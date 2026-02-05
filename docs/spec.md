@@ -6,6 +6,28 @@ Derived from: CLAUDE.md, docs/plan.md
 ## 1. Purpose
 HybridCoder is a local-first AI coding assistant CLI that prioritizes deterministic analysis and uses LLMs only when necessary. The goal is Claude Code-level utility on consumer hardware, with strong transparency and user control.
 
+### Market Positioning: Edge-Native Intelligence
+
+**This project MUST stand out from every competitor in the market.** The differentiator is not just "local-first" — it is **edge-native by design**:
+
+1. **Ultra-Low Resource Footprint** — Runs on consumer hardware (8GB VRAM, 16GB RAM). No cloud APIs, no $0.50/task costs, no 70B+ parameter models required.
+2. **100% Edge Computing** — ALL intelligence (parsing, search, embedding, inference) runs on the user's device. This is not a "local mode" bolted onto a cloud product. Edge computing IS the product.
+3. **Deterministic-First Architecture** — 60-80% of operations consume zero LLM tokens. Classical AI (tree-sitter, LSP, static analysis, BM25) handles what it can; LLMs handle only what it can't. No competitor in the market does this.
+4. **Zero-Cost After Setup** — Once installed, every task is free. No API keys, no subscriptions, no metered billing.
+5. **Air-Gap Ready** — Works on laptops without internet, air-gapped corporate networks, developer machines in regions with poor connectivity, and for developers who refuse to send proprietary code to third-party servers.
+
+**Why this matters:** As AI coding tools become commoditized (Cursor, Copilot, Claude Code all require cloud), the winners will be those that work EVERYWHERE — offline, on-device, on any hardware. Aider/Cline support local models but still treat the LLM as the first resort. HybridCoder is the only tool that makes the LLM the LAST resort, achieving dramatic cost and latency reductions.
+
+**Competitive Landscape (Feb 2026):**
+| Tool | Local? | LLM-First? | Min VRAM | Cost | Edge-Native? |
+|------|--------|-----------|----------|------|-------------|
+| Claude Code | No | Yes | N/A | $$$ | No |
+| Cursor | No | Yes | N/A | $20/mo | No |
+| Copilot CLI | No | Yes | N/A | $10/mo | No |
+| Aider | Optional | Yes | 8GB+ | Free+API | No |
+| Cline | Optional | Yes | 8GB+ | Free+API | No |
+| **HybridCoder** | **Yes** | **No** | **8GB** | **$0** | **YES** |
+
 **Performance Target Proxy**: Achieve >40% pass@1 on Aider polyglot benchmark subset (comparable to GPT-4 baseline on similar tasks) while using 60-80% fewer LLM tokens than a naive always-call-LLM approach.
 
 ## 2. Scope
@@ -54,7 +76,7 @@ HybridCoder is a local-first AI coding assistant CLI that prioritizes determinis
   - Grammar/JSON constrained decoding (Outlines).
   - Small model for simple tasks.
 - Layer 4: Full Reasoning (targeted LLM)
-  - 7B model for complex edits.
+  - 8B model for complex edits (Qwen3-8B).
   - Architect/Editor split for reliability.
   - Feedback loop with compiler/linter/test signals.
 
@@ -81,9 +103,13 @@ HybridCoder is a local-first AI coding assistant CLI that prioritizes determinis
 - Semgrep: open-source, pattern-based static analysis rules.
 - LanceDB: local/embedded vector database with vector search and optional full-text (BM25) search.
 - Embeddings: jina-embeddings-v2-base-code (768-dim, 8192 tokens, ~300MB model size).
-- LLM runtime: Ollama local server (HTTP API at http://localhost:11434/api by default).
-- LLM model: Qwen2.5-Coder 7B Instruct (32k default context; longer via YaRN in supported runtimes).
-- Constrained decoding: Outlines for JSON/Pydantic/grammar outputs.
+- LLM runtime (L4): Ollama local server (HTTP API at http://localhost:11434/api by default).
+- LLM runtime (L3): llama-cpp-python + Outlines (direct model access for constrained decoding).
+- LLM model (L4): Qwen3-8B Q4_K_M (~5 GB VRAM, thinking mode).
+- LLM model (L3): Qwen2.5-Coder-1.5B Q4_K_M (~1 GB VRAM, 72% HumanEval).
+- Constrained decoding: Outlines for JSON/Pydantic/grammar outputs (via llama-cpp-python, NOT Ollama).
+- LSP client: multilspy (Microsoft) — manages Pyright/JDT-LS lifecycle.
+- Package manager: uv (10-100x faster than pip).
 - CLI UX: Typer (Click-based, type-hint driven CLI) with Rich for formatting.
 
 ## 7. Functional Requirements
@@ -219,10 +245,15 @@ Handled without LLM:
 **Resolved:**
 - Memory target: <2GB idle (stretch goal: <500MB)
 - Default edit format: whole-file (search/replace deferred to Phase 2.5+)
+- Embedding model: jina-v2-base-code (768-dim, local, proven quality)
+- L4 model: Qwen3-8B Q4_K_M (supersedes Qwen2.5-Coder-7B)
+- L3 model: Qwen2.5-Coder-1.5B Q4_K_M (constrained generation)
+- Two-tier LLM: Ollama (L4) + llama-cpp-python/Outlines (L3)
+- LSP client: multilspy (Microsoft)
+- Package manager: uv
 
 **Open:**
 - Python-only MVP vs Python+Java (recommendation: Python-only to reduce scope risk)
-- Default embedding model and index size limits
 - Cloud fallback policy and opt-in UX
 
 ## 14. MVP Acceptance Checklist
@@ -253,11 +284,89 @@ The following 12 criteria must ALL pass for MVP release:
 - Phase 3: Deterministic Layer 1.
 - Phase 4: Retrieval Layer 2.
 - Phase 5: Agentic workflow Layer 4.
-- Phase 6: Benchmarking and release.
+- Phase 6: Testing and benchmarking.
 
 ---
 
-## 16. References
+## 16. Phased Execution Plan (Tech Stack -> HLD -> LLD -> Code -> Documentation)
+
+### Phase A: Tech Stack Finalization
+1. Confirm supported languages (Python-only vs Python+Java) using scope and resource criteria.
+2. Select package/tooling stack (uv or pip/poetry, pytest, lint/format tools) and document exact commands.
+3. Validate LLM runtime defaults (Ollama vs llama.cpp server) on target hardware; set baseline model and quantization.
+4. Validate deterministic stack (tree-sitter, Pyright, JDT LS, Semgrep) install steps and performance budgets.
+5. Validate retrieval stack (LanceDB, embedding model) for disk and RAM usage; set index size limits.
+6. Define minimum hardware baseline and resource budgets per layer; document thresholds.
+7. Produce dependency matrix with versions, licenses, and install steps; update roadmap docs if needed.
+
+### Phase B: High-Level Design (HLD)
+1. Define system context diagram and request flow across layers 1-4.
+2. Define component responsibilities and boundaries (CLI, router, layer engines, edit system, git, shell).
+3. Define configuration schema and defaults aligned to local-first and edge-first constraints.
+4. Define security model and sandbox boundaries.
+5. Define persistence layout for logs, cache, indexes, and config.
+6. Define performance budgets and SLAs per component; identify bottleneck risks.
+7. Review HLD against "LLM as last resort" and low-resource edge requirement.
+
+### Phase C: Low-Level Design (LLD)
+1. Specify module layout under `src/hybridcoder/` with public interfaces and dependencies.
+2. Define data models for requests, tool calls, edit results, context bundles, and metrics.
+3. Detail algorithms: routing logic, chunking strategy, hybrid search scoring, fuzzy matching, retry rules.
+4. Define error handling and rollback behavior; state machine for multi-step tasks.
+5. Define cache keys, invalidation rules, and persistence schema (LanceDB tables, repo map).
+6. Define observability (structured logs, metrics, profiling hooks).
+7. Produce a test plan mapping each module to unit, integration, and benchmark coverage.
+
+### Phase D: Implementation (Code)
+#### D0: Repo and Tooling Setup
+1. Create project layout (src/, tests/, docs/, configs) and baseline config files.
+2. Add packaging and dev tooling (pyproject, make or scripts) with install/test/lint commands.
+3. Add CI scaffolding to run tests and basic linting.
+
+#### D1: CLI + LLM Foundation
+1. Implement Typer CLI commands and REPL with streaming output.
+2. Implement config loader/writer and default config.
+3. Implement LLM provider abstraction (Ollama first, openai-compatible optional).
+4. Implement file read/write tools with line ranges.
+
+#### D2: Edit System + Git Safety
+1. Implement whole-file edit flow with diff preview and apply.
+2. Add syntax validation and lint/type check hooks.
+3. Add git auto-commit and undo workflow.
+4. Add retry and failure handling with safe rollback.
+
+#### D3: Layer 1 Deterministic Engine
+1. Integrate tree-sitter parsers and queries for Python/Java.
+2. Integrate LSP clients (Pyright, JDT LS) with caching.
+3. Implement deterministic query router with no-LLM handling.
+
+#### D4: Layer 2 Retrieval + Context
+1. Implement AST-aware chunker and metadata.
+2. Integrate embeddings generator and LanceDB store.
+3. Implement hybrid search (BM25 + vector) and repo map.
+4. Implement rules loader and context assembler.
+
+#### D5: Layer 4 Agentic Workflow
+1. Implement tool registry and sandboxed executor.
+2. Implement architect/editor split and plan execution.
+3. Implement feedback loop (syntax, type, lint, test) with retries.
+4. Add task persistence and progress reporting.
+
+#### D6: Testing + Benchmarking
+1. Build unit, integration, and benchmark test harnesses with CI hooks.
+2. Implement benchmark runners and baseline result capture.
+3. Profile CPU/RAM/VRAM and optimize hot paths.
+4. Tune routing thresholds and retrieval weights using benchmark feedback.
+
+### Phase E: Documentation and Release
+1. Write installation, usage, configuration, and architecture docs in docs/.
+2. Document performance targets, benchmarks, and reproducibility steps.
+3. Provide example projects and .rules templates.
+4. Finalize release checklist and packaging (PyPI/test PyPI).
+
+---
+
+## 17. References
 - Tree-sitter documentation: https://tree-sitter.github.io/tree-sitter/
 - LSP specification: https://microsoft.github.io/language-server-protocol/
 - Pyright CLI: https://www.npmjs.com/package/pyright
@@ -266,7 +375,8 @@ The following 12 criteria must ALL pass for MVP release:
 - LanceDB docs: https://lancedb.com/documentation/overview/
 - Jina embeddings v2 base code: https://aws.amazon.com/marketplace/pp/prodview-tk7t7bz6fp5ng
 - Ollama API: https://docs.ollama.com/api/introduction
-- Qwen2.5-Coder model card: https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct
+- Qwen3-8B model card: https://huggingface.co/Qwen/Qwen3-8B
+- Qwen2.5-Coder-1.5B model card: https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct
 - Outlines structured generation: https://dottxt-ai.github.io/outlines/reference/generation/json/
 - Typer docs: https://typer.tiangolo.com/
 - Rich: https://github.com/Textualize/rich

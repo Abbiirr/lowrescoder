@@ -3,7 +3,9 @@
     "allow": [
       "WebSearch",
       "Bash(where:*)",
-      "Bash(codex:*)"
+      "Bash(codex:*)",
+      "Bash(uv:*)",
+      "Bash(test:*)"
     ]
   }
 }

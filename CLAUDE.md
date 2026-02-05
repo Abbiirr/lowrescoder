@@ -94,15 +94,20 @@ Understanding this architecture is critical to working on this project:
 | Component | Choice | Rationale |
 |-----------|--------|-----------|
 | Language | Python 3.11+ | ML ecosystem, rapid dev |
+| Package Manager | uv | 10-100x faster than pip |
 | CLI Framework | Typer + Rich | Modern, type-safe, beautiful |
-| Parsing | tree-sitter | Industry standard, fast |
+| Parsing | tree-sitter 0.25.2 | Industry standard, fast |
+| LSP Client | multilspy (Microsoft) | Multi-language, battle-tested |
 | Python LSP | Pyright | Best type inference |
 | Java LSP | JDT-LS | Most complete |
 | Vector DB | LanceDB | Embedded, hybrid search |
-| Embeddings | jina-v2-base-code | Local, good quality |
-| Local LLM | Ollama | Easiest setup |
-| Model | Qwen2.5-Coder 7B Q4_K_M | Best 7B code model |
-| Grammar | Outlines | Pydantic integration |
+| Embeddings | jina-v2-base-code | Local, 768-dim, proven quality |
+| L4 LLM Runtime | Ollama | Easy setup, streaming, model mgmt |
+| L4 Model | Qwen3-8B Q4_K_M | Best 8B model, thinking mode, ~5 GB VRAM |
+| L3 LLM Runtime | llama-cpp-python + Outlines | Outlines requires direct model access |
+| L3 Model | Qwen2.5-Coder-1.5B Q4_K_M | 72% HumanEval at 1GB VRAM |
+
+> **Note:** Outlines does NOT integrate with Ollama's HTTP API. Layer 3 (constrained generation) uses llama-cpp-python directly. Layer 4 (full reasoning) uses Ollama. See `docs/claude/01-local-llm-inference-research.md` for details.
 
 ---
 

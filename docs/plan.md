@@ -61,8 +61,15 @@ A local-first AI coding assistant CLI that achieves Claude Code-level performanc
 
 **Open:**
 - Python-only MVP vs Python+Java (recommendation: Python-only to reduce scope risk)
-- Default embedding model and index size limits
 - Cloud fallback policy and opt-in UX
+
+**Resolved (Feb 2026):**
+- Embedding model: jina-v2-base-code (768-dim, local, proven quality)
+- L4 model: Qwen3-8B Q4_K_M (supersedes Qwen2.5-Coder-7B)
+- L3 model: Qwen2.5-Coder-1.5B Q4_K_M (constrained generation)
+- Two-tier LLM: Ollama (L4) + llama-cpp-python/Outlines (L3)
+- LSP client: multilspy (Microsoft)
+- Package manager: uv
 
 ---
 
@@ -134,7 +141,7 @@ CLI Interface
     │       │       └── Repo Map Generator
     │       │
     │       ├── Layer 3: Generation Engine
-    │       │       ├── LLM Client (Ollama/llama.cpp)
+    │       │       ├── LLM Client (llama-cpp-python + Outlines)
     │       │       ├── Grammar Constraints (Outlines)
     │       │       └── Output Parser
     │       │
@@ -241,7 +248,8 @@ hybridcoder --help            # Show all commands
 # ~/.hybridcoder/config.yaml
 llm:
   provider: ollama  # ollama | openai | anthropic
-  model: qwen2.5-coder:7b-instruct-q4_K_M
+  model: qwen3:8b-q4_K_M          # Layer 4 (full reasoning)
+  l3_model: qwen2.5-coder:1.5b-instruct-q4_K_M  # Layer 3 (constrained gen)
   temperature: 0.2
   max_tokens: 4096
   context_length: 8192
@@ -340,7 +348,7 @@ Files modified:
 - path/to/file.py
 
 Prompt: <truncated user prompt>
-Model: qwen2.5-coder:7b
+Model: qwen3:8b
 Tokens: 1234
 ```
 
@@ -699,23 +707,23 @@ Phase 2 - Editor (execution):
 
 ---
 
-### Phase 6: Polish & Benchmarking (Weeks 13-14)
+### Phase 6: Testing & Benchmarking (Weeks 13-14)
 
 #### Objectives
-- Comprehensive benchmarking
-- Performance optimization
-- Documentation
-- Release preparation
+- Comprehensive testing (unit, integration, benchmark harness)
+- Benchmarking and performance profiling
+- Reliability validation and regression gating
+- Resource usage verification
 
 #### Deliverables
 | ID | Deliverable | Acceptance Criteria |
 |----|-------------|---------------------|
 | D6.1 | Benchmark suite | Automated tests against Aider benchmark |
-| D6.2 | Performance profiling | Identify and fix bottlenecks |
-| D6.3 | User documentation | Installation, usage, configuration docs |
-| D6.4 | Developer documentation | Architecture, contribution guide |
-| D6.5 | Release packaging | pip installable package |
-| D6.6 | Demo project | Example project with .rules/ |
+| D6.2 | Test suites | Unit + integration coverage for core modules |
+| D6.3 | Performance profiling | Identify and fix bottlenecks |
+| D6.4 | Reliability regression suite | Crash/rollback scenarios automated |
+| D6.5 | Benchmark baselines | Baseline metrics + regression thresholds recorded |
+| D6.6 | CI gates | Tests and benchmarks block regressions |
 
 #### Benchmark Requirements
 
@@ -751,15 +759,16 @@ Phase 2 - Editor (execution):
 
 #### Verification Tests
 - [ ] VT6.1: Benchmark suite runs in CI
-- [ ] VT6.2: Performance regression detected automatically
-- [ ] VT6.3: Documentation builds without errors
-- [ ] VT6.4: Package installs from PyPI (test.pypi.org)
-- [ ] VT6.5: Demo project works end-to-end
+- [ ] VT6.2: Unit and integration tests run in CI
+- [ ] VT6.3: Performance regression detected automatically
+- [ ] VT6.4: Reliability regression suite passes
+- [ ] VT6.5: Benchmark baselines published and used for gating
 
 #### Exit Criteria
 - [ ] All benchmark targets met
-- [ ] Documentation complete and reviewed
-- [ ] Package published to PyPI
+- [ ] Unit and integration tests pass
+- [ ] Performance regressions blocked by CI
+- [ ] Reliability regression suite passes
 - [ ] Demo video/walkthrough created
 
 ---
@@ -777,9 +786,12 @@ Phase 2 - Editor (execution):
 | Semgrep | Open-source, pattern-based static analysis rules |
 | LanceDB | Local/embedded vector database with vector search and optional full-text (BM25) search |
 | Embeddings | jina-embeddings-v2-base-code (768-dim, 8192 tokens, ~300MB model size) |
-| LLM Runtime | Ollama local server (HTTP API at http://localhost:11434/api by default) |
-| LLM Model | Qwen2.5-Coder 7B Instruct (32k default context; longer via YaRN in supported runtimes) |
-| Constrained Decoding | Outlines for JSON/Pydantic/grammar outputs |
+| LLM Runtime (L4) | Ollama local server (HTTP API at http://localhost:11434/api by default) |
+| LLM Runtime (L3) | llama-cpp-python + Outlines (direct model access required for constrained decoding) |
+| LLM Model (L4) | Qwen3-8B Q4_K_M (~5 GB VRAM, thinking mode) |
+| LLM Model (L3) | Qwen2.5-Coder-1.5B Q4_K_M (~1 GB VRAM, 72% HumanEval) |
+| Constrained Decoding | Outlines for JSON/Pydantic/grammar outputs (via llama-cpp-python, NOT Ollama) |
+| LSP Client | multilspy (Microsoft) — manages Pyright/JDT-LS lifecycle |
 | CLI UX | Typer (Click-based, type-hint driven CLI) with Rich for formatting |
 
 ### 4.1 Technology Stack
@@ -793,9 +805,12 @@ Phase 2 - Editor (execution):
 | Java LSP | JDT-LS | Most complete | - |
 | Vector DB | LanceDB | Embedded, hybrid search | Chroma |
 | Embeddings | jina-v2-base-code | Local, good quality | voyage-code-3 |
-| Local LLM | Ollama | Easiest setup | llama.cpp |
-| Model | Qwen2.5-Coder 7B Q4_K_M | Best 7B code model | DeepSeek |
-| Grammar | Outlines | Pydantic integration | SynCode |
+| L4 LLM Runtime | Ollama | Easy setup, streaming | llama.cpp server |
+| L4 Model | Qwen3-8B Q4_K_M | Best 8B, thinking mode, ~5 GB VRAM | Qwen2.5-Coder-7B |
+| L3 LLM Runtime | llama-cpp-python + Outlines | Outlines needs direct access | N/A |
+| L3 Model | Qwen2.5-Coder-1.5B Q4_K_M | 72% HumanEval, 1GB VRAM | DeepSeek |
+| LSP Client | multilspy (Microsoft) | Multi-language, battle-tested | pylsp |
+| Package Manager | uv | 10-100x faster than pip | pip/poetry |
 | Git | GitPython | Pure Python | subprocess |
 | Testing | pytest | Standard | - |
 
@@ -876,8 +891,9 @@ hybridcoder/
 # LLM Configuration
 llm:
   provider: ollama          # ollama | openai | anthropic | llama_cpp
-  model: qwen2.5-coder:7b-instruct-q4_K_M
-  api_base: http://localhost:11434  # For Ollama
+  model: qwen3:8b-q4_K_M           # Layer 4 model
+  l3_model: qwen2.5-coder:1.5b-instruct-q4_K_M  # Layer 3 model
+  api_base: http://localhost:11434  # For Ollama (L4)
   api_key: null             # For cloud providers
   temperature: 0.2
   max_tokens: 4096
@@ -1089,7 +1105,8 @@ Each phase must pass before proceeding:
 6. LanceDB docs: https://lancedb.com/documentation/overview/
 7. Jina embeddings v2 base code: https://aws.amazon.com/marketplace/pp/prodview-tk7t7bz6fp5ng
 8. Ollama API: https://docs.ollama.com/api/introduction
-9. Qwen2.5-Coder model card: https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct
+9. Qwen3-8B model card: https://huggingface.co/Qwen/Qwen3-8B
+9a. Qwen2.5-Coder-1.5B model card: https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct
 10. Outlines structured generation: https://dottxt-ai.github.io/outlines/reference/generation/json/
 11. Typer docs: https://typer.tiangolo.com/
 12. Rich: https://github.com/Textualize/rich
@@ -1130,7 +1147,7 @@ HybridCoder aims to match the utility of frontier AI coding assistants while run
 **Benchmark Execution Protocol:**
 
 1. **Aider Polyglot Subset (50 tasks)**
-   - Run each task with default config (Qwen2.5-Coder 7B, whole-file edit)
+   - Run each task with default config (Qwen3-8B, whole-file edit)
    - Record: pass/fail, retries needed, tokens used, latency
    - Success = code compiles and passes provided tests
    - Calculate: pass@1, pass@3 (with retries), avg tokens per task

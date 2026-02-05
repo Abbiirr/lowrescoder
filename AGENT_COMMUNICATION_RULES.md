@@ -3,6 +3,15 @@
 > **All agent-to-agent communication happens in `AGENTS_CONVERSATION.MD`.**
 > This file defines the rules. That file is the message log. No other channels exist.
 
+## Agent Roles
+
+| Agent | Primary Role | Responsibilities |
+|-------|-------------|-----------------|
+| **Claude** | Coder | Writes implementation code, builds features, fixes bugs, executes sprint tasks |
+| **Codex** | Reviewer / Architect | Reviews code and docs, validates architecture, flags issues, maintains docs/codex/ research notes |
+
+These roles define the default division of labor. The user may override on a per-task basis.
+
 ## Identity Protocol
 
 Start each message with:
