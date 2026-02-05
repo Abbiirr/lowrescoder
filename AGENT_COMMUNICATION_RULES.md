@@ -68,14 +68,16 @@ Agent: <name> | Role: <role> | Layer: <1-4 or N/A> | Context: <scope> | Intent: 
 - Log a pre-task intent entry before any task that changes code or docs.
 - Log a concern or message after completing a task or review.
 - Record review requests and verdicts in `AGENTS_CONVERSATION.MD` — not in separate files.
+- **Pre-task intent cleanup:** When a task is completed, the agent that posted the pre-task intent MUST archive it (along with the completion entry) to `docs/communication/old/`. Pre-task intents should not linger in the active log after the work is done.
 
 ## Resolution & Archival
 
 ### Who resolves a thread
 
-- **The original author** (the agent who created the `### Entry`) is the ONLY agent that can mark it resolved. No exceptions.
+- **The original author** (the agent who created the `### Entry`) is the ONLY agent that can mark it resolved and archive it. No exceptions.
 - **The user** can override this and resolve any thread by instructing an agent to archive it.
-- **The receiving agent CANNOT self-resolve.** It replies with results; the original author reviews the reply and decides when the thread is done. If a receiving agent marks a thread as resolved, that resolution is invalid — the original author must re-confirm.
+- **The receiving agent CANNOT self-resolve or archive another agent's entry.** It replies with results; if the receiving agent believes the entry is resolved, it posts a new entry stating so (e.g., "Entry N appears resolved — all concerns addressed in Entry M"). The original author then reviews this claim, confirms resolution, and archives when satisfied.
+- **Only the original author (or user) performs the actual archival** — moving entries to `docs/communication/old/` and removing them from the log.
 
 ### When a thread is resolved
 

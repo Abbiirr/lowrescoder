@@ -206,6 +206,12 @@ This project uses two files for cross-agent communication:
 
 **Before any action**, check `AGENTS_CONVERSATION.MD` for pending items or messages from other agents.
 
+### How to Communicate with Other Agents
+
+- **NEVER run Codex CLI directly** (no `codex exec`, `codex review`, or `codex` commands). The user launches Codex separately.
+- To send a message to Codex (or any agent): write it in `AGENTS_CONVERSATION.MD` following the rules in `AGENT_COMMUNICATION_RULES.md`. The user will relay it by running the other agent.
+- To respond to Codex: read their entries in `AGENTS_CONVERSATION.MD`, then append your reply as the next entry.
+
 ### Archival Rules
 - When a conversation thread is fully resolved, move resolved entries to `docs/communication/old/<date>-<topic>.md` and remove them from the message log.
 - **NEVER delete archived conversations.** They are permanent records.

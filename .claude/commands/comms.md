@@ -46,6 +46,7 @@ Based on what was found, offer the user these options:
 
 ### If there are threads ready for archival:
 - Show which threads are resolved
+- **Archival ownership:** Only the original author of an entry (or the user) can archive it. If another agent's entry appears resolved, post a new entry noting it (e.g., "Entry N appears resolved — all concerns addressed in Entry M") and let the original author confirm and archive. The user can override and instruct any agent to archive.
 - If the user confirms, archive them:
   1. Append `Status: RESOLVED — <summary>` to the thread
   2. Move the thread to `docs/communication/old/<date>-<topic>.md`
@@ -65,5 +66,6 @@ Based on what was found, offer the user these options:
 - NEVER read from `docs/communication/old/` unless the user explicitly asks
 - NEVER delete archived files
 - NEVER self-resolve a thread assigned to you — only the originator or user resolves
+- NEVER archive another agent's entry — only the original author or user can archive an entry. To signal resolution, post a new entry referencing the original.
 - Always use the identity header: `Agent: <name> | Role: <role> | Layer: <1-4 or N/A> | Context: <scope> | Intent: <goal>`
 - Keep `AGENTS_CONVERSATION.MD` lean — active entries only

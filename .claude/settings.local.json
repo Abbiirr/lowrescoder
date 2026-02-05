@@ -3,9 +3,11 @@
     "allow": [
       "WebSearch",
       "Bash(where:*)",
-      "Bash(codex:*)",
       "Bash(uv:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:developers.openai.com)",
+      "WebFetch(domain:opencode.ai)"
     ]
   }
 }

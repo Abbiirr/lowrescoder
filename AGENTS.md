@@ -54,6 +54,7 @@ This project uses two files for cross-agent communication:
 | `AGENTS_CONVERSATION.MD` | **Message log** — active/unresolved entries only. This is where you read and write messages. |
 
 **Before any action**, check `AGENTS_CONVERSATION.MD` for pending items or messages from other agents.
+**Instead of making edits, always communicate via `AGENTS_CONVERSATION.MD` following `AGENT_COMMUNICATION_RULES.md`.**
 
 ### Quick start
 - **Claude Code**: Run `/comms` (skill at `.claude/commands/comms.md`)
