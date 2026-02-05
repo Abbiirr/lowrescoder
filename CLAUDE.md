@@ -160,6 +160,35 @@ See `docs/plan.md` for complete phase details and deliverables.
 
 ---
 
+## Testing (Required)
+
+**Always run tests after any code change.** No code is considered working until tests pass.
+
+```bash
+# Unit tests (fast, run after every change)
+make test
+
+# Or directly:
+uv run pytest tests/ -v --cov=src/hybridcoder
+
+# Sprint verification (run after completing a sprint)
+uv run pytest tests/test_sprint_verify.py -v
+
+# Linting + type checking (run before any review)
+make lint
+
+# Integration tests (only when testing LLM connections)
+uv run pytest -m integration tests/integration/
+```
+
+**Rules:**
+- All unit tests must pass before requesting review or moving to the next sprint
+- New code must include tests — no exceptions
+- Sprint verification tests (`tests/test_sprint_verify.py`) must pass at each sprint boundary
+- Integration tests are skipped by default (require running servers / API keys)
+
+---
+
 ## Reference Documents
 
 - `docs/plan.md` - Full product roadmap and requirements specification

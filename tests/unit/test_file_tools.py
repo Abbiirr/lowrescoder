@@ -38,6 +38,25 @@ class TestReadFile:
         with pytest.raises(ValueError, match="escapes project root"):
             read_file(str(secret), project_root=str(tmp_path / "sub"))
 
+    def test_path_validation_blocks_prefix_bypass(self, tmp_path: Path) -> None:
+        """Regression: /repo-evil should not pass validation for /repo."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        repo_evil = tmp_path / "repo-evil"
+        repo_evil.mkdir()
+        evil_file = repo_evil / "steal.txt"
+        evil_file.write_text("stolen")
+        with pytest.raises(ValueError, match="escapes project root"):
+            read_file(str(evil_file), project_root=str(repo))
+
+    def test_relative_path_resolves_to_project_root(self, tmp_path: Path) -> None:
+        """Relative paths should resolve against project_root, not CWD."""
+        (tmp_path / "src").mkdir()
+        target = tmp_path / "src" / "hello.txt"
+        target.write_text("content")
+        content = read_file("src/hello.txt", project_root=str(tmp_path))
+        assert content == "content"
+
 
 class TestWriteFile:
     """Test write_file function."""
@@ -54,6 +73,12 @@ class TestWriteFile:
         (tmp_path / "sub").mkdir()
         with pytest.raises(ValueError, match="escapes project root"):
             write_file(tmp_path / "outside.txt", "bad", project_root=str(tmp_path / "sub"))
+
+    def test_write_relative_path_resolves_to_project_root(self, tmp_path: Path) -> None:
+        """Relative paths should resolve against project_root."""
+        path = write_file("output.txt", "hello", project_root=str(tmp_path))
+        assert path.read_text() == "hello"
+        assert path.parent == tmp_path
 
 
 class TestListFiles:

@@ -90,7 +90,12 @@ class TestConfigYAML:
         assert loaded.llm.model == "test-model"
         assert loaded.ui.verbose is True
 
-    def test_load_from_project_yaml(self, tmp_path: Path) -> None:
+    def test_load_from_project_yaml(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("HYBRIDCODER_LLM_PROVIDER", raising=False)
+        monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
         project_config = tmp_path / ".hybridcoder.yaml"
         project_config.write_text(
             yaml.dump({"llm": {"model": "custom-model", "temperature": 0.5}})
@@ -99,7 +104,12 @@ class TestConfigYAML:
         assert config.llm.model == "custom-model"
         assert config.llm.temperature == 0.5
 
-    def test_load_missing_yaml_returns_defaults(self, tmp_path: Path) -> None:
+    def test_load_missing_yaml_returns_defaults(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("HYBRIDCODER_LLM_PROVIDER", raising=False)
+        monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
         config = load_config(project_root=tmp_path)
         assert config.llm.model == "qwen3:8b"
 
@@ -153,3 +163,28 @@ class TestConfigCheck:
         config.layer3.enabled = False  # Skip L3 model check
         warnings = check_config(config)
         assert len(warnings) == 0
+
+
+class TestOpenRouterApiBase:
+    """Test OpenRouter api_base auto-correction."""
+
+    def test_yaml_openrouter_gets_correct_api_base(self, tmp_path: Path) -> None:
+        """If YAML sets provider=openrouter, api_base should auto-correct from Ollama default."""
+        project_config = tmp_path / ".hybridcoder.yaml"
+        project_config.write_text(yaml.dump({"llm": {"provider": "openrouter"}}))
+        config = load_config(project_root=tmp_path)
+        assert config.llm.api_base == "https://openrouter.ai/api/v1"
+
+    def test_yaml_openrouter_preserves_custom_api_base(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If YAML sets both provider and api_base, don't override."""
+        monkeypatch.delenv("HYBRIDCODER_LLM_PROVIDER", raising=False)
+        monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+        project_config = tmp_path / ".hybridcoder.yaml"
+        project_config.write_text(
+            yaml.dump({"llm": {"provider": "openrouter", "api_base": "https://custom.api/v1"}})
+        )
+        config = load_config(project_root=tmp_path)
+        assert config.llm.api_base == "https://custom.api/v1"

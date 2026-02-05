@@ -112,6 +112,26 @@ Agents must **NOT** read from `docs/communication/old/` by default. Only read ar
 
 In all other cases, treat archives as if they don't exist. Do not scan, list, or load archived files to "catch up" or "review history" — that defeats the purpose of archival.
 
+## Testing Requirements
+
+**All agents MUST run tests before posting any review request or task completion message.**
+
+```bash
+# Required before any review request or task handoff
+uv run pytest tests/ -v
+uv run ruff check src/ tests/
+uv run mypy src/
+
+# Sprint verification (required at sprint boundaries)
+uv run pytest tests/test_sprint_verify.py -v
+```
+
+- If tests fail, fix the issues before posting. Do not send review requests with failing tests.
+- Include test results (pass count, any failures) in review requests and task completion messages.
+- New code must include tests. Reviewers should flag missing test coverage.
+
+---
+
 ## Examples
 
 ### Concern

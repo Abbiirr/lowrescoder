@@ -41,6 +41,28 @@ class TestCLIConfig:
         assert "Unknown action" in result.output
 
 
+class TestCLIConfigSet:
+    """Test config set command."""
+
+    def test_config_set_missing_value(self) -> None:
+        result = runner.invoke(app, ["config", "set"])
+        assert result.exit_code == 1
+
+    def test_config_set_bad_format(self) -> None:
+        result = runner.invoke(app, ["config", "set", "no-equals"])
+        assert result.exit_code == 1
+
+    def test_config_set_bad_section(self) -> None:
+        result = runner.invoke(app, ["config", "set", "fake.key=value"])
+        assert result.exit_code == 1
+        assert "Unknown section" in result.output
+
+    def test_config_set_bad_field(self) -> None:
+        result = runner.invoke(app, ["config", "set", "llm.nonexistent=value"])
+        assert result.exit_code == 1
+        assert "Unknown field" in result.output
+
+
 class TestCLIEdit:
     """Test edit command (stub)."""
 

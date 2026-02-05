@@ -8,11 +8,18 @@ from __future__ import annotations
 from pathlib import Path
 
 
+def _resolve_path(path: Path, project_root: Path) -> Path:
+    """Resolve path relative to project_root if not absolute."""
+    if not path.is_absolute():
+        return (project_root / path).resolve()
+    return path.resolve()
+
+
 def _validate_path(path: Path, project_root: Path) -> Path:
     """Ensure path is within project root (no traversal attacks)."""
-    resolved = path.resolve()
     root_resolved = project_root.resolve()
-    if not str(resolved).startswith(str(root_resolved)):
+    resolved = _resolve_path(path, root_resolved)
+    if resolved != root_resolved and root_resolved not in resolved.parents:
         msg = f"Path escapes project root: {path}"
         raise ValueError(msg)
     return resolved
@@ -34,7 +41,10 @@ def read_file(
     """
     file_path = Path(path)
     if project_root is not None:
-        file_path = _validate_path(file_path, Path(project_root))
+        root = Path(project_root)
+        file_path = _validate_path(file_path, root)
+    elif not file_path.is_absolute():
+        file_path = file_path.resolve()
 
     content = file_path.read_text(encoding="utf-8")
 
@@ -61,7 +71,10 @@ def write_file(
     """
     file_path = Path(path)
     if project_root is not None:
-        file_path = _validate_path(file_path, Path(project_root))
+        root = Path(project_root)
+        file_path = _validate_path(file_path, root)
+    elif not file_path.is_absolute():
+        file_path = file_path.resolve()
 
     file_path.parent.mkdir(parents=True, exist_ok=True)
     file_path.write_text(content, encoding="utf-8")
@@ -85,7 +98,10 @@ def list_files(
     """
     dir_path = Path(directory)
     if project_root is not None:
-        dir_path = _validate_path(dir_path, Path(project_root))
+        root = Path(project_root)
+        dir_path = _validate_path(dir_path, root)
+    elif not dir_path.is_absolute():
+        dir_path = dir_path.resolve()
 
     if not dir_path.is_dir():
         return []

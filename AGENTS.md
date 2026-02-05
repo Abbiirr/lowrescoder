@@ -9,10 +9,15 @@ This repo currently contains planning docs and contributor guidance; source code
 Planned layout (per the roadmap): `src/hybridcoder/` for application code, `tests/` for unit/integration/benchmarks, and `docs/` for product documentation.
 
 ## Build, Test, and Development Commands
-No build or test scripts are committed yet. If you add tooling, update this section with exact commands. Planned defaults in the roadmap:
-- `pytest` for running tests.
-- `python -m hybridcoder` or `hybridcoder chat` for local CLI runs.
-- `make test` and `make lint` if a Makefile is added.
+Current commands:
+- `uv sync --all-extras`
+- `uv run pytest tests/ -v --cov=src/hybridcoder`
+- `uv run ruff check src/ tests/`
+- `uv run ruff format src/ tests/`
+- `uv run mypy src/hybridcoder/`
+- `uv run python -m hybridcoder` or `uv run hybridcoder chat`
+- `make test` and `make lint`
+- `uv run python scripts/bench_tui.py --cmd hybridcoder --args "chat"`
 
 ## Coding Style & Naming Conventions
 - Python 3.11+.

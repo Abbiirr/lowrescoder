@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import typer
 from rich.console import Console
 from rich.live import Live
+from rich.spinner import Spinner
 from rich.text import Text
 
 from hybridcoder.config import (
@@ -46,13 +47,15 @@ async def _stream_response(
 ) -> str:
     """Stream LLM response to console, return full text."""
     full_response = ""
-    text = Text()
+    waiting = True
 
-    with Live(text, console=console, refresh_per_second=15) as live:
+    with Live(Spinner("dots", text="Thinking..."), console=console, refresh_per_second=15) as live:
         async for chunk in provider.generate(messages, stream=True):
+            if waiting:
+                waiting = False
+                live.update(Text(chunk))
             full_response += chunk
-            text = Text(full_response)
-            live.update(text)
+            live.update(Text(full_response))
 
     return full_response
 
@@ -171,7 +174,8 @@ def edit(
 
 @app.command()
 def config(
-    action: str = typer.Argument("show", help="Action: show | check | path"),
+    action: str = typer.Argument("show", help="Action: show | set | check | path"),
+    key_value: str | None = typer.Argument(None, help="key=value pair (for 'set' action)"),
 ) -> None:
     """Show or manage configuration."""
     cfg = load_config()
@@ -182,6 +186,29 @@ def config(
 
         yaml_str = yaml.dump(cfg.model_dump(), default_flow_style=False, sort_keys=False)
         console.print(Syntax(yaml_str, "yaml", theme="monokai"))
+    elif action == "set":
+        if not key_value or "=" not in key_value:
+            console.print("[red]Usage: hybridcoder config set section.key=value[/]")
+            raise typer.Exit(1)
+        key, _, value = key_value.partition("=")
+        parts = key.strip().split(".")
+        if len(parts) != 2:  # noqa: PLR2004
+            console.print("[red]Key must be section.field (e.g. llm.model)[/]")
+            raise typer.Exit(1)
+        section, field = parts
+        data = cfg.model_dump()
+        if section not in data:
+            console.print(f"[red]Unknown section: {section}[/]")
+            raise typer.Exit(1)
+        if field not in data[section]:
+            console.print(f"[red]Unknown field: {section}.{field}[/]")
+            raise typer.Exit(1)
+        data[section][field] = value.strip()
+        from hybridcoder.config import save_config as _save
+
+        updated = HybridCoderConfig.model_validate(data)
+        path = _save(updated)
+        console.print(f"[green]Set {key.strip()} = {value.strip()}[/] (saved to {path})")
     elif action == "check":
         warnings = check_config(cfg)
         if warnings:
@@ -192,7 +219,7 @@ def config(
     elif action == "path":
         console.print(str(get_config_path()))
     else:
-        console.print(f"[red]Unknown action: {action}[/]. Use: show, check, path")
+        console.print(f"[red]Unknown action: {action}[/]. Use: show, set, check, path")
 
 
 @app.command()

@@ -210,10 +210,14 @@ class ConversationHistory:
         return sum(len(m["content"]) // 4 for m in self.messages)
 
     def trim_to_budget(self, max_tokens: int) -> None:
-        """Remove oldest non-system messages to fit token budget."""
+        """Remove oldest non-system user/assistant pairs to fit token budget."""
         while self.token_estimate() > max_tokens and len(self.messages) > 1:
-            # Keep system prompt (index 0), remove oldest user/assistant pair
-            if len(self.messages) > 2:
+            # Keep system prompt (index 0), remove oldest user+assistant pair
+            if len(self.messages) >= 3 and self.messages[1]["role"] == "user":
+                self.messages.pop(1)  # remove user
+                if len(self.messages) > 1 and self.messages[1]["role"] == "assistant":
+                    self.messages.pop(1)  # remove matching assistant
+            elif len(self.messages) >= 2:
                 self.messages.pop(1)
             else:
                 break

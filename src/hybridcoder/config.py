@@ -190,7 +190,9 @@ def _apply_openrouter_env(data: dict[str, object]) -> dict[str, object]:
         llm = data["llm"]
         if isinstance(llm, dict):
             llm["provider"] = "openrouter"
-            llm["api_base"] = "https://openrouter.ai/api/v1"
+            # Only set api_base if user hasn't specified a custom one
+            if "api_base" not in llm or llm["api_base"] == "http://localhost:11434":
+                llm["api_base"] = "https://openrouter.ai/api/v1"
             if model:
                 llm["model"] = model
 
@@ -220,7 +222,15 @@ def load_config(
     data = _apply_env_overrides(data)
     data = _apply_openrouter_env(data)
 
-    return HybridCoderConfig.model_validate(data)
+    config = HybridCoderConfig.model_validate(data)
+
+    # Fix #5: If provider is openrouter but api_base is still the Ollama default,
+    # auto-correct to OpenRouter base URL
+    ollama_default = "http://localhost:11434"
+    if config.llm.provider == "openrouter" and config.llm.api_base == ollama_default:
+        config.llm.api_base = "https://openrouter.ai/api/v1"
+
+    return config
 
 
 def save_config(config: HybridCoderConfig, path: Path | None = None) -> Path:

@@ -360,6 +360,7 @@ all = [
     { name = "tree-sitter-python" },
 ]
 dev = [
+    { name = "httpx" },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -389,6 +390,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "hybridcoder", extras = ["layer1", "layer2", "layer3", "layer4"], marker = "extra == 'all'" },
     { name = "lancedb", marker = "extra == 'layer2'", specifier = ">=0.10" },
     { name = "llama-cpp-python", marker = "extra == 'layer3'", specifier = ">=0.3" },
