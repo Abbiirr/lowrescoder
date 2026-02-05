@@ -96,6 +96,8 @@ class TestConfigYAML:
         monkeypatch.delenv("HYBRIDCODER_LLM_PROVIDER", raising=False)
         monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        monkeypatch.delenv("OLLAMA_MODEL", raising=False)
         project_config = tmp_path / ".hybridcoder.yaml"
         project_config.write_text(
             yaml.dump({"llm": {"model": "custom-model", "temperature": 0.5}})
@@ -110,6 +112,8 @@ class TestConfigYAML:
         monkeypatch.delenv("HYBRIDCODER_LLM_PROVIDER", raising=False)
         monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        monkeypatch.delenv("OLLAMA_MODEL", raising=False)
         config = load_config(project_root=tmp_path)
         assert config.llm.model == "qwen3:8b"
 
@@ -168,8 +172,13 @@ class TestConfigCheck:
 class TestOpenRouterApiBase:
     """Test OpenRouter api_base auto-correction."""
 
-    def test_yaml_openrouter_gets_correct_api_base(self, tmp_path: Path) -> None:
+    def test_yaml_openrouter_gets_correct_api_base(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """If YAML sets provider=openrouter, api_base should auto-correct from Ollama default."""
+        monkeypatch.delenv("HYBRIDCODER_LLM_PROVIDER", raising=False)
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        monkeypatch.delenv("OLLAMA_MODEL", raising=False)
         project_config = tmp_path / ".hybridcoder.yaml"
         project_config.write_text(yaml.dump({"llm": {"provider": "openrouter"}}))
         config = load_config(project_root=tmp_path)

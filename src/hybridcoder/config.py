@@ -32,6 +32,7 @@ class LLMConfig(BaseModel):
     temperature: float = Field(default=0.2, ge=0.0, le=2.0)
     max_tokens: int = Field(default=4096, gt=0)
     context_length: int = Field(default=8192, gt=0, description="Max context window")
+    reasoning_enabled: bool = Field(default=True, description="Enable thinking/reasoning tokens")
 
 
 class Layer3Config(BaseModel):
@@ -87,6 +88,7 @@ class GitConfig(BaseModel):
 class ShellConfig(BaseModel):
     """Sandboxed shell execution configuration."""
 
+    enabled: bool = False
     timeout: int = Field(default=30, ge=1)
     max_timeout: int = Field(default=300, ge=1)
     allowed_commands: list[str] = Field(
@@ -106,6 +108,16 @@ class UIConfig(BaseModel):
     verbose: bool = False
 
 
+class TUIConfig(BaseModel):
+    """Textual TUI configuration."""
+
+    approval_mode: Literal["read-only", "suggest", "auto"] = "suggest"
+    session_db_path: str = "~/.hybridcoder/sessions.db"
+    max_iterations: int = 10
+    show_tool_calls: bool = True
+    alternate_screen: bool = False
+
+
 # --- Top-level config ---
 
 
@@ -121,6 +133,7 @@ class HybridCoderConfig(BaseModel):
     git: GitConfig = Field(default_factory=GitConfig)
     shell: ShellConfig = Field(default_factory=ShellConfig)
     ui: UIConfig = Field(default_factory=UIConfig)
+    tui: TUIConfig = Field(default_factory=TUIConfig)
 
 
 # --- Config loading ---
@@ -177,6 +190,27 @@ def _apply_env_overrides(data: dict[str, object]) -> dict[str, object]:
     return data
 
 
+def _apply_ollama_env(data: dict[str, object]) -> dict[str, object]:
+    """Apply OLLAMA_HOST and OLLAMA_MODEL env vars when provider is ollama."""
+    host = os.environ.get("OLLAMA_HOST")
+    model = os.environ.get("OLLAMA_MODEL")
+    provider_env = os.environ.get("HYBRIDCODER_LLM_PROVIDER")
+
+    llm = data.get("llm")
+    if not isinstance(llm, dict):
+        llm = {}
+        data["llm"] = llm
+
+    provider = llm.get("provider", provider_env or "ollama")
+    if provider == "ollama":
+        if host:
+            llm["api_base"] = host
+        if model:
+            llm["model"] = model
+
+    return data
+
+
 def _apply_openrouter_env(data: dict[str, object]) -> dict[str, object]:
     """If OpenRouter env vars are set and no explicit provider override, configure OpenRouter."""
     api_key = os.environ.get("OPENROUTER_API_KEY")
@@ -220,6 +254,7 @@ def load_config(
 
     # 4. Environment variable overrides
     data = _apply_env_overrides(data)
+    data = _apply_ollama_env(data)
     data = _apply_openrouter_env(data)
 
     config = HybridCoderConfig.model_validate(data)

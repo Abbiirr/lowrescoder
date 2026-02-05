@@ -5,7 +5,22 @@ All file I/O goes through these functions to enforce path safety.
 
 from __future__ import annotations
 
+import fnmatch
+import os
 from pathlib import Path
+
+_DEFAULT_IGNORED_DIRS = {
+    ".git",
+    ".venv",
+    ".venv2",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    "__pycache__",
+    "node_modules",
+    "dist",
+    "build",
+}
 
 
 def _resolve_path(path: Path, project_root: Path) -> Path:
@@ -85,6 +100,7 @@ def list_files(
     directory: str | Path,
     pattern: str = "*",
     project_root: str | Path | None = None,
+    max_results: int | None = 5000,
 ) -> list[str]:
     """List files in a directory matching a glob pattern.
 
@@ -92,6 +108,9 @@ def list_files(
         directory: Directory to search.
         pattern: Glob pattern (default "*").
         project_root: Project root for path validation. If None, skips validation.
+
+    Args:
+        max_results: Optional cap on returned entries to avoid large scans.
 
     Returns:
         List of relative paths (strings) from directory.
@@ -106,4 +125,16 @@ def list_files(
     if not dir_path.is_dir():
         return []
 
-    return sorted(str(p.relative_to(dir_path)) for p in dir_path.rglob(pattern) if p.is_file())
+    results: list[str] = []
+    for root_dir, dirs, files in os.walk(dir_path):
+        dirs[:] = [d for d in dirs if d not in _DEFAULT_IGNORED_DIRS]
+        rel_root = Path(root_dir).relative_to(dir_path)
+        for filename in files:
+            rel_path = (rel_root / filename) if rel_root != Path(".") else Path(filename)
+            rel_str = rel_path.as_posix()
+            if fnmatch.fnmatch(rel_str, pattern):
+                results.append(rel_str)
+                if max_results is not None and len(results) >= max_results:
+                    return sorted(results)
+
+    return sorted(results)

@@ -7,7 +7,14 @@
       "Bash(test:*)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:developers.openai.com)",
-      "WebFetch(domain:opencode.ai)"
+      "WebFetch(domain:opencode.ai)",
+      "Bash(wc -l:*)",
+      "Bash(grep:*)",
+      "Bash(findstr:*)",
+      "Bash(curl -s http://10.112.30.10:11434/api/chat -d '{\"\"model\"\":\"\"qwen2.5-coder:7b\"\",\"\"messages\"\":[{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"What is the current directory? Use the run_command tool.\"\"}],\"\"tools\"\":[{\"\"type\"\":\"\"function\"\",\"\"function\"\":{\"\"name\"\":\"\"run_command\"\",\"\"description\"\":\"\"Run a shell command\"\",\"\"parameters\"\":{\"\"type\"\":\"\"object\"\",\"\"properties\"\":{\"\"command\"\":{\"\"type\"\":\"\"string\"\",\"\"description\"\":\"\"Shell command to execute\"\"}},\"\"required\"\":[\"\"command\"\"]}}}],\"\"stream\"\":false}')",
+      "Bash(python -m json.tool:*)",
+      "Bash(curl:*)",
+      "Bash(wmic:*)"
     ]
   }
 }

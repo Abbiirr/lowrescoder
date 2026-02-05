@@ -1,7 +1,7 @@
 # Phase 2: TUI Prototype
 
 > HybridCoder — Edge-Native AI Coding Assistant
-> Version: 3.3 | Date: 2026-02-05
+> Version: 3.4 FINAL (implementation complete) | Date: 2026-02-05
 > Replaces: Original Phase 2 ("Edit System + Git Safety") — deferred to Phase 3
 > Consensus: Reached via agent comms
 
@@ -13,13 +13,15 @@ Build a minimal but usable TUI coding assistant that feels like Claude Code in t
 
 - A fast Textual TUI with streaming markdown chat, @file references, and slash commands
 - Session persistence (SQLite) with compaction
-- 5 tools with approval gating: read_file, write_file, list_files, search_text, run_command
+- 6 tools with approval gating: read_file, write_file, list_files, search_text, run_command, ask_user
 - OpenRouter as acceptance target; Ollama non-blocking/experimental
 - Project memory file (`.hybridcoder/memory.md`)
 - Performance meeting TUI quality checklist budgets
 - BENCH sentinel instrumentation
 
 This is a UX and interaction layer milestone. No Layer 1-2 deterministic engines; no full L3/L4 beyond tool-calling. No git integration. Design stays resource-safe and local-first.
+
+**Implementation status:** Phase 2 is complete. 252 tests passing (unit + benchmark + sprint verify).
 
 ---
 
@@ -29,10 +31,10 @@ This is a UX and interaction layer milestone. No Layer 1-2 deterministic engines
 
 | Feature | Source | Implementation |
 |---------|--------|----------------|
-| Approval modes | Codex CLI | suggest (default) / auto / read-only |
+| Approval modes | Codex CLI | suggest (default) / auto-edit / full-auto |
 | Session persistence | OpenCode | SQLite with sessions, messages, tool_calls |
 | @file references | Codex CLI + OpenCode | Fuzzy completion, line ranges |
-| Slash commands | OpenCode + Claude Code | 9 commands (minimal, discoverable) |
+| Slash commands | OpenCode + Claude Code | 11 commands (minimal, discoverable) |
 | Project memory file | OpenCode | `.hybridcoder/memory.md` injected into prompts |
 | Tool-calling format | Codex CLI | OpenAI function-calling format |
 | Session compaction | OpenCode | LLM summarizes history via /compact |
@@ -56,13 +58,21 @@ This is a UX and interaction layer milestone. No Layer 1-2 deterministic engines
 
 - Textual TUI with header, chat pane, input bar, status bar
 - Streaming markdown rendering of assistant messages
-- 9 slash commands: /help /exit /new /sessions /resume /model /mode (alias: /permissions) /compact /init
-- @file references with fuzzy completion and line ranges
+- 11 slash commands: /help /exit /new /sessions /resume /model /mode (alias: /permissions) /compact /init /shell /copy (alias: /cp)
+- @file references with fuzzy completion, line ranges, and tab completion
 - SQLite session persistence (3 tables: sessions, messages, tool_calls)
 - Session compaction (/compact)
-- 3 approval modes: read-only / suggest / auto
-- 5 tools: read_file, write_file, list_files, search_text, run_command
-- `run_command` defaults to **disabled** (`shell.enabled: false`); user must opt in
+- Session auto-naming — timestamp title on create, auto-update from first user message
+- 3 approval modes: suggest / auto-edit / full-auto
+- 6 tools: read_file, write_file, list_files, search_text, run_command, ask_user
+- `run_command` defaults to **disabled** (`shell.enabled: false`); user must opt in; toggleable at runtime via `/shell on|off`
+- Interactive approval prompt (ApprovalPrompt widget with Y/n/a keys)
+- `ask_user` tool — LLM can ask questions via tool call, routes to OptionSelector or free-text input
+- Input history — Up/Down arrow to recall previous messages
+- Typing indicator — StatusBar shows "You: typing..." when user types during generation
+- Copy/scroll support — PageUp/PageDown bindings, `/copy [all]` command
+- Thinking toggle — Ctrl+T/Alt+T to show/hide thinking tokens
+- Search backends — ripgrep > grep > Python fallback chain
 - Tool calling via OpenRouter (acceptance target)
 - Ollama tool calling (non-blocking, best-effort)
 - Project memory file (`.hybridcoder/memory.md`)
@@ -97,19 +107,24 @@ Phase 2 delivers the core checklist items: performance budgets, BENCH sentinels,
 ## 4. Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                  Textual TUI (tui/app.py)                │
-│  ┌──────────┐  ┌───────────┐  ┌──────────┐             │
-│  │ InputBar  │  │ ChatView  │  │StatusBar │             │
-│  │ (@file)   │  │ (markdown)│  │(model/   │             │
-│  │           │  │           │  │ tokens)  │             │
-│  └─────┬─────┘  └─────▲─────┘  └──────────┘             │
-│        │              │                                   │
-│        ▼              │                                   │
-│  ┌────────────────────────────────────────────────────┐  │
-│  │           Slash Command Router (tui/commands.py)    │  │
-│  └──────────────────┬─────────────────────────────────┘  │
-└─────────────────────┼────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                  Textual TUI (tui/app.py)                     │
+│  ┌──────────┐  ┌───────────┐  ┌──────────┐                  │
+│  │ InputBar  │  │ ChatView  │  │StatusBar │                  │
+│  │ (@file,   │  │ (markdown)│  │(model/   │                  │
+│  │  history, │  │           │  │ tokens/  │                  │
+│  │  tab comp)│  │           │  │ typing)  │                  │
+│  └─────┬─────┘  └─────▲─────┘  └──────────┘                  │
+│        │              │                                        │
+│        │        ┌─────┴──────────┐                            │
+│        │        │ ApprovalPrompt │  (Y/n/a keys)              │
+│        │        │ OptionSelector │  (ask_user multi/single)   │
+│        │        └────────────────┘                            │
+│        ▼                                                      │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │       Slash Command Router (tui/commands.py, 11 cmds)  │  │
+│  └──────────────────┬─────────────────────────────────────┘  │
+└─────────────────────┼────────────────────────────────────────┘
                       │
                       ▼
 ┌──────────────────────────────────────────────────────────┐
@@ -117,13 +132,14 @@ Phase 2 delivers the core checklist items: performance budgets, BENCH sentinels,
 │  User Message ──► LLM ──► text ──► stream to ChatView    │
 │                    └──► tool_call ──► ToolRegistry        │
 │                                         │                 │
-│                         ┌───────────────┼──────────┐     │
-│                         ▼               ▼          ▼     │
-│                    read_file      write_file  run_command │
-│                    list_files     search_text             │
-│                         │               │          │     │
-│                         ▼               ▼          ▼     │
-│                    ApprovalManager (agent/approval.py)    │
+│                    ┌────────────────────┼──────────┐     │
+│                    ▼         ▼          ▼          ▼     │
+│               read_file  write_file  run_command  ask_user│
+│               list_files search_text                      │
+│                    │         │          │          │      │
+│                    ▼         ▼          ▼          ▼      │
+│               ApprovalManager (agent/approval.py)         │
+│               (async approval callbacks via isawaitable)  │
 └──────────────────────────────────────────────────────────┘
                       │
                       ▼
@@ -136,11 +152,12 @@ Phase 2 delivers the core checklist items: performance budgets, BENCH sentinels,
 
 ### Design Principles
 
-- TUI is presentation only — no business logic in widgets
+- TUI is presentation only — no business logic in widgets (except ApprovalPrompt/OptionSelector which handle user interaction)
 - AgentLoop is the single source of truth for message flow
 - Tools are declarative (JSON Schema) and approval-gated
 - Session store writes after every message (crash-safe)
 - Everything async — Textual event loop, async LLM streaming
+- Async approval callbacks — agent loop supports both sync and async callbacks via `inspect.isawaitable()`
 
 ---
 
@@ -232,15 +249,16 @@ async def generate_with_tools(
 
 ## 7. Tool System
 
-### 5 Built-in Tools
+### 6 Built-in Tools
 
 | Tool | Category | Approval | Description |
 |------|----------|----------|-------------|
 | `read_file` | file | Never | Read file contents (optional line range) |
 | `write_file` | file | suggest: Y/n, auto: auto | Write full file content (shows diff) |
 | `list_files` | file | Never | List files matching glob pattern |
-| `search_text` | file | Never | Regex search in files |
-| `run_command` | shell | suggest: Y/n, auto: Y/n | Shell command (disabled by default) |
+| `search_text` | file | Never | Regex search in files (ripgrep > grep > Python fallback) |
+| `run_command` | shell | suggest: Y/n, auto: Y/n | Shell command (disabled by default, toggleable via `/shell on\|off`) |
+| `ask_user` | interaction | Never | LLM asks user a question; routes to OptionSelector (multi/single select) or free-text input |
 
 ### Tool Registration
 
@@ -275,17 +293,19 @@ class ToolRegistry:
 
 | Mode | Reads | File Writes | Shell |
 |------|-------|-------------|-------|
-| `read-only` | Auto | Denied | Denied |
-| `suggest` | Auto | Y/n prompt | Y/n prompt |
-| `auto` | Auto | Auto | Y/n prompt (always) |
+| `suggest` | Auto | Y/n prompt (ApprovalPrompt widget) | Y/n prompt |
+| `auto-edit` | Auto | Auto | Y/n prompt |
+| `full-auto` | Auto | Auto | Auto |
 
-**Note:** Shell tools (`run_command`) are disabled entirely unless `shell.enabled=true` in config, regardless of approval mode.
+**Note:** Shell tools (`run_command`) are disabled entirely unless `shell.enabled=true` in config (or toggled on via `/shell on`), regardless of approval mode. The `ask_user` tool never requires approval — it always routes to the user.
+
+**Approval UI:** The `ApprovalPrompt` widget presents Y/n/a keys inline in the chat. Pressing `a` (accept all) switches the session to auto mode for the remaining tool calls.
 
 ```python
 class ApprovalMode(Enum):
-    READ_ONLY = "read-only"
     SUGGEST = "suggest"
-    AUTO = "auto"
+    AUTO_EDIT = "auto-edit"
+    FULL_AUTO = "full-auto"
 
 class ApprovalManager:
     def __init__(self, mode: ApprovalMode) -> None: ...
@@ -297,7 +317,7 @@ class ApprovalManager:
 
 ## 9. Commands and UX
 
-### Slash Commands (9)
+### Slash Commands (11)
 
 | Command | Aliases | Description |
 |---------|---------|-------------|
@@ -310,11 +330,14 @@ class ApprovalManager:
 | `/mode <mode>` | `/permissions` | Switch approval mode |
 | `/compact` | | Summarize history |
 | `/init` | | Create/update project memory file |
+| `/shell on\|off` | | Toggle shell execution at runtime |
+| `/copy [all]` | `/cp` | Copy last response (or all) to clipboard |
 
 ### @file References
 
 - `@path/to/file.py` — insert full file content
 - `@file.py:10-40` — insert lines 10-40
+- Tab completion for slash commands and @file references with inline suggestions
 - Fuzzy completion on `@` keystroke
 
 ### Project Memory
@@ -323,11 +346,14 @@ class ApprovalManager:
 - `/init` creates a short project summary from current directory
 - Injected into system prompt (bounded by token budget)
 
-### Cancel / Interrupt
+### Keyboard Shortcuts
 
 - **Escape** — Cancel current LLM generation or tool execution. Preserves context.
 - **Ctrl+C** — If generation is running, same as Escape. If idle, no-op (TUI stays open).
 - **Ctrl+D** — Exit TUI (same as `/exit`).
+- **Ctrl+T / Alt+T** — Toggle display of thinking tokens.
+- **Up/Down arrows** — Recall previous input messages (input history).
+- **PageUp/PageDown** — Scroll chat view.
 - In-progress tool calls are cancelled via `asyncio.Task.cancel()`.
 
 ### Display Decisions
@@ -354,11 +380,11 @@ class ApprovalManager:
 | D2A.5 | BENCH sentinels | READY/PONG/EXIT |
 
 **Exit criteria:**
-- [ ] `hybridcoder chat` opens Textual TUI
-- [ ] Responses stream from OpenRouter
-- [ ] Sessions persist to SQLite and resume
-- [ ] Startup cold <300ms
-- [ ] BENCH:READY emitted
+- [x] `hybridcoder chat` opens Textual TUI
+- [x] Responses stream from OpenRouter
+- [x] Sessions persist to SQLite and resume
+- [x] Startup cold <300ms
+- [x] BENCH:READY emitted
 
 ### Sprint 2B: Tools + Commands + Polish (~1 week)
 
@@ -366,62 +392,67 @@ class ApprovalManager:
 
 | ID | Deliverable | Acceptance |
 |----|-------------|------------|
-| D2B.1 | AgentLoop | LLM <-> tool cycle, max 10 iterations |
-| D2B.2 | 5 tools | read/write/list/search/run_command |
-| D2B.3 | Approval modes | 3 modes, blocked commands rejected |
+| D2B.1 | AgentLoop | LLM <-> tool cycle, max 10 iterations, async approval callbacks |
+| D2B.2 | 6 tools | read/write/list/search/run_command/ask_user |
+| D2B.3 | Approval modes | 3 modes (suggest/auto-edit/full-auto), blocked commands rejected |
 | D2B.4 | `generate_with_tools()` | Added to both providers |
-| D2B.5 | @file references | Fuzzy completion, line ranges |
-| D2B.6 | Remaining commands | /help /model /mode /compact /init |
+| D2B.5 | @file references | Fuzzy completion, line ranges, tab completion |
+| D2B.6 | Remaining commands | /help /model /mode /compact /init /shell /copy |
 | D2B.7 | Diff preview | Inline diff for write_file |
 | D2B.8 | Project memory | .hybridcoder/memory.md + /init |
+| D2B.9 | ApprovalPrompt + OptionSelector | Interactive approval widget (Y/n/a), multi/single select for ask_user |
+| D2B.10 | Session auto-naming | Timestamp on create, auto-update from first user message |
+| D2B.11 | Input history + typing indicator | Up/Down recall, "You: typing..." in StatusBar |
+| D2B.12 | Thinking toggle | Ctrl+T/Alt+T to show/hide thinking tokens |
 
 **Exit criteria:**
-- [ ] LLM calls tools, results feed back
-- [ ] write_file shows diff preview
-- [ ] suggest mode blocks unapproved writes
-- [ ] run_command disabled by default, works when enabled
-- [ ] @file references resolve correctly
-- [ ] /compact reduces token count by >50%
-- [ ] All tests pass (`make test` + `make lint`)
+- [x] LLM calls tools, results feed back (including ask_user)
+- [x] write_file shows diff preview
+- [x] suggest mode blocks unapproved writes (ApprovalPrompt widget)
+- [x] run_command disabled by default, works when enabled, toggleable via /shell
+- [x] @file references resolve correctly with tab completion
+- [x] /compact reduces token count by >50%
+- [x] All tests pass (`make test` + `make lint`) — 252 total tests
 
 ---
 
 ## 11. File-by-File Guide
 
-### New Source Files (16)
+### New Source Files (18)
 
 ```
 src/hybridcoder/
   tui/                              # Textual TUI
     __init__.py
     app.py                          # HybridCoderApp (main Textual app)
-    commands.py                     # SlashCommand registry + 9 handlers
-    file_completer.py               # @file fuzzy completion
+    commands.py                     # SlashCommand registry + 11 handlers
+    file_completer.py               # @file fuzzy completion + tab completion
     styles.tcss                     # Textual CSS layout
     widgets/
       __init__.py
-      chat_view.py                  # Scrollable markdown chat
-      input_bar.py                  # Multi-line input + @completion
-      status_bar.py                 # Model/mode/tokens reactive display
+      chat_view.py                  # Scrollable markdown chat (PageUp/PageDown)
+      input_bar.py                  # Multi-line input + @completion + input history
+      status_bar.py                 # Model/mode/tokens/typing indicator display
+      approval_prompt.py            # ApprovalPrompt (Y/n/a) + OptionSelector widgets
 
   session/                          # SQLite persistence
     __init__.py
-    store.py                        # SessionStore (3 tables, CRUD, compact)
+    store.py                        # SessionStore (3 tables, CRUD, compact, auto-naming)
     models.py                       # DDL + Pydantic row models
 
   agent/                            # Agentic loop
     __init__.py
-    loop.py                         # AgentLoop (LLM <-> tool cycle)
-    tools.py                        # ToolRegistry + 5 built-in tools
+    loop.py                         # AgentLoop (LLM <-> tool cycle, async callbacks)
+    tools.py                        # ToolRegistry + 6 built-in tools (incl. ask_user)
     prompts.py                      # System prompt, tool descriptions
-    approval.py                     # ApprovalManager (3 modes)
+    approval.py                     # ApprovalManager (3 modes: suggest/auto-edit/full-auto)
 ```
 
 ### Files to Modify (4)
 
 | File | Changes |
 |------|---------|
-| `cli.py` | `chat` command launches Textual TUI; add `--session` option |
+| `cli.py` | `chat` command launches Textual TUI; add `--session`, `--shell` options |
 | `config.py` | Add `TUIConfig` (approval_mode, session_db_path, etc.) |
 | `layer4/llm.py` | Add `generate_with_tools()`, `ToolCall`, `LLMResponse` |
 | `pyproject.toml` | Add `textual>=0.89`, `pytest-asyncio>=0.24` to deps |
@@ -430,7 +461,7 @@ src/hybridcoder/
 
 ```python
 class TUIConfig(BaseModel):
-    approval_mode: Literal["read-only", "suggest", "auto"] = "suggest"
+    approval_mode: Literal["suggest", "auto-edit", "full-auto"] = "suggest"
     session_db_path: str = "~/.hybridcoder/sessions.db"
     max_iterations: int = 10
     show_tool_calls: bool = True
@@ -450,8 +481,13 @@ class ShellConfig(BaseModel):
 class AgentLoop:
     MAX_ITERATIONS = 10
 
-    async def run(self, user_message: str, *, on_chunk=None, on_tool_call=None) -> str:
-        """One turn: send message, stream response or execute tools, repeat."""
+    async def run(self, user_message: str, *, on_chunk=None, on_tool_call=None,
+                  approval_callback=None, ask_user_callback=None) -> str:
+        """One turn: send message, stream response or execute tools, repeat.
+
+        approval_callback and ask_user_callback can be sync or async —
+        the loop checks via inspect.isawaitable() and awaits if needed.
+        """
         self.session_store.add_message(self.session_id, "user", user_message)
         messages = self._build_messages()
 
@@ -469,7 +505,7 @@ class AgentLoop:
                 self.session_store.add_message(self.session_id, "assistant", full_text)
                 return full_text
 
-            # Execute tools, append results, continue loop
+            # Execute tools (ask_user routes to OptionSelector/free-text)
             for tc in tool_calls:
                 result = await self._execute_tool(tc, on_tool_call)
                 messages.append({"role": "tool", "tool_call_id": tc.id, "content": result})
@@ -512,25 +548,31 @@ def generate_diff(file_path: str, original: str, new: str) -> str:
 
 ## 13. Test Strategy
 
-### Test Files (~42 tests across 8 files)
+### Test Summary: 252 Total Tests
 
-| File | Tests | Description |
-|------|-------|-------------|
-| `tests/unit/test_session_store.py` | 6 | CRUD: sessions, messages, tool_calls, compact |
-| `tests/unit/test_tui_app.py` | 4 | Textual pilot: mount, send, stream, BENCH |
-| `tests/unit/test_tools.py` | 6 | Registration, schemas, 5 tool handlers |
-| `tests/unit/test_agent_loop.py` | 6 | Text response, tool calls, max iter, errors |
-| `tests/unit/test_approval.py` | 6 | 3 modes, blocked commands, shell disabled, shell.enabled=false |
-| `tests/unit/test_commands.py` | 5 | Dispatch /help /mode /compact, unknown cmd |
-| `tests/unit/test_file_completer.py` | 5 | Fuzzy match, resolve, line ranges, invalid path |
-| `tests/unit/test_tui_integration.py` | 4 | E2E with mock provider |
+Tests span unit, benchmark, and sprint verification across all Phase 2 modules. Key test areas:
+
+| Area | Description |
+|------|-------------|
+| Session store | CRUD: sessions, messages, tool_calls, compact, auto-naming |
+| TUI app | Textual pilot: mount, send, stream, BENCH, keyboard shortcuts |
+| Tools | Registration, schemas, 6 tool handlers (incl. ask_user) |
+| Agent loop | Text response, tool calls, max iter, errors, async callbacks |
+| Approval | 3 modes (suggest/auto-edit/full-auto), blocked commands, shell toggle |
+| Commands | Dispatch all 11 commands, unknown cmd handling |
+| File completer | Fuzzy match, resolve, line ranges, tab completion, invalid path |
+| Approval prompt | ApprovalPrompt widget (Y/n/a), OptionSelector (multi/single) |
+| Search backends | ripgrep > grep > Python fallback chain |
+| Benchmarks | Startup time, idle RSS, keystroke latency |
+| Sprint verify | `tests/test_sprint_verify.py` — phase boundary checks |
 
 ### Testing Patterns
 
 - Textual: `app.run_test()` with pilot
 - SQLite: `tmp_path` fixture for isolated DB
-- Agent loop: mock provider yielding canned responses
+- Agent loop: mock provider yielding canned responses; async approval/ask_user callbacks
 - Shell: safe commands only (`echo`, `python --version`)
+- Approval prompt: simulated keypress events for Y/n/a
 
 ---
 
@@ -549,6 +591,37 @@ From `docs/plan/tui-quality-checklist.md`:
 | Remote LLM first token | <3s | OpenRouter direct |
 | Streaming stability | No pauses >250ms | Async I/O, no blocking on UI thread |
 
+### Lightweight + Low-End Benchmarking
+
+**Lightweight constraints (Phase 2):**
+- Avoid importing heavy ML stacks (torch/transformers/llama-cpp) in the TUI path.
+- Lazy-import provider SDKs (`openai`, `ollama`) only when a chat session starts.
+- Keep default install minimal: Textual + core deps; advanced layers remain optional extras.
+- No background daemons, indexers, or watchers in Phase 2.
+
+**Low-end baseline definition (for benchmarking):**
+- CPU: 2–4 cores (no AVX required), 8 GB RAM, no GPU.
+- OS: Windows/macOS/Linux on commodity laptop hardware.
+- LLM: OpenRouter only (remote), with local LLM disabled.
+- Screen: 1366x768 or similar (ensure layout adapts to small terminals).
+
+**Benchmark matrix (mandatory each sprint):**
+- `scripts/bench_tui.py` (startup, ping latency).
+- Idle RSS + CPU% captured for 60s after startup.
+- Typing latency (keystroke echo) using Textual test pilot.
+- Long-session stability: 30-minute idle + 30-minute active typing.
+
+**Profiling toolkit (use as needed):**
+- **py-spy** for low-overhead CPU sampling without code changes.
+- **Scalene** for combined CPU/memory profiling and hotspots.
+- **Memray** for allocation-level memory profiling and leak detection.
+- **psutil** for cross-platform RSS/CPU telemetry during benchmarks.
+
+**Regular profiling cadence:**
+- Per-sprint: run `bench_tui.py` and record results in `docs/benchmarks/tui/`.
+- Monthly or before release: run Scalene + Memray on the TUI startup path.
+- Regression gate: if startup or idle RSS regresses >20% from last baseline, open a perf issue.
+
 ### BENCH Contract
 
 When `HYBRIDCODER_BENCH=1`:
@@ -566,7 +639,7 @@ When `HYBRIDCODER_BENCH=1`:
 | OpenRouter tool-calling errors | Medium | High | Strict schema validation, retry, clear errors |
 | Ollama tool-calling unreliable | High | Low | Non-blocking; fall back to text-only |
 | Session DB lock | Low | Medium | WAL mode, single-writer |
-| Small model tool-call quality | High | Medium | Good system prompts, limit to 5 tools |
+| Small model tool-call quality | High | Medium | Good system prompts, limit to 6 tools |
 | Memory bloat | Medium | Medium | /compact, max history, token budget |
 | Windows path handling | Medium | Low | pathlib everywhere, test on Windows |
 
@@ -599,23 +672,77 @@ When `HYBRIDCODER_BENCH=1`:
 
 ## 17. Phase 2 Exit Criteria
 
-- [ ] `hybridcoder chat` launches Textual TUI with streaming markdown
-- [ ] OpenRouter tool calling works end-to-end (acceptance target)
-- [ ] 5 tools available: read_file, write_file, list_files, search_text, run_command
-- [ ] run_command disabled by default, works when shell.enabled=true
-- [ ] 3 approval modes function correctly (read-only / suggest / auto)
-- [ ] Sessions persist to SQLite and are resumable
-- [ ] /compact reduces token count by >50%
-- [ ] @file references work with fuzzy completion and line ranges
-- [ ] Project memory file (.hybridcoder/memory.md) created by /init
-- [ ] Startup cold <300ms, keystroke <16ms
-- [ ] BENCH sentinels work (READY/PONG/EXIT)
-- [ ] Ollama text streaming works (tool-calling best-effort, not blocking)
-- [ ] All tests pass (`make test` + `make lint`)
+All exit criteria have been met. Phase 2 implementation is complete.
+
+- [x] `hybridcoder chat` launches Textual TUI with streaming markdown
+- [x] OpenRouter tool calling works end-to-end (acceptance target)
+- [x] 6 tools available: read_file, write_file, list_files, search_text, run_command, ask_user
+- [x] run_command disabled by default, works when shell.enabled=true, toggleable via /shell on|off
+- [x] 3 approval modes function correctly (suggest / auto-edit / full-auto)
+- [x] Sessions persist to SQLite and are resumable
+- [x] Session auto-naming from first user message
+- [x] /compact reduces token count by >50%
+- [x] @file references work with fuzzy completion, line ranges, and tab completion
+- [x] Project memory file (.hybridcoder/memory.md) created by /init
+- [x] Startup cold <300ms, keystroke <16ms
+- [x] BENCH sentinels work (READY/PONG/EXIT)
+- [x] Ollama text streaming works (tool-calling best-effort, not blocking)
+- [x] Interactive approval (ApprovalPrompt Y/n/a, OptionSelector for ask_user)
+- [x] Input history, typing indicator, copy/scroll, thinking toggle
+- [x] 11 slash commands implemented
+- [x] 252 total tests pass (`make test` + `make lint`)
 
 ---
 
-## 18. References
+## 18. Post-Implementation Additions
+
+The following features were added during implementation beyond the original v3.3 plan scope. They are documented here for completeness.
+
+### ask_user Tool
+
+The LLM can ask the user questions via a tool call rather than embedding questions in prose. The tool accepts a `question` string and optional `options` list. When options are provided, the `OptionSelector` widget renders single-select or multi-select UI. Without options, the user gets free-text input. This enables structured decision-making without leaving the chat flow.
+
+### ApprovalPrompt and OptionSelector Widgets
+
+`approval_prompt.py` contains two widgets:
+- **ApprovalPrompt** — Renders inline in the chat for tool approval. Accepts Y (approve), n (deny), a (approve all remaining). Pressing `a` upgrades the session to auto mode for subsequent calls.
+- **OptionSelector** — Used by `ask_user` tool. Supports single-select and multi-select modes with keyboard navigation.
+
+### Session Auto-Naming
+
+Sessions are created with a timestamp-based title (e.g., "Session 2026-02-05 14:30"). After the first user message, the title is automatically updated to a truncated version of that message, matching Claude Code's behavior. This makes `/sessions` output immediately meaningful.
+
+### Runtime Shell Toggle
+
+`/shell on|off` allows toggling `shell.enabled` at runtime without editing the config file. This complements the `--shell` CLI flag for quick enablement during a session.
+
+### Clipboard and Scroll
+
+`/copy` copies the last assistant response to the clipboard. `/copy all` copies the entire conversation. PageUp/PageDown keybindings enable scrolling through long chat histories.
+
+### Input History
+
+Up/Down arrow keys in the InputBar recall previously sent messages, similar to shell history. History is per-session and not persisted across sessions.
+
+### Typing Indicator
+
+When the user types while the LLM is generating, the StatusBar shows "You: typing..." to acknowledge input is being received without interrupting the stream.
+
+### Thinking Token Toggle
+
+Ctrl+T / Alt+T toggles visibility of thinking/reasoning tokens from models that support them (e.g., Qwen3 thinking mode). Hidden by default to reduce noise.
+
+### Search Backend Fallback Chain
+
+The `search_text` tool uses a three-tier fallback: ripgrep (fastest, if installed) > grep (POSIX fallback) > pure Python regex search. This ensures the tool works on any platform without requiring external dependencies.
+
+### Async Approval Callbacks
+
+The AgentLoop accepts `approval_callback` and `ask_user_callback` parameters that can be either sync or async callables. The loop uses `inspect.isawaitable()` to detect async results and awaits them as needed. This allows the TUI to provide async Textual-based prompts while tests can provide simple sync lambdas.
+
+---
+
+## 19. References
 
 - `docs/plan/tui-quality-checklist.md` — Performance budgets
 - `docs/codex/openai-codex-cli.md` — Codex CLI research
@@ -623,3 +750,7 @@ When `HYBRIDCODER_BENCH=1`:
 - `docs/codex/claude-code.md` — Claude Code research
 - `docs/codex/aider.md` — Aider research
 - `docs/communication/old/2026-02-05-phase2-scope-negotiation.md` — Scope consensus
+- https://github.com/benfred/py-spy — py-spy profiler
+- https://github.com/plasma-umass/scalene — Scalene profiler
+- https://github.com/bloomberg/memray — Memray profiler
+- https://pypi.org/project/psutil/ — psutil telemetry

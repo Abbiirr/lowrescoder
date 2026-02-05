@@ -142,12 +142,24 @@ def _get_version() -> str:
 @app.command()
 def chat(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
+    session: str | None = typer.Option(None, "--session", "-s", help="Resume a session by ID"),
+    alternate_screen: bool = typer.Option(False, "--alternate-screen", help="Use alternate screen"),
+    legacy: bool = typer.Option(False, "--legacy", help="Use legacy Rich REPL instead of TUI"),
 ) -> None:
     """Start an interactive chat session."""
     config = load_config()
     if verbose:
         config.ui.verbose = True
-    asyncio.run(_chat_loop(config))
+
+    if legacy:
+        asyncio.run(_chat_loop(config))
+        return
+
+    from hybridcoder.tui.app import HybridCoderApp
+
+    use_inline = not (alternate_screen or config.tui.alternate_screen)
+    tui_app = HybridCoderApp(config=config, session_id=session or None)
+    tui_app.run(inline=use_inline)
 
 
 @app.command()

@@ -267,9 +267,99 @@ class TestSprint1CoreTypes:
 
 
 # ============================================================
-# Sprint 2+: Add sections below as sprints are completed
+# Sprint 2: Phase 2 — TUI Prototype
 # ============================================================
 
-# class TestSprint2EditSystem:
-#     """S2: Edit system verification."""
-#     pass
+
+class TestSprint2TUI:
+    """S2.1: TUI app imports and constructs."""
+
+    def test_tui_app_constructs(self, tmp_path: Path) -> None:
+        from hybridcoder.config import HybridCoderConfig
+        from hybridcoder.tui.app import HybridCoderApp
+
+        config = HybridCoderConfig()
+        config.tui.session_db_path = str(tmp_path / "test.db")
+        app = HybridCoderApp(config=config)
+        assert app is not None
+        assert app.config is config
+
+    def test_tui_widgets_importable(self) -> None:
+        from hybridcoder.tui.widgets import ChatView, InputBar, StatusBar
+
+        assert ChatView is not None
+        assert InputBar is not None
+        assert StatusBar is not None
+
+
+class TestSprint2Session:
+    """S2.2: SessionStore creates DB and tables."""
+
+    def test_session_store_creates_tables(self, tmp_path: Path) -> None:
+        from hybridcoder.session.store import SessionStore
+
+        store = SessionStore(tmp_path / "test.db")
+        # Tables should exist
+        cursor = store._conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        )
+        tables = {row[0] for row in cursor.fetchall()}
+        assert "sessions" in tables
+        assert "messages" in tables
+        assert "tool_calls" in tables
+        store.close()
+
+
+class TestSprint2Tools:
+    """S2.3: ToolRegistry registers 6 tools."""
+
+    def test_six_tools_registered(self) -> None:
+        from hybridcoder.agent.tools import create_default_registry
+
+        registry = create_default_registry()
+        tools = registry.get_all()
+        names = {t.name for t in tools}
+        assert names == {
+            "read_file", "write_file", "list_files",
+            "search_text", "run_command", "ask_user",
+        }
+
+
+class TestSprint2Agent:
+    """S2.4: AgentLoop constructs with mock provider."""
+
+    def test_agent_loop_constructs(self, tmp_path: Path) -> None:
+        from unittest.mock import AsyncMock
+
+        from hybridcoder.agent.approval import ApprovalManager, ApprovalMode
+        from hybridcoder.agent.loop import AgentLoop
+        from hybridcoder.agent.tools import ToolRegistry
+        from hybridcoder.session.store import SessionStore
+
+        store = SessionStore(tmp_path / "test.db")
+        sid = store.create_session(title="T", model="m", provider="p")
+        loop = AgentLoop(
+            provider=AsyncMock(),
+            tool_registry=ToolRegistry(),
+            approval_manager=ApprovalManager(ApprovalMode.SUGGEST),
+            session_store=store,
+            session_id=sid,
+        )
+        assert loop.MAX_ITERATIONS == 10
+        store.close()
+
+
+class TestSprint2Commands:
+    """S2.5: All 12 slash commands registered."""
+
+    def test_all_commands_registered(self) -> None:
+        from hybridcoder.tui.commands import create_default_router
+
+        router = create_default_router()
+        commands = router.get_all()
+        names = {c.name for c in commands}
+        expected = {
+            "exit", "new", "sessions", "resume", "help",
+            "model", "mode", "compact", "init", "shell", "copy", "freeze",
+        }
+        assert names == expected
