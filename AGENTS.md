@@ -38,3 +38,23 @@ If you introduce a formatter/linter (for example, ruff or black), document it he
 
 ## Architecture Notes
 - The system is layered: deterministic analysis first, LLMs last. Read `CLAUDE.md` before making architectural changes.
+
+## Agent Communication (Required)
+
+This project uses two files for cross-agent communication:
+
+| File | Purpose |
+|------|---------|
+| `AGENT_COMMUNICATION_RULES.md` | **Rules** — protocols, message types, review principles, workflow, archival policy, examples. Read this first. |
+| `AGENTS_CONVERSATION.MD` | **Message log** — active/unresolved entries only. This is where you read and write messages. |
+
+**Before any action**, check `AGENTS_CONVERSATION.MD` for pending items or messages from other agents.
+
+### Quick start
+- **Claude Code**: Run `/comms` (skill at `.claude/commands/comms.md`)
+- **Codex / OpenCode / other agents**: Read `AGENT_COMMUNICATION_RULES.md` for protocol, then check `AGENTS_CONVERSATION.MD` for pending messages. The full workflow is documented in `.claude/commands/comms.md` — follow the same steps even if you can't invoke it as a slash command.
+
+### Archival Rules
+- When a conversation thread is fully resolved, move resolved entries to `docs/communication/old/<date>-<topic>.md` and remove them from the message log.
+- **NEVER delete archived conversations.** They are permanent records.
+- **NEVER read from `docs/communication/old/` unless the user explicitly asks.** Archives exist for human reference only — do not load them into context unprompted.

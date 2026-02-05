@@ -19,6 +19,16 @@ You are the developer. I am a tool to accelerate your work, not replace your jud
 
 **HybridCoder** is a local-first AI coding assistant CLI that aims to achieve Claude Code-level performance while running on consumer hardware (7-11B parameter models).
 
+### Market Positioning: Edge-Native AI Coding
+
+**This project MUST stand out from the market.** The core competitive advantage is:
+
+1. **Ultra-Low Resource Usage** - Runs on consumer hardware (8GB VRAM, 16GB RAM) where competitors require cloud APIs or 70B+ parameter models
+2. **Edge Computing First** - ALL intelligence runs locally on the user's machine. No cloud dependency, no API costs, no data leaves the device. This is not a "local mode" bolted onto a cloud product — edge computing IS the product.
+3. **Deterministic-First Architecture** - 60-80% of operations use zero LLM tokens. Classical AI (tree-sitter, LSP, static analysis) handles what it can; LLMs handle only what it can't. No competitor does this.
+
+**Why this matters:** As AI coding tools become commoditized, the winners will be those that work everywhere — on laptops without internet, on air-gapped corporate networks, on developer machines in regions with poor cloud connectivity, and for developers who refuse to send proprietary code to third-party servers. HybridCoder is built for ALL of these scenarios from day one.
+
 ### Key Differentiator
 The system uses **deterministic classical AI techniques as the primary intelligence layer**, invoking LLMs only when necessary. This is the opposite of how most AI coders work.
 
@@ -150,3 +160,20 @@ See `docs/plan.md` for complete phase details and deliverables.
 - `docs/plan.md` - Full product roadmap and requirements specification
 - `docs/spec.md` - System specification with MVP acceptance checklist
 - Project rules can be placed in `.rules/` directory
+
+## Agent Communication (Required)
+
+This project uses two files for cross-agent communication:
+
+| File | Purpose |
+|------|---------|
+| `AGENT_COMMUNICATION_RULES.md` | **Rules** — protocols, message types, review principles, workflow, archival policy, examples. Read this first. |
+| `AGENTS_CONVERSATION.MD` | **Message log** — active/unresolved entries only. This is where you read and write messages. |
+
+**Before any action**, check `AGENTS_CONVERSATION.MD` for pending items or messages from other agents.
+
+### Archival Rules
+- When a conversation thread is fully resolved, move resolved entries to `docs/communication/old/<date>-<topic>.md` and remove them from the message log.
+- **NEVER delete archived conversations.** They are permanent records.
+- **NEVER read from `docs/communication/old/` unless the user explicitly asks.** Archives exist for human reference only — do not load them into context unprompted.
+
