@@ -1,4 +1,8 @@
-"""Inline REPL using Rich + prompt_toolkit."""
+"""Inline REPL using Rich + prompt_toolkit.
+
+Claude Code-style sequential REPL: output streams above, prompt appears after.
+Bottom toolbar shows model/mode/tokens/edits. Thinking hidden by default.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +13,7 @@ from typing import Any
 from prompt_toolkit import PromptSession
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.history import FileHistory
+from prompt_toolkit.key_binding import KeyBindings
 from rich.console import Console
 
 from hybridcoder.agent.approval import ApprovalManager, ApprovalMode
@@ -29,6 +34,9 @@ class InlineApp:
     This is the canonical rendering mode for HybridCoder.
     Output goes to stdout (becomes terminal scrollback).
     Input handled by prompt_toolkit (async readline with completion).
+
+    Sequential model: prompt -> process -> output -> prompt.
+    No concurrent streaming+input (deferred to Phase 5).
     """
 
     def __init__(
@@ -74,6 +82,12 @@ class InlineApp:
         self._agent_loop: AgentLoop | None = None
         self._session_titled: bool = False
         self._interrupt_count: int = 0
+
+        # Thinking visibility (hidden by default, matching Claude Code)
+        self._show_thinking: bool = False
+
+        # Session-level auto-approve tracking
+        self._session_approved_tools: set[str] = set()
 
         # Stats tracking
         self._total_tokens: int = 0
@@ -138,6 +152,15 @@ class InlineApp:
         if self._approval_manager:
             self._approval_manager.shell_config.enabled = value
 
+    @property
+    def show_thinking(self) -> bool:
+        """Whether thinking tokens are visible."""
+        return self._show_thinking
+
+    @show_thinking.setter
+    def show_thinking(self, value: bool) -> None:
+        self._show_thinking = value
+
     # --- Lifecycle ---
 
     def _get_status_text(self) -> str:
@@ -161,20 +184,21 @@ class InlineApp:
 
         return " | ".join(parts)
 
-    def _get_bottom_toolbar(self) -> str:
-        """Bottom toolbar styled as closing border with status info.
+    def _create_key_bindings(self) -> KeyBindings:
+        """Create custom key bindings for the REPL."""
+        kb = KeyBindings()
 
-        Renders: ╰─ Model: ... | Mode: ... ──────────
-        """
-        import shutil
+        @kb.add("s-tab")
+        def _cycle_mode(event: Any) -> None:
+            """Shift+Tab cycles approval modes."""
+            modes = ["read-only", "suggest", "auto"]
+            current = self.approval_mode
+            idx = modes.index(current) if current in modes else 0
+            self.approval_mode = modes[(idx + 1) % len(modes)]
+            # Invalidate toolbar to show new mode
+            event.app.invalidate()
 
-        status = self._get_status_text()
-        try:
-            width = min(shutil.get_terminal_size().columns, 120)
-        except (ValueError, OSError):
-            width = 80
-        fill_len = max(0, width - len(status) - 4)
-        return f"╰─ {status} {'─' * fill_len}"
+        return kb
 
     def _ensure_prompt_session(self) -> PromptSession[str]:
         """Create PromptSession lazily (avoids terminal detection during tests)."""
@@ -187,12 +211,24 @@ class InlineApp:
                 auto_suggest=self.auto_suggest,
                 multiline=False,
                 complete_while_typing=False,
-                bottom_toolbar=self._get_bottom_toolbar,
+                bottom_toolbar=self._get_status_text,
+                key_bindings=self._create_key_bindings(),
             )
         return self.session
 
     async def run(self) -> None:
-        """Main REPL loop. Blocks until /exit or Ctrl+D."""
+        """Main REPL loop. Blocks until /exit or Ctrl+D.
+
+        Flow:
+            Welcome banner + separator
+            Loop:
+              ❯ [user types]
+              [streaming response...]
+              [tool] read_file ✓
+              [formatted response]
+              ─────────────────────
+              ❯ [next prompt]
+        """
         prompt_session = self._ensure_prompt_session()
         self.renderer.print_welcome(
             model=self.config.llm.model,
@@ -200,21 +236,25 @@ class InlineApp:
             mode=self.config.tui.approval_mode,
         )
 
-        # Styled prompt with left border (Claude Code-style input box)
-        input_prompt = FormattedText([
-            ("fg:ansibrightblack", "│ "),
-            ("fg:ansigreen bold", "❯ "),
-        ])
+        input_prompt = FormattedText(
+            [
+                ("fg:ansibrightblack", "│ "),
+                ("fg:ansigreen bold", "❯ "),
+            ]
+        )
 
         while True:
             try:
-                self.console.print()  # Gap before input box
                 self.renderer.print_input_border(top=True)
                 text = await prompt_session.prompt_async(input_prompt)
+                self.renderer.print_input_border(top=False)
+
                 if not text.strip():
                     continue
                 self._interrupt_count = 0
                 await self._handle_input(text.strip())
+                # Separator AFTER response, before next prompt
+                self.renderer.print_turn_separator()
             except EOFError:
                 break
             except KeyboardInterrupt:
@@ -312,11 +352,14 @@ class InlineApp:
         # Start streaming
         self.renderer.start_streaming()
 
+        # Conditionally pass thinking callback based on _show_thinking
+        on_thinking = self.renderer.print_thinking if self._show_thinking else None
+
         try:
             await agent_loop.run(
                 user_message,
                 on_chunk=self.renderer.stream_chunk,
-                on_thinking_chunk=self.renderer.print_thinking,
+                on_thinking_chunk=on_thinking,
                 on_tool_call=self._on_tool_call,
                 approval_callback=self._approval_prompt,
                 ask_user_callback=self._ask_user_prompt,
@@ -344,7 +387,10 @@ class InlineApp:
     # --- Interactive prompts ---
 
     async def _arrow_select(
-        self, title: str, options: list[str], default_index: int = 0,
+        self,
+        title: str,
+        options: list[str],
+        default_index: int = 0,
     ) -> str | None:
         """Arrow-key selector for options. Returns selected value or None on cancel.
 
@@ -352,7 +398,7 @@ class InlineApp:
         Enter accepts, Escape cancels.
         """
         from prompt_toolkit.application import Application
-        from prompt_toolkit.key_binding import KeyBindings
+        from prompt_toolkit.key_binding import KeyBindings as SelectKB
         from prompt_toolkit.layout import Layout
         from prompt_toolkit.layout.containers import Window
         from prompt_toolkit.layout.controls import FormattedTextControl
@@ -371,7 +417,7 @@ class InlineApp:
                     result.append(("", "\n"))
             return result
 
-        kb = KeyBindings()
+        kb = SelectKB()
 
         @kb.add("up")
         def _up(event: Any) -> None:
@@ -390,14 +436,18 @@ class InlineApp:
         def _cancel(event: Any) -> None:
             event.app.exit(result=None)
 
-        layout = Layout(Window(
-            FormattedTextControl(get_text),
-            dont_extend_height=True,
-        ))
-        style = Style.from_dict({
-            "highlight": "bold fg:ansigreen",
-            "option": "fg:ansibrightblack",
-        })
+        layout = Layout(
+            Window(
+                FormattedTextControl(get_text),
+                dont_extend_height=True,
+            )
+        )
+        style = Style.from_dict(
+            {
+                "highlight": "bold fg:ansigreen",
+                "option": "fg:ansibrightblack",
+            }
+        )
 
         app: Application[str | None] = Application(
             layout=layout,
@@ -417,11 +467,22 @@ class InlineApp:
         return result
 
     async def _approval_prompt(self, tool_name: str, arguments: dict[str, Any]) -> bool:
-        """Show arrow-key approval selector."""
+        """Show arrow-key approval selector.
+
+        Options: Yes / Yes, this session / No
+        'Yes, this session' auto-approves that tool type for rest of session.
+        """
+        # Check session-level auto-approve
+        if tool_name in self._session_approved_tools:
+            self.renderer.print_tool_call(tool_name, "pending", "(auto-approved)")
+            return True
+
         self.renderer.print_approval_context(tool_name, arguments)
 
         result = await self._arrow_select(
-            "Allow?", ["Yes", "No", "Always"], default_index=0,
+            "Allow?",
+            ["Yes", "Yes, this session", "No"],
+            default_index=0,
         )
 
         if result is None or result == "No":
@@ -433,7 +494,8 @@ class InlineApp:
                 self._approval_manager.enable_shell()
             return True
 
-        if result == "Always":
+        if result == "Yes, this session":
+            self._session_approved_tools.add(tool_name)
             if self._approval_manager:
                 self._approval_manager.enable_shell()
             return True
@@ -441,7 +503,10 @@ class InlineApp:
         return False
 
     async def _ask_user_prompt(
-        self, question: str, options: list[str], allow_text: bool,
+        self,
+        question: str,
+        options: list[str],
+        allow_text: bool,
     ) -> str:
         """Show question with arrow-key option selection or free-text input."""
         if options:

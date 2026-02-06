@@ -568,6 +568,16 @@ class HybridCoderApp(App[None]):
         if self._approval_manager:
             self._approval_manager.shell_config.enabled = value
 
+    @property
+    def show_thinking(self) -> bool:
+        """AppContext: Whether thinking tokens are visible."""
+        return self._show_thinking
+
+    @show_thinking.setter
+    def show_thinking(self, value: bool) -> None:
+        """AppContext: Toggle thinking visibility."""
+        self._show_thinking = value
+
     async def action_quit(self) -> None:
         """Quit the application."""
         if os.environ.get("HYBRIDCODER_BENCH") == "1":

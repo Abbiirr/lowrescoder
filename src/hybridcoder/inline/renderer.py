@@ -1,4 +1,8 @@
-"""Rich-based terminal output for inline mode."""
+"""Rich-based terminal output for inline mode.
+
+Claude Code-style UX: main buffer, minimal chrome, full-width separators,
+compact tool calls, streaming tokens, dim thinking.
+"""
 
 from __future__ import annotations
 
@@ -12,7 +16,14 @@ from rich.table import Table
 
 
 class InlineRenderer:
-    """Rich-based terminal output for inline mode."""
+    """Rich-based terminal output for inline mode.
+
+    Follows Claude Code visual language:
+    - Full-width ─ separators between turns
+    - Compact ⏵ tool call one-liners
+    - Dim italic thinking (no <thinking> tags)
+    - Minimal chrome, no borders
+    """
 
     def __init__(self, console: Console | None = None) -> None:
         self.console = console or Console()
@@ -22,45 +33,66 @@ class InlineRenderer:
     # --- Startup/shutdown ---
 
     def print_welcome(self, model: str, provider: str, mode: str) -> None:
-        """Print startup banner with model, provider, approval mode."""
-        self.console.print(
-            f"[bold]HybridCoder[/bold] | Model: {model} | Provider: {provider} | Mode: {mode}"
-        )
+        """Print startup banner — clean info + separator, no ASCII art."""
+        from hybridcoder import __version__
+
+        self.console.print(f"[bold]HybridCoder[/bold] v{__version__}")
+        self.console.print(f"[dim]Model: {model} | Provider: {provider} | Mode: {mode}[/dim]")
         self.console.print("[dim]Type /help for commands, Ctrl+D to exit[/dim]")
-        self.console.print()
+        self.print_separator()
 
     def print_goodbye(self) -> None:
         """Print exit message."""
         self.console.print("[dim]Goodbye.[/dim]")
 
+    # --- Separators ---
+
+    def print_separator(self) -> None:
+        """Print full-width horizontal separator (Claude Code style)."""
+        self.console.print(f"[dim]{'─' * self.console.width}[/dim]")
+
+    def print_input_border(self, top: bool = True) -> None:
+        """Print input area border (Claude Code style).
+
+        Top: ╭───
+        Bottom: ╰───
+        """
+        # Cap width at 120 chars or console width, whichever is smaller
+        width = min(self.console.width, 120)
+        border_char = "╭" if top else "╰"
+        self.console.print(f"[dim]{border_char}{'─' * (width - 2)}[/dim]")
+
+    def print_turn_separator(self) -> None:
+        """Print separator + blank line between conversation turns."""
+        self.console.print()
+        self.print_separator()
+
     # --- Messages ---
 
     def print_user_message(self, text: str) -> None:
-        """Print user message with "> " prefix."""
+        """Print user message with > prefix."""
         self.console.print(f"[bold green]>[/bold green] {text}")
         self.console.print()
 
     def print_assistant_message(self, content: str) -> None:
         """Print completed assistant response as Rich Markdown."""
+        self.console.print()
         self.console.print(Markdown(content))
         self.console.print()
 
     def print_system(self, message: str) -> None:
-        """Print system message (command output, errors, info).
-
-        Renders as Markdown since command handlers produce Markdown-formatted
-        output (bold, italic, code, lists).
-        """
+        """Print system message as Rich Markdown."""
         self.console.print(Markdown(message))
 
     # --- Tool calls ---
 
     def print_tool_call(self, tool_name: str, status: str, result: str = "") -> None:
-        """Print tool call status line. Auto-ends thinking if active.
+        """Print compact tool call one-liner. Auto-ends thinking if active.
 
         Examples:
-            [tool] read_file: src/main.py ✓
-            [tool] run_command ✗ Permission denied
+            ⏵ read_file src/main.py ✓
+            ⏵ write_file src/auth.py ✓ (12 lines)
+            ⏵ run_command ls ✗ Permission denied
         """
         if self._thinking_buffer:
             self.end_thinking()
@@ -72,27 +104,24 @@ class InlineRenderer:
         else:
             icon = "[yellow]…[/yellow]"
 
-        line = f"[dim]\\[tool][/dim] {tool_name} {icon}"
+        line = f"[dim]⏵[/dim] {tool_name}"
         if result:
             line += f" [dim]{result[:100]}[/dim]"
+        line += f" {icon}"
         self.console.print(line)
 
     # --- Thinking tokens ---
 
     def print_thinking(self, content: str) -> None:
-        """Stream thinking tokens inline, dim styled."""
-        if not self._thinking_buffer:
-            # First thinking chunk — print a dim prefix
-            self.console.print("[dim italic]<thinking>[/dim italic]", highlight=False)
+        """Stream thinking tokens inline, dim italic. No <thinking> tags."""
         self._thinking_buffer.append(content)
-        self.console.print(content, end="", highlight=False, style="dim")
+        self.console.print(content, end="", highlight=False, style="dim italic")
 
     def end_thinking(self) -> str:
-        """End thinking stream with separator. Returns accumulated content."""
+        """End thinking stream. Returns accumulated content."""
         content = "".join(self._thinking_buffer)
         if content:
             self.console.print()  # End the last thinking line
-            self.console.print("[dim italic]</thinking>[/dim italic]", highlight=False)
             self.console.print()  # Blank line before response
         self._thinking_buffer = []
         return content
@@ -116,11 +145,17 @@ class InlineRenderer:
     # --- Approval context ---
 
     def print_approval_context(self, tool_name: str, arguments: dict[str, Any]) -> None:
-        """Print tool details before showing approval prompt."""
-        import json
+        """Print compact tool details before showing approval prompt.
 
-        self.console.print(f"[bold yellow]Tool:[/bold yellow] {tool_name}")
-        self.console.print(f"[dim]{json.dumps(arguments, indent=2)}[/dim]")
+        Example:
+            ⏵ write_file
+              path: src/auth.py
+              content: (47 lines)
+        """
+        self.console.print(f"[dim]⏵[/dim] [bold]{tool_name}[/bold]")
+        for key, value in arguments.items():
+            display_value = _truncate_arg(key, value)
+            self.console.print(f"  [dim]{key}:[/dim] {display_value}", highlight=False)
 
     # --- Sessions table ---
 
@@ -143,22 +178,22 @@ class InlineRenderer:
     # --- Status bar ---
 
     def print_status_bar(self, text: str) -> None:
-        """Print status info line above the input box."""
+        """Print status info line (dim text)."""
         self.console.print(f"[dim] {text}[/dim]")
 
-    # --- Input box ---
+    # --- Cost summary ---
 
-    def print_input_border(self, *, top: bool = True) -> None:
-        """Print input box border (top or bottom).
-
-        Creates a Claude Code-style framed input area:
-            ╭─────────────────────────
-            │ ❯ user types here
-            ╰─────────────────────────
-        """
-        width = min(self.console.width, 120)
-        corner = "╭" if top else "╰"
-        self.console.print(f"[dim]{corner}{'─' * (width - 1)}[/dim]")
+    def print_cost_summary(
+        self,
+        tokens_in: int,
+        tokens_out: int,
+        cost: float = 0.0,
+    ) -> None:
+        """Print per-turn cost line (dim, inline)."""
+        parts = [f"Tokens: {tokens_in}→{tokens_out}"]
+        if cost > 0:
+            parts.append(f"Cost: ${cost:.4f}")
+        self.console.print(f"[dim]{' | '.join(parts)}[/dim]", highlight=False)
 
     # --- Streaming ---
 
@@ -180,3 +215,14 @@ class InlineRenderer:
         self.console.print()  # Blank line separator
         self._stream_buffer = []
         return content
+
+
+def _truncate_arg(key: str, value: Any) -> str:
+    """Truncate argument values for compact display."""
+    s = str(value)
+    if key == "content" and isinstance(value, str):
+        line_count = value.count("\n") + 1
+        return f"({line_count} lines)"
+    if len(s) > 80:
+        return s[:77] + "..."
+    return s

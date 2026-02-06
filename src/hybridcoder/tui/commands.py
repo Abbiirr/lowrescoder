@@ -42,6 +42,11 @@ class AppContext(Protocol):
     @shell_enabled.setter
     def shell_enabled(self, value: bool) -> None: ...
 
+    @property
+    def show_thinking(self) -> bool: ...
+    @show_thinking.setter
+    def show_thinking(self, value: bool) -> None: ...
+
 
 @dataclass
 class SlashCommand:
@@ -362,6 +367,21 @@ async def _handle_copy(app: AppContext, args: str) -> None:
         app.add_system_message(f"Clipboard unavailable. Text:\n```\n{preview}\n```")
 
 
+async def _handle_thinking(app: AppContext, args: str) -> None:
+    app.show_thinking = not app.show_thinking
+    state = "on" if app.show_thinking else "off"
+    app.add_system_message(f"Thinking: **{state}**")
+
+
+async def _handle_clear(app: AppContext, args: str) -> None:
+    # Print ANSI clear sequence + reprint welcome banner
+    import sys
+
+    sys.stdout.write("\033[2J\033[H")
+    sys.stdout.flush()
+    app.add_system_message("Screen cleared.")
+
+
 async def _handle_freeze(app: AppContext, args: str) -> None:
     # Textual TUI has a frozen ChatView; inline mode uses native scrollback
     if hasattr(app, "query_one"):
@@ -474,5 +494,15 @@ def create_default_router() -> CommandRouter:
         name="freeze", aliases=["scroll-lock"],
         description="Toggle auto-scroll (pause for text selection)",
         handler=_handle_freeze,
+    ))
+    router.register(SlashCommand(
+        name="thinking", aliases=["think"],
+        description="Toggle thinking token visibility",
+        handler=_handle_thinking,
+    ))
+    router.register(SlashCommand(
+        name="clear", aliases=["cls"],
+        description="Clear the terminal screen",
+        handler=_handle_clear,
     ))
     return router

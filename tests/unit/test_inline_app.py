@@ -107,11 +107,13 @@ class TestInlineApp:
             assert result is False
 
     @pytest.mark.asyncio()
-    async def test_approval_prompt_always(self, inline_app: InlineApp) -> None:
-        """Approval prompt returns True and enables shell on 'Always'."""
-        with patch.object(inline_app, "_arrow_select", new_callable=AsyncMock, return_value="Always"):
+    async def test_approval_prompt_session(self, inline_app: InlineApp) -> None:
+        """Approval prompt returns True and tracks tool on 'Yes, this session'."""
+        mock_select = AsyncMock(return_value="Yes, this session")
+        with patch.object(inline_app, "_arrow_select", mock_select):
             result = await inline_app._approval_prompt("run_command", {"command": "ls"})
             assert result is True
+            assert "run_command" in inline_app._session_approved_tools
 
     @pytest.mark.asyncio()
     async def test_approval_prompt_cancel(self, inline_app: InlineApp) -> None:
@@ -197,3 +199,132 @@ class TestStatusBar:
             inline_app._on_tool_call("read_file", "completed", "src/main.py")
             assert inline_app._edit_count == 0
             assert len(inline_app._files_modified) == 0
+
+
+class TestThinkingToggle:
+    def test_thinking_default_hidden(self, inline_app: InlineApp) -> None:
+        """Thinking is hidden by default (matching Claude Code)."""
+        assert inline_app._show_thinking is False
+        assert inline_app.show_thinking is False
+
+    def test_thinking_toggle_property(self, inline_app: InlineApp) -> None:
+        """show_thinking property toggles correctly."""
+        inline_app.show_thinking = True
+        assert inline_app.show_thinking is True
+        inline_app.show_thinking = False
+        assert inline_app.show_thinking is False
+
+    @pytest.mark.asyncio()
+    async def test_thinking_toggle_command(self, inline_app: InlineApp) -> None:
+        """'/thinking' command toggles thinking visibility."""
+        assert inline_app.show_thinking is False
+        with patch.object(inline_app, "add_system_message") as mock_msg:
+            await inline_app._handle_input("/thinking")
+            assert inline_app.show_thinking is True
+            mock_msg.assert_called_once()
+            assert "on" in mock_msg.call_args[0][0]
+
+    @pytest.mark.asyncio()
+    async def test_thinking_hidden_suppresses_callback(self, inline_app: InlineApp) -> None:
+        """When thinking is hidden, on_thinking_chunk is None in agent run."""
+        mock_loop = AsyncMock()
+        mock_loop.run = AsyncMock(return_value="response")
+        inline_app._agent_loop = mock_loop
+        inline_app._provider = MagicMock()
+        inline_app._show_thinking = False
+
+        with patch.object(inline_app.renderer, "start_streaming"), \
+             patch.object(inline_app.renderer, "end_streaming", return_value=""):
+            await inline_app._run_agent("test")
+            # Verify on_thinking_chunk was None
+            call_kwargs = mock_loop.run.call_args[1]
+            assert call_kwargs.get("on_thinking_chunk") is None
+
+    @pytest.mark.asyncio()
+    async def test_thinking_shown_passes_callback(self, inline_app: InlineApp) -> None:
+        """When thinking is shown, on_thinking_chunk is the renderer method."""
+        mock_loop = AsyncMock()
+        mock_loop.run = AsyncMock(return_value="response")
+        inline_app._agent_loop = mock_loop
+        inline_app._provider = MagicMock()
+        inline_app._show_thinking = True
+
+        with patch.object(inline_app.renderer, "start_streaming"), \
+             patch.object(inline_app.renderer, "end_streaming", return_value=""):
+            await inline_app._run_agent("test")
+            call_kwargs = mock_loop.run.call_args[1]
+            assert call_kwargs.get("on_thinking_chunk") is not None
+
+
+class TestKeyBindings:
+    def test_key_bindings_created(self, inline_app: InlineApp) -> None:
+        """Key bindings object is created with shift+tab binding."""
+        kb = inline_app._create_key_bindings()
+        # Check that at least one binding exists
+        assert len(kb.bindings) > 0
+
+    def test_shift_tab_cycles_mode(self, inline_app: InlineApp) -> None:
+        """Shift+Tab cycles through approval modes."""
+        # Start with suggest mode (default)
+        initial_mode = inline_app.approval_mode
+
+        # Create a mock event with an app that has invalidate()
+        mock_event = MagicMock()
+        mock_event.app = MagicMock()
+
+        # Get the shift-tab handler from key bindings
+        kb = inline_app._create_key_bindings()
+        # Find the s-tab binding
+        stab_handlers = [
+            b.handler for b in kb.bindings
+        ]
+        assert len(stab_handlers) > 0
+
+        # Call the first handler (shift-tab)
+        stab_handlers[0](mock_event)
+
+        # Mode should have changed
+        new_mode = inline_app.approval_mode
+        assert new_mode != initial_mode or initial_mode not in ["read-only", "suggest", "auto"]
+
+
+class TestSessionApproval:
+    @pytest.mark.asyncio()
+    async def test_session_approve_auto_approves(self, inline_app: InlineApp) -> None:
+        """After 'Yes, this session', subsequent calls auto-approve."""
+        # First call: user approves with "Yes, this session"
+        mock_select = AsyncMock(return_value="Yes, this session")
+        with patch.object(inline_app, "_arrow_select", mock_select):
+            result = await inline_app._approval_prompt("write_file", {"path": "test.py"})
+            assert result is True
+
+        # Second call: auto-approved (no arrow_select needed)
+        with patch.object(inline_app.renderer, "print_tool_call"):
+            result = await inline_app._approval_prompt("write_file", {"path": "other.py"})
+            assert result is True
+
+    @pytest.mark.asyncio()
+    async def test_session_approve_per_tool(self, inline_app: InlineApp) -> None:
+        """Session approval is per-tool — different tools still prompt."""
+        # Approve write_file for session
+        mock_select = AsyncMock(return_value="Yes, this session")
+        with patch.object(inline_app, "_arrow_select", mock_select):
+            await inline_app._approval_prompt("write_file", {"path": "test.py"})
+
+        # run_command should still prompt
+        mock_select2 = AsyncMock(return_value="Yes")
+        with patch.object(inline_app, "_arrow_select", mock_select2):
+            result = await inline_app._approval_prompt("run_command", {"command": "ls"})
+            mock_select2.assert_called_once()
+            assert result is True
+
+
+class TestClearCommand:
+    @pytest.mark.asyncio()
+    async def test_clear_command(self, inline_app: InlineApp) -> None:
+        """/clear command calls add_system_message."""
+        with patch.object(inline_app, "add_system_message") as mock_msg, \
+             patch("sys.stdout"):
+            await inline_app._handle_input("/clear")
+            mock_msg.assert_called_once()
+            assert "cleared" in mock_msg.call_args[0][0].lower()

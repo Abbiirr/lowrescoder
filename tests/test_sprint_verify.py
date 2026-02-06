@@ -260,10 +260,19 @@ class TestSprint1CoreTypes:
         )
 
         # All types exist and are usable
-        assert all([
-            RequestType, LayerResult, Request, Response,
-            FileRange, Symbol, CodeChunk, SearchResult, EditResult,
-        ])
+        assert all(
+            [
+                RequestType,
+                LayerResult,
+                Request,
+                Response,
+                FileRange,
+                Symbol,
+                CodeChunk,
+                SearchResult,
+                EditResult,
+            ]
+        )
 
 
 # ============================================================
@@ -300,9 +309,7 @@ class TestSprint2Session:
 
         store = SessionStore(tmp_path / "test.db")
         # Tables should exist
-        cursor = store._conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        )
+        cursor = store._conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
         tables = {row[0] for row in cursor.fetchall()}
         assert "sessions" in tables
         assert "messages" in tables
@@ -320,8 +327,12 @@ class TestSprint2Tools:
         tools = registry.get_all()
         names = {t.name for t in tools}
         assert names == {
-            "read_file", "write_file", "list_files",
-            "search_text", "run_command", "ask_user",
+            "read_file",
+            "write_file",
+            "list_files",
+            "search_text",
+            "run_command",
+            "ask_user",
         }
 
 
@@ -350,7 +361,7 @@ class TestSprint2Agent:
 
 
 class TestSprint2Commands:
-    """S2.5: All 12 slash commands registered."""
+    """S2.5: All 14 slash commands registered."""
 
     def test_all_commands_registered(self) -> None:
         from hybridcoder.tui.commands import create_default_router
@@ -359,8 +370,20 @@ class TestSprint2Commands:
         commands = router.get_all()
         names = {c.name for c in commands}
         expected = {
-            "exit", "new", "sessions", "resume", "help",
-            "model", "mode", "compact", "init", "shell", "copy", "freeze",
+            "exit",
+            "new",
+            "sessions",
+            "resume",
+            "help",
+            "model",
+            "mode",
+            "compact",
+            "init",
+            "shell",
+            "copy",
+            "freeze",
+            "thinking",
+            "clear",
         }
         assert names == expected
 
@@ -416,3 +439,148 @@ class TestSprint2C:
         version = prompt_toolkit.__version__
         major = int(version.split(".")[0])
         assert major >= 3
+
+
+# ============================================================
+# Sprint 2D: Claude Code UX Clone
+# ============================================================
+
+
+class TestSprint2D:
+    """S2D: Claude Code-style UX rewrite."""
+
+    def test_thinking_toggle_exists(self) -> None:
+        """/thinking command is registered."""
+        from hybridcoder.tui.commands import create_default_router
+
+        router = create_default_router()
+        result = router.dispatch("/thinking")
+        assert result is not None
+        assert result[0].name == "thinking"
+
+    def test_clear_command_exists(self) -> None:
+        """/clear command is registered."""
+        from hybridcoder.tui.commands import create_default_router
+
+        router = create_default_router()
+        result = router.dispatch("/clear")
+        assert result is not None
+        assert result[0].name == "clear"
+
+    def test_thinking_default_hidden(self) -> None:
+        """InlineApp._show_thinking defaults to False."""
+        from hybridcoder.config import HybridCoderConfig
+        from hybridcoder.inline.app import InlineApp
+
+        config = HybridCoderConfig()
+        config.tui.session_db_path = ":memory:"
+        app = InlineApp(config=config)
+        assert app._show_thinking is False
+
+    def test_show_thinking_property(self) -> None:
+        """InlineApp has show_thinking property."""
+        from hybridcoder.config import HybridCoderConfig
+        from hybridcoder.inline.app import InlineApp
+
+        config = HybridCoderConfig()
+        config.tui.session_db_path = ":memory:"
+        app = InlineApp(config=config)
+        assert hasattr(app, "show_thinking")
+        app.show_thinking = True
+        assert app.show_thinking is True
+
+    def test_key_bindings_exist(self) -> None:
+        """InlineApp creates key bindings with shift+tab."""
+        from hybridcoder.config import HybridCoderConfig
+        from hybridcoder.inline.app import InlineApp
+
+        config = HybridCoderConfig()
+        config.tui.session_db_path = ":memory:"
+        app = InlineApp(config=config)
+        kb = app._create_key_bindings()
+        assert len(kb.bindings) > 0
+
+    def test_renderer_has_turn_separator(self) -> None:
+        """InlineRenderer has print_turn_separator method."""
+        from hybridcoder.inline.renderer import InlineRenderer
+
+        renderer = InlineRenderer()
+        assert hasattr(renderer, "print_turn_separator")
+
+    def test_renderer_tool_call_uses_prefix(self) -> None:
+        """Tool calls use ⏵ prefix instead of [tool]."""
+        from io import StringIO
+
+        from rich.console import Console
+
+        from hybridcoder.inline.renderer import InlineRenderer
+
+        buf = StringIO()
+        console = Console(file=buf, force_terminal=True)
+        renderer = InlineRenderer(console=console)
+        renderer.print_tool_call("read_file", "completed", "test.py")
+        output = buf.getvalue()
+        assert "⏵" in output
+        assert "[tool]" not in output
+
+    def test_renderer_thinking_no_tags(self) -> None:
+        """Thinking output has no <thinking> tags."""
+        from io import StringIO
+
+        from rich.console import Console
+
+        from hybridcoder.inline.renderer import InlineRenderer
+
+        buf = StringIO()
+        console = Console(file=buf, force_terminal=True)
+        renderer = InlineRenderer(console=console)
+        renderer.print_thinking("test thought")
+        renderer.end_thinking()
+        output = buf.getvalue()
+        assert "<thinking>" not in output
+        assert "</thinking>" not in output
+
+    def test_renderer_approval_context_compact(self) -> None:
+        """Approval context shows compact display."""
+        from io import StringIO
+
+        from rich.console import Console
+
+        from hybridcoder.inline.renderer import InlineRenderer
+
+        buf = StringIO()
+        console = Console(file=buf, force_terminal=True)
+        renderer = InlineRenderer(console=console)
+        renderer.print_approval_context(
+            "write_file",
+            {"path": "test.py", "content": "hello\nworld"},
+        )
+        output = buf.getvalue()
+        assert "⏵" in output
+        assert "write_file" in output
+        assert "(2 lines)" in output
+
+    def test_app_context_has_show_thinking(self) -> None:
+        """AppContext protocol includes show_thinking."""
+        from hybridcoder.tui.commands import AppContext
+
+        assert hasattr(AppContext, "show_thinking")
+
+    def test_session_approved_tools_tracking(self) -> None:
+        """InlineApp tracks session-approved tools."""
+        from hybridcoder.config import HybridCoderConfig
+        from hybridcoder.inline.app import InlineApp
+
+        config = HybridCoderConfig()
+        config.tui.session_db_path = ":memory:"
+        app = InlineApp(config=config)
+        assert hasattr(app, "_session_approved_tools")
+        assert isinstance(app._session_approved_tools, set)
+
+    def test_fourteen_commands_registered(self) -> None:
+        """14 slash commands are registered (12 original + /thinking + /clear)."""
+        from hybridcoder.tui.commands import create_default_router
+
+        router = create_default_router()
+        commands = router.get_all()
+        assert len(commands) == 14

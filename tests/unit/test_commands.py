@@ -59,14 +59,26 @@ class TestCommandRouter:
         cmd, args = result
         assert cmd.name == "compact"
 
-    def test_all_twelve_commands_registered(self) -> None:
-        """All 12 slash commands are registered."""
+    def test_all_commands_registered(self) -> None:
+        """All 14 slash commands are registered."""
         router = create_default_router()
         commands = router.get_all()
         names = {c.name for c in commands}
         expected = {
-            "exit", "new", "sessions", "resume", "help",
-            "model", "mode", "compact", "init", "shell", "copy", "freeze",
+            "exit",
+            "new",
+            "sessions",
+            "resume",
+            "help",
+            "model",
+            "mode",
+            "compact",
+            "init",
+            "shell",
+            "copy",
+            "freeze",
+            "thinking",
+            "clear",
         }
         assert names == expected
 
