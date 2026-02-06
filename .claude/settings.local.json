@@ -21,7 +21,9 @@
       "Bash(\"K:/projects/ai/lowrescoder/.venv/Scripts/python.exe\" -m pytest tests/test_sprint_verify.py -v --tb=short)",
       "Bash(\"K:/projects/ai/lowrescoder/.venv/Scripts/python.exe\" -m pytest tests/ -v --tb=short)",
       "Bash(\"K:/projects/ai/lowrescoder/.venv/Scripts/python.exe\" -m ruff check:*)",
-      "Bash(\"K:\\\\projects\\\\ai\\\\lowrescoder\\\\.venv\\\\Scripts\\\\python.exe\":*)"
+      "Bash(\"K:\\\\projects\\\\ai\\\\lowrescoder\\\\.venv\\\\Scripts\\\\python.exe\":*)",
+      "Bash(python -m pytest:*)",
+      "Bash(.venvScriptspython.exe -m pytest tests/unit/test_commands.py -v --tb=short)"
     ]
   }
 }

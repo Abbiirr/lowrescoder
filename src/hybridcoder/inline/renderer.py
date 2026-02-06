@@ -52,13 +52,15 @@ class InlineRenderer:
         self.console.print(f"[dim]{'─' * self.console.width}[/dim]")
 
     def print_input_border(self, top: bool = True) -> None:
-        """Print input area border (Claude Code style).
+        """Print input area border.
 
         Top: ╭───
         Bottom: ╰───
+
+        Note: No longer called from the REPL loop (borders removed to fix
+        BUG-1/5/6). Kept for potential future use.
         """
-        # Cap width at 120 chars or console width, whichever is smaller
-        width = min(self.console.width, 120)
+        width = self.console.width
         border_char = "╭" if top else "╰"
         self.console.print(f"[dim]{border_char}{'─' * (width - 2)}[/dim]")
 
@@ -167,10 +169,13 @@ class InlineRenderer:
         table.add_column("Title")
         table.add_column("Updated")
         for i, s in enumerate(sessions, 1):
+            title = s.title or "(untitled)"
+            if len(title) > 40:
+                title = title[:37] + "..."
             table.add_row(
                 str(i),
                 s.id[:8],
-                s.title or "(untitled)",
+                title,
                 s.updated_at.strftime("%Y-%m-%d %H:%M") if s.updated_at else "",
             )
         self.console.print(table)
@@ -215,6 +220,12 @@ class InlineRenderer:
         self.console.print()  # Blank line separator
         self._stream_buffer = []
         return content
+
+    # --- Thinking indicator ---
+
+    def print_thinking_indicator(self) -> None:
+        """Print a static thinking indicator before LLM response."""
+        self.console.print("[dim italic]Thinking...[/dim italic]")
 
 
 def _truncate_arg(key: str, value: Any) -> str:

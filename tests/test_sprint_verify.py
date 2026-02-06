@@ -584,3 +584,131 @@ class TestSprint2D:
         router = create_default_router()
         commands = router.get_all()
         assert len(commands) == 14
+
+
+# ============================================================
+# Sprint 2E: Phase 2D-E UI Bug Fix Verification
+# ============================================================
+
+
+class TestSprint2E:
+    """S2E: UI bug fixes verification."""
+
+    def test_bug1_separator_no_width_cap(self) -> None:
+        """BUG-1: 200-col console gets 198+ dashes in separator."""
+        from io import StringIO
+
+        from rich.console import Console
+
+        from hybridcoder.inline.renderer import InlineRenderer
+
+        buf = StringIO()
+        console = Console(file=buf, force_terminal=True, width=200)
+        renderer = InlineRenderer(console=console)
+        renderer.print_separator()
+        output = buf.getvalue()
+        assert output.count("─") >= 198
+
+    def test_bug2_escape_listener_exists(self) -> None:
+        """BUG-2/7: _listen_for_escape is async method on InlineApp."""
+        import inspect
+
+        from hybridcoder.inline.app import InlineApp
+
+        assert hasattr(InlineApp, "_listen_for_escape")
+        assert inspect.iscoroutinefunction(InlineApp._listen_for_escape)
+
+    def test_bug2_cancel_wrapper_exists(self) -> None:
+        """BUG-2/7: _handle_input_with_cancel is async method."""
+        import inspect
+
+        from hybridcoder.inline.app import InlineApp
+
+        assert hasattr(InlineApp, "_handle_input_with_cancel")
+        assert inspect.iscoroutinefunction(InlineApp._handle_input_with_cancel)
+
+    def test_bug4_resume_truncates_title(self) -> None:
+        """BUG-4: 100-char title shows '...' in output."""
+        from io import StringIO
+
+        from rich.console import Console
+
+        from hybridcoder.inline.renderer import InlineRenderer
+
+        buf = StringIO()
+        console = Console(file=buf, force_terminal=True)
+        renderer = InlineRenderer(console=console)
+        from unittest.mock import MagicMock
+
+        session = MagicMock()
+        session.id = "abc12345-full-id"
+        session.title = "X" * 100
+        session.updated_at = None
+        renderer.print_sessions_table([session])
+        output = buf.getvalue()
+        assert "X" * 100 not in output
+        assert "..." in output
+
+    def test_bug5_no_bordered_input_in_run(self) -> None:
+        """BUG-5/6: run() source has no print_input_border call."""
+        import inspect
+
+        from hybridcoder.inline.app import InlineApp
+
+        source = inspect.getsource(InlineApp.run)
+        assert "print_input_border" not in source
+
+    def test_bug5_prompt_is_chevron(self) -> None:
+        """BUG-5/6: run() source contains ❯ prompt character."""
+        import inspect
+
+        from hybridcoder.inline.app import InlineApp
+
+        source = inspect.getsource(InlineApp.run)
+        assert "❯" in source
+
+    def test_bug8_thinking_indicator_exists(self) -> None:
+        """BUG-8: print_thinking_indicator outputs 'Thinking'."""
+        from io import StringIO
+
+        from rich.console import Console
+
+        from hybridcoder.inline.renderer import InlineRenderer
+
+        buf = StringIO()
+        console = Console(file=buf, force_terminal=True)
+        renderer = InlineRenderer(console=console)
+        renderer.print_thinking_indicator()
+        assert "Thinking" in buf.getvalue()
+
+    def test_bug8_thinking_called_in_run_agent(self) -> None:
+        """BUG-8: _run_agent source contains print_thinking_indicator."""
+        import inspect
+
+        from hybridcoder.inline.app import InlineApp
+
+        source = inspect.getsource(InlineApp._run_agent)
+        assert "print_thinking_indicator" in source
+
+    def test_renderer_goodbye_method(self) -> None:
+        """InlineRenderer has print_goodbye method."""
+        from hybridcoder.inline.renderer import InlineRenderer
+
+        renderer = InlineRenderer()
+        assert hasattr(renderer, "print_goodbye")
+        assert callable(renderer.print_goodbye)
+
+    def test_all_fourteen_commands(self) -> None:
+        """14 commands registered with correct names."""
+        from hybridcoder.tui.commands import create_default_router
+
+        router = create_default_router()
+        commands = router.get_all()
+        names = {c.name for c in commands}
+        assert len(names) == 14
+        expected = {
+            "exit", "new", "sessions", "resume", "help", "model",
+            "mode", "compact", "init", "shell", "copy", "freeze",
+            "thinking", "clear",
+        }
+        assert names == expected

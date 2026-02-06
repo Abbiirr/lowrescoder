@@ -208,6 +208,89 @@ class TestInlineRenderer:
         assert "**bold text**" not in output
         assert "bold text" in output
 
+    def test_input_border_full_width(self) -> None:
+        """Input border uses full console width (no 120-char cap)."""
+        buf = StringIO()
+        console = Console(file=buf, force_terminal=True, width=200)
+        renderer = InlineRenderer(console=console)
+        renderer.print_input_border(top=True)
+        output = buf.getvalue()
+        # Should contain ╭ and many ─ chars (at least 190 to prove no 120 cap)
+        assert "╭" in output
+        assert output.count("─") >= 190
+
+    def test_input_border_bottom(self) -> None:
+        """Input border bottom uses ╰ character."""
+        renderer, buf = _make_renderer()
+        renderer.print_input_border(top=False)
+        output = buf.getvalue()
+        assert "╰" in output
+
+    def test_thinking_indicator(self) -> None:
+        """Thinking indicator prints 'Thinking...' in dim italic."""
+        renderer, buf = _make_renderer()
+        renderer.print_thinking_indicator()
+        output = buf.getvalue()
+        # Rich renders "Thinking..." with ANSI codes splitting the text
+        assert "Thinking" in output
+
+    def test_sessions_table_truncates_long_title(self) -> None:
+        """Sessions table truncates titles longer than 40 chars."""
+        renderer, buf = _make_renderer()
+        session = MagicMock()
+        session.id = "abc12345-full-id"
+        session.title = "A" * 100
+        session.updated_at = None
+        renderer.print_sessions_table([session])
+        output = buf.getvalue()
+        # Should not contain the full 100-char title
+        assert "A" * 100 not in output
+        assert "..." in output
+
+
+class TestRendererEdgeCases:
+    def test_print_goodbye(self) -> None:
+        """print_goodbye outputs 'Goodbye'."""
+        renderer, buf = _make_renderer()
+        renderer.print_goodbye()
+        output = buf.getvalue()
+        assert "Goodbye" in output
+
+    def test_tool_call_auto_ends_thinking(self) -> None:
+        """print_tool_call clears _thinking_buffer."""
+        renderer, buf = _make_renderer()
+        renderer.print_thinking("some thought")
+        assert len(renderer._thinking_buffer) > 0
+        renderer.print_tool_call("read_file", "completed", "test.py")
+        assert renderer._thinking_buffer == []
+
+    def test_stream_chunk_auto_ends_thinking(self) -> None:
+        """stream_chunk clears _thinking_buffer."""
+        renderer, buf = _make_renderer()
+        renderer.print_thinking("some thought")
+        assert len(renderer._thinking_buffer) > 0
+        renderer.start_streaming()
+        renderer.stream_chunk("hello")
+        assert renderer._thinking_buffer == []
+
+    def test_separator_full_width_200_cols(self) -> None:
+        """Separator at width=200 produces 200 dashes."""
+        buf = StringIO()
+        console = Console(file=buf, force_terminal=True, width=200)
+        renderer = InlineRenderer(console=console)
+        renderer.print_separator()
+        output = buf.getvalue()
+        # Count dash characters — should be at least 198 (allowing for ANSI codes)
+        dash_count = output.count("─")
+        assert dash_count >= 198
+
+    def test_empty_stream_returns_empty(self) -> None:
+        """start_streaming → end_streaming with no chunks returns empty string."""
+        renderer, buf = _make_renderer()
+        renderer.start_streaming()
+        result = renderer.end_streaming()
+        assert result == ""
+
 
 class TestTruncateArg:
     def test_short_string_unchanged(self) -> None:

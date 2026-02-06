@@ -5,23 +5,74 @@
 
 ## Agent Roles
 
-| Agent | Primary Role | Responsibilities |
-|-------|-------------|-----------------|
-| **Claude** | Coder | Writes implementation code, builds features, fixes bugs, executes sprint tasks |
-| **Codex** | Reviewer / Architect | Reviews code and docs, validates architecture, flags issues, maintains docs/codex/ research notes |
+Any agent or human may participate in this communication system. The following table shows example roles, but **the system is open to infinite agents and humans**.
 
-These roles define the default division of labor. The user may override on a per-task basis.
+| Participant | Type | Primary Role | Responsibilities |
+|-------------|------|-------------|-----------------|
+| **Claude** | AI Agent | Coder | Writes implementation code, builds features, fixes bugs, executes sprint tasks |
+| **Codex** | AI Agent | Reviewer / Architect | Reviews code and docs, validates architecture, flags issues, maintains docs/codex/ research notes |
+| **OpenCode** | AI Agent | Reviewer / Architect | Code review, research, cross-cutting analysis |
+| **User** | Human | Product Owner / Director | Sets direction, makes final decisions, provides feedback |
+| *[Your Name]* | Human or Agent | *Any* | Anyone can join by following the Identity Protocol below |
+
+### Role Guidelines
+
+- **AI Agents**: Use your designated identifier (Claude, Codex, OpenCode, etc.)
+- **Humans**: Use your name or preferred identifier (e.g., "User", "Alice", "Bob")
+- **Custom Agents**: If you bring a new AI agent into the project, add it to the table above via a PR or comms entry
+- Roles are **flexible** — agents can switch roles per task if needed (e.g., a Coder can also Review)
+- The user always has final authority and can override any agent decision
 
 ## Identity Protocol
 
-Start each message with:
+All participants (agents and humans) start each message with:
 
 ```
 Agent: <name> | Role: <role> | Layer: <1-4 or N/A> | Context: <scope> | Intent: <goal>
 ```
 
-- If responding to another agent: `Replying to: <agent name>`
-- If you used any tools, list them at the end: `Tools Used: <list>`
+**For Humans:** Use `Agent: <your-name>` (e.g., `Agent: User` or `Agent: Alice`). The "Agent:" prefix is a protocol requirement, not a statement of artificial nature.
+
+- `<name>`: Your identifier (Claude, Codex, OpenCode, User, Alice, etc.)
+- `<role>`: Your current role (Coder, Reviewer, Architect, Product Owner, etc.)
+- `<layer>`: 1-4 for code layers, N/A for meta/organization tasks
+- `<scope>`: Brief context (e.g., "Phase 3 planning", "Bug fix", "Code review")
+- `<goal>`: What you intend to accomplish
+
+**Replying:** If responding to another participant: `Replying to: <name>`
+
+**Directing:** To assign or call out a specific participant: `Directed to: <name>` (or multiple: `Directed to: Codex, OpenCode`)
+
+**Tools:** If you used any tools, list them at the end: `Tools Used: <list>`
+
+## Directing Messages
+
+Any participant can direct a message to one or more specific agents or humans. Use the `Directed to:` field in the identity header.
+
+### How it works
+
+- **`Directed to: <name>`** — The named participant is expected to respond or act. Other participants may still comment, but the named one owns the action.
+- **Multiple targets** — `Directed to: Codex, OpenCode` means both are expected to respond.
+- **Broadcast (no `Directed to:`)** — If omitted, the message is open to anyone. Any participant may respond.
+- **The user can direct any agent** — e.g., "Codex, review the Phase 3 plan" or "Claude, fix the failing tests". The user's directive always takes priority.
+
+### Common patterns
+
+| Pattern | Header | Effect |
+|---------|--------|--------|
+| Request a review | `Directed to: Codex` | Codex should review and post a verdict |
+| Assign a task | `Directed to: Claude` | Claude should implement and report completion |
+| Ask for research | `Directed to: OpenCode` | OpenCode should research and post findings |
+| Ask the human | `Directed to: User` | Requires human input before proceeding |
+| Open discussion | *(no `Directed to:`)* | Anyone may respond |
+| Multiple reviewers | `Directed to: Codex, OpenCode` | Both should respond independently |
+
+### Rules
+
+- A directed message creates an **obligation to respond**. If you are named, you must acknowledge (even if just "Acknowledged, will handle in next session").
+- If you cannot fulfill a directed request, say so explicitly: `Cannot fulfill: <reason>`.
+- The user can redirect any message: "Actually, Claude handle this instead of Codex."
+- `Directed to:` is compatible with all message types (Concern, Review, Task Handoff, General).
 
 ## Message Types
 
@@ -47,6 +98,8 @@ Agent: <name> | Role: <role> | Layer: <1-4 or N/A> | Context: <scope> | Intent: 
 2. **Files involved**: Which files to read/modify.
 3. **Context**: Link to relevant docs or prior entries.
 4. **Deadline/Priority**: If applicable.
+
+**Note:** Always use `Directed to: <name>` in the header when handing off a task, so the target agent knows they own it.
 
 ## Review Principles
 
@@ -136,10 +189,11 @@ uv run pytest tests/test_sprint_verify.py -v
 
 ## Examples
 
-### Concern
+### Concern (directed to a specific agent)
 
 ```
 Agent: Codex | Role: Reviewer | Layer: 2 | Context: Plan review | Intent: Flag feasibility risk
+Directed to: Claude
 
 Concern: The timeline in `plan1.md:14` appears unfeasible given current scope.
 Severity: Medium
@@ -148,25 +202,35 @@ Proposed Fix: Extend the milestone by one week or split into chunking first, emb
 Question: Is the 1-week target fixed due to an external deadline?
 ```
 
-### Review
+### Review (directed to multiple reviewers)
 
 ```
-Agent: Claude | Role: Reviewer | Layer: 3 | Context: Code review | Intent: Approve grammar module
+Agent: Claude | Role: Coder | Layer: 3 | Context: Phase 2D review request | Intent: Get code reviewed
+Directed to: Codex, OpenCode
 
-Layer Assessment: 3
-Verdict: APPROVE
-Analysis: The Pydantic schemas enforce valid structured output. Outlines integration uses llama-cpp-python backend correctly.
-Concerns: None
-Suggested Changes: None
+Phase 2D implementation complete. Requesting review of inline UX rewrite.
+Files: src/hybridcoder/inline/app.py, src/hybridcoder/inline/renderer.py
+Tests: 396 passed, ruff clean, mypy clean.
 ```
 
-### Task Handoff
+### Task Handoff (directed to an agent)
 
 ```
 Agent: Claude | Role: Architect | Layer: N/A | Context: Sprint 0 setup | Intent: Assign project scaffolding to Codex
+Directed to: Codex
 
 Action requested: Create project scaffolding with pyproject.toml, src/hybridcoder/, and tests/ directories.
 Files involved: pyproject.toml, src/hybridcoder/__init__.py, tests/conftest.py
 Context: docs/claude/phase4-implementation.md Sprint 0
 Priority: High — blocks all other work.
+```
+
+### Asking the human for a decision
+
+```
+Agent: Codex | Role: Architect | Layer: N/A | Context: UX direction | Intent: Get product decision
+Directed to: User
+
+Question: Should we keep two UIs long-term (inline + Textual) or converge to a single renderer?
+Options: (A) Keep both, inline canonical. (B) Converge to custom renderer in Phase 5.
 ```

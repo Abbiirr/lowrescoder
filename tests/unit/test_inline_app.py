@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -328,3 +329,369 @@ class TestClearCommand:
             await inline_app._handle_input("/clear")
             mock_msg.assert_called_once()
             assert "cleared" in mock_msg.call_args[0][0].lower()
+
+
+class TestCancellation:
+    @pytest.mark.asyncio()
+    async def test_handle_input_with_cancel_slash_command(self, inline_app: InlineApp) -> None:
+        """Slash commands bypass cancellation wrapper."""
+        with patch.object(inline_app, "add_system_message"):
+            await inline_app._handle_input_with_cancel("/help")
+
+    @pytest.mark.asyncio()
+    async def test_agent_handles_cancelled_error(self, inline_app: InlineApp) -> None:
+        """_run_agent handles CancelledError gracefully."""
+        mock_loop = AsyncMock()
+        mock_loop.run = AsyncMock(side_effect=asyncio.CancelledError())
+        inline_app._agent_loop = mock_loop
+        inline_app._provider = MagicMock()
+
+        with patch.object(inline_app.renderer, "start_streaming"), \
+             patch.object(inline_app.renderer, "end_streaming", return_value=""), \
+             patch.object(inline_app.renderer, "end_thinking"), \
+             patch.object(inline_app.renderer, "print_thinking_indicator"), \
+             patch.object(inline_app.renderer, "print_system"):
+            await inline_app._run_agent("test")
+
+    @pytest.mark.asyncio()
+    async def test_listen_for_escape_returns_bool(self, inline_app: InlineApp) -> None:
+        """_listen_for_escape method exists and is async."""
+        # Just verify the method exists and is callable
+        assert callable(inline_app._listen_for_escape)
+
+    @pytest.mark.asyncio()
+    async def test_handle_input_with_cancel_runs_agent(self, inline_app: InlineApp) -> None:
+        """Non-slash input goes through cancellation wrapper to agent."""
+        mock_loop = AsyncMock()
+        mock_loop.run = AsyncMock(return_value="response")
+        inline_app._agent_loop = mock_loop
+        inline_app._provider = MagicMock()
+
+        with (
+            patch.object(inline_app, "_listen_for_escape", new_callable=AsyncMock) as mock_escape,
+            patch.object(inline_app.renderer, "start_streaming"),
+            patch.object(inline_app.renderer, "end_streaming", return_value=""),
+            patch.object(inline_app.renderer, "end_thinking"),
+            patch.object(inline_app.renderer, "print_thinking_indicator"),
+        ):
+            # Make escape never trigger (just hang until cancelled)
+            mock_escape.side_effect = asyncio.CancelledError()
+            await inline_app._handle_input_with_cancel("hello")
+            mock_loop.run.assert_called_once()
+
+
+class TestThinkingIndicator:
+    @pytest.mark.asyncio()
+    async def test_thinking_indicator_called_in_run_agent(self, inline_app: InlineApp) -> None:
+        """_run_agent calls print_thinking_indicator before streaming."""
+        mock_loop = AsyncMock()
+        mock_loop.run = AsyncMock(return_value="response")
+        inline_app._agent_loop = mock_loop
+        inline_app._provider = MagicMock()
+
+        with patch.object(inline_app.renderer, "start_streaming"), \
+             patch.object(inline_app.renderer, "end_streaming", return_value=""), \
+             patch.object(inline_app.renderer, "end_thinking"), \
+             patch.object(inline_app.renderer, "print_thinking_indicator") as mock_indicator:
+            await inline_app._run_agent("test")
+            mock_indicator.assert_called_once()
+
+
+class TestEscapeCancellation:
+    @pytest.mark.asyncio()
+    async def test_escape_triggers_agent_loop_cancel(self, inline_app: InlineApp) -> None:
+        """Escape returns True -> _agent_loop.cancel() called."""
+        mock_loop = AsyncMock()
+        mock_loop.run = AsyncMock(side_effect=asyncio.CancelledError())
+        mock_loop.cancel = MagicMock()
+        inline_app._agent_loop = mock_loop
+        inline_app._provider = MagicMock()
+
+        with (
+            patch.object(
+                inline_app, "_listen_for_escape",
+                new_callable=AsyncMock, return_value=True,
+            ),
+            patch.object(inline_app, "_handle_input", new_callable=AsyncMock) as mock_handle,
+            patch.object(inline_app.renderer, "end_thinking"),
+            patch.object(inline_app.renderer, "end_streaming", return_value=""),
+        ):
+            # Make _handle_input hang until cancelled
+            async def _hang(text: str) -> None:
+                await asyncio.sleep(100)
+            mock_handle.side_effect = _hang
+            await inline_app._handle_input_with_cancel("hello")
+            mock_loop.cancel.assert_called_once()
+
+    @pytest.mark.asyncio()
+    async def test_escape_calls_end_thinking_and_streaming(self, inline_app: InlineApp) -> None:
+        """Escape -> end_thinking() + end_streaming() called."""
+        with (
+            patch.object(
+                inline_app, "_listen_for_escape",
+                new_callable=AsyncMock, return_value=True,
+            ),
+            patch.object(inline_app, "_handle_input", new_callable=AsyncMock) as mock_handle,
+            patch.object(inline_app.renderer, "end_thinking") as mock_end_think,
+            patch.object(inline_app.renderer, "end_streaming", return_value="") as mock_end_stream,
+        ):
+            async def _hang(text: str) -> None:
+                await asyncio.sleep(100)
+            mock_handle.side_effect = _hang
+            await inline_app._handle_input_with_cancel("hello")
+            mock_end_think.assert_called()
+            mock_end_stream.assert_called()
+
+    @pytest.mark.asyncio()
+    async def test_escape_prints_cancelled_message(self, inline_app: InlineApp) -> None:
+        """Escape -> 'Cancelled.' printed."""
+        with (
+            patch.object(
+                inline_app, "_listen_for_escape",
+                new_callable=AsyncMock, return_value=True,
+            ),
+            patch.object(inline_app, "_handle_input", new_callable=AsyncMock) as mock_handle,
+            patch.object(inline_app.renderer, "end_thinking"),
+            patch.object(inline_app.renderer, "end_streaming", return_value=""),
+            patch.object(inline_app.console, "print") as mock_print,
+        ):
+            async def _hang(text: str) -> None:
+                await asyncio.sleep(100)
+            mock_handle.side_effect = _hang
+            await inline_app._handle_input_with_cancel("hello")
+            # Check that "Cancelled." was printed
+            printed = [str(call) for call in mock_print.call_args_list]
+            assert any("Cancelled" in s for s in printed)
+
+    @pytest.mark.asyncio()
+    async def test_normal_completion_cancels_escape_listener(self, inline_app: InlineApp) -> None:
+        """Agent completes -> escape task cancelled, no 'Cancelled.' message."""
+        mock_loop = AsyncMock()
+        mock_loop.run = AsyncMock(return_value="response")
+        inline_app._agent_loop = mock_loop
+        inline_app._provider = MagicMock()
+
+        with (
+            patch.object(inline_app, "_listen_for_escape", new_callable=AsyncMock) as mock_escape,
+            patch.object(inline_app.renderer, "start_streaming"),
+            patch.object(inline_app.renderer, "end_streaming", return_value=""),
+            patch.object(inline_app.renderer, "end_thinking"),
+            patch.object(inline_app.renderer, "print_thinking_indicator"),
+            patch.object(inline_app.console, "print") as mock_print,
+        ):
+            # Escape never triggers (hangs then gets cancelled)
+            mock_escape.side_effect = asyncio.CancelledError()
+            await inline_app._handle_input_with_cancel("hello")
+            # "Cancelled." should NOT appear
+            printed = " ".join(str(call) for call in mock_print.call_args_list)
+            assert "Cancelled" not in printed
+
+    @pytest.mark.asyncio()
+    async def test_agent_exception_propagates(self, inline_app: InlineApp) -> None:
+        """Agent raises RuntimeError -> re-raised via agent_task.result()."""
+        with (
+            patch.object(
+                inline_app, "_listen_for_escape",
+                new_callable=AsyncMock,
+            ) as mock_escape,
+            patch.object(inline_app, "_handle_input", new_callable=AsyncMock) as mock_handle,
+        ):
+            mock_handle.side_effect = RuntimeError("test error")
+            mock_escape.side_effect = asyncio.CancelledError()
+            with pytest.raises(RuntimeError, match="test error"):
+                await inline_app._handle_input_with_cancel("hello")
+
+    @pytest.mark.asyncio()
+    async def test_no_agent_loop_escape_still_works(self, inline_app: InlineApp) -> None:
+        """_agent_loop is None -> no crash, still prints 'Cancelled.'."""
+        inline_app._agent_loop = None  # No agent loop
+
+        with (
+            patch.object(
+                inline_app, "_listen_for_escape",
+                new_callable=AsyncMock, return_value=True,
+            ),
+            patch.object(inline_app, "_handle_input", new_callable=AsyncMock) as mock_handle,
+            patch.object(inline_app.renderer, "end_thinking"),
+            patch.object(inline_app.renderer, "end_streaming", return_value=""),
+            patch.object(inline_app.console, "print") as mock_print,
+        ):
+            async def _hang(text: str) -> None:
+                await asyncio.sleep(100)
+            mock_handle.side_effect = _hang
+            await inline_app._handle_input_with_cancel("hello")
+            printed = " ".join(str(call) for call in mock_print.call_args_list)
+            assert "Cancelled" in printed
+
+
+class TestRunAgentExceptions:
+    @pytest.mark.asyncio()
+    async def test_run_agent_generic_exception(self, inline_app: InlineApp) -> None:
+        """RuntimeError caught, print_system('Error: ...') called."""
+        mock_loop = AsyncMock()
+        mock_loop.run = AsyncMock(side_effect=RuntimeError("boom"))
+        inline_app._agent_loop = mock_loop
+        inline_app._provider = MagicMock()
+
+        with patch.object(inline_app.renderer, "start_streaming"), \
+             patch.object(inline_app.renderer, "end_streaming", return_value=""), \
+             patch.object(inline_app.renderer, "end_thinking"), \
+             patch.object(inline_app.renderer, "print_thinking_indicator"), \
+             patch.object(inline_app.renderer, "print_system") as mock_sys:
+            await inline_app._run_agent("test")
+            mock_sys.assert_called_once()
+            assert "Error" in mock_sys.call_args[0][0]
+
+    @pytest.mark.asyncio()
+    async def test_run_agent_session_auto_title(self, inline_app: InlineApp) -> None:
+        """First call titles session, second doesn't re-title."""
+        mock_loop = AsyncMock()
+        mock_loop.run = AsyncMock(return_value="response")
+        inline_app._agent_loop = mock_loop
+        inline_app._provider = MagicMock()
+        inline_app._session_titled = False
+
+        with patch.object(inline_app.renderer, "start_streaming"), \
+             patch.object(inline_app.renderer, "end_streaming", return_value=""), \
+             patch.object(inline_app.renderer, "end_thinking"), \
+             patch.object(inline_app.renderer, "print_thinking_indicator"), \
+             patch.object(inline_app.session_store, "update_session") as mock_update:
+            await inline_app._run_agent("first message")
+            mock_update.assert_called_once()
+            assert inline_app._session_titled is True
+
+            mock_update.reset_mock()
+            await inline_app._run_agent("second message")
+            mock_update.assert_not_called()
+
+
+class TestREPLLoop:
+    @pytest.mark.asyncio()
+    async def test_repl_keyboard_interrupt_first(self, inline_app: InlineApp) -> None:
+        """First ^C prints warning, increments _interrupt_count."""
+        mock_session = MagicMock()
+        mock_session.prompt_async = AsyncMock(
+            side_effect=[KeyboardInterrupt, EOFError],
+        )
+        inline_app.session = mock_session
+
+        with patch.object(inline_app.renderer, "print_welcome"), \
+             patch.object(inline_app.renderer, "print_goodbye"), \
+             patch.object(inline_app.console, "print"):
+            await inline_app.run()
+        # After first ^C, count should be 1, then EOFError exits
+        # We can't check mid-loop, but the test verifies no crash
+
+    @pytest.mark.asyncio()
+    async def test_repl_keyboard_interrupt_double_exits(self, inline_app: InlineApp) -> None:
+        """Two ^C's break the loop."""
+        mock_session = MagicMock()
+        mock_session.prompt_async = AsyncMock(
+            side_effect=[KeyboardInterrupt, KeyboardInterrupt],
+        )
+        inline_app.session = mock_session
+
+        with patch.object(inline_app.renderer, "print_welcome"), \
+             patch.object(inline_app.renderer, "print_goodbye") as mock_goodbye, \
+             patch.object(inline_app.console, "print"):
+            await inline_app.run()
+            mock_goodbye.assert_called_once()
+
+    @pytest.mark.asyncio()
+    async def test_repl_keyboard_interrupt_during_agent(self, inline_app: InlineApp) -> None:
+        """^C with active _agent_loop calls cancel()."""
+        mock_agent = MagicMock()
+        mock_agent.cancel = MagicMock()
+        inline_app._agent_loop = mock_agent
+
+        mock_session = MagicMock()
+        mock_session.prompt_async = AsyncMock(
+            side_effect=[KeyboardInterrupt, EOFError],
+        )
+        inline_app.session = mock_session
+
+        with patch.object(inline_app.renderer, "print_welcome"), \
+             patch.object(inline_app.renderer, "print_goodbye"), \
+             patch.object(inline_app.console, "print"):
+            await inline_app.run()
+            mock_agent.cancel.assert_called_once()
+
+    @pytest.mark.asyncio()
+    async def test_repl_interrupt_count_resets_on_input(self, inline_app: InlineApp) -> None:
+        """Valid input resets _interrupt_count to 0."""
+        mock_session = MagicMock()
+        mock_session.prompt_async = AsyncMock(
+            side_effect=[KeyboardInterrupt, "hello", EOFError],
+        )
+        inline_app.session = mock_session
+
+        with patch.object(inline_app.renderer, "print_welcome"), \
+             patch.object(inline_app.renderer, "print_goodbye"), \
+             patch.object(inline_app.renderer, "print_turn_separator"), \
+             patch.object(inline_app, "_handle_input_with_cancel", new_callable=AsyncMock), \
+             patch.object(inline_app.console, "print"):
+            await inline_app.run()
+            assert inline_app._interrupt_count == 0
+
+    @pytest.mark.asyncio()
+    async def test_repl_empty_input_skipped(self, inline_app: InlineApp) -> None:
+        """Whitespace input doesn't trigger _handle_input_with_cancel."""
+        mock_session = MagicMock()
+        mock_session.prompt_async = AsyncMock(
+            side_effect=["  \t  ", EOFError],
+        )
+        inline_app.session = mock_session
+
+        mock_cancel = AsyncMock()
+        with patch.object(inline_app.renderer, "print_welcome"), \
+             patch.object(inline_app.renderer, "print_goodbye"), \
+             patch.object(inline_app, "_handle_input_with_cancel", mock_cancel):
+            await inline_app.run()
+            mock_cancel.assert_not_called()
+
+    @pytest.mark.asyncio()
+    async def test_repl_prints_goodbye_on_exit(self, inline_app: InlineApp) -> None:
+        """EOFError -> renderer.print_goodbye() called."""
+        mock_session = MagicMock()
+        mock_session.prompt_async = AsyncMock(side_effect=EOFError)
+        inline_app.session = mock_session
+
+        with patch.object(inline_app.renderer, "print_welcome"), \
+             patch.object(inline_app.renderer, "print_goodbye") as mock_goodbye:
+            await inline_app.run()
+            mock_goodbye.assert_called_once()
+
+    @pytest.mark.asyncio()
+    async def test_repl_welcome_banner_printed(self, inline_app: InlineApp) -> None:
+        """run() calls renderer.print_welcome()."""
+        mock_session = MagicMock()
+        mock_session.prompt_async = AsyncMock(side_effect=EOFError)
+        inline_app.session = mock_session
+
+        with patch.object(inline_app.renderer, "print_welcome") as mock_welcome, \
+             patch.object(inline_app.renderer, "print_goodbye"):
+            await inline_app.run()
+            mock_welcome.assert_called_once()
+
+    @pytest.mark.asyncio()
+    async def test_repl_turn_separator_after_response(self, inline_app: InlineApp) -> None:
+        """Separator printed after each agent response."""
+        mock_session = MagicMock()
+        mock_session.prompt_async = AsyncMock(
+            side_effect=["hello", EOFError],
+        )
+        inline_app.session = mock_session
+
+        with patch.object(inline_app.renderer, "print_welcome"), \
+             patch.object(inline_app.renderer, "print_goodbye"), \
+             patch.object(inline_app.renderer, "print_turn_separator") as mock_sep, \
+             patch.object(inline_app, "_handle_input_with_cancel", new_callable=AsyncMock):
+            await inline_app.run()
+            mock_sep.assert_called_once()
+
+    def test_prompt_is_green_chevron(self, inline_app: InlineApp) -> None:
+        """FormattedText in run() contains '>' character."""
+        import inspect
+
+        source = inspect.getsource(InlineApp.run)
+        assert "❯" in source

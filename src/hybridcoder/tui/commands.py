@@ -119,7 +119,10 @@ async def _handle_sessions(app: AppContext, args: str) -> None:
         return
     lines = ["**Sessions:**"]
     for s in sessions[:10]:
-        lines.append(f"- `{s.id[:8]}` {s.title} ({s.model})")
+        title = s.title or "(untitled)"
+        if len(title) > 40:
+            title = title[:37] + "..."
+        lines.append(f"- `{s.id[:8]}` {title} ({s.model})")
     app.add_system_message("\n".join(lines))
 
 
@@ -144,6 +147,8 @@ async def _handle_resume(app: AppContext, args: str) -> None:
                         overview += "..."
                     break
             title_display = s.title or "Untitled"
+            if len(title_display) > 40:
+                title_display = title_display[:37] + "..."
             lines.append(f"- `{s.id[:8]}` **{title_display}** ({s.model})")
             if overview:
                 lines.append(f"  _{overview}_")

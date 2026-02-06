@@ -238,21 +238,18 @@ class InlineApp:
 
         input_prompt = FormattedText(
             [
-                ("fg:ansibrightblack", "│ "),
                 ("fg:ansigreen bold", "❯ "),
             ]
         )
 
         while True:
             try:
-                self.renderer.print_input_border(top=True)
                 text = await prompt_session.prompt_async(input_prompt)
-                self.renderer.print_input_border(top=False)
 
                 if not text.strip():
                     continue
                 self._interrupt_count = 0
-                await self._handle_input(text.strip())
+                await self._handle_input_with_cancel(text.strip())
                 # Separator AFTER response, before next prompt
                 self.renderer.print_turn_separator()
             except EOFError:
@@ -273,6 +270,100 @@ class InlineApp:
                 continue
 
         self.renderer.print_goodbye()
+
+    async def _handle_input_with_cancel(self, text: str) -> None:
+        """Wrap _handle_input in a cancellable task with Escape listener."""
+        # Slash commands don't need cancellation
+        if text.startswith("/"):
+            await self._handle_input(text)
+            return
+
+        agent_task = asyncio.create_task(self._handle_input(text))
+        escape_task = asyncio.create_task(self._listen_for_escape())
+
+        done, pending = await asyncio.wait(
+            [agent_task, escape_task],
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+
+        for task in pending:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+        if escape_task in done:
+            try:
+                escaped = escape_task.result()
+            except asyncio.CancelledError:
+                escaped = False
+            if escaped:
+                if self._agent_loop:
+                    self._agent_loop.cancel()
+                self.renderer.end_thinking()
+                self.renderer.end_streaming()
+                self.console.print("\n[dim]Cancelled.[/dim]")
+                return
+
+        # Re-raise any agent_task exception
+        if agent_task in done:
+            agent_task.result()  # raises if failed
+
+    def _poll_key_windows(self) -> str | None:
+        """Check for keypress on Windows. Returns key byte or None."""
+        import msvcrt
+
+        if msvcrt.kbhit():
+            key = msvcrt.getch()
+            if key in (b"\x1b", b"\x03"):
+                return key.decode("latin-1")
+        return None
+
+    def _poll_key_unix(self, fd: int) -> str | None:
+        """Check for keypress on Unix. Returns char or None."""
+        import select
+        import sys
+
+        ready, _, _ = select.select([fd], [], [], 0.05)
+        if ready:
+            ch = sys.stdin.read(1)
+            if ch in ("\x1b", "\x03"):
+                return ch
+        return None
+
+    async def _listen_for_escape(self) -> bool:
+        """Listen for Escape key press. Returns True if pressed."""
+        import sys
+
+        loop = asyncio.get_running_loop()
+
+        if sys.platform == "win32":
+            while True:
+                key = await loop.run_in_executor(None, self._poll_key_windows)
+                if key is not None:
+                    return True
+                await asyncio.sleep(0.05)
+        else:
+            import termios
+            import tty
+
+            fd = sys.stdin.fileno()
+            try:
+                old_settings = termios.tcgetattr(fd)
+            except termios.error:
+                return False  # Not a TTY — can't listen for keys
+            try:
+                tty.setraw(fd)
+                while True:
+                    key = await loop.run_in_executor(
+                        None, self._poll_key_unix, fd,
+                    )
+                    if key is not None:
+                        return True
+                    await asyncio.sleep(0.05)
+            finally:
+                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
     async def _handle_input(self, text: str) -> None:
         """Route input to slash command or agent loop."""
@@ -338,6 +429,7 @@ class InlineApp:
         """Run agent loop and stream output via renderer."""
         # Don't reprint user message — prompt_toolkit already displayed it.
         self.console.print()  # Blank line after user input
+        self.renderer.print_thinking_indicator()
 
         # Auto-title session from first user message
         if not self._session_titled:
