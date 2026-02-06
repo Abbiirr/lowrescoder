@@ -1,13 +1,46 @@
-"""Slash command router for the TUI."""
+"""Slash command router and AppContext protocol."""
 
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import Any, Protocol, runtime_checkable
 
-if TYPE_CHECKING:
-    from hybridcoder.tui.app import HybridCoderApp
+from hybridcoder.config import HybridCoderConfig
+from hybridcoder.session.store import SessionStore
+
+
+@runtime_checkable
+class AppContext(Protocol):
+    """Minimal interface for slash command handlers.
+
+    Both InlineApp and HybridCoderApp implement this protocol,
+    allowing the same command handlers to work in both modes.
+    """
+
+    session_store: SessionStore
+    session_id: str
+    config: HybridCoderConfig
+    project_root: Path
+    command_router: CommandRouter
+
+    def add_system_message(self, content: str) -> None: ...
+    def clear_messages(self) -> None: ...
+    def display_messages(self, messages: list[Any]) -> None: ...
+    def get_assistant_messages(self) -> list[str]: ...
+    def copy_to_clipboard(self, text: str) -> bool: ...
+    def exit_app(self) -> None: ...
+
+    @property
+    def approval_mode(self) -> str: ...
+    @approval_mode.setter
+    def approval_mode(self, value: str) -> None: ...
+
+    @property
+    def shell_enabled(self) -> bool: ...
+    @shell_enabled.setter
+    def shell_enabled(self, value: bool) -> None: ...
 
 
 @dataclass
@@ -54,28 +87,14 @@ class CommandRouter:
         return list(self._commands.values())
 
 
-def _get_chat(app: HybridCoderApp) -> Any:
-    """Get the ChatView widget from the app."""
-    from hybridcoder.tui.widgets.chat_view import ChatView
-
-    return app.query_one("#chat-view", ChatView)
-
-
-def _get_status(app: HybridCoderApp) -> Any:
-    """Get the StatusBar widget from the app."""
-    from hybridcoder.tui.widgets.status_bar import StatusBar
-
-    return app.query_one("#status-bar", StatusBar)
-
-
 # --- Sprint 2A command handlers ---
 
 
-async def _handle_exit(app: HybridCoderApp, args: str) -> None:
-    app.exit()
+async def _handle_exit(app: AppContext, args: str) -> None:
+    app.exit_app()
 
 
-async def _handle_new(app: HybridCoderApp, args: str) -> None:
+async def _handle_new(app: AppContext, args: str) -> None:
     title = args.strip() or "New session"
     session_id = app.session_store.create_session(
         title=title,
@@ -84,32 +103,29 @@ async def _handle_new(app: HybridCoderApp, args: str) -> None:
         project_dir=str(app.project_root),
     )
     app.session_id = session_id
-    chat = _get_chat(app)
-    chat.remove_children()
-    chat.add_message("system", f"Started new session: {title}")
+    app.clear_messages()
+    app.add_system_message(f"Started new session: {title}")
 
 
-async def _handle_sessions(app: HybridCoderApp, args: str) -> None:
+async def _handle_sessions(app: AppContext, args: str) -> None:
     sessions = app.session_store.list_sessions()
-    chat = _get_chat(app)
     if not sessions:
-        chat.add_message("system", "No sessions found.")
+        app.add_system_message("No sessions found.")
         return
     lines = ["**Sessions:**"]
     for s in sessions[:10]:
         lines.append(f"- `{s.id[:8]}` {s.title} ({s.model})")
-    chat.add_message("system", "\n".join(lines))
+    app.add_system_message("\n".join(lines))
 
 
-async def _handle_resume(app: HybridCoderApp, args: str) -> None:
+async def _handle_resume(app: AppContext, args: str) -> None:
     session_id = args.strip()
-    chat = _get_chat(app)
 
     # No args: list available sessions with overview
     if not session_id:
         sessions = app.session_store.list_sessions()
         if not sessions:
-            chat.add_message("system", "No sessions to resume.")
+            app.add_system_message("No sessions to resume.")
             return
         lines = ["**Sessions available to resume:**"]
         for s in sessions[:15]:
@@ -127,7 +143,7 @@ async def _handle_resume(app: HybridCoderApp, args: str) -> None:
             if overview:
                 lines.append(f"  _{overview}_")
         lines.append("\nUsage: `/resume <id-prefix>`")
-        chat.add_message("system", "\n".join(lines))
+        app.add_system_message("\n".join(lines))
         return
 
     sessions = app.session_store.list_sessions()
@@ -138,23 +154,21 @@ async def _handle_resume(app: HybridCoderApp, args: str) -> None:
             break
 
     if match is None:
-        chat.add_message("system", f"Session not found: {session_id}")
+        app.add_system_message(f"Session not found: {session_id}")
         return
 
     app.session_id = match.id
-    chat.remove_children()
-    chat.add_message("system", f"Resumed session: {match.title}")
+    app.clear_messages()
+    app.add_system_message(f"Resumed session: {match.title}")
 
     messages = app.session_store.get_messages(match.id)
-    for msg in messages:
-        chat.add_message(msg.role, msg.content)
+    app.display_messages(messages)
 
 
 # --- Sprint 2B command handlers ---
 
 
-async def _handle_help(app: HybridCoderApp, args: str) -> None:
-    chat = _get_chat(app)
+async def _handle_help(app: AppContext, args: str) -> None:
     lines = ["**Available commands:**"]
     for cmd in app.command_router.get_all():
         aliases_str = ""
@@ -162,11 +176,10 @@ async def _handle_help(app: HybridCoderApp, args: str) -> None:
             aliases = ", ".join(f"/{a}" for a in cmd.aliases)
             aliases_str = f" ({aliases})"
         lines.append(f"- `/{cmd.name}`{aliases_str} — {cmd.description}")
-    chat.add_message("system", "\n".join(lines))
+    app.add_system_message("\n".join(lines))
 
 
-async def _handle_model(app: HybridCoderApp, args: str) -> None:
-    chat = _get_chat(app)
+async def _handle_model(app: AppContext, args: str) -> None:
     arg = args.strip()
 
     if not arg or arg == "list":
@@ -180,13 +193,17 @@ async def _handle_model(app: HybridCoderApp, args: str) -> None:
                 lines.append(f"- `{m}`{marker}")
         else:
             lines.append("_Could not list models (Ollama not running?)_")
-        chat.add_message("system", "\n".join(lines))
+        app.add_system_message("\n".join(lines))
         return
 
     app.config.llm.model = arg
-    status = _get_status(app)
-    status.model = arg
-    chat.add_message("system", f"Switched model to: {arg}")
+    # Update status bar if available (Textual TUI only)
+    if hasattr(app, "query_one"):
+        from hybridcoder.tui.widgets.status_bar import StatusBar
+
+        status = app.query_one("#status-bar", StatusBar)
+        status.model = arg
+    app.add_system_message(f"Switched model to: {arg}")
 
 
 def _copy_to_clipboard(text: str) -> bool:
@@ -243,35 +260,29 @@ def _list_ollama_models() -> list[str]:
         return []
 
 
-async def _handle_mode(app: HybridCoderApp, args: str) -> None:
-    chat = _get_chat(app)
+async def _handle_mode(app: AppContext, args: str) -> None:
     valid_modes = ("read-only", "suggest", "auto")
     if not args.strip():
-        chat.add_message(
-            "system", f"Current mode: {app.config.tui.approval_mode}",
-        )
+        app.add_system_message(f"Current mode: {app.approval_mode}")
         return
     mode = args.strip().lower()
     if mode not in valid_modes:
-        chat.add_message(
-            "system", f"Invalid mode. Choose: {', '.join(valid_modes)}",
-        )
+        app.add_system_message(f"Invalid mode. Choose: {', '.join(valid_modes)}")
         return
-    app.config.tui.approval_mode = mode  # type: ignore[assignment]
-    status = _get_status(app)
-    status.mode = mode
-    if hasattr(app, "_approval_manager") and app._approval_manager is not None:
-        from hybridcoder.agent.approval import ApprovalMode
+    app.approval_mode = mode
+    # Update status bar if available (Textual TUI only)
+    if hasattr(app, "query_one"):
+        from hybridcoder.tui.widgets.status_bar import StatusBar
 
-        app._approval_manager.mode = ApprovalMode(mode)
-    chat.add_message("system", f"Switched to {mode} mode.")
+        status = app.query_one("#status-bar", StatusBar)
+        status.mode = mode
+    app.add_system_message(f"Switched to {mode} mode.")
 
 
-async def _handle_compact(app: HybridCoderApp, args: str) -> None:
-    chat = _get_chat(app)
+async def _handle_compact(app: AppContext, args: str) -> None:
     messages = app.session_store.get_messages(app.session_id)
     if len(messages) <= 4:
-        chat.add_message("system", "Not enough messages to compact.")
+        app.add_system_message("Not enough messages to compact.")
         return
 
     summary_parts = [
@@ -282,34 +293,27 @@ async def _handle_compact(app: HybridCoderApp, args: str) -> None:
     )
 
     app.session_store.compact_session(app.session_id, summary=summary)
-    chat.add_message("system", "Compacted session. Kept last 4 messages.")
+    app.add_system_message("Compacted session. Kept last 4 messages.")
 
 
-async def _handle_shell(app: HybridCoderApp, args: str) -> None:
-    chat = _get_chat(app)
+async def _handle_shell(app: AppContext, args: str) -> None:
     arg = args.strip().lower()
 
     if arg in ("on", "enable", "true"):
-        app.config.shell.enabled = True
-        if app._approval_manager is not None:
-            app._approval_manager.shell_config.enabled = True
-        chat.add_message("system", "Shell execution enabled.")
+        app.shell_enabled = True
+        app.add_system_message("Shell execution enabled.")
     elif arg in ("off", "disable", "false"):
-        app.config.shell.enabled = False
-        if app._approval_manager is not None:
-            app._approval_manager.shell_config.enabled = False
-        chat.add_message("system", "Shell execution disabled.")
+        app.shell_enabled = False
+        app.add_system_message("Shell execution disabled.")
     else:
         status = "enabled" if app.config.shell.enabled else "disabled"
-        chat.add_message(
-            "system",
+        app.add_system_message(
             f"Shell execution is **{status}**.\n"
             "Usage: `/shell on` or `/shell off`",
         )
 
 
-async def _handle_copy(app: HybridCoderApp, args: str) -> None:
-    chat = _get_chat(app)
+async def _handle_copy(app: AppContext, args: str) -> None:
     arg = args.strip()
 
     messages = app.session_store.get_messages(app.session_id)
@@ -323,7 +327,7 @@ async def _handle_copy(app: HybridCoderApp, args: str) -> None:
         try:
             count = int(count_str) if count_str else 3
         except ValueError:
-            chat.add_message("system", "Usage: `/copy last N` (e.g. `/copy last 5`)")
+            app.add_system_message("Usage: `/copy last N` (e.g. `/copy last 5`)")
             return
         tail = messages[-count:] if count <= len(messages) else messages
         text = "\n\n".join(f"{m.role}: {m.content}" for m in tail)
@@ -332,11 +336,10 @@ async def _handle_copy(app: HybridCoderApp, args: str) -> None:
         n = int(arg)
         assistant_msgs = [m for m in messages if m.role == "assistant"]
         if not assistant_msgs:
-            chat.add_message("system", "No assistant messages to copy.")
+            app.add_system_message("No assistant messages to copy.")
             return
         if n < 1 or n > len(assistant_msgs):
-            chat.add_message(
-                "system",
+            app.add_system_message(
                 f"Only {len(assistant_msgs)} assistant messages. Use 1-{len(assistant_msgs)}.",
             )
             return
@@ -345,43 +348,48 @@ async def _handle_copy(app: HybridCoderApp, args: str) -> None:
         # /copy (no args) — last assistant message
         assistant_msgs = [m for m in messages if m.role == "assistant"]
         if not assistant_msgs:
-            chat.add_message("system", "No assistant messages to copy.")
+            app.add_system_message("No assistant messages to copy.")
             return
         text = assistant_msgs[-1].content
 
-    if _copy_to_clipboard(text):
-        chat.add_message("system", f"Copied {len(text)} characters to clipboard.")
+    if app.copy_to_clipboard(text):
+        app.add_system_message(f"Copied {len(text)} characters to clipboard.")
     else:
         # Fallback: show text in chat for manual copy
         preview = text[:500]
         if len(text) > 500:
             preview += "\n...(truncated)"
-        chat.add_message("system", f"Clipboard unavailable. Text:\n```\n{preview}\n```")
+        app.add_system_message(f"Clipboard unavailable. Text:\n```\n{preview}\n```")
 
 
-async def _handle_freeze(app: HybridCoderApp, args: str) -> None:
-    chat = _get_chat(app)
-    if chat.frozen:
-        chat.unfreeze()
-        chat.add_message("system", "Auto-scroll resumed.")
+async def _handle_freeze(app: AppContext, args: str) -> None:
+    # Textual TUI has a frozen ChatView; inline mode uses native scrollback
+    if hasattr(app, "query_one"):
+        from hybridcoder.tui.widgets.chat_view import ChatView
+
+        chat = app.query_one("#chat-view", ChatView)
+        if chat.frozen:
+            chat.unfreeze()
+            app.add_system_message("Auto-scroll resumed.")
+        else:
+            chat.freeze()
+            app.add_system_message(
+                "Auto-scroll paused. Use PageUp/PageDown to scroll. "
+                "Use `/freeze` again to resume.",
+            )
     else:
-        chat.freeze()
-        message = (
-            "Auto-scroll paused. Use PageUp/PageDown to scroll. "
-            "Use `/freeze` again to resume."
+        app.add_system_message(
+            "Scroll-lock is not needed in inline mode — "
+            "use your terminal's native scrollback."
         )
-        chat.add_message("system", message)
 
 
-async def _handle_init(app: HybridCoderApp, args: str) -> None:
-    chat = _get_chat(app)
+async def _handle_init(app: AppContext, args: str) -> None:
     memory_dir = app.project_root / ".hybridcoder"
     memory_file = memory_dir / "memory.md"
 
     if memory_file.exists():
-        chat.add_message(
-            "system", f"Memory file already exists: {memory_file}",
-        )
+        app.add_system_message(f"Memory file already exists: {memory_file}")
         return
 
     lines = ["# Project Memory\n"]
@@ -397,9 +405,7 @@ async def _handle_init(app: HybridCoderApp, args: str) -> None:
 
     memory_dir.mkdir(parents=True, exist_ok=True)
     memory_file.write_text("\n".join(lines), encoding="utf-8")
-    chat.add_message(
-        "system", f"Created project memory at {memory_file}",
-    )
+    app.add_system_message(f"Created project memory at {memory_file}")
 
 
 def create_default_router() -> CommandRouter:

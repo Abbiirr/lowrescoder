@@ -363,3 +363,56 @@ class TestSprint2Commands:
             "model", "mode", "compact", "init", "shell", "copy", "freeze",
         }
         assert names == expected
+
+
+# ============================================================
+# Sprint 2C: Inline Mode (Rich + prompt_toolkit)
+# ============================================================
+
+
+class TestSprint2C:
+    """S2C: Inline mode implementation."""
+
+    def test_inline_app_imports(self) -> None:
+        """InlineApp is importable."""
+        from hybridcoder.inline.app import InlineApp
+
+        assert InlineApp is not None
+
+    def test_inline_renderer_imports(self) -> None:
+        """InlineRenderer is importable."""
+        from hybridcoder.inline.renderer import InlineRenderer
+
+        assert InlineRenderer is not None
+
+    def test_hybrid_completer_imports(self) -> None:
+        """HybridCompleter is importable."""
+        from hybridcoder.inline.completer import HybridCompleter
+
+        assert HybridCompleter is not None
+
+    def test_app_context_protocol(self) -> None:
+        """AppContext protocol has required methods."""
+        from hybridcoder.tui.commands import AppContext
+
+        # Check required method signatures exist in the protocol
+        assert hasattr(AppContext, "add_system_message")
+        assert hasattr(AppContext, "clear_messages")
+        assert hasattr(AppContext, "display_messages")
+        assert hasattr(AppContext, "get_assistant_messages")
+        assert hasattr(AppContext, "copy_to_clipboard")
+        assert hasattr(AppContext, "exit_app")
+
+    def test_cli_tui_flag(self) -> None:
+        """--tui parameter exists on chat command."""
+        result = runner.invoke(app, ["chat", "--help"])
+        assert result.exit_code == 0
+        assert "--tui" in result.output
+
+    def test_prompt_toolkit_installed(self) -> None:
+        """prompt_toolkit is installed and version >= 3.0."""
+        import prompt_toolkit
+
+        version = prompt_toolkit.__version__
+        major = int(version.split(".")[0])
+        assert major >= 3

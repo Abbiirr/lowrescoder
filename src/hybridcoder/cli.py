@@ -143,8 +143,9 @@ def _get_version() -> str:
 def chat(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
     session: str | None = typer.Option(None, "--session", "-s", help="Resume a session by ID"),
-    alternate_screen: bool = typer.Option(False, "--alternate-screen", help="Use alternate screen"),
-    legacy: bool = typer.Option(False, "--legacy", help="Use legacy Rich REPL instead of TUI"),
+    tui: bool = typer.Option(False, "--tui", help="Use fullscreen Textual TUI"),
+    alternate_screen: bool = typer.Option(False, "--alternate-screen", help="Alias for --tui"),
+    legacy: bool = typer.Option(False, "--legacy", help="Use legacy Rich REPL (no agent loop)"),
 ) -> None:
     """Start an interactive chat session."""
     config = load_config()
@@ -153,13 +154,21 @@ def chat(
 
     if legacy:
         asyncio.run(_chat_loop(config))
-        return
+    elif tui or alternate_screen:
+        # Fullscreen Textual TUI (opt-in)
+        from hybridcoder.tui.app import HybridCoderApp
 
-    from hybridcoder.tui.app import HybridCoderApp
+        tui_app = HybridCoderApp(config=config, session_id=session or None)
+        tui_app.run(inline=False)
+    else:
+        # Default: inline REPL (Rich + prompt_toolkit)
+        from hybridcoder.inline.app import InlineApp
 
-    use_inline = not (alternate_screen or config.tui.alternate_screen)
-    tui_app = HybridCoderApp(config=config, session_id=session or None)
-    tui_app.run(inline=use_inline)
+        inline_app = InlineApp(
+            config=config,
+            session_id=session or None,
+        )
+        asyncio.run(inline_app.run())
 
 
 @app.command()

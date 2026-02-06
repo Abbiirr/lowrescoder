@@ -509,6 +509,65 @@ class HybridCoderApp(App[None]):
         chat = self.query_one("#chat-view", ChatView)
         chat.scroll_relative(y=chat.size.height)
 
+    # --- AppContext protocol methods ---
+
+    def add_system_message(self, content: str) -> None:
+        """AppContext: Display system message via ChatView."""
+        self.query_one("#chat-view", ChatView).add_message("system", content)
+
+    def clear_messages(self) -> None:
+        """AppContext: Clear all messages from ChatView."""
+        self.query_one("#chat-view", ChatView).remove_children()
+
+    def display_messages(self, messages: list) -> None:  # type: ignore[type-arg]
+        """AppContext: Display a list of messages in ChatView."""
+        chat = self.query_one("#chat-view", ChatView)
+        for msg in messages:
+            chat.add_message(msg.role, msg.content)
+
+    def get_assistant_messages(self) -> list[str]:
+        """AppContext: Get assistant messages from session store."""
+        msgs = self.session_store.get_messages(self.session_id)
+        return [m.content for m in msgs if m.role == "assistant"]
+
+    def copy_to_clipboard(self, text: str) -> bool:  # type: ignore[override]
+        """AppContext: Copy to clipboard using platform-native command."""
+        from hybridcoder.tui.commands import _copy_to_clipboard
+
+        return _copy_to_clipboard(text)
+
+    def exit_app(self) -> None:
+        """AppContext: Exit the application."""
+        self.exit()
+
+    @property
+    def approval_mode(self) -> str:
+        """AppContext: Current approval mode."""
+        if self._approval_manager:
+            return self._approval_manager.mode.value
+        return self.config.tui.approval_mode
+
+    @approval_mode.setter
+    def approval_mode(self, value: str) -> None:
+        """AppContext: Set approval mode."""
+        from hybridcoder.agent.approval import ApprovalMode
+
+        self.config.tui.approval_mode = value  # type: ignore[assignment]
+        if self._approval_manager:
+            self._approval_manager.mode = ApprovalMode(value)
+
+    @property
+    def shell_enabled(self) -> bool:
+        """AppContext: Whether shell execution is enabled."""
+        return self.config.shell.enabled
+
+    @shell_enabled.setter
+    def shell_enabled(self, value: bool) -> None:
+        """AppContext: Enable/disable shell."""
+        self.config.shell.enabled = value
+        if self._approval_manager:
+            self._approval_manager.shell_config.enabled = value
+
     async def action_quit(self) -> None:
         """Quit the application."""
         if os.environ.get("HYBRIDCODER_BENCH") == "1":

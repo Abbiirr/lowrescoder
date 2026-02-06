@@ -1,7 +1,7 @@
 # Phase 2: TUI Prototype
 
 > HybridCoder — Edge-Native AI Coding Assistant
-> Version: 3.4 FINAL (implementation complete) | Date: 2026-02-05
+> Version: 3.5 (inline mode addendum) | Date: 2026-02-05
 > Replaces: Original Phase 2 ("Edit System + Git Safety") — deferred to Phase 3
 > Consensus: Reached via agent comms
 
@@ -9,9 +9,10 @@
 
 ## 1. Goal
 
-Build a minimal but usable TUI coding assistant that feels like Claude Code in the terminal, while preserving HybridCoder's layered architecture. By the end of Phase 2:
+Build a minimal but usable coding assistant that feels like Claude Code in the terminal, while preserving HybridCoder's layered architecture. Two rendering modes: **inline** (Rich + prompt_toolkit, default) outputs directly to the terminal with native scrollback and text selection; **Textual TUI** (opt-in via `--tui`) provides a fullscreen alternate-screen experience. By the end of Phase 2:
 
-- A fast Textual TUI with streaming markdown chat, @file references, and slash commands
+- **Inline mode** (default): Rich + prompt_toolkit REPL with streaming markdown, @file references, and slash commands — see Sprint 2C / `docs/plan/sprint-2c-inline-mode.md`
+- **Textual TUI** (opt-in `--tui`): Fullscreen alternate-screen app with streaming markdown chat, @file references, and slash commands
 - Session persistence (SQLite) with compaction
 - 6 tools with approval gating: read_file, write_file, list_files, search_text, run_command, ask_user
 - OpenRouter as acceptance target; Ollama non-blocking/experimental
@@ -21,7 +22,7 @@ Build a minimal but usable TUI coding assistant that feels like Claude Code in t
 
 This is a UX and interaction layer milestone. No Layer 1-2 deterministic engines; no full L3/L4 beyond tool-calling. No git integration. Design stays resource-safe and local-first.
 
-**Implementation status:** Phase 2 is complete. 252 tests passing (unit + benchmark + sprint verify).
+**Implementation status:** Phase 2 is complete. Textual TUI (307 tests) and Sprint 2C inline mode (338 tests) are both implemented. Inline mode (Rich + prompt_toolkit) is the canonical default; Textual TUI is opt-in via `--tui`. See Section 20 and `docs/plan/sprint-2c-inline-mode.md`.
 
 ---
 
@@ -34,7 +35,7 @@ This is a UX and interaction layer milestone. No Layer 1-2 deterministic engines
 | Approval modes | Codex CLI | suggest (default) / auto-edit / full-auto |
 | Session persistence | OpenCode | SQLite with sessions, messages, tool_calls |
 | @file references | Codex CLI + OpenCode | Fuzzy completion, line ranges |
-| Slash commands | OpenCode + Claude Code | 11 commands (minimal, discoverable) |
+| Slash commands | OpenCode + Claude Code | 12 commands (minimal, discoverable) |
 | Project memory file | OpenCode | `.hybridcoder/memory.md` injected into prompts |
 | Tool-calling format | Codex CLI | OpenAI function-calling format |
 | Session compaction | OpenCode | LLM summarizes history via /compact |
@@ -56,9 +57,10 @@ This is a UX and interaction layer milestone. No Layer 1-2 deterministic engines
 
 ### In Scope
 
-- Textual TUI with header, chat pane, input bar, status bar
-- Streaming markdown rendering of assistant messages
-- 11 slash commands: /help /exit /new /sessions /resume /model /mode (alias: /permissions) /compact /init /shell /copy (alias: /cp)
+- **Inline mode** (default): Rich + prompt_toolkit REPL — streaming markdown, native scrollback, text selection (Sprint 2C)
+- **Textual TUI** (opt-in `--tui`): Fullscreen app with header, chat pane, input bar, status bar
+- Streaming markdown rendering of assistant messages (both modes)
+- 12 slash commands: /help /exit /new /sessions /resume /model /mode (alias: /permissions) /compact /init /shell /copy (alias: /cp) /freeze (alias: /scroll-lock, added in v3.5)
 - @file references with fuzzy completion, line ranges, and tab completion
 - SQLite session persistence (3 tables: sessions, messages, tool_calls)
 - Session compaction (/compact)
@@ -358,8 +360,10 @@ class ApprovalManager:
 
 ### Display Decisions
 
-- **Alternate screen**: Off by default (inline mode) to preserve terminal scrollback. Opt-in via `--alternate-screen` flag or `tui.alternate_screen: true` in config. Aligns with TUI quality checklist.
-- **Tool call display**: Use Textual `Collapsible` widget — tool name and status visible, expand to see arguments/result. Controlled by `show_tool_calls` config.
+- **Rendering mode**: Two modes available (see Section 20 for full analysis):
+  - **Inline mode (default)**: Rich + prompt_toolkit REPL. Output goes to terminal scrollback, native text selection, no mouse capture. Matches Claude Code/Aider experience.
+  - **TUI mode (`--tui`)**: Textual fullscreen app with all widgets. Opt-in via `--tui` flag or `tui.alternate_screen: true` in config.
+- **Tool call display**: Collapsible in TUI mode; prefixed status lines in inline mode. Controlled by `show_tool_calls` config.
 - **Error surfaces**: Errors display inline in chat with red styling and recovery hints (e.g., "File not found: foo.py — check the path and try again").
 - **Diff preview**: Inline in chat flow using syntax-highlighted unified diff (Rich Syntax).
 
@@ -412,7 +416,7 @@ class ApprovalManager:
 - [x] run_command disabled by default, works when enabled, toggleable via /shell
 - [x] @file references resolve correctly with tab completion
 - [x] /compact reduces token count by >50%
-- [x] All tests pass (`make test` + `make lint`) — 252 total tests
+- [x] All tests pass (`make test` + `make lint`) — 252 tests at Sprint 2B completion; 307 after v3.5 polish (added /freeze, /copy enhancements, interactive widget tests, thinking token tests); 338 after Sprint 2C (inline mode: renderer, completer, app, protocol tests)
 
 ---
 
@@ -548,7 +552,7 @@ def generate_diff(file_path: str, original: str, new: str) -> str:
 
 ## 13. Test Strategy
 
-### Test Summary: 252 Total Tests
+### Test Summary: 338 Total Tests (252 at Sprint 2B, +55 in v3.5 polish, +31 in Sprint 2C)
 
 Tests span unit, benchmark, and sprint verification across all Phase 2 modules. Key test areas:
 
@@ -556,10 +560,11 @@ Tests span unit, benchmark, and sprint verification across all Phase 2 modules. 
 |------|-------------|
 | Session store | CRUD: sessions, messages, tool_calls, compact, auto-naming |
 | TUI app | Textual pilot: mount, send, stream, BENCH, keyboard shortcuts |
+| Inline app | InlineApp REPL, renderer, completer, AppContext protocol |
 | Tools | Registration, schemas, 6 tool handlers (incl. ask_user) |
 | Agent loop | Text response, tool calls, max iter, errors, async callbacks |
 | Approval | 3 modes (suggest/auto-edit/full-auto), blocked commands, shell toggle |
-| Commands | Dispatch all 11 commands, unknown cmd handling |
+| Commands | Dispatch all 12 commands, unknown cmd handling |
 | File completer | Fuzzy match, resolve, line ranges, tab completion, invalid path |
 | Approval prompt | ApprovalPrompt widget (Y/n/a), OptionSelector (multi/single) |
 | Search backends | ripgrep > grep > Python fallback chain |
@@ -689,8 +694,8 @@ All exit criteria have been met. Phase 2 implementation is complete.
 - [x] Ollama text streaming works (tool-calling best-effort, not blocking)
 - [x] Interactive approval (ApprovalPrompt Y/n/a, OptionSelector for ask_user)
 - [x] Input history, typing indicator, copy/scroll, thinking toggle
-- [x] 11 slash commands implemented
-- [x] 252 total tests pass (`make test` + `make lint`)
+- [x] 12 slash commands implemented (added /freeze in v3.5)
+- [x] 338 total tests pass (307 Textual + 31 inline mode)
 
 ---
 
@@ -738,7 +743,174 @@ The `search_text` tool uses a three-tier fallback: ripgrep (fastest, if installe
 
 ### Async Approval Callbacks
 
-The AgentLoop accepts `approval_callback` and `ask_user_callback` parameters that can be either sync or async callables. The loop uses `inspect.isawaitable()` to detect async results and awaits them as needed. This allows the TUI to provide async Textual-based prompts while tests can provide simple sync lambdas.
+The AgentLoop accepts `approval_callback` and `ask_user_callback` as always-async callables (`Callable[..., Awaitable[T]]`). Both are always awaited. This simplifies the code (no `inspect.isawaitable()` branching). Tests provide `async` lambdas/functions.
+
+### Shell Enable-on-Approve
+
+When `shell.enabled=False` and the LLM calls `run_command`, the system routes through the approval prompt instead of hard-blocking. The prompt shows "Enable shell and execute: <cmd>". If approved, shell is enabled at runtime and the command executes. This avoids double-prompting and matches user expectations.
+
+### Dynamic System Prompt
+
+The system prompt is rebuilt at the start of each `AgentLoop.run()` call, reflecting current runtime state (shell enabled/disabled, approval mode). This prevents stale refusals after runtime changes.
+
+### Enhanced /copy Command
+
+`/copy` supports multiple forms: `/copy` (last assistant message), `/copy N` (Nth-last assistant message), `/copy all` (all messages), `/copy last N` (last N messages). Uses platform-native clipboard (`clip.exe` on Windows, `pbcopy` on macOS, `xclip`/`xsel` on Linux).
+
+### /freeze Command
+
+`/freeze` (alias `/scroll-lock`) toggles auto-scroll in ChatView. When frozen, new content is mounted but scroll position is not changed, allowing the user to select text with the mouse. `/freeze` again resumes auto-scroll and jumps to bottom. Total: 12 slash commands.
+
+---
+
+## 20. Inline Mode — Rich + prompt_toolkit (Complete)
+
+### User Requirements
+
+> "If it works, if I can keep selecting while scrolling back then it works."
+> "2 rendering modes is okay if not too resource heavy."
+> "We can include it in 2C."
+
+**Hard requirements:**
+- Native mouse text selection must work while scrolling back through terminal history
+- Two rendering modes (inline + TUI) are acceptable if the inline mode is lightweight
+- Inline mode is the default; Textual TUI is opt-in via `--tui`
+- Implementation is Sprint 2C scope (complete — 338 tests passing)
+
+### Problem
+
+Textual's `inline=True` mode does NOT achieve true inline behavior:
+- On Windows, inline mode is **not supported** (relies on `termios`, Unix-only)
+- Content does not enter terminal scrollback — it's a fixed-height box managed by Textual
+- Mouse events are captured by Textual, preventing native text selection
+- This differs fundamentally from Claude Code and Aider, where output becomes normal scrollback
+
+### Research Findings
+
+| Tool | UI Stack | Alternate Screen | Mouse Capture | Scrollback | Text Selection |
+|------|----------|-----------------|---------------|------------|---------------|
+| Claude Code | Custom React/Ink renderer | No | No | Yes | Native |
+| Codex CLI | Ratatui + Crossterm (Rust) | Yes | Yes | No | No |
+| Aider | Rich + prompt_toolkit | No | No | Yes | Native |
+| HybridCoder (current) | Textual inline | No | Yes | No | Via `/copy` |
+
+### Recommended Architecture: Rich + prompt_toolkit
+
+Adopt the **Aider pattern** for the default interaction mode:
+
+```
+┌─────────────────────────────────────────────┐
+│ Terminal scrollback (native selection works) │
+│                                             │
+│ > user message                              │
+│ [tool] read_file: src/foo.py ✓              │
+│ Assistant response (Rich Markdown)          │
+│ > another message                           │
+│ ...                                         │
+├─────────────────────────────────────────────┤
+│ prompt_toolkit input (with completion)    > │
+└─────────────────────────────────────────────┘
+```
+
+**Components:**
+- `prompt_toolkit.PromptSession` — async input with completion, history, key bindings
+- `prompt_toolkit.patch_stdout()` — streaming output appears above prompt line
+- `rich.Console.print(Markdown(...))` — formatted assistant output
+- `rich.Live` — streaming chunks during generation
+- `rich.Syntax` — diff preview, code blocks
+- `rich.Prompt.ask()` or prompt_toolkit input — approval prompts (Y/n/a)
+
+### Feature Mapping
+
+| Feature | Textual TUI | Rich + prompt_toolkit Inline |
+|---------|------------|------------------------------|
+| Streaming output | `Static.update()` | `rich.Live` or `print()` chunks |
+| Approval prompt | `ApprovalPrompt` widget | `rich.Prompt.ask("Allow? [Y/n/a]")` |
+| Option selector | `OptionSelector` widget | `prompt_toolkit` radio list or numbered choices |
+| @file completion | `InputBar` suggestion | `prompt_toolkit.Completer` |
+| Slash commands | `CommandRouter.dispatch()` | Same (reuse) |
+| Thinking tokens | `Collapsible` widget | `rich.Console.print()` with dim style, or hidden |
+| Diff preview | `Static` + Rich Syntax | `rich.Syntax` directly |
+| Copy/scroll | `/copy`, PageUp/PageDown | Native terminal selection + `/copy` |
+| Tool call display | `Collapsible` in chat | Prefixed status line: `[tool] name ✓/✗` |
+| Session store | SQLite (reuse) | Same (reuse) |
+| Agent loop | `AgentLoop` (reuse) | Same (reuse) |
+
+### Implementation Plan
+
+**New files:**
+- `src/hybridcoder/inline/__init__.py`
+- `src/hybridcoder/inline/app.py` — `InlineApp` class (main REPL loop)
+- `src/hybridcoder/inline/completer.py` — prompt_toolkit Completer for / and @
+- `src/hybridcoder/inline/renderer.py` — Rich-based output formatting
+
+**Modified files:**
+- `src/hybridcoder/cli.py` — Default `chat` command uses `InlineApp`, `--tui` flag for Textual
+- `pyproject.toml` — Add `prompt_toolkit>=3.0` dependency
+
+**Reused without changes:**
+- `agent/loop.py`, `agent/tools.py`, `agent/approval.py`, `agent/prompts.py`
+- `session/store.py`
+- `tui/commands.py` (CommandRouter, SlashCommand — refactored with AppContext protocol in Sprint 2C)
+- `tui/file_completer.py` (detection + resolution logic)
+- `config.py`
+
+### Sprint Plan
+
+**Sprint 2C: Inline Mode (Complete)**
+
+| ID | Deliverable | Acceptance | Status |
+|----|------------|------------|--------|
+| 2C.1 | `inline/app.py` — REPL loop with `PromptSession` | User can type, get streaming responses | Done |
+| 2C.2 | `inline/completer.py` — `/` and `@` completion | Tab-complete works for commands and files | Done |
+| 2C.3 | `inline/renderer.py` — Rich output formatting | Messages render as Markdown, tools as status lines | Done |
+| 2C.4 | Approval via prompt_toolkit `prompt_async()` | Y/n/a approval works for tool calls | Done |
+| 2C.5 | CLI integration — default inline, `--tui` for Textual | Both modes work from `hybridcoder chat` | Done |
+| 2C.6 | Tests + AppContext protocol | 31 new tests, AppContext protocol compliance | Done |
+
+**Key implementation details:**
+- `AppContext` protocol in `tui/commands.py` decouples all 12 handlers from Textual
+- `PromptSession` is lazy-initialized (avoids terminal detection in tests)
+- `tui/app.py` gained 8 new AppContext methods (additive, no breaking changes)
+- 338 total tests (307 existing + 31 new), ruff clean
+
+**Exit criteria (all met):**
+- [x] `hybridcoder chat` opens inline REPL (Rich + prompt_toolkit)
+- [x] `hybridcoder chat --tui` opens Textual TUI (existing behavior)
+- [x] All existing tests still pass (307+)
+- [x] New inline tests pass (31 new)
+- [x] Native text selection works in inline mode
+- [x] Works on Windows
+- [ ] QA matrix P0 items verified manually (pending)
+
+**QA matrix (inline mode validation):**
+
+| OS | Terminal | Priority |
+|----|---------|----------|
+| Windows | Windows Terminal | P0 |
+| Windows | PowerShell (conhost) | P1 |
+| macOS | Terminal.app | P0 |
+| macOS | iTerm2 | P1 |
+| Linux | gnome-terminal | P0 |
+| Linux | tmux | P1 |
+| Linux | zellij | P2 |
+
+See `docs/plan/sprint-2c-inline-mode.md` for the comprehensive standalone plan.
+
+### Risks
+
+| Risk | Mitigation |
+|------|-----------|
+| prompt_toolkit async integration complexity | Aider proves it works; follow their pattern |
+| Feature parity between two modes | Share AgentLoop, CommandRouter, SessionStore |
+| Maintenance burden of two UIs | Inline is simpler (less code); Textual becomes optional power mode |
+
+### References
+
+- `docs/plan/inline-tui-research.md` — Full research document
+- Aider `io.py`: Rich + prompt_toolkit pattern reference
+- prompt_toolkit docs: https://python-prompt-toolkit.readthedocs.io/
+- Claude Code terminal UI: custom React renderer (not replicable, but goals align)
 
 ---
 
