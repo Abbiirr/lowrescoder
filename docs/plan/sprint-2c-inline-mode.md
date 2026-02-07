@@ -45,7 +45,7 @@ Build a Rich + prompt_toolkit inline REPL as the **canonical** (default) renderi
 ### What We Have Now
 
 HybridCoder Phase 2 built a Textual-based TUI (`src/hybridcoder/tui/app.py`) with:
-- 12 slash commands (`/exit`, `/new`, `/sessions`, `/resume`, `/help`, `/model`, `/mode`, `/compact`, `/init`, `/shell`, `/copy`, `/freeze`)
+- 14 slash commands (`/exit`, `/new`, `/sessions`, `/resume`, `/help`, `/model`, `/mode`, `/compact`, `/init`, `/shell`, `/copy`, `/freeze`, `/thinking`, `/clear`)
 - 6 tools (read_file, write_file, list_files, search_text, run_command, ask_user) with approval gating
 - SQLite session persistence with WAL mode
 - Agent loop (LLM ↔ tool execution cycle, max 10 iterations)
@@ -229,7 +229,7 @@ Terminal window (normal scrollback buffer)
               │  agent/approval.py — ApprovalManager (3 modes)         │
               │  agent/prompts.py  — System prompt builder             │
               │  session/store.py  — SQLite with WAL mode              │
-              │  tui/commands.py   — CommandRouter + 12 slash commands  │
+              │  tui/commands.py   — CommandRouter + 14 slash commands  │
               │  tui/file_completer.py — @file detection + expansion   │
               │  config.py         — HybridCoderConfig (Pydantic)      │
               │  layer4/llm.py     — Ollama + OpenRouter providers     │
@@ -1181,7 +1181,7 @@ For **both** modes, verify:
 
 - [ ] User can type and submit messages
 - [ ] Streaming responses render incrementally
-- [ ] `/help` — shows all 12 commands
+- [ ] `/help` — shows all 14 commands
 - [ ] `/exit` — exits cleanly
 - [ ] `/model` — shows current model
 - [ ] `/mode suggest` — changes approval mode
@@ -1435,7 +1435,7 @@ Sprint 2C is complete when ALL of these are met:
 ### Functional
 - [ ] `hybridcoder chat` launches inline REPL (Rich + prompt_toolkit)
 - [ ] `hybridcoder chat --tui` launches Textual TUI (existing behavior preserved)
-- [ ] All 12 slash commands work in inline mode
+- [ ] All 14 slash commands work in inline mode
 - [ ] @file references work with tab completion in inline mode
 - [ ] Streaming output renders incrementally
 - [ ] Approval prompts work (Y/n/a) in inline mode
@@ -1492,7 +1492,7 @@ Step 14: tests/test_sprint_verify.py          — Sprint 2C checks (6 tests)
 | What | Location | How Used in Sprint 2C |
 |------|----------|----------------------|
 | `CommandRouter`, `SlashCommand` | `tui/commands.py:15-45` | Shared command dispatch for both modes |
-| `create_default_router()` | `tui/commands.py:200+` | Registers all 12 commands |
+| `create_default_router()` | `tui/commands.py:200+` | Registers all 14 commands |
 | `_copy_to_clipboard()` | `tui/commands.py:50+` | Platform-native clipboard (clip.exe/pbcopy/xclip) |
 | `AgentLoop` | `agent/loop.py:25-120` | Core LLM ↔ tool cycle (max 10 iterations) |
 | `ToolRegistry`, `create_default_tools()` | `agent/tools.py:30-180` | 6 tools with JSON Schema parameters |

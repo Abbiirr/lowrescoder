@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, cast
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.formatted_text import FormattedText
@@ -26,6 +26,18 @@ from hybridcoder.layer4.llm import create_provider
 from hybridcoder.session.store import SessionStore
 from hybridcoder.tui.commands import CommandRouter, create_default_router
 from hybridcoder.tui.file_completer import expand_references
+
+
+class _MSVCRTModule(Protocol):
+    """Subset of msvcrt we rely on for Escape/Ctrl+C detection.
+
+    Mypy runs on non-Windows too; stubs for this Windows-only module can be
+    incomplete/conditional. We cast to this protocol inside the Windows path.
+    """
+
+    def kbhit(self) -> bool: ...
+
+    def getch(self) -> bytes: ...
 
 
 class InlineApp:
@@ -312,7 +324,9 @@ class InlineApp:
 
     def _poll_key_windows(self) -> str | None:
         """Check for keypress on Windows. Returns key byte or None."""
-        import msvcrt
+        import msvcrt as msvcrt_mod
+
+        msvcrt = cast(_MSVCRTModule, msvcrt_mod)
 
         if msvcrt.kbhit():
             key = msvcrt.getch()
@@ -345,16 +359,24 @@ class InlineApp:
                     return True
                 await asyncio.sleep(0.05)
         else:
+            import os
+
+            fd = sys.stdin.fileno()
+            if not os.isatty(fd):
+                return False  # Not a TTY — can't listen for keys
+
             import termios
             import tty
 
-            fd = sys.stdin.fileno()
             try:
                 old_settings = termios.tcgetattr(fd)
             except termios.error:
                 return False  # Not a TTY — can't listen for keys
             try:
-                tty.setraw(fd)
+                try:
+                    tty.setraw(fd)
+                except termios.error:
+                    return False  # Not a TTY — can't switch to raw mode
                 while True:
                     key = await loop.run_in_executor(
                         None, self._poll_key_unix, fd,
@@ -363,7 +385,10 @@ class InlineApp:
                         return True
                     await asyncio.sleep(0.05)
             finally:
-                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                try:
+                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                except termios.error:
+                    pass
 
     async def _handle_input(self, text: str) -> None:
         """Route input to slash command or agent loop."""

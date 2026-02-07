@@ -32,10 +32,10 @@ This is a UX and interaction layer milestone. No Layer 1-2 deterministic engines
 
 | Feature | Source | Implementation |
 |---------|--------|----------------|
-| Approval modes | Codex CLI | suggest (default) / auto-edit / full-auto |
+| Approval modes | Codex CLI | read-only / suggest (default) / auto |
 | Session persistence | OpenCode | SQLite with sessions, messages, tool_calls |
 | @file references | Codex CLI + OpenCode | Fuzzy completion, line ranges |
-| Slash commands | OpenCode + Claude Code | 12 commands (minimal, discoverable) |
+| Slash commands | OpenCode + Claude Code | 14 commands (minimal, discoverable) |
 | Project memory file | OpenCode | `.hybridcoder/memory.md` injected into prompts |
 | Tool-calling format | Codex CLI | OpenAI function-calling format |
 | Session compaction | OpenCode | LLM summarizes history via /compact |
@@ -60,12 +60,12 @@ This is a UX and interaction layer milestone. No Layer 1-2 deterministic engines
 - **Inline mode** (default): Rich + prompt_toolkit REPL — streaming markdown, native scrollback, text selection (Sprint 2C)
 - **Textual TUI** (opt-in `--tui`): Fullscreen app with header, chat pane, input bar, status bar
 - Streaming markdown rendering of assistant messages (both modes)
-- 12 slash commands: /help /exit /new /sessions /resume /model /mode (alias: /permissions) /compact /init /shell /copy (alias: /cp) /freeze (alias: /scroll-lock, added in v3.5)
+- 14 slash commands: /help /exit /new /sessions /resume /model /mode (alias: /permissions) /compact /init /shell /copy (alias: /cp) /freeze (alias: /scroll-lock) /thinking (alias: /think) /clear (alias: /cls)
 - @file references with fuzzy completion, line ranges, and tab completion
 - SQLite session persistence (3 tables: sessions, messages, tool_calls)
 - Session compaction (/compact)
 - Session auto-naming — timestamp title on create, auto-update from first user message
-- 3 approval modes: suggest / auto-edit / full-auto
+- 3 approval modes: read-only / suggest / auto
 - 6 tools: read_file, write_file, list_files, search_text, run_command, ask_user
 - `run_command` defaults to **disabled** (`shell.enabled: false`); user must opt in; toggleable at runtime via `/shell on|off`
 - Interactive approval prompt (ApprovalPrompt widget with Y/n/a keys)
@@ -295,9 +295,9 @@ class ToolRegistry:
 
 | Mode | Reads | File Writes | Shell |
 |------|-------|-------------|-------|
+| `read-only` | Auto | Blocked | Blocked |
 | `suggest` | Auto | Y/n prompt (ApprovalPrompt widget) | Y/n prompt |
-| `auto-edit` | Auto | Auto | Y/n prompt |
-| `full-auto` | Auto | Auto | Auto |
+| `auto` | Auto | Auto | Y/n prompt |
 
 **Note:** Shell tools (`run_command`) are disabled entirely unless `shell.enabled=true` in config (or toggled on via `/shell on`), regardless of approval mode. The `ask_user` tool never requires approval — it always routes to the user.
 
@@ -305,9 +305,9 @@ class ToolRegistry:
 
 ```python
 class ApprovalMode(Enum):
+    READ_ONLY = "read-only"
     SUGGEST = "suggest"
-    AUTO_EDIT = "auto-edit"
-    FULL_AUTO = "full-auto"
+    AUTO = "auto"
 
 class ApprovalManager:
     def __init__(self, mode: ApprovalMode) -> None: ...
@@ -319,21 +319,24 @@ class ApprovalManager:
 
 ## 9. Commands and UX
 
-### Slash Commands (11)
+### Slash Commands (14)
 
 | Command | Aliases | Description |
 |---------|---------|-------------|
 | `/help` | `/h`, `/?` | Show command list |
-| `/exit` | `/quit`, `/q` | Quit TUI |
+| `/exit` | `/quit`, `/q` | Quit the application |
 | `/new` | | Start new session |
-| `/sessions` | `/s` | List past sessions |
+| `/sessions` | `/s` | List sessions |
 | `/resume <id>` | | Resume a session |
 | `/model <name>` | `/m` | Show or switch model |
 | `/mode <mode>` | `/permissions` | Switch approval mode |
 | `/compact` | | Summarize history |
-| `/init` | | Create/update project memory file |
+| `/init` | | Create project memory file |
 | `/shell on\|off` | | Toggle shell execution at runtime |
-| `/copy [all]` | `/cp` | Copy last response (or all) to clipboard |
+| `/copy [N\|all\|last N]` | `/cp` | Copy assistant output to clipboard |
+| `/freeze` | `/scroll-lock` | Toggle auto-scroll (TUI) |
+| `/thinking` | `/think` | Toggle thinking token visibility |
+| `/clear` | `/cls` | Clear the terminal screen |
 
 ### @file References
 
@@ -398,7 +401,7 @@ class ApprovalManager:
 |----|-------------|------------|
 | D2B.1 | AgentLoop | LLM <-> tool cycle, max 10 iterations, async approval callbacks |
 | D2B.2 | 6 tools | read/write/list/search/run_command/ask_user |
-| D2B.3 | Approval modes | 3 modes (suggest/auto-edit/full-auto), blocked commands rejected |
+| D2B.3 | Approval modes | 3 modes (read-only/suggest/auto), blocked commands rejected |
 | D2B.4 | `generate_with_tools()` | Added to both providers |
 | D2B.5 | @file references | Fuzzy completion, line ranges, tab completion |
 | D2B.6 | Remaining commands | /help /model /mode /compact /init /shell /copy |
@@ -449,7 +452,7 @@ src/hybridcoder/
     loop.py                         # AgentLoop (LLM <-> tool cycle, async callbacks)
     tools.py                        # ToolRegistry + 6 built-in tools (incl. ask_user)
     prompts.py                      # System prompt, tool descriptions
-    approval.py                     # ApprovalManager (3 modes: suggest/auto-edit/full-auto)
+    approval.py                     # ApprovalManager (3 modes: read-only/suggest/auto)
 ```
 
 ### Files to Modify (4)
@@ -465,7 +468,7 @@ src/hybridcoder/
 
 ```python
 class TUIConfig(BaseModel):
-    approval_mode: Literal["suggest", "auto-edit", "full-auto"] = "suggest"
+    approval_mode: Literal["read-only", "suggest", "auto"] = "suggest"
     session_db_path: str = "~/.hybridcoder/sessions.db"
     max_iterations: int = 10
     show_tool_calls: bool = True
@@ -552,7 +555,7 @@ def generate_diff(file_path: str, original: str, new: str) -> str:
 
 ## 13. Test Strategy
 
-### Test Summary: 338 Total Tests (252 at Sprint 2B, +55 in v3.5 polish, +31 in Sprint 2C)
+### Test Summary: 475 Total Tests
 
 Tests span unit, benchmark, and sprint verification across all Phase 2 modules. Key test areas:
 
@@ -563,8 +566,8 @@ Tests span unit, benchmark, and sprint verification across all Phase 2 modules. 
 | Inline app | InlineApp REPL, renderer, completer, AppContext protocol |
 | Tools | Registration, schemas, 6 tool handlers (incl. ask_user) |
 | Agent loop | Text response, tool calls, max iter, errors, async callbacks |
-| Approval | 3 modes (suggest/auto-edit/full-auto), blocked commands, shell toggle |
-| Commands | Dispatch all 12 commands, unknown cmd handling |
+| Approval | 3 modes (read-only/suggest/auto), blocked commands, shell toggle |
+| Commands | Dispatch all 14 commands, unknown cmd handling |
 | File completer | Fuzzy match, resolve, line ranges, tab completion, invalid path |
 | Approval prompt | ApprovalPrompt widget (Y/n/a), OptionSelector (multi/single) |
 | Search backends | ripgrep > grep > Python fallback chain |
@@ -683,7 +686,7 @@ All exit criteria have been met. Phase 2 implementation is complete.
 - [x] OpenRouter tool calling works end-to-end (acceptance target)
 - [x] 6 tools available: read_file, write_file, list_files, search_text, run_command, ask_user
 - [x] run_command disabled by default, works when shell.enabled=true, toggleable via /shell on|off
-- [x] 3 approval modes function correctly (suggest / auto-edit / full-auto)
+- [x] 3 approval modes function correctly (read-only / suggest / auto)
 - [x] Sessions persist to SQLite and are resumable
 - [x] Session auto-naming from first user message
 - [x] /compact reduces token count by >50%
@@ -694,8 +697,8 @@ All exit criteria have been met. Phase 2 implementation is complete.
 - [x] Ollama text streaming works (tool-calling best-effort, not blocking)
 - [x] Interactive approval (ApprovalPrompt Y/n/a, OptionSelector for ask_user)
 - [x] Input history, typing indicator, copy/scroll, thinking toggle
-- [x] 12 slash commands implemented (added /freeze in v3.5)
-- [x] 338 total tests pass (307 Textual + 31 inline mode)
+- [x] 14 slash commands implemented
+- [x] 475 total tests pass
 
 ---
 
@@ -735,7 +738,7 @@ When the user types while the LLM is generating, the StatusBar shows "You: typin
 
 ### Thinking Token Toggle
 
-Ctrl+T / Alt+T toggles visibility of thinking/reasoning tokens from models that support them (e.g., Qwen3 thinking mode). Hidden by default to reduce noise.
+Ctrl+T / Alt+T toggles visibility of thinking/reasoning tokens from models that support them (e.g., Qwen3 thinking mode). Inline mode hides thinking by default; Textual TUI shows it by default (toggleable).
 
 ### Search Backend Fallback Chain
 
@@ -759,7 +762,7 @@ The system prompt is rebuilt at the start of each `AgentLoop.run()` call, reflec
 
 ### /freeze Command
 
-`/freeze` (alias `/scroll-lock`) toggles auto-scroll in ChatView. When frozen, new content is mounted but scroll position is not changed, allowing the user to select text with the mouse. `/freeze` again resumes auto-scroll and jumps to bottom. Total: 12 slash commands.
+`/freeze` (alias `/scroll-lock`) toggles auto-scroll in ChatView. When frozen, new content is mounted but scroll position is not changed, allowing the user to select text with the mouse. `/freeze` again resumes auto-scroll and jumps to bottom. Total: 14 slash commands.
 
 ---
 
