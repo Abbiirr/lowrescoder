@@ -4,15 +4,13 @@ This doc is a checkpoint so we can resume work quickly if the machine powers off
 
 ## TL;DR
 
-Phase 2 (Textual TUI + inline mode) is largely implemented, but there are still UX issues in **inline mode** on Windows:
+Phase 2 (Textual TUI + inline mode) is implemented, and inline mode now defaults to a Claude Code-style always-on prompt:
 
-- **Prompt placement bug:** the prompt appears on the same line as the separator (example: `──────❯ hello`). Prompt must start on its own line.
-- **Prompt spacing:** input feels too low (extra vertical whitespace around turns).
-- **Ctrl+C state bug:** Ctrl+C at idle after a previous generation can be treated as “cancel generation” because the REPL uses `_agent_loop` existence as a proxy for “generation active”.
+- **Visible concurrent typing (default):** while the assistant streams output, the prompt stays active and keystrokes are visible.
+- **Submit while generating:** new messages are **queued** (FIFO) and run after the current generation completes or is cancelled.
+- **Fallback:** use `hybridcoder chat --sequential` if your terminal has issues with `patch_stdout(raw=True)` (sequential mode still supports blind type-ahead buffering so keystrokes aren’t dropped).
 
-Work to address this is tracked in `AGENTS_CONVERSATION.MD`:
-- Active thread: **Entry 114** (directed to Codex)
-- Current pre-task: **Entry 115**
+Work to address this is tracked in `AGENTS_CONVERSATION.MD` (active threads around Entry 125+).
 
 ## Environment Notes (WSL vs Windows)
 
@@ -90,9 +88,17 @@ manual verification on Windows terminals.
     cancelled cleanly and the streaming line is terminated before returning to the prompt.
   - Removed extra “[Cancelled]” system message to avoid duplicate cancellation output.
 
+### Type-ahead while generating (inline mode)
+
+- `src/hybridcoder/inline/app.py`
+  - `_listen_for_escape()` now buffers printable keystrokes while the agent is generating.
+  - The next prompt is pre-filled with whatever the user typed during generation (so keystrokes are no longer dropped).
+  - Backspace is supported; Enter is ignored; extended keys (arrows/F-keys) are ignored on Windows.
+
 ### Tests updated
 
 - `tests/unit/test_inline_app.py` updated to reflect corrected Ctrl+C semantics.
+- `tests/unit/test_inline_typeahead.py` added to cover the key pollers + prompt prefill behavior.
 
 ### Repo hygiene (WSL/Windows)
 
@@ -116,6 +122,17 @@ Run on Windows:
   - Confirm the prompt footer is visible (model/provider/mode + tokens/edits/files) and updates after a turn.
   - Confirm the submitted input is printed as a turn (`❯ ...`) while the editable prompt itself is erased (input feels separate from streamed output).
   - Confirm a separator is printed immediately after the submitted user turn (model output always starts in a new block).
+  - Confirm you can type while streaming (prompt remains active).
+  - While streaming, submit another message and confirm it is queued and runs after the current response.
+
+- `uv run hybridcoder chat --sequential` (fallback)
+  - Confirm sequential behavior is still correct (prompt only after response).
+  - While generating, type ahead and confirm the next prompt is prefilled with what you typed.
+
+Probe (if you see ANSI corruption or prompt instability):
+- `uv run python scripts/probe_patch_stdout.py`
+  - Confirms whether `prompt_toolkit.patch_stdout(raw=True)` preserves Rich ANSI on Windows while typing.
+  - This is the core building block used by the default inline REPL.
 
 ## Follow-up Inline UX Fixes (Later on 2026-02-07)
 

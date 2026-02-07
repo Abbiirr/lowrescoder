@@ -1,14 +1,22 @@
 """Inline REPL using Rich + prompt_toolkit.
 
-Claude Code-style sequential REPL: output streams above, prompt appears after.
+Two modes:
+- Parallel (CLI default): always-on prompt via `patch_stdout(raw=True)` so users can
+  type while the assistant streams output above the prompt.
+- Sequential: prompt -> response -> prompt, with blind type-ahead buffering during
+  generation.
+
 Bottom toolbar shows model/mode/tokens/edits. Thinking hidden by default.
 """
 
 from __future__ import annotations
 
 import asyncio
+import sys
+from collections import deque
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Protocol, cast
+from typing import Any, Literal, Protocol, cast
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.formatted_text import FormattedText
@@ -40,6 +48,27 @@ class _MSVCRTModule(Protocol):
     def getch(self) -> bytes: ...
 
 
+@dataclass
+class _PendingPromptRequest:
+    """A pending interactive request that is fulfilled by the next submitted line.
+
+    Used only in `--parallel` mode to avoid nested prompt_toolkit Applications.
+    """
+
+    kind: Literal["approval", "ask_user"]
+    future: asyncio.Future[str]
+
+    # Context used for parsing/UX.
+    tool_name: str = ""
+    question: str = ""
+    options: list[str] = field(default_factory=list)
+    allow_text: bool = False
+
+    # Draft text that was in the main prompt when the request appeared.
+    draft_text: str = ""
+    draft_cursor: int = 0
+
+
 class InlineApp:
     """Inline REPL using Rich + prompt_toolkit.
 
@@ -48,7 +77,10 @@ class InlineApp:
     Input handled by prompt_toolkit (async readline with completion).
 
     Sequential model: prompt -> process -> output -> prompt.
-    No concurrent streaming+input (deferred to Phase 5).
+    Parallel model: prompt stays active while output streams above it.
+
+    In sequential mode, we still capture "type-ahead" keystrokes and prefill the
+    next prompt so user input isn't dropped during generation.
     """
 
     def __init__(
@@ -56,6 +88,8 @@ class InlineApp:
         config: HybridCoderConfig | None = None,
         session_id: str | None = None,
         project_root: Path | None = None,
+        *,
+        parallel: bool = False,
     ) -> None:
         self.config = config or load_config()
         self.project_root = project_root or Path.cwd()
@@ -95,6 +129,8 @@ class InlineApp:
         # Active per-turn agent task (tracks "generation in progress" independent
         # of whether the AgentLoop instance exists).
         self._agent_task: asyncio.Task[None] | None = None
+        self._agent_finalizer_task: asyncio.Task[None] | None = None
+        self._agent_cancel_message: str | None = None
         self._session_titled: bool = False
         self._interrupt_count: int = 0
 
@@ -108,6 +144,18 @@ class InlineApp:
         self._total_tokens: int = 0
         self._edit_count: int = 0
         self._files_modified: set[str] = set()
+
+        # Type-ahead capture while the agent is generating. In sequential mode
+        # there is no visible prompt during generation, but we can still buffer
+        # keystrokes so the next prompt is prefilled with what the user typed.
+        self._typeahead_buffer: list[str] = []
+
+        # `--parallel` mode: keep prompt active while output streams above it.
+        self._parallel: bool = parallel
+        self._pending_prompt_request: _PendingPromptRequest | None = None
+        self._parallel_queue: deque[str] = deque()
+        self._parallel_queue_max: int = 10
+        self._parallel_shutdown: bool = False
 
     # --- AppContext protocol methods ---
 
@@ -185,6 +233,9 @@ class InlineApp:
         mode = self.approval_mode
         parts = [f"Model: {model}", f"Provider: {provider}", f"Mode: {mode}"]
 
+        if self._parallel and self._parallel_queue:
+            parts.append(f"Queued: {len(self._parallel_queue)}")
+
         if self._total_tokens > 0:
             if self._total_tokens >= 1000:
                 token_str = f"~{self._total_tokens / 1000:.1f}k"
@@ -227,6 +278,9 @@ class InlineApp:
         mode_short = {"read-only": "RO", "suggest": "S", "auto": "A"}.get(mode, mode[:1].upper())
         parts: list[str] = [model_short, provider_short, mode_short]
 
+        if self._parallel and self._parallel_queue:
+            parts.append(f"Q{len(self._parallel_queue)}")
+
         if self._total_tokens > 0:
             if self._total_tokens >= 1000:
                 token_str = f"~{self._total_tokens / 1000:.1f}k"
@@ -263,6 +317,14 @@ class InlineApp:
             # Invalidate toolbar to show new mode
             event.app.invalidate()
 
+        @kb.add("escape")
+        def _escape(event: Any) -> None:
+            """Escape cancels generation in `--parallel` mode (Claude Code parity)."""
+            if self._parallel and self._agent_task is not None and not self._agent_task.done():
+                event.app.create_background_task(
+                    self._cancel_generation("[dim]Cancelled.[/dim]"),
+                )
+
         return kb
 
     def _ensure_prompt_session(self) -> PromptSession[str]:
@@ -286,15 +348,9 @@ class InlineApp:
     async def run(self) -> None:
         """Main REPL loop. Blocks until /exit or Ctrl+D.
 
-        Flow:
-            Welcome banner + separator
-            Loop:
-              ❯ [user types]
-              [streaming response...]
-              [tool] read_file ✓
-              [formatted response]
-              ─────────────────────
-              ❯ [next prompt]
+        Two modes:
+        - Sequential (default): prompt -> agent -> prompt
+        - Parallel (`--parallel`): keep the prompt active while the agent streams output.
         """
         prompt_session = self._ensure_prompt_session()
         self.renderer.print_welcome(
@@ -309,9 +365,27 @@ class InlineApp:
             ]
         )
 
+        if self._parallel:
+            await self._run_parallel(prompt_session, input_prompt)
+        else:
+            await self._run_sequential(prompt_session, input_prompt)
+
+        self.renderer.print_goodbye()
+
+    async def _run_sequential(
+        self,
+        prompt_session: PromptSession[str],
+        input_prompt: FormattedText,
+    ) -> None:
+        """Sequential REPL loop (baseline cross-platform behavior)."""
         while True:
             try:
-                text = await prompt_session.prompt_async(input_prompt)
+                typeahead = "".join(self._typeahead_buffer)
+                self._typeahead_buffer.clear()
+                if typeahead:
+                    text = await prompt_session.prompt_async(input_prompt, default=typeahead)
+                else:
+                    text = await prompt_session.prompt_async(input_prompt)
 
                 text = text.strip()
                 if not text:
@@ -344,6 +418,7 @@ class InlineApp:
                     self.renderer.end_thinking()
                     self.renderer.end_streaming()
                     self.console.print("[dim]^C — generation cancelled[/dim]")
+                    self._typeahead_buffer.clear()
                     self._interrupt_count = 0
                     continue
 
@@ -355,7 +430,252 @@ class InlineApp:
                     break
                 continue
 
-        self.renderer.print_goodbye()
+    async def _run_parallel(
+        self,
+        prompt_session: PromptSession[str],
+        input_prompt: FormattedText,
+    ) -> None:
+        """Parallel REPL loop (always-on prompt while output streams).
+
+        Uses `patch_stdout(raw=True)` so background output prints above the prompt.
+        """
+        from prompt_toolkit.patch_stdout import patch_stdout
+
+        with patch_stdout(raw=True):
+            self._parallel_shutdown = False
+            self._parallel_queue.clear()
+
+            # Ensure Rich prints go through the patched stdout proxy while the prompt is active.
+            try:
+                self.console.file = sys.stdout
+            except Exception:
+                pass
+
+            while True:
+                try:
+                    raw = await prompt_session.prompt_async(input_prompt)
+                except EOFError:
+                    break
+                except KeyboardInterrupt:
+                    if self._generation_active():
+                        await self._cancel_generation("[dim]^C — generation cancelled[/dim]")
+                        self._interrupt_count = 0
+                        continue
+
+                    self.console.print(
+                        "[dim]^C — Press Ctrl+C again to quit, or Ctrl+D[/dim]",
+                    )
+                    self._interrupt_count += 1
+                    if self._interrupt_count >= 2:
+                        break
+                    continue
+
+                text = raw.strip()
+
+                # If the agent is awaiting an interactive response (approval/ask_user),
+                # consume the submitted line for that request.
+                if self._pending_prompt_request is not None:
+                    self._handle_pending_prompt_submission(text)
+                    continue
+
+                if not text:
+                    continue
+
+                # Slash commands stay sequential (they control the app/session).
+                if text.startswith("/"):
+                    try:
+                        await self._handle_input(text)
+                    except EOFError:
+                        break
+                    self._interrupt_count = 0
+                    continue
+
+                # New message while generating: queue it (runs after current generation completes).
+                if self._generation_active():
+                    if len(self._parallel_queue) >= self._parallel_queue_max:
+                        self.console.print(
+                            "(queue full; dropping message)",
+                            style="dim",
+                            markup=False,
+                        )
+                    else:
+                        self._parallel_queue.append(text)
+                        self.console.print(
+                            f"(queued {len(self._parallel_queue)} pending)",
+                            style="dim",
+                            markup=False,
+                        )
+                    self._interrupt_count = 0
+                    continue
+
+                self.renderer.print_user_turn(text)
+                self.renderer.print_separator()
+                self._interrupt_count = 0
+                self._start_agent_task_parallel(text)
+
+            # Exit: stop queue processing + cancel any active generation so we don't leak tasks.
+            self._parallel_shutdown = True
+            self._parallel_queue.clear()
+            if self._generation_active():
+                await self._cancel_generation(None)
+
+    def _generation_active(self) -> bool:
+        return self._agent_task is not None and not self._agent_task.done()
+
+    def _start_agent_task_parallel(self, text: str) -> None:
+        """Start the agent in the background and finalize the turn when done."""
+        agent_task = asyncio.create_task(self._handle_input(text))
+        self._agent_task = agent_task
+        self._agent_finalizer_task = asyncio.create_task(
+            self._finalize_agent_task_parallel(agent_task),
+        )
+
+    async def _finalize_agent_task_parallel(self, agent_task: asyncio.Task[None]) -> None:
+        """Finalize a parallel agent run.
+
+        Ensures any cancel message is printed, a turn separator is emitted,
+        and per-turn task state is cleared.
+        """
+        try:
+            await agent_task
+        except asyncio.CancelledError:
+            pass
+        except EOFError:
+            # Shouldn't happen for normal agent runs; ignore to avoid crashing the loop.
+            pass
+        except Exception as e:
+            # `_run_agent()` already prints its own error; this is a last-resort guard.
+            self.renderer.print_system(f"Error: {e}")
+        finally:
+            if self._agent_cancel_message:
+                self.console.print(self._agent_cancel_message)
+                self._agent_cancel_message = None
+
+            # Separator after assistant output/cancel to keep "turn blocks" consistent.
+            self.renderer.print_turn_separator()
+
+            finalized_active = self._agent_task is agent_task
+            if finalized_active:
+                self._agent_task = None
+            if self._agent_finalizer_task is asyncio.current_task():
+                self._agent_finalizer_task = None
+
+            # If messages were queued while generating, start the next one automatically.
+            if (
+                finalized_active
+                and (not self._parallel_shutdown)
+                and (self._pending_prompt_request is None)
+                and self._parallel_queue
+            ):
+                next_text = self._parallel_queue.popleft()
+                self.renderer.print_user_turn(next_text)
+                self.renderer.print_separator()
+                self._interrupt_count = 0
+                self._start_agent_task_parallel(next_text)
+
+    async def _cancel_generation(self, message: str | None) -> None:
+        """Cancel the active generation and wait for cleanup (parallel mode)."""
+        if not self._generation_active():
+            return
+
+        self._agent_cancel_message = message
+
+        # If we were waiting for approval/ask_user, cancel that prompt request and restore draft.
+        if self._pending_prompt_request is not None:
+            pending = self._pending_prompt_request
+            self._pending_prompt_request = None
+            if not pending.future.done():
+                pending.future.cancel()
+            self._restore_prompt_draft(pending.draft_text, pending.draft_cursor)
+
+        if self._agent_loop:
+            self._agent_loop.cancel()
+
+        assert self._agent_task is not None
+        self._agent_task.cancel()
+        try:
+            await self._agent_task
+        except asyncio.CancelledError:
+            pass
+
+        if self._agent_finalizer_task is not None:
+            try:
+                await self._agent_finalizer_task
+            except asyncio.CancelledError:
+                pass
+
+    def _stash_prompt_draft(self) -> tuple[str, int]:
+        """Capture current prompt buffer text (draft) and clear it."""
+        if self.session is None:
+            return ("", 0)
+        try:
+            buf = self.session.app.current_buffer
+            text = buf.text
+            cursor = buf.cursor_position
+            buf.text = ""
+            buf.cursor_position = 0
+            self.session.app.invalidate()
+            return (text, cursor)
+        except Exception:
+            return ("", 0)
+
+    def _restore_prompt_draft(self, text: str, cursor: int) -> None:
+        """Restore a previously stashed draft into the prompt buffer."""
+        if self.session is None:
+            return
+        try:
+            buf = self.session.app.current_buffer
+            buf.text = text
+            buf.cursor_position = min(max(0, cursor), len(text))
+            self.session.app.invalidate()
+        except Exception:
+            return
+
+    def _handle_pending_prompt_submission(self, text: str) -> None:
+        """Handle the submitted line for a pending parallel prompt request."""
+        req = self._pending_prompt_request
+        if req is None or req.future.done():
+            return
+
+        if req.kind == "approval":
+            answer = text.strip().lower()
+            if answer in ("y", "yes"):
+                req.future.set_result("yes")
+                return
+            if answer in ("s", "session", "this session", "yes, this session"):
+                req.future.set_result("session")
+                return
+            if answer in ("n", "no"):
+                req.future.set_result("no")
+                return
+            self.console.print("[dim]Allow? Type 'y' (yes), 's' (session), or 'n' (no).[/dim]")
+            return
+
+        if req.kind == "ask_user":
+            if not req.options:
+                req.future.set_result(text)
+                return
+
+            answer = text.strip()
+            if answer.isdigit():
+                idx = int(answer)
+                if 1 <= idx <= len(req.options):
+                    req.future.set_result(req.options[idx - 1])
+                    return
+
+            for opt in req.options:
+                if answer == opt:
+                    req.future.set_result(opt)
+                    return
+
+            if req.allow_text:
+                req.future.set_result(text)
+                return
+
+            self.console.print(
+                f"[dim]Please choose 1-{len(req.options)} (or type the exact option).[/dim]",
+            )
+            return
 
     async def _handle_input_with_cancel(self, text: str) -> None:
         """Wrap _handle_input in a cancellable task with Escape listener."""
@@ -389,6 +709,7 @@ class InlineApp:
                 self.renderer.end_thinking()
                 self.renderer.end_streaming()
                 self.console.print("[dim]^C — generation cancelled[/dim]")
+                self._typeahead_buffer.clear()
                 self._interrupt_count = 0
                 return
 
@@ -410,6 +731,7 @@ class InlineApp:
                     self.renderer.end_thinking()
                     self.renderer.end_streaming()
                     self.console.print("[dim]Cancelled.[/dim]")
+                    self._typeahead_buffer.clear()
                     self._interrupt_count = 0
                     return
 
@@ -422,7 +744,10 @@ class InlineApp:
                 self._agent_task = None
 
     def _poll_key_windows(self) -> str | None:
-        """Check for keypress on Windows. Returns key byte or None."""
+        """Check for keypress on Windows. Returns key byte or None.
+
+        Note: In sequential mode, this is used while the agent is generating.
+        """
         import msvcrt as msvcrt_mod
 
         msvcrt = cast(_MSVCRTModule, msvcrt_mod)
@@ -434,7 +759,10 @@ class InlineApp:
         return None
 
     def _poll_key_unix(self, fd: int) -> str | None:
-        """Check for keypress on Unix. Returns char or None."""
+        """Check for keypress on Unix. Returns char or None.
+
+        Note: In sequential mode, this is used while the agent is generating.
+        """
         import select
         import sys
 
@@ -445,6 +773,90 @@ class InlineApp:
                 return ch
         return None
 
+    def _poll_key_windows_typeahead(self) -> tuple[str, bool] | None:
+        """Windows: return (ch, is_cancel) for type-ahead capture.
+
+        - Esc/Ctrl+C -> (ch, True)
+        - Backspace -> ('\\x08', False)
+        - Extended keys (arrows/F-keys) are ignored (consume 2nd byte).
+        - Printable chars are returned as (ch, False)
+        """
+        import msvcrt as msvcrt_mod
+
+        msvcrt = cast(_MSVCRTModule, msvcrt_mod)
+
+        if not msvcrt.kbhit():
+            return None
+
+        key = msvcrt.getch()
+
+        # Escape or Ctrl+C -> cancel generation.
+        if key in (b"\x1b", b"\x03"):
+            return (key.decode("latin-1"), True)
+
+        # Extended key: 2-byte sequence starting with 0x00 or 0xE0.
+        if key in (b"\x00", b"\xe0"):
+            # Consume/discard the second byte so it doesn't appear as input.
+            try:
+                msvcrt.getch()
+            except Exception:
+                pass
+            return None
+
+        # Backspace.
+        if key == b"\x08":
+            return ("\x08", False)
+
+        # Regular character. Use latin-1 to avoid decode errors for arbitrary bytes.
+        ch = key.decode("latin-1")
+        if ch in ("\r", "\n"):
+            return None
+        if ch == "\t" or ch.isprintable():
+            return (ch, False)
+        return None
+
+    def _poll_key_unix_typeahead(self, fd: int) -> tuple[str, bool] | None:
+        """Unix: return (ch, is_cancel) for type-ahead capture.
+
+        Uses select() + sys.stdin.read(1) in raw mode (set by caller).
+        """
+        import select
+        import sys
+
+        ready, _, _ = select.select([fd], [], [], 0.05)
+        if not ready:
+            return None
+
+        ch = sys.stdin.read(1)
+
+        # Escape sequences (arrows, etc.) start with ESC. Only treat a *lone*
+        # ESC as cancel. If more bytes are immediately available, ignore it
+        # as part of an escape sequence.
+        if ch == "\x1b":
+            extra_ready, _, _ = select.select([fd], [], [], 0.01)
+            if extra_ready:
+                # Drain the rest of the escape sequence bytes that are ready.
+                while True:
+                    more, _, _ = select.select([fd], [], [], 0)
+                    if not more:
+                        break
+                    _ = sys.stdin.read(1)
+                return None
+            return (ch, True)
+
+        if ch == "\x03":  # Ctrl+C
+            return (ch, True)
+
+        if ch in ("\x7f", "\x08"):  # backspace (DEL) or BS
+            return (ch, False)
+
+        if ch in ("\r", "\n"):
+            return None
+
+        if ch == "\t" or ch.isprintable():
+            return (ch, False)
+        return None
+
     async def _listen_for_escape(self) -> bool:
         """Listen for Escape key press. Returns True if pressed."""
         import sys
@@ -452,10 +864,18 @@ class InlineApp:
         loop = asyncio.get_running_loop()
 
         if sys.platform == "win32":
+            self._typeahead_buffer.clear()
             while True:
-                key = await loop.run_in_executor(None, self._poll_key_windows)
-                if key is not None:
-                    return True
+                result = await loop.run_in_executor(None, self._poll_key_windows_typeahead)
+                if result is not None:
+                    ch, is_cancel = result
+                    if is_cancel:
+                        return True
+                    if ch == "\x08":  # backspace
+                        if self._typeahead_buffer:
+                            self._typeahead_buffer.pop()
+                    else:
+                        self._typeahead_buffer.append(ch)
                 await asyncio.sleep(0.05)
         else:
             import os
@@ -476,12 +896,20 @@ class InlineApp:
                     tty.setraw(fd)
                 except termios.error:
                     return False  # Not a TTY — can't switch to raw mode
+                self._typeahead_buffer.clear()
                 while True:
-                    key = await loop.run_in_executor(
-                        None, self._poll_key_unix, fd,
+                    result = await loop.run_in_executor(
+                        None, self._poll_key_unix_typeahead, fd,
                     )
-                    if key is not None:
-                        return True
+                    if result is not None:
+                        ch, is_cancel = result
+                        if is_cancel:
+                            return True
+                        if ch in ("\x7f", "\x08"):  # backspace
+                            if self._typeahead_buffer:
+                                self._typeahead_buffer.pop()
+                        else:
+                            self._typeahead_buffer.append(ch)
                     await asyncio.sleep(0.05)
             finally:
                 try:
@@ -683,11 +1111,15 @@ class InlineApp:
         return result
 
     async def _approval_prompt(self, tool_name: str, arguments: dict[str, Any]) -> bool:
-        """Show arrow-key approval selector.
+        """Show tool approval prompt.
 
-        Options: Yes / Yes, this session / No
-        'Yes, this session' auto-approves that tool type for rest of session.
+        Sequential mode uses arrow-key selector.
+        `--parallel` uses a single-prompt typed response (y/s/n) to avoid nested
+        prompt_toolkit Applications while a prompt is active.
         """
+        if self._parallel:
+            return await self._approval_prompt_parallel(tool_name, arguments)
+
         # Check session-level auto-approve
         if tool_name in self._session_approved_tools:
             self.renderer.print_tool_call(tool_name, "pending", "(auto-approved)")
@@ -718,13 +1150,69 @@ class InlineApp:
 
         return False
 
+    async def _approval_prompt_parallel(self, tool_name: str, arguments: dict[str, Any]) -> bool:
+        """Parallel-mode approval prompt (typed y/s/n)."""
+        # Check session-level auto-approve
+        if tool_name in self._session_approved_tools:
+            self.renderer.print_tool_call(tool_name, "pending", "(auto-approved)")
+            return True
+
+        if self._pending_prompt_request is not None:
+            # Shouldn't happen (agent awaits one interactive request at a time),
+            # but avoid clobbering state.
+            self.renderer.print_system("Error: already waiting for user input.")
+            return False
+
+        self.renderer.print_approval_context(tool_name, arguments)
+        self.console.print("[dim]Allow? Type 'y' (yes), 's' (session), or 'n' (no).[/dim]")
+
+        loop = asyncio.get_running_loop()
+        fut: asyncio.Future[str] = loop.create_future()
+        draft_text, draft_cursor = self._stash_prompt_draft()
+        req = _PendingPromptRequest(
+            kind="approval",
+            future=fut,
+            tool_name=tool_name,
+            draft_text=draft_text,
+            draft_cursor=draft_cursor,
+        )
+        self._pending_prompt_request = req
+
+        try:
+            result = await fut
+        except asyncio.CancelledError:
+            return False
+        finally:
+            # Clear request (if still ours) and restore any draft text.
+            if self._pending_prompt_request is req:
+                self._pending_prompt_request = None
+            self._restore_prompt_draft(req.draft_text, req.draft_cursor)
+
+        if result == "no":
+            self.renderer.print_system("Denied.")
+            return False
+
+        if result == "session":
+            self._session_approved_tools.add(tool_name)
+            if self._approval_manager:
+                self._approval_manager.enable_shell()
+            return True
+
+        # "yes"
+        if tool_name == "run_command" and self._approval_manager:
+            self._approval_manager.enable_shell()
+        return True
+
     async def _ask_user_prompt(
         self,
         question: str,
         options: list[str],
         allow_text: bool,
     ) -> str:
-        """Show question with arrow-key option selection or free-text input."""
+        """Show question with option selection or free-text input."""
+        if self._parallel:
+            return await self._ask_user_prompt_parallel(question, options, allow_text)
+
         if options:
             choices = list(options)
             if allow_text:
@@ -757,3 +1245,47 @@ class InlineApp:
                 return answer
             except (EOFError, KeyboardInterrupt):
                 return ""
+
+    async def _ask_user_prompt_parallel(
+        self,
+        question: str,
+        options: list[str],
+        allow_text: bool,
+    ) -> str:
+        """Parallel-mode ask_user prompt (typed response)."""
+        if self._pending_prompt_request is not None:
+            self.renderer.print_system("Error: already waiting for user input.")
+            return ""
+
+        self.console.print(f"[bold]{question}[/bold]")
+        if options:
+            for i, opt in enumerate(options, 1):
+                self.console.print(f"[dim]  {i}.[/dim] {opt}", highlight=False)
+            if allow_text:
+                self.console.print("[dim]  (or type a custom answer)[/dim]")
+        else:
+            self.console.print("[dim](type your answer)[/dim]")
+
+        loop = asyncio.get_running_loop()
+        fut: asyncio.Future[str] = loop.create_future()
+        draft_text, draft_cursor = self._stash_prompt_draft()
+        req = _PendingPromptRequest(
+            kind="ask_user",
+            future=fut,
+            question=question,
+            options=list(options),
+            allow_text=allow_text,
+            draft_text=draft_text,
+            draft_cursor=draft_cursor,
+        )
+        self._pending_prompt_request = req
+
+        try:
+            answer = await fut
+            return str(answer)
+        except asyncio.CancelledError:
+            return options[0] if options else ""
+        finally:
+            if self._pending_prompt_request is req:
+                self._pending_prompt_request = None
+            self._restore_prompt_draft(req.draft_text, req.draft_cursor)

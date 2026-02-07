@@ -59,6 +59,14 @@ uv run hybridcoder chat
 
 Starts a multi-turn REPL with streaming output. Type `exit` or press `Ctrl+C` to quit.
 
+By default, the inline prompt stays active while the assistant is generating (type while streaming). Submitting another message while a response is streaming queues it (FIFO) and runs it after the current generation completes or is cancelled.
+
+If your terminal has issues with the always-on prompt, use sequential mode:
+
+```bash
+uv run hybridcoder chat --sequential
+```
+
 ### Single question
 
 ```bash

@@ -15,12 +15,17 @@ The bordered input box (`╭───`/`╰───` drawn by `print_input_bord
 
 **Research**: Claude Code does NOT use bordered input. It uses a plain `> ` prompt with a separator above. Removing borders eliminates 3 bugs simultaneously.
 
-### 2. patch_stdout() is Broken on Windows
+### 2. `patch_stdout()` and Windows ANSI corruption (what we know)
 
-Documented in archived Entries 79, 81, 84:
-- ANSI escape corruption when prompt_toolkit's `patch_stdout()` is used with Rich output on Windows Terminal
-- Caused garbled output, misaligned text, phantom characters
-- **Decision**: Removed `patch_stdout()` entirely. Sequential REPL model is the correct approach.
+We originally observed ANSI corruption when using prompt_toolkit's `patch_stdout()` with Rich output on Windows Terminal (documented in archived Entries 79, 81, 84). That led to removing `patch_stdout()` entirely and keeping the REPL sequential.
+
+**Important nuance:** prompt_toolkit's `patch_stdout()` defaults to `raw=False`. In this mode, output is routed through `Output.write()` (not `write_raw()`), and escape sequences can be removed/escaped by design. This manifests as visible ANSI garbage like `?[0m` with Rich output.
+
+**Current hypothesis:** the earlier "Windows ANSI corruption" may be explained by `raw=False` escape stripping rather than an inherent Windows-only bug. prompt_toolkit exposes `patch_stdout(raw=True)` specifically to preserve VT100/ANSI sequences.
+
+**Action:** we added a manual probe script (`scripts/probe_patch_stdout.py`) to validate `patch_stdout(raw=True)` behavior on Windows Terminal/PowerShell/cmd. If you see ANSI corruption or prompt instability, run the probe and use sequential fallback mode.
+
+**Implementation (default):** inline mode defaults to an always-on prompt using `patch_stdout(raw=True)`, which keeps the prompt active while streaming output above it (Claude Code-style). While a response is streaming, submitting another message queues it (FIFO) and runs it after the current generation completes or is cancelled. To avoid nested prompt_toolkit Applications, tool approvals and `ask_user` are handled via the same prompt (typed responses) while stashing/restoring any partially typed draft. Use `hybridcoder chat --sequential` to disable the always-on prompt if needed.
 
 ### 3. Cancellation Architecture
 
@@ -33,6 +38,8 @@ Documented in archived Entries 79, 81, 84:
 - prompt_toolkit `run_in_terminal()` — doesn't help for non-prompt operations
 
 **Chosen approach**: Race `asyncio.Task(_handle_input)` vs `asyncio.Task(_listen_for_escape)`. First to complete wins. Loser gets cancelled.
+
+**Follow-up improvement:** `_listen_for_escape()` now also buffers printable keystrokes during generation and pre-fills the next prompt with that "type-ahead" text. This enables composing the next message while output streams, without requiring `patch_stdout()`.
 
 ### 4. Windows Key Listening
 

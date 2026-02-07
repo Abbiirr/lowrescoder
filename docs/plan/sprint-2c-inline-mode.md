@@ -120,7 +120,7 @@ async def main():
         await handle(text)
 ```
 
-**Note on `patch_stdout()`:** prompt_toolkit provides a `patch_stdout()` context manager that protects the prompt line from concurrent output. HybridCoder intentionally omits it because: (a) the REPL is sequential — it awaits the agent response, then awaits the next prompt, so there is no concurrent output during the prompt; and (b) `patch_stdout()` was found to corrupt Rich's ANSI escape sequences on Windows, producing garbled output. Since there is no concurrency to guard against, removing it is both correct and necessary for cross-platform compatibility.
+**Note on `patch_stdout()`:** prompt_toolkit provides a `patch_stdout()` context manager that protects the prompt line from concurrent output. `patch_stdout()` defaults to `raw=False`, which can strip/escape VT100/ANSI sequences by design (mangling Rich output as visible garbage like `?[0m`). HybridCoder uses an always-on prompt design in inline mode by default via `patch_stdout(raw=True)` and provides `hybridcoder chat --sequential` as a fallback for terminals where this is unstable. Validate behavior on Windows terminals via `scripts/probe_patch_stdout.py` if you observe corruption.
 
 ### How Rich Works
 
@@ -1422,7 +1422,7 @@ uv run mypy src/hybridcoder/              # Type checking
 | **Feature drift between modes** | Medium | Medium | `AppContext` protocol enforces shared interface. New features land in inline first. CI runs both suites. |
 | **Streaming formatting (mid-stream)** | Low | Medium | Use incremental print (plain text mid-stream). Final content stored in session DB as markdown. |
 | **Handler adaptation breaks Textual** | Medium | Low | `AppContext` is additive — existing methods still work. All existing tests must pass. |
-| **prompt_toolkit + Rich on Windows** | Low | Low | Both are well-tested on Windows. Note: `patch_stdout()` was found to corrupt Rich's ANSI escape sequences on Windows and was intentionally removed. The sequential REPL design makes it unnecessary. |
+| **prompt_toolkit + Rich on Windows** | Low | Low | Both are well-tested on Windows. Note: `patch_stdout(raw=False)` can mangle ANSI by design and is intentionally omitted. The sequential REPL design makes it unnecessary. If we revisit concurrency, validate `patch_stdout(raw=True)` via `scripts/probe_patch_stdout.py`. |
 | **Approval prompt interrupts stream** | Low | Certain | Acceptable UX — pause stream, show prompt, resume. Same behavior as Textual mode. |
 | **Tab completion performance** | Low | Low | `fuzzy_complete()` already handles large directories. prompt_toolkit completions are lazy (yielded). |
 

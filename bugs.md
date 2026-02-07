@@ -7,7 +7,7 @@ Tracked bugs found during manual QA of `uv run hybridcoder chat` (Phase 2D).
 | ID | Severity | Description | File | Status |
 |----|----------|-------------|------|--------|
 | BUG-1 | Medium | Input border NOT full-width (capped at 120 chars) | `renderer.py:61` | Fixed (border removed) |
-| BUG-2 | High | Cannot type during LLM generation | `app.py:246-386` | Fixed (Escape/Ctrl+C cancel) |
+| BUG-2 | High | Cannot type during LLM generation | `app.py:_run_parallel()` | Fixed (parallel inline is default; sequential `--sequential` keeps type-ahead) |
 | BUG-3 | N/A | Input box not fixed at bottom | `app.py:246-250` | Closed (by design) |
 | BUG-4 | Low | /resume shows long titles without truncation | `commands.py:146-147` | Fixed |
 | BUG-5 | Medium | Double ">" in input area | `app.py:239-244` | Fixed (border removed) |
@@ -30,6 +30,14 @@ Claude Code does NOT pin the input at the bottom. It uses inline scrollback like
 
 ### BUG-2, BUG-7 — Escape/Ctrl+C cancellation
 Wrapped `_handle_input()` in `asyncio.Task`. Added `_listen_for_escape()` using `msvcrt` on Windows. `asyncio.wait(FIRST_COMPLETED)` races agent task vs escape listener.
+
+### BUG-2 — Type-ahead (sequential)
+While inline mode is still sequential (no visible prompt during generation), `_listen_for_escape()` now buffers printable keystrokes during generation and pre-fills the next prompt with what the user typed. This prevents keystrokes from being dropped and enables “compose next message while waiting” behavior without requiring `patch_stdout()`.
+
+### BUG-2 — Visible typing while generating (default inline)
+Inline mode defaults to an always-on prompt under `prompt_toolkit.patch_stdout(raw=True)`, streaming output above it so the user can type while the assistant is generating (Claude Code-style).
+
+While a response is streaming, submitting another message queues it (FIFO) and runs it after the current generation completes or is cancelled. Use `--sequential` to disable the always-on prompt if your terminal has issues.
 
 ### BUG-4 — Title truncation
 Titles in `/resume` and `/sessions` capped at 40 chars with `...` suffix.
@@ -57,6 +65,8 @@ To make the prompt feel like a distinct input area:
 
 ## Constraints
 
-- `patch_stdout()` is BROKEN on Windows (ANSI corruption). Cannot use for concurrent I/O.
-- Sequential REPL model: prompt -> process -> output -> prompt.
+- `patch_stdout(raw=False)` strips ANSI escape sequences by design (will mangle Rich output). `patch_stdout(raw=True)` is the only viable option for ANSI, but requires manual Windows verification (see `scripts/probe_patch_stdout.py`) before adopting an always-on prompt design.
+- Inline REPL supports two modes:
+  - Parallel (default): prompt stays active while output streams above it.
+  - Sequential (`--sequential`): prompt -> process -> output -> prompt (type-ahead buffered while generating).
 - Escape listener uses `msvcrt.kbhit()`/`msvcrt.getch()` on Windows, `select` on Unix.

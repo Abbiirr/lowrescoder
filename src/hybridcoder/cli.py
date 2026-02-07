@@ -146,6 +146,14 @@ def chat(
     tui: bool = typer.Option(False, "--tui", help="Use fullscreen Textual TUI"),
     alternate_screen: bool = typer.Option(False, "--alternate-screen", help="Alias for --tui"),
     legacy: bool = typer.Option(False, "--legacy", help="Use legacy Rich REPL (no agent loop)"),
+    parallel: bool = typer.Option(
+        True,
+        "--parallel/--sequential",
+        help=(
+            "Inline mode: keep prompt active while assistant streams output (default). "
+            "Use --sequential if your terminal has issues."
+        ),
+    ),
 ) -> None:
     """Start an interactive chat session."""
     config = load_config()
@@ -167,6 +175,7 @@ def chat(
         inline_app = InlineApp(
             config=config,
             session_id=session or None,
+            parallel=parallel,
         )
         asyncio.run(inline_app.run())
 
