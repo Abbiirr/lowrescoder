@@ -17,12 +17,13 @@
 - [ ] Resize terminal to 120 columns — separator spans full width
 - [ ] Resize terminal to 200 columns — separator spans full width (no 120-char cap)
 - [ ] Welcome banner separator matches terminal width
+- [ ] After any separator, the next prompt starts on its own line (not appended like `──────❯`)
 
 ## BUG-2/7: Escape-to-Cancel
 
 - [ ] Send a message, press Escape during "Thinking..." — see "Cancelled." message
 - [ ] Send a message, press Escape during streaming — response stops, "Cancelled." printed
-- [ ] Press Ctrl+C during streaming — generation cancelled
+- [ ] Press Ctrl+C during streaming — generation cancels (message printed)
 - [ ] After cancel, terminal is not left in raw mode (type normally)
 - [ ] After cancel, next prompt works correctly
 
@@ -42,15 +43,15 @@
 ## BUG-5/6: Clean Prompt (No Borders)
 
 - [ ] No `╭` or `╰` border characters visible around input
-- [ ] Single green `>` prompt character visible
+- [ ] Single green `❯` prompt character visible
 - [ ] No empty ghost box between turns
 - [ ] Clean visual flow: response → separator → prompt
+- [ ] User input is visually separated from model output (separator printed immediately after the submitted `❯ ...` turn)
 
 ## BUG-8: Thinking Indicator
 
 - [ ] "Thinking..." appears before every LLM response
-- [ ] "Thinking..." disappears when streaming begins
-- [ ] "Thinking..." disappears when a tool call is made
+- [ ] Inline mode: "Thinking..." stays in scrollback (no ANSI cursor tricks), and the response streams below it
 
 ## Slash Commands
 
@@ -80,10 +81,11 @@
 
 ## Status Bar
 
-- [ ] Bottom toolbar shows Model, Mode
+- [ ] Bottom toolbar shows Model, Provider, Mode
 - [ ] After agent response, Tokens count appears
 - [ ] After file edit, Edits/Files count appears
 - [ ] Shift+Tab cycles through modes (read-only → suggest → auto)
+- [ ] Submitting input does not leave the editable prompt in scrollback (prompt is erased); the submitted turn still appears as `❯ ...`
 
 ---
 

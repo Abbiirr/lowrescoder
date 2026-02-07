@@ -44,6 +44,14 @@ class TestInlineRenderer:
         assert ">" in output
         assert "hello world" in output
 
+    def test_print_user_turn(self) -> None:
+        """Submitted user turns are printed with ❯ prefix."""
+        renderer, buf = _make_renderer()
+        renderer.print_user_turn("hello world")
+        output = buf.getvalue()
+        assert "❯" in output
+        assert "hello world" in output
+
     def test_print_assistant_message(self) -> None:
         """Assistant messages render as markdown."""
         renderer, buf = _make_renderer()

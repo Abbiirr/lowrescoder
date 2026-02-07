@@ -1,0 +1,6 @@
+# Cross-platform line ending hygiene.
+#
+# This repo is used from both Windows and WSL/macOS/Linux. Enforce LF in the
+# repository to avoid noisy diffs and mixed CRLF/LF files.
+* text=auto eol=lf
+

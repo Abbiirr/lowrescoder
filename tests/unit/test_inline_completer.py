@@ -68,6 +68,77 @@ class TestHybridCompleter:
         names = [c.text for c in completions]
         assert "README.md" in names
 
+    def test_slash_completion_has_display_meta(self, tmp_path: Path) -> None:
+        """Dropdown items show description text alongside command name."""
+        completer = _make_completer(tmp_path)
+        doc = Document("/he", cursor_position=3)
+        completions = list(completer.get_completions(doc, None))
+        help_comp = [c for c in completions if c.text == "help"]
+        assert len(help_comp) == 1
+        assert help_comp[0].display_meta is not None
+        assert len(help_comp[0].display_meta) > 0
+
+    def test_alias_appears_in_dropdown(self, tmp_path: Path) -> None:
+        """Aliases appear in dropdown with '-> /command' meta."""
+        completer = _make_completer(tmp_path)
+        doc = Document("/qu", cursor_position=3)
+        completions = list(completer.get_completions(doc, None))
+        names = [c.text for c in completions]
+        assert "quit" in names
+        quit_comp = [c for c in completions if c.text == "quit"]
+        assert quit_comp[0].display_meta is not None
+
+    def test_bare_at_yields_no_completions(self, tmp_path: Path) -> None:
+        """Bare @ with no partial text yields no completions."""
+        (tmp_path / "file.txt").write_text("content")
+        completer = _make_completer(tmp_path)
+        doc = Document("@", cursor_position=1)
+        completions = list(completer.get_completions(doc, None))
+        assert len(completions) == 0
+
+    def test_at_file_completion_start_position(self, tmp_path: Path) -> None:
+        """@RE completions have correct start_position for cursor placement."""
+        (tmp_path / "README.md").write_text("# Test")
+        completer = _make_completer(tmp_path)
+        doc = Document("@RE", cursor_position=3)
+        completions = list(completer.get_completions(doc, None))
+        readme = [c for c in completions if c.text == "README.md"]
+        assert len(readme) == 1
+        # start_position should be -2 (replacing "RE")
+        assert readme[0].start_position == -len("RE")
+
+    def test_slash_completion_start_position(self, tmp_path: Path) -> None:
+        """Slash completions have correct start_position."""
+        completer = _make_completer(tmp_path)
+        doc = Document("/he", cursor_position=3)
+        completions = list(completer.get_completions(doc, None))
+        help_comp = [c for c in completions if c.text == "help"]
+        assert len(help_comp) == 1
+        # start_position should be -2 (replacing "he")
+        assert help_comp[0].start_position == -len("he")
+
+    def test_at_directory_completion(self, tmp_path: Path) -> None:
+        """@src/ shows files inside the src directory."""
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "main.py").write_text("# main")
+        completer = _make_completer(tmp_path)
+        doc = Document("@src/m", cursor_position=6)
+        completions = list(completer.get_completions(doc, None))
+        names = [c.text for c in completions]
+        # Should find main.py via fuzzy match
+        assert any("main" in n for n in names)
+
+    def test_at_file_display_meta(self, tmp_path: Path) -> None:
+        """@file completions show 'file' as display_meta."""
+        (tmp_path / "test.py").write_text("# test")
+        completer = _make_completer(tmp_path)
+        doc = Document("@test", cursor_position=5)
+        completions = list(completer.get_completions(doc, None))
+        assert len(completions) > 0
+        meta_text = completions[0].display_meta_text
+        assert meta_text == "file"
+
 
 class TestHybridAutoSuggest:
     def test_slash_command_ghost_text(self) -> None:
@@ -108,6 +179,14 @@ class TestHybridAutoSuggest:
         """Bare / produces no ghost text (too many options)."""
         suggest = _make_auto_suggest()
         doc = Document("/", cursor_position=1)
+        buf = MagicMock()
+        result = suggest.get_suggestion(buf, doc)
+        assert result is None
+
+    def test_at_reference_no_ghost(self) -> None:
+        """@src produces no ghost text (auto-suggest only handles /)."""
+        suggest = _make_auto_suggest()
+        doc = Document("@src", cursor_position=4)
         buf = MagicMock()
         result = suggest.get_suggestion(buf, doc)
         assert result is None

@@ -92,6 +92,9 @@ class InlineApp:
         self._tool_registry: ToolRegistry | None = None
         self._approval_manager: ApprovalManager | None = None
         self._agent_loop: AgentLoop | None = None
+        # Active per-turn agent task (tracks "generation in progress" independent
+        # of whether the AgentLoop instance exists).
+        self._agent_task: asyncio.Task[None] | None = None
         self._session_titled: bool = False
         self._interrupt_count: int = 0
 
@@ -178,8 +181,9 @@ class InlineApp:
     def _get_status_text(self) -> str:
         """Return status info string for the bottom toolbar."""
         model = self.config.llm.model
+        provider = self.config.llm.provider
         mode = self.approval_mode
-        parts = [f"Model: {model}", f"Mode: {mode}"]
+        parts = [f"Model: {model}", f"Provider: {provider}", f"Mode: {mode}"]
 
         if self._total_tokens > 0:
             if self._total_tokens >= 1000:
@@ -195,6 +199,55 @@ class InlineApp:
             parts.append(f"Files: {len(self._files_modified)}")
 
         return " | ".join(parts)
+
+    def _get_status_toolbar(self) -> FormattedText:
+        """Status line shown below the prompt (bottom toolbar)."""
+        return FormattedText(
+            [
+                ("fg:ansibrightblack", f" {self._get_status_text()}"),
+            ]
+        )
+
+    def _get_status_rprompt_text(self) -> str:
+        """Short status for the right-aligned prompt (fallback for some terminals)."""
+        model_short = self.config.llm.model.split("/")[-1]
+        if model_short.endswith(":free"):
+            model_short = model_short[: -len(":free")]
+        # Keep the rprompt compact to reduce wrapping/overlap on narrow terminals.
+        if len(model_short) > 18:
+            model_short = model_short[:15] + "..."
+
+        provider = self.config.llm.provider
+        provider_short = {
+            "openrouter": "OR",
+            "ollama": "OL",
+        }.get(provider, provider[:2].upper())
+
+        mode = self.approval_mode
+        mode_short = {"read-only": "RO", "suggest": "S", "auto": "A"}.get(mode, mode[:1].upper())
+        parts: list[str] = [model_short, provider_short, mode_short]
+
+        if self._total_tokens > 0:
+            if self._total_tokens >= 1000:
+                token_str = f"~{self._total_tokens / 1000:.1f}k"
+            else:
+                token_str = f"~{self._total_tokens}"
+            parts.append(token_str)
+
+        if self._edit_count > 0:
+            parts.append(f"E{self._edit_count}")
+        if self._files_modified:
+            parts.append(f"F{len(self._files_modified)}")
+
+        return " ".join(parts)
+
+    def _get_status_rprompt(self) -> FormattedText:
+        """Short status shown on the right side of the prompt line."""
+        return FormattedText(
+            [
+                ("fg:ansibrightblack", self._get_status_rprompt_text()),
+            ]
+        )
 
     def _create_key_bindings(self) -> KeyBindings:
         """Create custom key bindings for the REPL."""
@@ -223,8 +276,10 @@ class InlineApp:
                 auto_suggest=self.auto_suggest,
                 multiline=False,
                 complete_while_typing=False,
-                bottom_toolbar=self._get_status_text,
+                bottom_toolbar=self._get_status_toolbar,
+                rprompt=self._get_status_rprompt,
                 key_bindings=self._create_key_bindings(),
+                erase_when_done=True,
             )
         return self.session
 
@@ -258,27 +313,46 @@ class InlineApp:
             try:
                 text = await prompt_session.prompt_async(input_prompt)
 
-                if not text.strip():
+                text = text.strip()
+                if not text:
                     continue
+                # With `erase_when_done=True`, the prompt input itself isn't left
+                # in scrollback, so we re-print the submitted turn explicitly.
+                self.renderer.print_user_turn(text)
+                # Close the "input canvas" before any model/tool output so the
+                # generation never visually appears inside the user's input.
+                self.renderer.print_separator()
                 self._interrupt_count = 0
-                await self._handle_input_with_cancel(text.strip())
+                await self._handle_input_with_cancel(text)
                 # Separator AFTER response, before next prompt
                 self.renderer.print_turn_separator()
             except EOFError:
                 break
             except KeyboardInterrupt:
-                if self._agent_loop:
-                    self._agent_loop.cancel()
+                # Ctrl+C at the prompt should warn/exit. Ctrl+C during generation
+                # is handled inside _handle_input_with_cancel(), but we still
+                # guard here to avoid stale `_agent_loop` references causing the
+                # wrong message at idle (Entry 114).
+                if self._agent_task is not None and not self._agent_task.done():
+                    if self._agent_loop:
+                        self._agent_loop.cancel()
+                    self._agent_task.cancel()
+                    try:
+                        await self._agent_task
+                    except asyncio.CancelledError:
+                        pass
+                    self.renderer.end_thinking()
+                    self.renderer.end_streaming()
                     self.console.print("[dim]^C — generation cancelled[/dim]")
-                else:
-                    self.console.print(
-                        "[dim]^C — Press Ctrl+C again to quit, or Ctrl+D[/dim]",
-                    )
-                    self._interrupt_count += 1
-                    if self._interrupt_count >= 2:
-                        break
+                    self._interrupt_count = 0
                     continue
-                self._interrupt_count = 0
+
+                self.console.print(
+                    "[dim]^C — Press Ctrl+C again to quit, or Ctrl+D[/dim]",
+                )
+                self._interrupt_count += 1
+                if self._interrupt_count >= 2:
+                    break
                 continue
 
         self.renderer.print_goodbye()
@@ -290,37 +364,62 @@ class InlineApp:
             await self._handle_input(text)
             return
 
-        agent_task = asyncio.create_task(self._handle_input(text))
-        escape_task = asyncio.create_task(self._listen_for_escape())
+        agent_task: asyncio.Task[None] = asyncio.create_task(self._handle_input(text))
+        escape_task: asyncio.Task[bool] = asyncio.create_task(self._listen_for_escape())
+        self._agent_task = agent_task
 
-        done, pending = await asyncio.wait(
-            [agent_task, escape_task],
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-
-        for task in pending:
-            task.cancel()
+        try:
             try:
-                await task
-            except asyncio.CancelledError:
-                pass
-
-        if escape_task in done:
-            try:
-                escaped = escape_task.result()
-            except asyncio.CancelledError:
-                escaped = False
-            if escaped:
+                done, pending = await asyncio.wait(
+                    [agent_task, escape_task],
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+            except KeyboardInterrupt:
+                # SIGINT during generation: cancel tasks and cleanly end the current
+                # streaming line before returning to the prompt.
                 if self._agent_loop:
                     self._agent_loop.cancel()
+                for task in (agent_task, escape_task):
+                    task.cancel()
+                for task in (agent_task, escape_task):
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass
                 self.renderer.end_thinking()
                 self.renderer.end_streaming()
-                self.console.print("\n[dim]Cancelled.[/dim]")
+                self.console.print("[dim]^C — generation cancelled[/dim]")
+                self._interrupt_count = 0
                 return
 
-        # Re-raise any agent_task exception
-        if agent_task in done:
-            agent_task.result()  # raises if failed
+            for pending_task in pending:
+                pending_task.cancel()
+                try:
+                    await pending_task
+                except asyncio.CancelledError:
+                    pass
+
+            if escape_task in done:
+                try:
+                    escaped = escape_task.result()
+                except asyncio.CancelledError:
+                    escaped = False
+                if escaped:
+                    if self._agent_loop:
+                        self._agent_loop.cancel()
+                    self.renderer.end_thinking()
+                    self.renderer.end_streaming()
+                    self.console.print("[dim]Cancelled.[/dim]")
+                    self._interrupt_count = 0
+                    return
+
+            # Re-raise any agent_task exception
+            if agent_task in done:
+                agent_task.result()  # raises if failed
+        finally:
+            # Don't leave a stale task reference across turns.
+            if self._agent_task is agent_task:
+                self._agent_task = None
 
     def _poll_key_windows(self) -> str | None:
         """Check for keypress on Windows. Returns key byte or None."""
@@ -446,14 +545,15 @@ class InlineApp:
         # Track edits and files modified
         if status in ("completed", "success") and tool_name == "write_file":
             self._edit_count += 1
-            # Extract file path from result (first arg is usually the path)
             if result:
-                self._files_modified.add(result.split("\n")[0][:200])
+                first_line = result.split("\n", 1)[0].strip()
+                if first_line.startswith("Written to "):
+                    first_line = first_line.removeprefix("Written to ").strip()
+                self._files_modified.add(first_line[:200])
 
     async def _run_agent(self, user_message: str) -> None:
         """Run agent loop and stream output via renderer."""
         # Don't reprint user message — prompt_toolkit already displayed it.
-        self.console.print()  # Blank line after user input
         self.renderer.print_thinking_indicator()
 
         # Auto-title session from first user message
@@ -484,7 +584,6 @@ class InlineApp:
         except asyncio.CancelledError:
             self.renderer.end_thinking()
             self.renderer.end_streaming()
-            self.renderer.print_system("[Cancelled]")
             return
         except Exception as e:
             self.renderer.end_thinking()
@@ -636,7 +735,10 @@ class InlineApp:
             if result == "[Type answer]":
                 try:
                     answer = await self._ensure_prompt_session().prompt_async("Answer: ")
-                    return answer.strip()
+                    answer = answer.strip()
+                    if answer:
+                        self.console.print(f"[dim]  → {answer}[/dim]")
+                    return answer
                 except (EOFError, KeyboardInterrupt):
                     return ""
 
@@ -649,6 +751,9 @@ class InlineApp:
             self.console.print(f"[bold]{question}[/bold]")
             try:
                 answer = await self._ensure_prompt_session().prompt_async("Answer: ")
-                return answer.strip()
+                answer = answer.strip()
+                if answer:
+                    self.console.print(f"[dim]  → {answer}[/dim]")
+                return answer
             except (EOFError, KeyboardInterrupt):
                 return ""

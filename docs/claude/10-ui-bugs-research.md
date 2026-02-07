@@ -65,13 +65,36 @@ Simple static text approach chosen over spinner/animation:
 - No need for `patch_stdout()` or cursor manipulation
 - Claude Code uses a similar static "Thinking..." before streaming begins
 
+### 7. Prompt Appended To Separator (Windows Newline / Last-Column Wrap)
+
+**Observed bug:** The next `prompt_toolkit` prompt can appear on the same line as a full-width separator, for example:
+
+`────────────────────────────❯ hello`
+
+**Likely cause:** Printing a full-width line with `\\n` can leave the cursor at a non-zero column (or trigger a wrap edge case in the last column). `prompt_toolkit` then renders the next prompt at the current cursor position.
+
+**Fix:** Print separators with `end="\\r\\n"` and avoid printing into the terminal's last column (`console.width - 1`) to prevent wrap. This keeps prompts starting at column 0 consistently across terminals.
+
+### 8. Status Line Visibility + "Output Inside Input" Perception
+
+Two UX issues were repeatedly reported in Windows manual QA:
+
+1. The status/footer line (model/tokens/edits/files) is easy to miss, and is not captured in plain text copy/paste.
+2. Streaming output can feel like it appears "inside" the input line because the editable prompt is left in scrollback after submit.
+
+**Mitigations (without using `patch_stdout()`):**
+
+- Use prompt_toolkit `bottom_toolbar` for the full status line, and also configure a short `rprompt` fallback (right-aligned on the prompt line) for visibility.
+- Use `PromptSession(erase_when_done=True)` so the editable input bar is not left in scrollback, then re-print the submitted turn into scrollback (so the chat transcript remains readable).
+- Print a full-width separator immediately after the submitted turn so model/tool output starts in a distinct block (prevents "output inside input" perception even when the terminal erases the prompt imperfectly).
+
 ## Files Modified
 
 | File | Changes |
 |------|---------|
-| `src/hybridcoder/inline/app.py` | Remove border calls, simplify prompt, add cancellation logic |
-| `src/hybridcoder/inline/renderer.py` | Fix border width, add `print_thinking_indicator()` |
+| `src/hybridcoder/inline/app.py` | Remove border calls, simplify prompt, add cancellation logic, status/footer rendering |
+| `src/hybridcoder/inline/renderer.py` | Fix border width, add `print_thinking_indicator()`, add `print_user_turn()` |
 | `src/hybridcoder/tui/commands.py` | Truncate titles in `/resume` and `/sessions` |
 | `tests/unit/test_inline_app.py` | Update REPL tests, add cancellation tests |
-| `tests/unit/test_inline_renderer.py` | Add border width test, thinking indicator test |
+| `tests/unit/test_inline_renderer.py` | Add border width test, thinking indicator test, user turn print test |
 | `tests/unit/test_commands.py` | Add title truncation test |

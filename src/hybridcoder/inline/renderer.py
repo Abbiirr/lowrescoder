@@ -28,6 +28,7 @@ class InlineRenderer:
     def __init__(self, console: Console | None = None) -> None:
         self.console = console or Console()
         self._stream_buffer: list[str] = []
+        self._streaming_active: bool = False
         self._thinking_buffer: list[str] = []
 
     # --- Startup/shutdown ---
@@ -49,7 +50,14 @@ class InlineRenderer:
 
     def print_separator(self) -> None:
         """Print full-width horizontal separator (Claude Code style)."""
-        self.console.print(f"[dim]{'─' * self.console.width}[/dim]")
+        # Use CRLF to ensure prompt_toolkit prompts always start at column 0
+        # across terminals/platforms (Windows newline handling can otherwise
+        # leave the cursor at a non-zero column after a full-width line).
+        # Printing exactly `console.width` characters can also trigger terminal
+        # wrap edge cases; using width-1 is more robust while remaining
+        # visually full-width.
+        width = max(1, self.console.width - 1)
+        self.console.print(f"[dim]{'─' * width}[/dim]", end="\r\n")
 
     def print_input_border(self, top: bool = True) -> None:
         """Print input area border.
@@ -65,8 +73,7 @@ class InlineRenderer:
         self.console.print(f"[dim]{border_char}{'─' * (width - 2)}[/dim]")
 
     def print_turn_separator(self) -> None:
-        """Print separator + blank line between conversation turns."""
-        self.console.print()
+        """Print separator between conversation turns."""
         self.print_separator()
 
     # --- Messages ---
@@ -75,6 +82,14 @@ class InlineRenderer:
         """Print user message with > prefix."""
         self.console.print(f"[bold green]>[/bold green] {text}")
         self.console.print()
+
+    def print_user_turn(self, text: str) -> None:
+        """Print the user's submitted input as a turn in scrollback.
+
+        Used when the prompt input itself is erased (`erase_when_done=True`) so
+        streaming output doesn't look like it appears "inside" the input bar.
+        """
+        self.console.print(f"[bold green]❯[/bold green] {text}")
 
     def print_assistant_message(self, content: str) -> None:
         """Print completed assistant response as Rich Markdown."""
@@ -205,6 +220,7 @@ class InlineRenderer:
     def start_streaming(self) -> None:
         """Begin streaming mode. Call stream_chunk() for each token."""
         self._stream_buffer = []
+        self._streaming_active = True
 
     def stream_chunk(self, chunk: str) -> None:
         """Print a streaming chunk. Auto-ends thinking if active."""
@@ -215,10 +231,14 @@ class InlineRenderer:
 
     def end_streaming(self) -> str:
         """End streaming. Returns full accumulated content."""
+        if not self._streaming_active:
+            return ""
         content = "".join(self._stream_buffer)
-        self.console.print()  # Final newline
-        self.console.print()  # Blank line separator
+        # End the streaming line; spacing after a turn is handled by
+        # print_turn_separator() in the REPL loop.
+        self.console.print(end="\r\n")
         self._stream_buffer = []
+        self._streaming_active = False
         return content
 
     # --- Thinking indicator ---

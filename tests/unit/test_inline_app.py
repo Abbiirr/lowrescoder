@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
@@ -287,6 +287,30 @@ class TestKeyBindings:
         # Mode should have changed
         new_mode = inline_app.approval_mode
         assert new_mode != initial_mode or initial_mode not in ["read-only", "suggest", "auto"]
+
+
+class TestPromptSessionCreation:
+    def test_prompt_session_has_status_footer_and_rprompt(self, inline_app: InlineApp) -> None:
+        """PromptSession is configured with status footer and rprompt fallbacks."""
+        # Patch PromptSession constructor to avoid terminal creation in unit tests
+        with patch("hybridcoder.inline.app.PromptSession") as mock_session:
+            mock_session.return_value = MagicMock()
+            inline_app.session = None
+            created = inline_app._ensure_prompt_session()
+            assert created is mock_session.return_value
+
+            kwargs = mock_session.call_args.kwargs
+            assert getattr(kwargs["bottom_toolbar"], "__self__", None) is inline_app
+            assert (
+                getattr(kwargs["bottom_toolbar"], "__func__", None)
+                is InlineApp._get_status_toolbar
+            )
+            assert getattr(kwargs["rprompt"], "__self__", None) is inline_app
+            assert (
+                getattr(kwargs["rprompt"], "__func__", None)
+                is InlineApp._get_status_rprompt
+            )
+            assert kwargs["erase_when_done"] is True
 
 
 class TestSessionApproval:
@@ -599,7 +623,7 @@ class TestREPLLoop:
 
     @pytest.mark.asyncio()
     async def test_repl_keyboard_interrupt_during_agent(self, inline_app: InlineApp) -> None:
-        """^C with active _agent_loop calls cancel()."""
+        """^C at idle prompt does NOT call cancel() just because _agent_loop exists."""
         mock_agent = MagicMock()
         mock_agent.cancel = MagicMock()
         inline_app._agent_loop = mock_agent
@@ -612,9 +636,11 @@ class TestREPLLoop:
 
         with patch.object(inline_app.renderer, "print_welcome"), \
              patch.object(inline_app.renderer, "print_goodbye"), \
-             patch.object(inline_app.console, "print"):
+             patch.object(inline_app.console, "print") as mock_print:
             await inline_app.run()
-            mock_agent.cancel.assert_called_once()
+            mock_agent.cancel.assert_not_called()
+            printed = " ".join(str(c) for c in mock_print.call_args_list)
+            assert "Ctrl+C again" in printed or "quit" in printed
 
     @pytest.mark.asyncio()
     async def test_repl_interrupt_count_resets_on_input(self, inline_app: InlineApp) -> None:
@@ -688,6 +714,151 @@ class TestREPLLoop:
              patch.object(inline_app, "_handle_input_with_cancel", new_callable=AsyncMock):
             await inline_app.run()
             mock_sep.assert_called_once()
+
+    @pytest.mark.asyncio()
+    async def test_repl_prints_separator_immediately_after_user_turn(
+        self, inline_app: InlineApp,
+    ) -> None:
+        """User turn is printed, then a separator, before any output starts.
+
+        This is the key "two-canvas" separation: the submitted `❯ ...` turn is
+        committed to scrollback and we close the input area with a full-width
+        separator before any model/tool output begins.
+        """
+        mock_session = MagicMock()
+        mock_session.prompt_async = AsyncMock(
+            side_effect=["hello", EOFError],
+        )
+        inline_app.session = mock_session
+
+        mock_renderer = MagicMock()
+        inline_app.renderer = mock_renderer
+
+        with patch.object(inline_app, "_handle_input_with_cancel", new_callable=AsyncMock):
+            await inline_app.run()
+
+        # Ensure we print the user turn and then immediately a separator.
+        calls = mock_renderer.method_calls
+        idx = calls.index(call.print_user_turn("hello"))
+        assert calls[idx + 1] == call.print_separator()
+
+    @pytest.mark.asyncio()
+    async def test_repl_keyboard_interrupt_first_prints_warning(
+        self, inline_app: InlineApp,
+    ) -> None:
+        """First ^C prints the 'Press Ctrl+C again to quit' warning."""
+        mock_session = MagicMock()
+        mock_session.prompt_async = AsyncMock(
+            side_effect=[KeyboardInterrupt, EOFError],
+        )
+        inline_app.session = mock_session
+
+        with patch.object(inline_app.renderer, "print_welcome"), \
+             patch.object(inline_app.renderer, "print_goodbye"), \
+             patch.object(inline_app.console, "print") as mock_print:
+            await inline_app.run()
+            printed = " ".join(str(c) for c in mock_print.call_args_list)
+            assert "Ctrl+C again" in printed or "quit" in printed
+
+    @pytest.mark.asyncio()
+    async def test_repl_keyboard_interrupt_during_agent_prints_message(
+        self, inline_app: InlineApp,
+    ) -> None:
+        """KeyboardInterrupt during generation prints 'generation cancelled' message."""
+        inline_app._interrupt_count = 1  # prove it resets on generation-cancel
+        mock_agent = MagicMock()
+        mock_agent.cancel = MagicMock()
+        inline_app._agent_loop = mock_agent
+
+        with (
+            patch("asyncio.wait", side_effect=KeyboardInterrupt),
+            patch.object(inline_app, "_handle_input", new_callable=AsyncMock),
+            patch.object(inline_app, "_listen_for_escape", new_callable=AsyncMock),
+            patch.object(inline_app.renderer, "end_thinking"),
+            patch.object(inline_app.renderer, "end_streaming", return_value=""),
+            patch.object(inline_app.console, "print") as mock_print,
+        ):
+            await inline_app._handle_input_with_cancel("hello")
+            printed = " ".join(str(c) for c in mock_print.call_args_list)
+            assert "generation cancelled" in printed.lower() or "cancelled" in printed.lower()
+            assert inline_app._interrupt_count == 0
+            assert inline_app._agent_task is None
+
+    @pytest.mark.asyncio()
+    async def test_repl_interrupt_count_resets_after_agent_cancel(
+        self, inline_app: InlineApp,
+    ) -> None:
+        """KeyboardInterrupt during generation resets _interrupt_count to 0."""
+        inline_app._interrupt_count = 1
+        mock_agent = MagicMock()
+        mock_agent.cancel = MagicMock()
+        inline_app._agent_loop = mock_agent
+
+        with (
+            patch("asyncio.wait", side_effect=KeyboardInterrupt),
+            patch.object(inline_app, "_handle_input", new_callable=AsyncMock),
+            patch.object(inline_app, "_listen_for_escape", new_callable=AsyncMock),
+            patch.object(inline_app.renderer, "end_thinking"),
+            patch.object(inline_app.renderer, "end_streaming", return_value=""),
+            patch.object(inline_app.console, "print"),
+        ):
+            await inline_app._handle_input_with_cancel("hello")
+            assert inline_app._interrupt_count == 0
+
+    @pytest.mark.asyncio()
+    async def test_escape_cancel_prints_cancelled_message(
+        self, inline_app: InlineApp,
+    ) -> None:
+        """Escape during _handle_input_with_cancel prints 'Cancelled.'."""
+        with (
+            patch.object(
+                inline_app, "_listen_for_escape",
+                new_callable=AsyncMock, return_value=True,
+            ),
+            patch.object(
+                inline_app, "_handle_input",
+                new_callable=AsyncMock,
+            ) as mock_handle,
+            patch.object(inline_app.renderer, "end_thinking"),
+            patch.object(inline_app.renderer, "end_streaming", return_value=""),
+            patch.object(inline_app.console, "print") as mock_print,
+        ):
+            async def _hang(text: str) -> None:
+                await asyncio.sleep(100)
+            mock_handle.side_effect = _hang
+            await inline_app._handle_input_with_cancel("hello")
+            printed = " ".join(str(c) for c in mock_print.call_args_list)
+            assert "Cancelled" in printed
+
+    @pytest.mark.asyncio()
+    async def test_ctrl_c_at_idle_after_previous_generation(
+        self, inline_app: InlineApp,
+    ) -> None:
+        """Ctrl+C at idle prompt after a previous generation shows quit warning.
+
+        Bug exposure: _agent_loop is never reset to None after completion,
+        so Ctrl+C at idle incorrectly takes the 'cancel generation' path
+        instead of showing 'Press Ctrl+C again to quit'.
+        """
+        # Simulate state after a previous generation completed
+        mock_agent = MagicMock()
+        inline_app._agent_loop = mock_agent
+
+        mock_session = MagicMock()
+        mock_session.prompt_async = AsyncMock(
+            side_effect=[KeyboardInterrupt, EOFError],
+        )
+        inline_app.session = mock_session
+
+        with patch.object(inline_app.renderer, "print_welcome"), \
+             patch.object(inline_app.renderer, "print_goodbye"), \
+             patch.object(inline_app.console, "print") as mock_print:
+            await inline_app.run()
+            printed = " ".join(str(c) for c in mock_print.call_args_list)
+            # Regression test for Entry 114: _agent_loop can be truthy even when
+            # no generation is in progress, so Ctrl+C should show the quit warning.
+            assert "Ctrl+C again" in printed or "quit" in printed.lower()
+            mock_agent.cancel.assert_not_called()
 
     def test_prompt_is_green_chevron(self, inline_app: InlineApp) -> None:
         """FormattedText in run() contains '>' character."""
