@@ -1,6 +1,6 @@
 # HybridCoder Specification
 Version: 1.0 (Draft)
-Date: 2026-02-01
+Date: 2026-02-08
 Derived from: CLAUDE.md, docs/plan.md
 
 ## 1. Purpose

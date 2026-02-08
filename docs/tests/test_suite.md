@@ -1,5 +1,7 @@
 # HybridCoder Test Suite — Master Catalog
 
+> Last verified: 2026-02-08 — **275 Go tests, 0 failures** (`go test ./... -count=1`, 0.24s)
+
 ## How to Test
 
 ### Prerequisites
@@ -99,20 +101,21 @@ chmod +x build.sh && ./build.sh
 
 | File | Category | Tests | Description |
 |------|----------|-------|-------------|
-| `cmd/hybridcoder-tui/view_test.go` | Display | ~17 | View() rendering for all stages |
-| `cmd/hybridcoder-tui/update_test.go` | Core | ~62 | Update loop, display pipeline, parallel input, thinking, slash commands, /resume |
-| `cmd/hybridcoder-tui/backend_test.go` | IPC | ~20 | Backend dispatch, routing, marshal, robustness, SendRequestCmd |
-| `cmd/hybridcoder-tui/commands_test.go` | Commands | ~11 | Slash command parsing and handling |
-| `cmd/hybridcoder-tui/askuser_test.go` | Dialog | ~15 | Ask-user stage transitions, navigation, rendering |
+| `cmd/hybridcoder-tui/update_test.go` | Core | 71 | Update loop, display pipeline, parallel input, thinking, slash commands, /resume |
+| `cmd/hybridcoder-tui/protocol_test.go` | Protocol | 29 | JSON-RPC wire format marshal/unmarshal including session types |
+| `cmd/hybridcoder-tui/session_picker_test.go` | Session Picker | 24 | Session picker transitions, labels, navigation, selection, cancel |
+| `cmd/hybridcoder-tui/backend_test.go` | IPC | 22 | Backend dispatch, routing, marshal, robustness, SendRequestCmd |
+| `cmd/hybridcoder-tui/completion_test.go` | Autocomplete | 21 | Prefix, fuzzy, Tab, ghost text, dropdown, cap, columns |
+| `cmd/hybridcoder-tui/view_test.go` | Display | 18 | View() rendering for all stages, status bar |
+| `cmd/hybridcoder-tui/commands_test.go` | Commands | 18 | Slash command parsing and handling |
+| `cmd/hybridcoder-tui/askuser_test.go` | Dialog | 18 | Ask-user stage transitions, navigation, rendering |
+| `cmd/hybridcoder-tui/history_test.go` | History | 14 | Persistence, navigation, dedup |
 | `cmd/hybridcoder-tui/approval_test.go` | Dialog | 12 | Approval stage transitions, navigation, rendering |
-| `cmd/hybridcoder-tui/completion_test.go` | Autocomplete | ~21 | Prefix, fuzzy, Tab, ghost text, dropdown, cap, columns |
-| `cmd/hybridcoder-tui/e2e_test.go` | E2E | ~9 | Full message flow simulations including session resume |
-| `cmd/hybridcoder-tui/session_picker_test.go` | Session Picker | ~25 | Session picker transitions, labels, navigation, selection, cancel |
-| `cmd/hybridcoder-tui/protocol_test.go` | Protocol | ~31 | JSON-RPC wire format marshal/unmarshal including session types |
-| `cmd/hybridcoder-tui/model_test.go` | Model | 6 | Initial state, defaults |
-| `cmd/hybridcoder-tui/history_test.go` | History | 13 | Persistence, navigation, dedup |
+| `cmd/hybridcoder-tui/e2e_test.go` | E2E | 12 | Full message flows: chat, tools, approval, cancel, queue, resume, thinking tokens |
 | `cmd/hybridcoder-tui/markdown_test.go` | Rendering | 10 | Glamour markdown rendering |
-| `tests/unit/test_backend_server.py` | Python | ~74 | Backend server, callbacks, protocol, dispatch |
+| `cmd/hybridcoder-tui/model_test.go` | Model | 6 | Initial state, defaults |
+| | | **275** | **Go total** |
+| `tests/unit/test_backend_server.py` | Python | 76 | Backend server, callbacks, protocol, dispatch |
 
 ---
 
@@ -382,6 +385,14 @@ Tests for the arrow-key session resume picker (`/resume` without args).
 | `TestFullSessionResumeFlow` | e2e_test.go | /resume → list → navigate → pick → session.resume sent |
 | `TestFullSessionResumeCancelFlow` | e2e_test.go | /resume → list → navigate → Escape → stageInput, no backend msg |
 | `TestFullSessionResumeDirectIDFlow` | e2e_test.go | /resume ID → session.resume sent, no picker |
+
+### E2E Thinking Token Tests (e2e_test.go)
+
+| Test | File | What It Verifies |
+|------|------|-----------------|
+| `TestFullThinkingTokensDisplayInRealTime` | e2e_test.go | 17-chunk thinking accumulation, per-chunk visibility in View(), 5-line cap, thinking+response coexistence, cleanup on done |
+| `TestThinkingTokensDisabledNotShownInView` | e2e_test.go | showThinking=false hides tokens from View(), buffer still accumulates, toggle reveals them |
+| `TestThinkingTokensInterleavedWithResponseTokens` | e2e_test.go | Interleaved thinking and response tokens accumulate correctly in separate buffers |
 
 ### Gap Tests (various files)
 

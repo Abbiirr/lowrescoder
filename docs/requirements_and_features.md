@@ -1,7 +1,7 @@
 # HybridCoder — Requirements & Feature Catalog
 
 > Comprehensive catalog of all features built, planned, current UX issues, and architecture decisions.
-> Last updated: 2026-02-07
+> Last updated: 2026-02-08
 
 ---
 
@@ -182,10 +182,12 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 
 ### 2.12 Tests
 
-- **509+ unit tests passing** (as of last Codex run)
-- Test files cover: CLI, agent loop, tools, approval, session store, inline app, inline renderer, inline completer, TUI commands, file tools, config, type-ahead, parallel mode
+- **275 Go + 509 Python = 784+ unit tests passing**
+- Go test files (15 files): update, protocol, session_picker, backend, completion, view, commands, askuser, history, approval, e2e, markdown, model
+- Python test files cover: CLI, agent loop, tools, approval, session store, inline app, inline renderer, inline completer, TUI commands, file tools, config, type-ahead, parallel mode, backend server
 - Sprint verification tests: `tests/test_sprint_verify.py`
 - Integration tests (skipped by default): `tests/integration/`
+- Full test catalog: `docs/tests/test_suite.md`
 
 ---
 
@@ -241,15 +243,15 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 
 ### 4.1 Arrow-key selects removed in parallel mode
 
-**Status:** Known regression
+**Status:** Fixed (Go TUI)
 **Root cause:** Nested prompt_toolkit Applications are unsafe while a `PromptSession` is active. Parallel mode replaced arrow-select with typed `y/s/n` responses.
-**Impact:** UX downgrade for approval prompts — less discoverable, more error-prone.
+**Resolution:** Go Bubble Tea TUI uses stage-based model with dedicated `stageApproval` and `stageAskUser` stages. Arrow-key navigation works in all dialogs (approval, ask-user, session picker). 275 tests cover all interaction paths.
 
 ### 4.2 Input not visually fixed during streaming
 
-**Status:** Known limitation of `patch_stdout`
+**Status:** Fixed (Go TUI)
 **Root cause:** `patch_stdout` is line-buffered. Token streaming causes frequent flushes that trigger prompt re-rendering mid-line, producing interleaving (e.g., `Hello❯ who a`).
-**Impact:** Input area doesn't feel "pinned" like Claude Code.
+**Resolution:** Go Bubble Tea renders a fixed input area at the bottom of the terminal via inline mode. `View()` always includes the input bar. Streaming content displays above it. No interleaving possible.
 
 ### 4.3 Cancel and message queue
 
@@ -258,15 +260,33 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 
 ### 4.4 Streaming smoothness
 
-**Status:** Known limitation
+**Status:** Fixed (Go TUI)
 **Root cause:** `patch_stdout`'s `StdoutProxy` line-buffering means tokens appear bursty without explicit flush, but flushing causes prompt interleaving.
-**Impact:** Less smooth streaming compared to Claude Code's differential renderer.
+**Resolution:** Go Bubble Tea batches tokens at 16ms tick rate. Plain text streamed in `View()` live area, Glamour renders once on `on_done`, then `tea.Println()` commits to scrollback. No flicker or interleaving.
 
 ### 4.5 `/resume` copy-paste issue
 
 **Status:** Fixed
 **Root cause:** `/resume` without args dumped a plain-text session list requiring copy-paste of UUIDs.
-**Resolution:** Arrow-key session picker added (Go TUI). `/resume` without args shows an interactive picker via `stageAskUser` with sentinel `askRequestID == -1`. User navigates with Up/Down, selects with Enter, cancels with Escape. Full session ID sent via `session.resume` RPC.
+**Resolution:** Arrow-key session picker added (Go TUI). `/resume` without args shows an interactive picker via `stageAskUser` with sentinel `askRequestID == -1`. User navigates with Up/Down, selects with Enter, cancels with Escape. Full session ID sent via `session.resume` RPC. Additionally, backend validates empty/ambiguous prefixes with explicit errors.
+
+### 4.6 Shell enablement safety
+
+**Status:** Fixed
+**Root cause:** `_approval_callback()` called `enable_shell()` for any "Yes, this session" approval regardless of tool type. Approving `write_file` could silently enable shell execution.
+**Resolution:** Shell enablement now scoped to `tool_name == "run_command"` only (Codex Entry 165).
+
+### 4.7 Backend shutdown race
+
+**Status:** Fixed
+**Root cause:** Shutdown path used non-blocking `select`, immediately force-killing the process. No grace period.
+**Resolution:** Real timeout-based wait: orderly shutdown request, 5s grace, fallback process-group kill, 2s goroutine drain (Codex Entry 165).
+
+### 4.8 Malformed JSON-RPC frame resilience
+
+**Status:** Fixed
+**Root cause:** A single invalid JSON frame from the backend could terminate the entire TUI session.
+**Resolution:** Newline-framed reads with per-line unmarshal. Invalid frames are dropped with error surfaced to user, not session abort (Codex Entry 170).
 
 ---
 
@@ -322,7 +342,7 @@ See `docs/plan/go-bubble-tea-migration.md` for the full migration plan.
 | Agentic task completion | >50% on custom test suite | N/A (benchmark not built) |
 | Memory usage (idle) | <2GB RAM (stretch: <500MB) | Not profiled |
 | Memory usage (inference) | <8GB VRAM | Not profiled |
-| Unit tests | 500+ passing | **272 Go + 509 Python = 781+ passing** |
+| Unit tests | 500+ passing | **275 Go + 509 Python = 784+ passing** |
 
 ---
 

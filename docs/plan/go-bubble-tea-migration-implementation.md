@@ -1,5 +1,19 @@
 # Go Bubble Tea TUI Migration — Implementation Plan
 
+## Implementation Status (as of 2026-02-08)
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Phase 0: Windows Spike | COMPLETE | Inline mode, scrollback, resize all work on Windows |
+| Phase 1: Foundation | COMPLETE | Go module, JSON-RPC, 3-goroutine backend, Python server adapter |
+| Phase 2: Core Features | COMPLETE | Streaming, approvals, cancel, queue, commands, session resume picker |
+| Phase 3: Polish | COMPLETE | Markdown (Glamour), autocomplete (prefix+fuzzy+dropdown), history, thinking tokens |
+| Phase 4: Hardening | COMPLETE | Graceful shutdown, control-path retry, TTY detection, session handoff, CLI fallback |
+
+**275 Go tests passing, build clean, gofmt clean.** Go TUI behind `--go-tui` flag (staged rollout).
+
+---
+
 ## Context
 
 HybridCoder's Python inline REPL (prompt_toolkit + patch_stdout) hit 3 fundamental limitations: line-buffered token streaming, unsafe nested Applications (breaking arrow-key approvals), and no true fixed input areas. After extensive research across 3 deep-research documents, 7 additional research files, and 155 agent conversation entries, all agents (Claude, Codex, OpenCode) approved migrating to a **Go Bubble Tea frontend + Python backend** architecture. This plan synthesizes the research into an opinionated, executable implementation plan.

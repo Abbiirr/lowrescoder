@@ -17,10 +17,10 @@ Implement Layer 1 (deterministic analysis) and Layer 2 (retrieval & context) to 
 - AST-aware chunking splits code at function/class boundaries for semantic search
 - LanceDB-backed hybrid search (BM25 + vector + RRF) retrieves relevant code
 - Repository map and context assembler build optimized LLM prompts within a 6000-token budget
-- 6 new tools and 1 new slash command integrated into the TUI
-- TUI shows which layer handled each response [L1/L2/L4]
+- 6 new tools and 1 new slash command integrated into the Python backend + Go TUI
+- Go TUI status bar shows which layer handled each response [L1/L4]
 
-**Implementation status:** Not started.
+**Implementation status:** Not started. *(Document updated 2026-02-08 to reflect Go Bubble Tea migration and dependency version updates.)*
 
 ---
 
@@ -80,7 +80,7 @@ None of the major competitors route deterministic queries away from the LLM. The
 - Edit system (apply_diff, search_replace, fuzzy matching)
 - Git integration (auto-commit, undo, rollback)
 - Multi-step planner and architect/editor split
-- Inline mode (Rich + prompt_toolkit)
+- Go TUI enhancements beyond layer indicator (inline mode already complete)
 
 ---
 
@@ -89,26 +89,31 @@ None of the major competitors route deterministic queries away from the LLM. The
 ### 4.1 Data Flow
 
 ```
-User Input
+User Input (Go TUI — cmd/hybridcoder-tui/)
     │
-    ▼
+    ├─ Slash command? → Go handles locally (/exit, /clear, /thinking)
+    │                   or delegates to Python (/index, /model, /mode, etc.)
+    │                   via JSON-RPC "command" request
+    │
+    └─ Chat message → JSON-RPC "chat" request
+                       │
+                       ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│  CommandRouter (slash commands)                                   │
-│  ├─ /index  → triggers manual index rebuild                     │
-│  └─ /help, /model, /mode, etc. → existing handlers             │
-└──────┬───────────────────────────────────────────────────────────┘
-       │ (not a slash command)
-       ▼
-┌──────────────────────────────────────────────────────────────────┐
-│  RequestRouter (NEW — core/router.py)                            │
-│  ├─ Stage 1: Regex pattern matching                             │
-│  ├─ Stage 2: Feature extraction (has file ref? symbol name?)    │
-│  └─ Stage 3: Weighted scoring → RequestType                    │
+│  Python Backend (backend/server.py — handle_chat)                │
 │                                                                   │
-│  Routes to:                                                       │
-│  ├─ DETERMINISTIC_QUERY → Layer 1 (direct response, no LLM)    │
-│  ├─ SEMANTIC_SEARCH     → Layer 2 context → Layer 4 LLM        │
-│  └─ COMPLEX_TASK/CHAT   → Layer 4 LLM (with L2 context)        │
+│  1. CommandRouter (slash commands via "command" RPC)              │
+│     ├─ /index  → triggers manual index rebuild                   │
+│     └─ /help, /model, /mode, etc. → existing handlers           │
+│                                                                   │
+│  2. RequestRouter (NEW — core/router.py, BEFORE agent loop)      │
+│     ├─ Stage 1: Regex pattern matching                           │
+│     ├─ Stage 2: Feature extraction (has file ref? symbol name?)  │
+│     └─ Stage 3: Weighted scoring → RequestType                  │
+│                                                                   │
+│     Routes to:                                                    │
+│     ├─ DETERMINISTIC_QUERY → Layer 1 (direct, no LLM)           │
+│     ├─ SEMANTIC_SEARCH     → Layer 2 context → Layer 4 LLM      │
+│     └─ COMPLEX_TASK/CHAT   → Layer 4 LLM (with L2 context)      │
 └──────┬──────────┬──────────┬─────────────────────────────────────┘
        │          │          │
        ▼          │          │
@@ -145,7 +150,9 @@ User Input
       │               │
       ▼               ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│  Response → ChatView (with layer indicator [L1/L2/L4])          │
+│  on_token + on_done (JSON-RPC notifications)                     │
+│  ├─ on_done includes layer_used=1 (L1) or layer_used=4 (L4)    │
+│  └─ Go TUI renders response + status bar shows [L1]/[L4]       │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -185,9 +192,18 @@ layer2/rules.py    → (standalone, reads files)
 
 agent/tools.py     → layer1/queries.py, layer1/lsp.py (new tools)
 agent/prompts.py   → core/context.py (context injection)
-tui/app.py         → core/router.py (pre-routing)
+backend/server.py  → core/router.py, layer1/queries.py, core/context.py (L1 bypass before agent loop)
 tui/commands.py    → layer2/index.py (/index command)
-tui/widgets/status_bar.py → (new reactive: layer)
+```
+
+Go TUI module integration (minimal — consumes JSON-RPC only):
+```
+cmd/hybridcoder-tui/protocol.go   → LayerUsed in DoneParams
+cmd/hybridcoder-tui/messages.go   → LayerUsed in backendDoneMsg
+cmd/hybridcoder-tui/backend.go    → Pass LayerUsed in on_done dispatch
+cmd/hybridcoder-tui/statusbar.go  → Layer field, render [L1]/[L4] in View()
+cmd/hybridcoder-tui/update.go     → Set m.statusBar.Layer in handleDone()
+cmd/hybridcoder-tui/commands.go   → Add "/index" to knownCommands
 ```
 
 ---
@@ -214,7 +230,8 @@ Empty package marker.
 - Cache implementation: `dict[Path, tuple[float, Tree]]` keyed by (path → mtime, tree)
 - Cache eviction: LRU with max 500 entries
 - Performance target: <10ms per file for files up to 5000 lines
-- Dependencies: `tree-sitter>=0.25`, `tree-sitter-python>=0.23`
+- Dependencies: `tree-sitter>=0.25.2`, `tree-sitter-python>=0.25.0`
+- tree-sitter 0.25.x API: `Language(tspython.language())` capsule-based constructor, `Parser(PY_LANGUAGE)` constructor
 
 **`src/hybridcoder/layer1/symbols.py`** — `SymbolExtractor` class
 - Constructor: takes `TreeSitterParser` instance
@@ -223,12 +240,13 @@ Empty package marker.
 - `extract_imports(source: str) -> list[str]`: extract import statements
 - `get_scope_chain(node: tree_sitter.Node) -> list[str]`: walk up tree to build scope
 - Symbol kinds: `function`, `class`, `method`, `variable`, `import`
-- Uses tree-sitter queries (S-expressions) for each symbol type:
+- Uses tree-sitter queries (S-expressions) via **QueryCursor API** (0.25.x):
   - Functions: `(function_definition name: (identifier) @name)`
   - Classes: `(class_definition name: (identifier) @name)`
   - Methods: `(class_definition body: (block (function_definition name: (identifier) @name)))`
   - Imports: `(import_statement)`, `(import_from_statement)`
   - Variables: `(assignment left: (identifier) @name)` (module-level only)
+- **QueryCursor pattern**: `QueryCursor(query).captures(node)` returns `dict[str, list[Node]]` (not the old `Query.captures(node)` returning `list[(Node, str)]`)
 - Populates: `Symbol.name`, `kind`, `file`, `line`, `end_line`, `scope`, `type_annotation`
 
 #### Modified Files
@@ -568,21 +586,22 @@ TestEmbeddingEngine:
 - `is_stale(path: Path) -> bool`: check if file has changed since last index
 - `stats() -> dict`: index statistics (total chunks, files, etc.)
 
-LanceDB schema:
+LanceDB schema (Pydantic `LanceModel` — replaces PyArrow schema):
 ```python
-schema = pa.schema([
-    pa.field("id", pa.string()),           # chunk unique ID
-    pa.field("content", pa.string()),       # code text
-    pa.field("file_path", pa.string()),     # relative file path
-    pa.field("language", pa.string()),      # "python"
-    pa.field("start_line", pa.int32()),     # first line
-    pa.field("end_line", pa.int32()),       # last line
-    pa.field("chunk_type", pa.string()),    # function/class/method/module
-    pa.field("scope_chain", pa.string()),   # JSON-encoded list
-    pa.field("imports", pa.string()),       # JSON-encoded list
-    pa.field("file_hash", pa.string()),     # for invalidation
-    pa.field("vector", pa.list_(pa.float32(), 768)),  # embedding
-])
+from lancedb.pydantic import LanceModel, Vector
+
+class CodeChunkRecord(LanceModel):
+    id: str                    # chunk unique ID
+    content: str               # code text (FTS-indexed)
+    file_path: str             # relative file path
+    language: str              # "python"
+    start_line: int            # first line
+    end_line: int              # last line
+    chunk_type: str            # function/class/method/module
+    scope_chain: str           # JSON-encoded list
+    imports: str               # JSON-encoded list
+    file_hash: str             # for invalidation
+    vector: Vector(768)        # jina-v2-base-code embedding
 ```
 
 File discovery:
@@ -598,26 +617,32 @@ Indexing flow:
 2. For each file: check hash vs stored hash → skip if unchanged
 3. For changed files: re-chunk → re-embed → upsert into LanceDB
 4. Remove chunks for deleted files
-5. Create FTS index on `content` column for BM25
+5. Create Tantivy FTS index: `table.create_fts_index("content", use_tantivy=True)` for BM25
 
 **`src/hybridcoder/layer2/search.py`** — `HybridSearch` class
 - `__init__(index: CodeIndex)`: takes index reference
 - `search(query: str, top_k: int = 10, file_filter: str | None = None) -> list[SearchResult]`
-- `_bm25_search(query: str, top_k: int) -> list[tuple[str, float]]`: BM25 full-text search
-- `_vector_search(query: str, top_k: int) -> list[tuple[str, float]]`: vector similarity search
-- `_fuse(bm25_results, vector_results, weights: tuple[float, float] = (0.5, 0.5)) -> list[SearchResult]`: Reciprocal Rank Fusion
 
-RRF formula:
+Uses LanceDB built-in hybrid search + RRF (replaces manual BM25/vector/fusion):
+```python
+from lancedb.rerankers import RRFReranker
+
+results = (
+    table
+    .search(query, query_type="hybrid")
+    .rerank(reranker=RRFReranker())
+    .limit(top_k)
+    .to_pandas()
+)
 ```
-RRF_score(d) = Σ (1 / (k + rank_i(d)))  for each ranking i
-```
-Where k = 60 (standard constant).
+
+LanceDB handles BM25 (Tantivy FTS), vector search, and Reciprocal Rank Fusion internally. No manual RRF formula needed.
 
 Search behavior:
-- If embeddings unavailable: BM25-only mode
+- If embeddings unavailable: `query_type="fts"` for BM25-only mode
 - If index empty: return empty results
 - Relevance threshold: 0.3 (filter out low-quality results)
-- File filter: optional, restrict to files matching a glob
+- File filter: optional, restrict to files matching a glob via `.where()` clause
 - Symbol affinity boost: if query mentions a symbol, boost chunks containing that symbol
 
 #### Tests: `tests/unit/test_index.py` (~12 tests)
@@ -822,93 +847,134 @@ New tools (all `requires_approval=False`):
 
 Total tools after Phase 3: **12** (6 original + 6 new)
 
-**`src/hybridcoder/tui/app.py`** — router integration
+**`src/hybridcoder/backend/server.py`** — router integration in `handle_chat()` (line 329-368)
 
-Changes to `on_input_bar_submitted`:
+Add L1 bypass **before** the agent loop in `handle_chat()`:
 ```python
-async def on_input_bar_submitted(self, event: InputBar.Submitted) -> None:
-    text = event.text
+async def handle_chat(self, message: str, session_id: str | None, request_id: int) -> None:
+    # ... existing session/title logic ...
 
-    # 1. ask_user future (existing)
-    if self._ask_user_future is not None and not self._ask_user_future.done():
-        self._ask_user_future.set_result(text)
-        ...
-        return
-
-    # 2. Slash commands (existing)
-    result = self.command_router.dispatch(text)
-    if result is not None:
-        ...
-        return
-
-    # 3. Expand @file references (existing)
-    text = expand_references(text, self.project_root)
-
-    # 4. NEW: Request router — try L1 deterministic first
+    # NEW: Request router — try L1 deterministic first
     if self.config.layer1.enabled:
         router = self._ensure_request_router()
-        request = router.classify(text)
+        request = router.classify(message)
         if request.request_type == RequestType.DETERMINISTIC_QUERY:
             response = self._handle_deterministic(request)
             if response is not None:
-                self._show_layer1_response(response)
+                # Emit result directly — bypasses agent loop entirely
+                self.emit_notification("on_token", {"text": response.content})
+                self.emit_notification("on_done", {
+                    "tokens_in": 0,
+                    "tokens_out": 0,
+                    "layer_used": 1,
+                })
                 return
 
-    # 5. Send to agent loop (existing, with L2 context injection)
-    self._run_agent(text)
+    # Existing agent loop path (L4)
+    try:
+        agent_loop = self._ensure_agent_loop()
+        # ... existing agent loop code ...
+
+    self.emit_notification("on_done", {
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "layer_used": 4,
+    })
 ```
 
-New methods on `HybridCoderApp`:
+New methods on `BackendServer`:
 - `_ensure_request_router() -> RequestRouter`: lazy-init router
 - `_handle_deterministic(request: Request) -> Response | None`: run L1 handler
-- `_show_layer1_response(response: Response)`: display in chat with [L1] indicator
-
-**`src/hybridcoder/tui/widgets/status_bar.py`** — layer indicator
-
-Add new reactive:
-```python
-layer: reactive[str] = reactive("")  # "L1", "L2", "L4", or ""
-```
-
-Update `render()` to include layer indicator:
-```python
-def render(self) -> str:
-    parts = [...]
-    if self.layer:
-        parts.insert(0, f"[{self.layer}]")
-    ...
-```
-
-**`src/hybridcoder/tui/widgets/chat_view.py`** — `add_layer1_result()` method
-
-New method to display deterministic results with distinct styling:
-```python
-def add_layer1_result(self, content: str, latency_ms: float) -> None:
-    """Display a Layer 1 deterministic result."""
-    header = f"[L1 • {latency_ms:.0f}ms • 0 tokens]"
-    widget = Static(f"{header}\n{content}", classes="layer1-result")
-    self.mount(widget)
-    if not self._frozen:
-        self.scroll_end(animate=False)
-```
 
 **`src/hybridcoder/tui/commands.py`** — add `/index` command
 
 ```python
-async def _handle_index(app: HybridCoderApp, args: str) -> None:
-    chat = _get_chat(app)
-    chat.add_message("system", "Building code index...")
-    # Trigger index build in background
+async def _handle_index(app: AppContext, args: str) -> None:
+    app.add_system_message("Building code index...")
     try:
-        index = app._ensure_code_index()
+        index = _ensure_code_index(app)
         await asyncio.to_thread(index.build, app.project_root, force="--force" in args)
         stats = index.stats()
-        chat.add_message(
-            "system",
+        app.add_system_message(
             f"Index built: {stats['files']} files, {stats['chunks']} chunks"
         )
     except Exception as e:
-        chat.add_message("system", f"Index build failed: {e}")
+        app.add_system_message(f"Index build failed: {e}")
+```
+
+**Go TUI changes (~20 lines total across 5 files):**
+
+**`cmd/hybridcoder-tui/protocol.go`** — Add `LayerUsed` to `DoneParams`:
+```go
+type DoneParams struct {
+	TokensIn  int  `json:"tokens_in"`
+	TokensOut int  `json:"tokens_out"`
+	Cancelled bool `json:"cancelled,omitempty"`
+	LayerUsed int  `json:"layer_used,omitempty"` // 1=L1 deterministic, 4=L4 LLM
+}
+```
+
+**`cmd/hybridcoder-tui/messages.go`** — Add `LayerUsed` to `backendDoneMsg`:
+```go
+type backendDoneMsg struct {
+	TokensIn  int
+	TokensOut int
+	Cancelled bool
+	LayerUsed int
+}
+```
+
+**`cmd/hybridcoder-tui/backend.go`** — Pass `LayerUsed` in `on_done` dispatch:
+```go
+case "on_done":
+	var params DoneParams
+	// ... unmarshal ...
+	b.program.Send(backendDoneMsg{
+		TokensIn:  params.TokensIn,
+		TokensOut: params.TokensOut,
+		Cancelled: params.Cancelled,
+		LayerUsed: params.LayerUsed,
+	})
+```
+
+**`cmd/hybridcoder-tui/statusbar.go`** — Add `Layer` field, render `[L1]`/`[L4]`:
+```go
+type statusBarModel struct {
+	// ... existing fields ...
+	Layer string // "L1", "L4", or ""
+}
+
+func (s statusBarModel) View() string {
+	parts := []string{}
+	if s.Layer != "" {
+		parts = append(parts, fmt.Sprintf("[%s]", s.Layer))
+	}
+	// ... existing parts ...
+}
+```
+
+**`cmd/hybridcoder-tui/update.go`** — Set `m.statusBar.Layer` in `handleDone()`:
+```go
+func (m model) handleDone(msg backendDoneMsg) (tea.Model, tea.Cmd) {
+	// ... existing flush logic ...
+	switch msg.LayerUsed {
+	case 1:
+		m.statusBar.Layer = "L1"
+	case 4:
+		m.statusBar.Layer = "L4"
+	default:
+		m.statusBar.Layer = ""
+	}
+	// ... rest of existing handleDone ...
+}
+```
+
+**`cmd/hybridcoder-tui/commands.go`** — Add `"/index"` to `knownCommands`:
+```go
+var knownCommands = []string{
+	// ... existing commands ...
+	"/index",
+}
 ```
 
 **`src/hybridcoder/agent/prompts.py`** — context injection
@@ -1005,15 +1071,32 @@ TestNewTools:
 
 **`tests/unit/test_integration_router_agent.py`** (~8 tests)
 ```
-TestRouterAgentIntegration:
-  test_deterministic_query_bypasses_agent
-  test_search_query_goes_to_agent_with_context
-  test_chat_query_goes_to_agent
-  test_layer_indicator_set_l1
-  test_layer_indicator_set_l4
+TestRouterBackendIntegration:
+  test_handle_chat_deterministic_bypasses_agent_loop
+  test_handle_chat_search_goes_to_agent_with_context
+  test_handle_chat_chat_goes_to_agent
+  test_on_done_includes_layer_used_1
+  test_on_done_includes_layer_used_4
   test_l1_response_shows_zero_tokens
   test_l1_response_under_50ms
   test_fallback_to_l4_on_l1_failure
+```
+
+**Go tests (in `cmd/hybridcoder-tui/`):**
+
+`protocol_test.go` — add:
+```
+TestDoneParamsLayerUsed:
+  test_unmarshal_done_params_with_layer_used
+  test_unmarshal_done_params_without_layer_used_defaults_zero
+```
+
+`statusbar_test.go` — add:
+```
+TestStatusBarLayerIndicator:
+  test_view_renders_l1_indicator
+  test_view_renders_l4_indicator
+  test_view_renders_no_indicator_when_empty
 ```
 
 **`tests/test_sprint_verify.py`** — add Sprint 3 verification tests
@@ -1091,8 +1174,13 @@ class TestSprint3Context:
         from hybridcoder.layer2.rules import RulesLoader
         assert RulesLoader is not None
 
-class TestSprint3Commands:
-    """S3.7: /index command registered."""
+class TestSprint3Integration:
+    """S3.7: Router integrated into backend server."""
+
+    def test_backend_server_emits_layer_used(self) -> None:
+        """BackendServer.handle_chat() emits layer_used in on_done."""
+        from hybridcoder.backend.server import BackendServer
+        assert hasattr(BackendServer, 'handle_chat')
 
     def test_index_command_registered(self) -> None:
         from hybridcoder.tui.commands import create_default_router
@@ -1104,7 +1192,7 @@ class TestSprint3Commands:
 
 ---
 
-## 6. New Files Summary (15 create + 8 modify)
+## 6. New Files Summary (15 create + 5 modify Python + 6 modify Go)
 
 ### Create
 
@@ -1126,7 +1214,7 @@ class TestSprint3Commands:
 | `src/hybridcoder/core/context.py` | 3F | Context assembler |
 | `src/hybridcoder/core/router.py` | 3B | Request router |
 
-### Modify
+### Modify (Python)
 
 | File | Sprint | Changes |
 |------|--------|---------|
@@ -1134,10 +1222,19 @@ class TestSprint3Commands:
 | `src/hybridcoder/config.py` | 3G | Extend `Layer1Config`, `Layer2Config` |
 | `src/hybridcoder/agent/tools.py` | 3G | Add 6 new tools |
 | `src/hybridcoder/agent/prompts.py` | 3G | Add repo map + rules + grounding |
-| `src/hybridcoder/tui/app.py` | 3G | Router integration before AgentLoop |
-| `src/hybridcoder/tui/widgets/status_bar.py` | 3G | Layer indicator reactive |
-| `src/hybridcoder/tui/widgets/chat_view.py` | 3G | `add_layer1_result()` method |
+| `src/hybridcoder/backend/server.py` | 3G | Router integration in `handle_chat()` — L1 bypass before agent loop, `layer_used` field in `on_done` |
 | `src/hybridcoder/tui/commands.py` | 3G | Add `/index` command |
+
+### Modify (Go TUI)
+
+| File | Sprint | Changes |
+|------|--------|---------|
+| `cmd/hybridcoder-tui/protocol.go` | 3G | Add `LayerUsed int` to `DoneParams` struct |
+| `cmd/hybridcoder-tui/messages.go` | 3G | Add `LayerUsed int` to `backendDoneMsg` |
+| `cmd/hybridcoder-tui/backend.go` | 3G | Pass `LayerUsed` in `on_done` dispatch |
+| `cmd/hybridcoder-tui/statusbar.go` | 3G | Add `Layer string` field, render `[L1]`/`[L4]` in `View()` |
+| `cmd/hybridcoder-tui/update.go` | 3G | Set `m.statusBar.Layer` in `handleDone()` based on `msg.LayerUsed` |
+| `cmd/hybridcoder-tui/commands.go` | 3G | Add `"/index"` to `knownCommands` for autocomplete |
 
 ### New Test Files
 
@@ -1157,8 +1254,16 @@ class TestSprint3Commands:
 | `tests/integration/test_lsp_integration.py` | 3C | ~6 |
 | `tests/integration/test_lancedb.py` | 3E | ~8 |
 
-**Total new tests: ~157**
-**Expected total: 307 (existing) + 157 = ~464 tests**
+Go test additions (in existing test files):
+
+| File | Sprint | Test Count |
+|------|--------|-----------|
+| `cmd/hybridcoder-tui/protocol_test.go` | 3G | ~2 |
+| `cmd/hybridcoder-tui/statusbar_test.go` (new) | 3G | ~3 |
+
+**Total new Python tests: ~157**
+**Total new Go tests: ~5**
+**Expected total: 307 (existing Python) + 157 + 202 (existing Go) + 5 = ~671 tests**
 
 ---
 
@@ -1169,29 +1274,28 @@ class TestSprint3Commands:
 ```toml
 # In pyproject.toml [project.optional-dependencies]
 layer1 = [
-    "tree-sitter>=0.25",
-    "tree-sitter-python>=0.23",
+    "tree-sitter>=0.25.2",        # QueryCursor API (breaking change from 0.25.0)
+    "tree-sitter-python>=0.25.0", # Capsule-based Language() constructor
 ]
 layer2 = [
-    "lancedb>=0.10",
-    "sentence-transformers>=3.0",
-    "pyarrow>=14.0",
+    "lancedb>=0.29",              # Pydantic LanceModel, built-in RRF, Tantivy FTS
+    "sentence-transformers>=5.0", # v5 backward-compatible, sparse encoder support
 ]
 ```
 
-Note: `tree-sitter` and `tree-sitter-python` are already declared in pyproject.toml optional deps. `lancedb` and `sentence-transformers` are also already declared. `pyarrow` is a new addition needed for LanceDB schema definitions.
+Note: `tree-sitter` and `tree-sitter-python` are already declared in pyproject.toml optional deps but need version bumps. `lancedb` and `sentence-transformers` are also already declared but need version bumps. `pyarrow` is no longer needed as a direct dependency — `LanceModel` (Pydantic) handles schema definition internally.
 
 ### Optional Dependencies
 
 ```toml
 lsp = [
-    "multilspy>=0.1",  # Microsoft's LSP client
+    "multilspy>=0.0.15",  # Microsoft's LSP client (now on PyPI)
 ]
 ```
 
-Note: multilspy may need to be installed from GitHub if not on PyPI:
+Note: multilspy is now available on PyPI as of v0.0.15:
 ```
-pip install git+https://github.com/microsoft/multilspy.git
+uv add multilspy>=0.0.15
 ```
 
 ---
@@ -1229,7 +1333,7 @@ pip install git+https://github.com/microsoft/multilspy.git
 | 5 | Context assembler stays within 6000 token budget | `test_total_under_budget` |
 | 6 | LSP degrades gracefully when unavailable | `test_unavailable_returns_none` |
 | 7 | Embedding engine degrades to BM25-only when unavailable | `test_bm25_only_when_no_embeddings` |
-| 8 | TUI shows layer indicator for each response | `test_layer_indicator_set_l1`, `test_layer_indicator_set_l4` |
+| 8 | Go TUI status bar shows layer indicator for each response | `TestStatusBarLayerIndicator` (Go), `test_on_done_includes_layer_used_1` (Python) |
 | 9 | All unit tests pass (target: 400+ total) | `uv run pytest tests/ -v` |
 | 10 | Sprint verification tests pass | `uv run pytest tests/test_sprint_verify.py -v` |
 | 11 | `/index` command works | `test_index_command_registered` |
@@ -1295,7 +1399,7 @@ Sprint 3G depends on all.
 | multilspy unstable on Windows | L1 LSP features unavailable | All LSP methods return None; tree-sitter fallback covers 80% |
 | jina-v2-base-code large download (~300MB) | Slow first search | Lazy load; BM25-only fallback until downloaded |
 | LanceDB version compatibility | Index build fails | Pin version; integration tests catch early |
-| Tree-sitter query API changes | Parser breaks | Pin tree-sitter>=0.25; test queries in CI |
+| Tree-sitter QueryCursor API changes | Parser breaks | Pin tree-sitter>=0.25.2; use QueryCursor pattern; test queries in CI |
 | Router misclassifies queries | Wrong layer handles request | Conservative thresholds (default to L4 on ambiguity) |
 | Large monorepo performance | Index build too slow | 50K file cap; incremental updates; mtime-based skip |
 
