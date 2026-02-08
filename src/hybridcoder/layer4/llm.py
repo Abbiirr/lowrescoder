@@ -320,94 +320,102 @@ class OpenRouterProvider:
         if reasoning_enabled:
             extra_body["reasoning"] = {"enabled": True}
 
-        response_stream = await client.chat.completions.create(
-            model=self.model,
-            messages=messages,  # type: ignore[arg-type]
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
-            tools=tools,  # type: ignore[arg-type]
-            stream=True,
-            extra_body=extra_body or None,
-        )
-
         content_parts: list[str] = []
         reasoning_parts: list[str] = []
         tool_call_data: dict[int, dict[str, Any]] = {}
         finish_reason = "stop"
         in_think_tag = False
 
-        async for chunk in response_stream:  # type: ignore[union-attr]
-            if not chunk.choices:
-                continue
-            choice = chunk.choices[0]
-            if choice.finish_reason:
-                finish_reason = choice.finish_reason
+        try:
+            response_stream = await client.chat.completions.create(
+                model=self.model,
+                messages=messages,  # type: ignore[arg-type]
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                tools=tools,  # type: ignore[arg-type]
+                stream=True,
+                extra_body=extra_body or None,
+            )
 
-            delta = choice.delta
-
-            # Capture reasoning field (OpenRouter native thinking)
-            reasoning_text = getattr(delta, "reasoning", None) if delta else None
-            if reasoning_text:
-                reasoning_parts.append(reasoning_text)
-                if on_thinking_chunk:
-                    on_thinking_chunk(reasoning_text)
-
-            if delta and delta.content:
-                text = delta.content
-
-                # Parse <think> tags (DeepSeek R1 style)
-                if "<think>" in text:
-                    in_think_tag = True
-                    # Split: before tag goes to content, after goes to reasoning
-                    before, _, after = text.partition("<think>")
-                    if before:
-                        content_parts.append(before)
-                        if on_chunk:
-                            on_chunk(before)
-                    if after:
-                        reasoning_parts.append(after)
-                        if on_thinking_chunk:
-                            on_thinking_chunk(after)
+            async for chunk in response_stream:  # type: ignore[union-attr]
+                if not chunk.choices:
                     continue
+                choice = chunk.choices[0]
+                if choice.finish_reason:
+                    finish_reason = choice.finish_reason
 
-                if "</think>" in text:
-                    in_think_tag = False
-                    before, _, after = text.partition("</think>")
-                    if before:
-                        reasoning_parts.append(before)
-                        if on_thinking_chunk:
-                            on_thinking_chunk(before)
-                    if after:
-                        content_parts.append(after)
-                        if on_chunk:
-                            on_chunk(after)
-                    continue
+                delta = choice.delta
 
-                if in_think_tag:
-                    reasoning_parts.append(text)
+                # Capture reasoning field (OpenRouter native thinking)
+                reasoning_text = getattr(delta, "reasoning", None) if delta else None
+                if reasoning_text:
+                    reasoning_parts.append(reasoning_text)
                     if on_thinking_chunk:
-                        on_thinking_chunk(text)
-                else:
-                    content_parts.append(text)
-                    if on_chunk:
-                        on_chunk(text)
+                        on_thinking_chunk(reasoning_text)
 
-            if delta and delta.tool_calls:
-                for tc_delta in delta.tool_calls:
-                    idx = tc_delta.index
-                    if idx not in tool_call_data:
-                        tool_call_data[idx] = {
-                            "id": tc_delta.id or "",
-                            "name": "",
-                            "arguments": "",
-                        }
-                    if tc_delta.id:
-                        tool_call_data[idx]["id"] = tc_delta.id
-                    if tc_delta.function:
-                        if tc_delta.function.name:
-                            tool_call_data[idx]["name"] = tc_delta.function.name
-                        if tc_delta.function.arguments:
-                            tool_call_data[idx]["arguments"] += tc_delta.function.arguments
+                if delta and delta.content:
+                    text = delta.content
+
+                    # Parse <think> tags (DeepSeek R1 style)
+                    if "<think>" in text:
+                        in_think_tag = True
+                        # Split: before tag goes to content, after goes to reasoning
+                        before, _, after = text.partition("<think>")
+                        if before:
+                            content_parts.append(before)
+                            if on_chunk:
+                                on_chunk(before)
+                        if after:
+                            reasoning_parts.append(after)
+                            if on_thinking_chunk:
+                                on_thinking_chunk(after)
+                        continue
+
+                    if "</think>" in text:
+                        in_think_tag = False
+                        before, _, after = text.partition("</think>")
+                        if before:
+                            reasoning_parts.append(before)
+                            if on_thinking_chunk:
+                                on_thinking_chunk(before)
+                        if after:
+                            content_parts.append(after)
+                            if on_chunk:
+                                on_chunk(after)
+                        continue
+
+                    if in_think_tag:
+                        reasoning_parts.append(text)
+                        if on_thinking_chunk:
+                            on_thinking_chunk(text)
+                    else:
+                        content_parts.append(text)
+                        if on_chunk:
+                            on_chunk(text)
+
+                if delta and delta.tool_calls:
+                    for tc_delta in delta.tool_calls:
+                        idx = tc_delta.index
+                        if idx not in tool_call_data:
+                            tool_call_data[idx] = {
+                                "id": tc_delta.id or "",
+                                "name": "",
+                                "arguments": "",
+                            }
+                        if tc_delta.id:
+                            tool_call_data[idx]["id"] = tc_delta.id
+                        if tc_delta.function:
+                            if tc_delta.function.name:
+                                tool_call_data[idx]["name"] = tc_delta.function.name
+                            if tc_delta.function.arguments:
+                                tool_call_data[idx]["arguments"] += tc_delta.function.arguments
+        except Exception as e:
+            # If we got partial content before the error, include it
+            # Otherwise re-raise so the caller (agent loop) handles it
+            if not content_parts and not tool_call_data:
+                raise
+            import logging
+            logging.getLogger(__name__).warning("OpenRouter stream error (partial data kept): %s", e)
 
         content = "".join(content_parts) or None
         reasoning = "".join(reasoning_parts) or None

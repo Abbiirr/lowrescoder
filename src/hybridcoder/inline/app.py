@@ -578,6 +578,7 @@ class InlineApp:
         if not self._generation_active():
             return
 
+        self._parallel_queue.clear()
         self._agent_cancel_message = message
 
         # If we were waiting for approval/ask_user, cancel that prompt request and restore draft.

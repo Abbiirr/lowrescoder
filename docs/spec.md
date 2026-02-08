@@ -85,7 +85,9 @@ HybridCoder is a local-first AI coding assistant CLI that prioritizes determinis
 - Escalate only on unresolved queries or when edits are required.
 
 ### 5.3 Major Components
-- CLI: command routing, REPL, streaming output.
+- **Go TUI frontend** (Bubble Tea): inline rendering, input, arrow-key approvals, autocomplete, thinking tokens, status bar. Communicates with Python backend via JSON-RPC over stdin/stdout. See `docs/plan/go-bubble-tea-migration.md`.
+- **Python backend**: agent loop, tools, LLM providers, session store, approval logic. Launched as subprocess by Go TUI (`hybridcoder serve`).
+- CLI: command routing, REPL, streaming output (Python `--legacy` fallback still available).
 - Core router: decides layer and tool usage.
 - File manager: read/write with line range support.
 - Git manager: auto-commit, undo/revert, branch control.

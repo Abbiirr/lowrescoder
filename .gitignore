@@ -33,6 +33,11 @@ htmlcov/
 # Linting
 .ruff_cache/
 
+# Go
+build/
+*.exe
+cmd/hybridcoder-tui-spike/
+
 # OS
 Thumbs.db
 .DS_Store

@@ -2,7 +2,7 @@
 ## Product Roadmap & Requirements Specification
 
 **Version:** 1.0
-**Last Updated:** February 1, 2026
+**Last Updated:** February 8, 2026
 **Target:** Solo Developer MVP
 **Languages:** Python, Java
 **Platform:** Local CLI Tool (Windows, macOS, Linux)
@@ -70,6 +70,7 @@ A local-first AI coding assistant CLI that achieves Claude Code-level performanc
 - Two-tier LLM: Ollama (L4) + llama-cpp-python/Outlines (L3)
 - LSP client: multilspy (Microsoft)
 - Package manager: uv
+- TUI Frontend: Go + Bubble Tea (inline mode, JSON-RPC over stdin/stdout to Python backend). See `docs/plan/go-bubble-tea-migration.md` for full plan.
 
 ---
 
@@ -125,7 +126,17 @@ A local-first AI coding assistant CLI that achieves Claude Code-level performanc
 ### 2.2 Component Dependency Graph
 
 ```
-CLI Interface
+Go TUI Frontend (Bubble Tea, inline mode)
+    │
+    ├── TextInput (fixed input bar, command history, completion)
+    ├── Live Area (streaming response, thinking indicator)
+    ├── StatusBar (model/mode/tokens/queue)
+    ├── Approval Prompt (arrow-key selection)
+    │
+    │   JSON-RPC over stdin/stdout
+    │
+    ▼
+Python Backend (subprocess launched by Go TUI)
     │
     ├── Request Router (decides which layer handles request)
     │       │
@@ -163,6 +174,8 @@ CLI Interface
     └── Shell Executor (sandboxed)
             ├── Test runner
             └── Build commands
+
+Legacy: Python inline REPL (--legacy flag) remains as fallback.
 ```
 
 ---
@@ -223,10 +236,12 @@ CLI Interface
 
 **FR1.1: CLI Commands**
 ```
-hybridcoder chat              # Start interactive session
+hybridcoder chat              # Start interactive session (Go TUI by default)
+hybridcoder chat --legacy     # Use Python inline REPL fallback
 hybridcoder ask "question"    # One-shot question
 hybridcoder edit file.py      # Edit mode for specific file
 hybridcoder config            # Show/edit configuration
+hybridcoder serve             # Launch Python backend (JSON-RPC mode, used by Go TUI)
 hybridcoder --help            # Show all commands
 ```
 
@@ -798,7 +813,9 @@ Phase 2 - Editor (execution):
 
 | Component | Choice | Rationale | Alternatives |
 |-----------|--------|-----------|--------------|
-| Language | Python 3.11+ | ML ecosystem, rapid dev | TypeScript |
+| Backend Language | Python 3.11+ | ML ecosystem, rapid dev | TypeScript |
+| TUI Frontend | Go + Bubble Tea | Single binary, inline mode, goroutines | Ink (Node.js), Ratatui (Rust) |
+| Frontend↔Backend | JSON-RPC over stdin/stdout | Language-agnostic, LSP-like | gRPC, REST |
 | CLI Framework | Typer + Rich | Modern, type-safe, beautiful | Click |
 | Parsing | tree-sitter | Industry standard, fast | - |
 | Python LSP | Pyright | Best type inference | pylsp |
@@ -818,6 +835,19 @@ Phase 2 - Editor (execution):
 
 ```
 hybridcoder/
+├── cmd/
+│   └── hybridcoder-tui/       # Go TUI frontend
+│       ├── main.go            # Entry point, launch Python backend
+│       ├── model.go           # Root Bubble Tea model
+│       ├── view.go            # View rendering
+│       ├── update.go          # Message handling
+│       ├── backend.go         # Python subprocess + JSON-RPC
+│       ├── approval.go        # Arrow-key approval prompt
+│       ├── commands.go        # Slash command handling
+│       ├── statusbar.go       # Status bar component
+│       └── styles.go          # Lip Gloss styles
+├── go.mod
+├── go.sum
 ├── src/
 │   └── hybridcoder/
 │       ├── __init__.py

@@ -1,0 +1,95 @@
+package main
+
+import (
+	"fmt"
+	"strings"
+)
+
+// View renders the live area (never the scrollback).
+// O(1) — only renders what's currently active on screen.
+func (m model) View() string {
+	if m.quitting {
+		return ""
+	}
+
+	var b strings.Builder
+
+	// 1. Thinking tokens (if showing and non-empty)
+	if m.showThinking && m.thinkingBuf.Len() > 0 {
+		content := m.thinkingBuf.String()
+		// Show last 5 lines of thinking to avoid taking too much space
+		lines := strings.Split(content, "\n")
+		if len(lines) > 5 {
+			lines = lines[len(lines)-5:]
+		}
+		b.WriteString(thinkingStyle.Render(strings.Join(lines, "\n")))
+		b.WriteString("\n")
+	}
+
+	// 2. Tool call log (current turn)
+	for _, tc := range m.toolCalls {
+		icon := toolIcon(tc.Status)
+		line := fmt.Sprintf(" %s %s", icon, toolCallStyle.Render(tc.Name))
+		if tc.Status == "error" && tc.Result != "" {
+			line += " " + errorStyle.Render(tc.Result)
+		} else if tc.Status == "completed" && tc.Result != "" {
+			// Truncate long results
+			result := tc.Result
+			if len(result) > 100 {
+				result = result[:97] + "..."
+			}
+			line += " " + dimStyle.Render(result)
+		}
+		b.WriteString(line)
+		b.WriteString("\n")
+	}
+
+	// 3. Streaming text (plain text — no Glamour during streaming)
+	if m.stage == stageStreaming {
+		content := m.streamBuf.String()
+		if content == "" && m.tokenBuf.Len() == 0 {
+			// Show spinner while waiting for first token
+			b.WriteString(m.spin.View() + " Thinking...\n")
+		} else {
+			// Cap displayed content (show last 50 lines)
+			displayed := content
+			if m.tokenBuf.Len() > 0 {
+				displayed += m.tokenBuf.String()
+			}
+			lines := strings.Split(displayed, "\n")
+			if len(lines) > 50 {
+				b.WriteString(dimStyle.Render(fmt.Sprintf("[%d lines above]\n", len(lines)-50)))
+				lines = lines[len(lines)-50:]
+			}
+			b.WriteString(streamStyle.Render(strings.Join(lines, "\n")))
+			b.WriteString("\n")
+		}
+	}
+
+	// 4. Error display
+	if m.lastError != "" {
+		b.WriteString(errorStyle.Render("Error: " + m.lastError))
+		b.WriteString("\n")
+	}
+
+	// 5. Separator line
+	b.WriteString(separator(m.width))
+	b.WriteString("\n")
+
+	// 6. Input area (depends on stage)
+	switch m.stage {
+	case stageApproval:
+		b.WriteString(renderApprovalView(m))
+	case stageAskUser:
+		b.WriteString(renderAskUserView(m))
+	default:
+		b.WriteString(m.textInput.View())
+	}
+	b.WriteString("\n")
+
+	// 7. Status bar
+	m.statusBar.Queue = len(m.messageQueue)
+	b.WriteString(m.statusBar.View())
+
+	return b.String()
+}

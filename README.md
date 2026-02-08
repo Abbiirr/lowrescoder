@@ -8,6 +8,7 @@ HybridCoder runs on consumer hardware (8GB VRAM, 16GB RAM) with no cloud depende
 
 - Python 3.11+
 - [uv](https://docs.astral.sh/uv/) package manager
+- Go 1.22+ (for the TUI frontend)
 - [Ollama](https://ollama.com/) (for local LLM inference)
 
 ## Quick Start
@@ -18,8 +19,15 @@ git clone https://github.com/your-username/hybridcoder.git
 cd hybridcoder
 uv sync --all-extras
 
+# Build the Go TUI frontend
+make tui                  # Linux/macOS
+build.bat tui             # Windows
+
 # Pull the default model
 ollama pull qwen3:8b
+
+# Start Ollama
+ollama serve
 
 # Start chatting
 uv run hybridcoder chat
@@ -27,21 +35,16 @@ uv run hybridcoder chat
 
 ## Installation
 
-### Basic (CLI + OpenRouter dev backend)
+### Python backend
 
 ```bash
+# Basic (CLI + OpenRouter dev backend)
 uv sync
-```
 
-### Full (all layers including local LLM)
-
-```bash
+# Full (all layers including local LLM)
 uv sync --all-extras
-```
 
-### Individual layers
-
-```bash
+# Individual layers
 uv sync --extra layer1   # tree-sitter parsing
 uv sync --extra layer2   # LanceDB + embeddings
 uv sync --extra layer3   # llama-cpp-python + Outlines (constrained generation)
@@ -49,22 +52,46 @@ uv sync --extra layer4   # Ollama client
 uv sync --extra dev      # pytest, ruff, mypy
 ```
 
+### Go TUI frontend
+
+```bash
+# Linux/macOS
+make tui
+
+# Windows
+build.bat tui
+
+# Or directly (any platform):
+cd cmd/hybridcoder-tui && go build -o ../../build/hybridcoder-tui .
+```
+
+The binary is placed in `build/hybridcoder-tui` (or `build/hybridcoder-tui.exe` on Windows).
+
 ## Usage
 
-### Interactive chat
+### Interactive chat (default)
 
 ```bash
 uv run hybridcoder chat
 ```
 
-Starts a multi-turn REPL with streaming output. Type `exit` or press `Ctrl+C` to quit.
+The default mode uses the Go Bubble Tea TUI (if built) or falls back to the Python inline REPL. Features:
 
-By default, the inline prompt stays active while the assistant is generating (type while streaming). Submitting another message while a response is streaming queues it (FIFO) and runs it after the current generation completes or is cancelled.
+- Streaming output with fixed input bar at the bottom
+- Type while the assistant is generating — your message is queued
+- Arrow-key tool approval selector (Yes / Yes for session / No)
+- Slash command autocomplete (type `/` then Tab)
+- Persistent command history (Up/Down arrows)
+- Native terminal scrollback preserved after exit
+- Markdown-rendered responses (on completion)
 
-If your terminal has issues with the always-on prompt, use sequential mode:
+### Explicit mode selection
 
 ```bash
-uv run hybridcoder chat --sequential
+uv run hybridcoder chat --go-tui      # Force Go TUI
+uv run hybridcoder chat --legacy       # Python Rich REPL (no agent loop)
+uv run hybridcoder chat --tui          # Fullscreen Textual TUI
+uv run hybridcoder chat --sequential   # Disable parallel input
 ```
 
 ### Single question
@@ -85,6 +112,13 @@ uv run hybridcoder ask "What does this function do?" --file src/myapp/utils.py
 uv run hybridcoder config show    # display current config
 uv run hybridcoder config check   # validate config and show warnings
 uv run hybridcoder config path    # show config file location
+```
+
+### Backend server (used internally by Go TUI)
+
+```bash
+uv run hybridcoder serve           # JSON-RPC server on stdin/stdout
+uv run hybridcoder serve --verbose # with debug logging
 ```
 
 ### Version
@@ -146,25 +180,44 @@ HYBRIDCODER_LLM_PROVIDER=openrouter uv run hybridcoder chat
 ### Setup
 
 ```bash
-make setup       # or: uv sync --all-extras
+make setup       # Linux/macOS
+build.bat setup  # Windows
+# Or directly: uv sync --all-extras
 ```
 
 ### Run tests
 
 ```bash
-make test        # unit tests with coverage
+# Python tests (569+ unit tests)
+make test            # Linux/macOS
+build.bat test       # Windows
+# Or: uv run pytest tests/ -v --cov=src/hybridcoder
+
+# Go tests (93 tests)
+make go-test         # Linux/macOS
+build.bat go-test    # Windows
+# Or: cd cmd/hybridcoder-tui && go test ./... -v
 ```
 
 ### Run linting
 
 ```bash
-make lint        # ruff check + mypy
+make lint            # Linux/macOS
+build.bat lint       # Windows
 ```
 
 ### Format code
 
 ```bash
-make format      # ruff format
+make format          # Linux/macOS
+build.bat format     # Windows
+```
+
+### Build Go TUI
+
+```bash
+make tui             # Linux/macOS
+build.bat tui        # Windows
 ```
 
 ### Integration tests
@@ -181,7 +234,17 @@ uv run pytest -m integration tests/integration/test_ollama.py
 
 ## Architecture
 
-HybridCoder uses a 4-layer intelligence model. Each layer adds capability at increasing cost:
+HybridCoder uses a **Go TUI frontend** + **Python backend** split, communicating via JSON-RPC 2.0 over stdin/stdout:
+
+```
+Go TUI (Bubble Tea)  ←── JSON-RPC ──►  Python Backend (agent loop, tools, LLM)
+```
+
+The Go frontend handles all terminal interaction (rendering, input, approvals, autocomplete). The Python backend handles intelligence: agent loop, tool execution, LLM providers, session storage, and slash commands.
+
+### 4-Layer Intelligence Model
+
+Each layer adds capability at increasing cost:
 
 | Layer | What | Latency | LLM Tokens |
 |-------|------|---------|------------|
@@ -191,6 +254,8 @@ HybridCoder uses a 4-layer intelligence model. Each layer adds capability at inc
 | 4 - Reasoning | Full LLM reasoning (8B model) | 5-30s | 2000-8000 |
 
 The system always tries the cheapest layer first and only escalates when necessary.
+
+See [docs/architecture.md](docs/architecture.md) for detailed architecture documentation including the JSON-RPC protocol, file structure, and stage machine.
 
 ## License
 

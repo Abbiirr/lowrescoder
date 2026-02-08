@@ -136,6 +136,38 @@ def _get_version() -> str:
     return __version__
 
 
+def _find_go_tui_binary() -> str | None:
+    """Discover the Go TUI binary.
+
+    Discovery order:
+      1. $HYBRIDCODER_TUI_BIN environment variable
+      2. build/hybridcoder-tui(.exe) relative to project root
+      3. hybridcoder-tui on PATH
+    """
+    import os
+    import shutil
+    import sys
+    from pathlib import Path
+
+    # 1. Env var override
+    env_bin = os.environ.get("HYBRIDCODER_TUI_BIN")
+    if env_bin and Path(env_bin).is_file():
+        return env_bin
+
+    # 2. build/ directory relative to project
+    ext = ".exe" if sys.platform == "win32" else ""
+    build_path = Path(__file__).resolve().parent.parent.parent / "build" / f"hybridcoder-tui{ext}"
+    if build_path.is_file():
+        return str(build_path)
+
+    # 3. On PATH
+    found = shutil.which(f"hybridcoder-tui{ext}")
+    if found:
+        return found
+
+    return None
+
+
 # --- Commands ---
 
 
@@ -146,6 +178,7 @@ def chat(
     tui: bool = typer.Option(False, "--tui", help="Use fullscreen Textual TUI"),
     alternate_screen: bool = typer.Option(False, "--alternate-screen", help="Alias for --tui"),
     legacy: bool = typer.Option(False, "--legacy", help="Use legacy Rich REPL (no agent loop)"),
+    inline: bool = typer.Option(False, "--inline", help="Use Python inline REPL instead of Go TUI"),
     parallel: bool = typer.Option(
         True,
         "--parallel/--sequential",
@@ -156,6 +189,8 @@ def chat(
     ),
 ) -> None:
     """Start an interactive chat session."""
+    import subprocess
+
     config = load_config()
     if verbose:
         config.ui.verbose = True
@@ -168,8 +203,23 @@ def chat(
 
         tui_app = HybridCoderApp(config=config, session_id=session or None)
         tui_app.run(inline=False)
+    elif inline:
+        # Python inline REPL (opt-in fallback)
+        from hybridcoder.inline.app import InlineApp
+
+        inline_app = InlineApp(
+            config=config,
+            session_id=session or None,
+            parallel=parallel,
+        )
+        asyncio.run(inline_app.run())
     else:
-        # Default: inline REPL (Rich + prompt_toolkit)
+        # Default: Go Bubble Tea TUI
+        go_bin = _find_go_tui_binary()
+        if go_bin:
+            raise typer.Exit(subprocess.run([go_bin]).returncode)
+        console.print("[yellow]Go TUI binary not found. Falling back to Python inline REPL.[/]")
+        console.print("[dim]Build it with: make tui (or build.bat tui on Windows)[/]")
         from hybridcoder.inline.app import InlineApp
 
         inline_app = InlineApp(
@@ -250,6 +300,23 @@ def config(
         console.print(str(get_config_path()))
     else:
         console.print(f"[red]Unknown action: {action}[/]. Use: show, set, check, path")
+
+
+@app.command()
+def serve(
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
+) -> None:
+    """Start JSON-RPC backend server for the Go TUI frontend."""
+    from hybridcoder.backend.server import main as server_main
+
+    if verbose:
+        import logging
+
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(levelname)s %(name)s: %(message)s",
+        )
+    asyncio.run(server_main())
 
 
 @app.command()

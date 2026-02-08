@@ -23,7 +23,10 @@
       "Bash(\"K:/projects/ai/lowrescoder/.venv/Scripts/python.exe\" -m ruff check:*)",
       "Bash(\"K:\\\\projects\\\\ai\\\\lowrescoder\\\\.venv\\\\Scripts\\\\python.exe\":*)",
       "Bash(python -m pytest:*)",
-      "Bash(.venvScriptspython.exe -m pytest tests/unit/test_commands.py -v --tb=short)"
+      "Bash(.venvScriptspython.exe -m pytest tests/unit/test_commands.py -v --tb=short)",
+      "Bash(go mod tidy:*)",
+      "Bash(go build:*)",
+      "Bash(go test:*)"
     ]
   }
 }

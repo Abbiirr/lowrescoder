@@ -93,7 +93,9 @@ Understanding this architecture is critical to working on this project:
 
 | Component | Choice | Rationale |
 |-----------|--------|-----------|
-| Language | Python 3.11+ | ML ecosystem, rapid dev |
+| Backend Language | Python 3.11+ | ML ecosystem, rapid dev |
+| TUI Frontend | **Go + Bubble Tea** | Inline mode, native scrollback, single binary |
+| Frontend↔Backend | JSON-RPC over stdin/stdout | Language-agnostic, like LSP |
 | Package Manager | uv | 10-100x faster than pip |
 | CLI Framework | Typer + Rich | Modern, type-safe, beautiful |
 | Parsing | tree-sitter 0.25.2 | Industry standard, fast |
@@ -108,6 +110,15 @@ Understanding this architecture is critical to working on this project:
 | L3 Model | Qwen2.5-Coder-1.5B Q4_K_M | 72% HumanEval at 1GB VRAM |
 
 > **Note:** Outlines does NOT integrate with Ollama's HTTP API. Layer 3 (constrained generation) uses llama-cpp-python directly. Layer 4 (full reasoning) uses Ollama. See `docs/claude/01-local-llm-inference-research.md` for details.
+
+### Frontend/Backend Split (Go TUI Migration)
+
+The TUI has been split into a **Go frontend** and **Python backend**:
+
+- **Go frontend** (Bubble Tea): Handles rendering, input, arrow-key approvals, autocomplete, thinking tokens display. Runs in inline mode (no alternate screen) to preserve native terminal scrollback. Communicates with Python via JSON-RPC over stdin/stdout.
+- **Python backend**: Unchanged — agent loop, tools, LLM providers, session store, approval logic. Exposes a thin JSON-RPC adapter (`hybridcoder serve`).
+- **Why**: Python `prompt_toolkit` has fundamental limitations (line-buffered `patch_stdout`, unsafe nested Applications) that prevent Claude Code-level UX. Go Bubble Tea's Elm Architecture solves all of these.
+- See `docs/plan/go-bubble-tea-migration.md` for the full migration plan.
 
 ---
 
