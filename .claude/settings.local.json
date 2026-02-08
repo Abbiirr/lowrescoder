@@ -26,7 +26,11 @@
       "Bash(.venvScriptspython.exe -m pytest tests/unit/test_commands.py -v --tb=short)",
       "Bash(go mod tidy:*)",
       "Bash(go build:*)",
-      "Bash(go test:*)"
+      "Bash(go test:*)",
+      "Bash(go doc:*)",
+      "Bash(ls:*)",
+      "Bash(pushd:*)",
+      "Bash(gofmt:*)"
     ]
   }
 }

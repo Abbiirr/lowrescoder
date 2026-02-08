@@ -189,6 +189,7 @@ def chat(
     ),
 ) -> None:
     """Start an interactive chat session."""
+    import os
     import subprocess
 
     config = load_config()
@@ -217,9 +218,21 @@ def chat(
         # Default: Go Bubble Tea TUI
         go_bin = _find_go_tui_binary()
         if go_bin:
-            raise typer.Exit(subprocess.run([go_bin]).returncode)
-        console.print("[yellow]Go TUI binary not found. Falling back to Python inline REPL.[/]")
-        console.print("[dim]Build it with: make tui (or build.bat tui on Windows)[/]")
+            env = None
+            if session:
+                env = os.environ.copy()
+                env["HYBRIDCODER_SESSION_ID"] = session
+
+            result = subprocess.run([go_bin], env=env)
+            if result.returncode == 0:
+                raise typer.Exit(0)
+
+            console.print(
+                f"[yellow]Go TUI exited with code {result.returncode}. Falling back to Python inline REPL.[/]"
+            )
+        else:
+            console.print("[yellow]Go TUI binary not found. Falling back to Python inline REPL.[/]")
+            console.print("[dim]Build it with: make tui (or build.bat tui on Windows)[/]")
         from hybridcoder.inline.app import InlineApp
 
         inline_app = InlineApp(

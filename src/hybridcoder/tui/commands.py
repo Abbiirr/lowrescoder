@@ -382,8 +382,11 @@ async def _handle_clear(app: AppContext, args: str) -> None:
     # Print ANSI clear sequence + reprint welcome banner
     import sys
 
-    sys.stdout.write("\033[2J\033[H")
-    sys.stdout.flush()
+    # In JSON-RPC backend mode stdout is the wire protocol, not a terminal.
+    # Guard raw ANSI writes to avoid corrupting RPC framing.
+    if sys.stdout.isatty():
+        sys.stdout.write("\033[2J\033[H")
+        sys.stdout.flush()
     app.add_system_message("Screen cleared.")
 
 

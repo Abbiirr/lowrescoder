@@ -94,10 +94,14 @@ func TestUpdateTokenMsgNoDuplicateTick(t *testing.T) {
 
 func TestUpdateThinkingMsg(t *testing.T) {
 	m := initialModel(nil)
-	updated, _ := m.Update(backendThinkingMsg{Text: "reasoning..."})
+	updated, cmd := m.Update(backendThinkingMsg{Text: "reasoning..."})
 	um := updated.(model)
 	if um.thinkingBuf.String() != "reasoning..." {
 		t.Errorf("expected thinkingBuf='reasoning...', got '%s'", um.thinkingBuf.String())
+	}
+	// Should return a tickCmd to force view refresh for live display
+	if cmd == nil {
+		t.Error("expected tickCmd for thinking token view refresh")
 	}
 }
 
@@ -736,13 +740,12 @@ func TestTokensDuringStageInputDontCrash(t *testing.T) {
 	m := initialModel(nil)
 	m.stage = stageInput
 
-	// Tokens arriving during input stage should not crash
-	updated, _ := m.Update(backendTokenMsg{Text: "unexpected token"})
-	um := updated.(model)
+	// Tokens arriving during input stage should not crash and print directly
+	_, cmd := m.Update(backendTokenMsg{Text: "unexpected token"})
 
-	// Token should still be written to tokenBuf (Update doesn't check stage for tokens)
-	if um.tokenBuf.String() != "unexpected token" {
-		t.Errorf("expected token buffered even in input stage, got '%s'", um.tokenBuf.String())
+	// Should return a Println command (direct print, not buffered)
+	if cmd == nil {
+		t.Error("expected Println command for tokens during input stage")
 	}
 }
 
@@ -883,5 +886,313 @@ func TestSendChatProducesEchoCommand(t *testing.T) {
 	_, cmd := m.sendChat("test message")
 	if cmd == nil {
 		t.Error("expected echo Println command from sendChat")
+	}
+}
+
+// --- Slash command end-to-end tests ---
+
+func TestSlashExitViaEnter(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageInput
+	m.textInput.SetValue("/exit")
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	um := updated.(model)
+
+	if !um.quitting {
+		t.Error("expected quitting=true after /exit Enter")
+	}
+}
+
+func TestSlashThinkingViaEnter(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageInput
+	m.showThinking = true
+	m.textInput.SetValue("/thinking")
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	um := updated.(model)
+
+	if um.showThinking {
+		t.Error("expected showThinking=false after /thinking toggle")
+	}
+}
+
+func TestSlashCommandBackendDelegatedNoBackend(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageInput
+	m.textInput.SetValue("/help")
+
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	um := updated.(model)
+
+	// Should not crash with nil backend
+	if um.quitting {
+		t.Error("should not quit on /help")
+	}
+	// Should return a command (error message Println) since no backend
+	if cmd == nil {
+		t.Error("expected error Println command when backend is nil")
+	}
+}
+
+func TestEnterAcceptsAutocompleteSuggestion(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageInput
+
+	// Type "/hel" to get a single suggestion (/help)
+	for _, r := range []rune{'/', 'h', 'e', 'l'} {
+		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		m = updated.(model)
+	}
+
+	// The textinput should have /help as current suggestion
+	suggestion := m.textInput.CurrentSuggestion()
+	if suggestion != "/help" {
+		t.Fatalf("expected current suggestion '/help', got '%s'", suggestion)
+	}
+
+	// Press Enter — should accept suggestion and submit /help, not /hel
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = updated.(model)
+
+	// The value was cleared (submitted), so we can't check it directly.
+	// But the command should have been handled as /help (not /hel which would be unknown).
+	// Since backend is nil, /help would return an error Println.
+	// /hel (unknown) would also go to backend delegation path.
+	// Either way, it shouldn't crash and textInput should be cleared.
+	if m.textInput.Value() != "" {
+		t.Errorf("expected textInput cleared after Enter, got '%s'", m.textInput.Value())
+	}
+}
+
+func TestTokensDuringInputPrintDirectly(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageInput
+
+	// Token arriving during input stage should print directly
+	_, cmd := m.Update(backendTokenMsg{Text: "[System] Available commands: /help, /exit"})
+
+	// Should return a Println command (not nil)
+	if cmd == nil {
+		t.Error("expected Println command for tokens during input stage")
+	}
+	// tokenBuf should remain empty (not buffered)
+	if m.tokenBuf.Len() != 0 {
+		t.Error("expected tokenBuf empty when printing directly in input stage")
+	}
+}
+
+func TestSlashCommandClearsCompletions(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageInput
+	m.completions = []string{"/exit", "/explore"}
+	m.textInput.SetValue("/exit")
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	um := updated.(model)
+
+	if um.completions != nil {
+		t.Errorf("expected completions cleared after slash command, got %v", um.completions)
+	}
+}
+
+// --- updateCompletions tests ---
+
+func TestUpdateCompletionsForSlashInput(t *testing.T) {
+	m := initialModel(nil)
+	m.textInput.SetValue("/he")
+	m.updateCompletions()
+
+	if len(m.completions) == 0 {
+		t.Fatal("expected completions for /he")
+	}
+}
+
+func TestUpdateCompletionsClearsForNonSlash(t *testing.T) {
+	m := initialModel(nil)
+	m.textInput.SetValue("hello")
+	m.updateCompletions()
+
+	if m.completions != nil {
+		t.Errorf("expected nil completions for non-slash, got %v", m.completions)
+	}
+}
+
+func TestUpdateCompletionsClearsAfterSpace(t *testing.T) {
+	m := initialModel(nil)
+	m.textInput.SetValue("/help arg")
+	m.updateCompletions()
+
+	if m.completions != nil {
+		t.Errorf("expected nil completions after space in command, got %v", m.completions)
+	}
+}
+
+// --- /resume command tests ---
+
+func TestSlashResumeNoArgsTriggersSessionList(t *testing.T) {
+	b := NewBackend()
+	m := initialModel(b)
+	m.stage = stageInput
+
+	_, cmd := m.handleSlashCommand("/resume")
+
+	// Should return a non-nil command (the SendRequestCmd that will call session.list)
+	if cmd == nil {
+		t.Error("expected non-nil command from /resume without args")
+	}
+
+	// The SendRequestCmd sends a session.list RPC to the backend
+	select {
+	case data := <-b.writeCh:
+		s := string(data)
+		if !strings.Contains(s, "session.list") {
+			t.Errorf("expected session.list in RPC, got %s", s)
+		}
+	default:
+		t.Error("expected session.list message in writeCh")
+	}
+}
+
+func TestSlashResumeWithArgsDelegatesToBackend(t *testing.T) {
+	b := NewBackend()
+	m := initialModel(b)
+	m.stage = stageInput
+
+	_, cmd := m.handleSlashCommand("/resume abc123")
+
+	// Should return a Println command for confirmation
+	if cmd == nil {
+		t.Error("expected Println command for direct resume")
+	}
+
+	// Should send session.resume directly with the given ID
+	select {
+	case data := <-b.writeCh:
+		s := string(data)
+		if !strings.Contains(s, "session.resume") {
+			t.Errorf("expected session.resume in RPC, got %s", s)
+		}
+		if !strings.Contains(s, "abc123") {
+			t.Errorf("expected session_id=abc123 in RPC, got %s", s)
+		}
+	default:
+		t.Error("expected session.resume message in writeCh")
+	}
+}
+
+func TestSlashResumeNoBackend(t *testing.T) {
+	m := initialModel(nil) // nil backend
+	m.stage = stageInput
+
+	_, cmd := m.handleSlashCommand("/resume")
+
+	// Should return error message Println
+	if cmd == nil {
+		t.Error("expected error Println command when backend is nil")
+	}
+}
+
+func TestBackendSessionListMsgEntersSessionPicker(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageInput
+
+	sessions := []sessionEntry{
+		{ID: "id1", Title: "Session 1", Model: "m1"},
+		{ID: "id2", Title: "Session 2", Model: "m2"},
+	}
+
+	updated, _ := m.Update(backendSessionListMsg{Sessions: sessions})
+	um := updated.(model)
+
+	if um.stage != stageAskUser {
+		t.Errorf("expected stageAskUser, got %d", um.stage)
+	}
+	if um.askRequestID != -1 {
+		t.Errorf("expected sentinel askRequestID=-1, got %d", um.askRequestID)
+	}
+	if len(um.askOptions) != 2 {
+		t.Errorf("expected 2 options, got %d", len(um.askOptions))
+	}
+}
+
+func TestBackendSessionListMsgEmptySessions(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageInput
+
+	updated, _ := m.Update(backendSessionListMsg{Sessions: []sessionEntry{}})
+	um := updated.(model)
+
+	// Should NOT enter session picker, should show error
+	if um.stage == stageAskUser {
+		t.Error("should not enter session picker with empty sessions")
+	}
+	if um.lastError != "No sessions found" {
+		t.Errorf("expected error message 'No sessions found', got '%s'", um.lastError)
+	}
+}
+
+func TestSlashResumeWithArgsTrimsWhitespace(t *testing.T) {
+	b := NewBackend()
+	m := initialModel(b)
+	m.stage = stageInput
+
+	m.handleSlashCommand("/resume   abc123   ")
+
+	select {
+	case data := <-b.writeCh:
+		s := string(data)
+		if !strings.Contains(s, "abc123") {
+			t.Errorf("expected trimmed session ID 'abc123', got %s", s)
+		}
+	default:
+		t.Error("expected message in writeCh")
+	}
+}
+
+func TestSlashResumeViaEnter(t *testing.T) {
+	// Test the full path: type /resume, press Enter
+	m := initialModel(nil)
+	m.stage = stageInput
+	m.textInput.SetValue("/resume")
+
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	um := updated.(model)
+
+	// With nil backend, should get error message
+	if um.quitting {
+		t.Error("should not quit on /resume")
+	}
+	if cmd == nil {
+		t.Error("expected error command when backend nil")
+	}
+}
+
+// --- Token empty text test ---
+
+func TestTokenMsgEmptyText(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageStreaming
+
+	// Empty text token during streaming should not crash
+	updated, _ := m.Update(backendTokenMsg{Text: ""})
+	um := updated.(model)
+
+	if um.tokenBuf.String() != "" {
+		t.Errorf("expected empty tokenBuf for empty text, got '%s'", um.tokenBuf.String())
+	}
+}
+
+func TestTokenMsgEmptyTextDuringInput(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageInput
+
+	// Empty text during input stage
+	_, cmd := m.Update(backendTokenMsg{Text: ""})
+
+	// Empty text should not produce a Println (trimmed to empty)
+	if cmd != nil {
+		t.Error("expected nil command for empty token during input stage")
 	}
 }

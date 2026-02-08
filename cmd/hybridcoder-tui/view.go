@@ -72,11 +72,16 @@ func (m model) View() string {
 		b.WriteString("\n")
 	}
 
-	// 5. Separator line
+	// 5. Autocomplete dropdown (when multiple matches)
+	if len(m.completions) > 1 {
+		b.WriteString(renderCompletionDropdown(m.completions, m.width))
+	}
+
+	// 6. Separator line
 	b.WriteString(separator(m.width))
 	b.WriteString("\n")
 
-	// 6. Input area (depends on stage)
+	// 7. Input area (depends on stage)
 	switch m.stage {
 	case stageApproval:
 		b.WriteString(renderApprovalView(m))
@@ -87,9 +92,42 @@ func (m model) View() string {
 	}
 	b.WriteString("\n")
 
-	// 7. Status bar
+	// 8. Status bar
 	m.statusBar.Queue = len(m.messageQueue)
 	b.WriteString(m.statusBar.View())
+
+	return b.String()
+}
+
+// renderCompletionDropdown renders a dropdown of completion options.
+func renderCompletionDropdown(completions []string, width int) string {
+	var b strings.Builder
+
+	// Cap at 8 items
+	items := completions
+	if len(items) > 8 {
+		items = items[:8]
+	}
+
+	// Determine column layout: 2 columns if width allows
+	colWidth := 20
+	cols := 1
+	if width > 50 {
+		cols = 2
+	}
+
+	for i := 0; i < len(items); i += cols {
+		b.WriteString("  ")
+		for c := 0; c < cols && i+c < len(items); c++ {
+			item := items[i+c]
+			padded := item
+			if len(padded) < colWidth {
+				padded += strings.Repeat(" ", colWidth-len(padded))
+			}
+			b.WriteString(dimStyle.Render(padded))
+		}
+		b.WriteString("\n")
+	}
 
 	return b.String()
 }

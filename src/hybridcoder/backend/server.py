@@ -282,6 +282,8 @@ class BackendServer:
         # Check session-level auto-approve
         if tool_name in self._session_approved_tools:
             self._on_tool_call(tool_name, "pending", "(auto-approved)")
+            if tool_name == "run_command" and self._approval_manager:
+                self._approval_manager.enable_shell()
             return True
 
         args_str = json.dumps(arguments, indent=2)
@@ -298,14 +300,11 @@ class BackendServer:
 
         if approved and session_approve:
             self._session_approved_tools.add(tool_name)
-            if self._approval_manager:
-                self._approval_manager.enable_shell()
-            return True
-        elif approved:
-            if tool_name == "run_command" and self._approval_manager:
-                self._approval_manager.enable_shell()
-            return True
-        return False
+
+        if approved and tool_name == "run_command" and self._approval_manager:
+            self._approval_manager.enable_shell()
+
+        return approved
 
     async def _ask_user_callback(
         self,
@@ -418,17 +417,33 @@ class BackendServer:
 
     async def handle_session_resume(self, session_id: str, request_id: int) -> None:
         """Resume a session by ID."""
-        sessions = self.session_store.list_sessions()
-        match = None
-        for s in sessions:
-            if s.id.startswith(session_id):
-                match = s
-                break
-
-        if match is None:
-            self.emit_response(request_id, {"error": f"Session not found: {session_id}"})
+        session_id = session_id.strip()
+        if not session_id:
+            msg = "Session ID is required"
+            self.emit_notification("on_error", {"message": msg})
+            self.emit_response(request_id, {"error": msg})
             return
 
+        sessions = self.session_store.list_sessions()
+        matches = [s for s in sessions if s.id.startswith(session_id)]
+
+        if not matches:
+            msg = f"Session not found: {session_id}"
+            self.emit_notification("on_error", {"message": msg})
+            self.emit_response(request_id, {"error": msg})
+            return
+
+        if len(matches) > 1:
+            sample = ", ".join(s.id[:8] for s in matches[:5])
+            msg = f"Ambiguous session prefix '{session_id}'. Matches: {sample}"
+            self.emit_notification("on_error", {"message": msg})
+            self.emit_response(
+                request_id,
+                {"error": msg},
+            )
+            return
+
+        match = matches[0]
         self.session_id = match.id
         self._session_titled = True
         self._session_approved_tools.clear()

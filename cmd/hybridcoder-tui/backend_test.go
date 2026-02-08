@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -273,10 +274,10 @@ func TestWriteChFullDropsMessage(t *testing.T) {
 	// Fill the channel
 	b.SendRequest("first", struct{}{})
 
-	// This should be dropped (non-blocking)
+	// This should be dropped (non-blocking) — returns -1 on full channel
 	id := b.SendRequest("second", struct{}{})
-	if id < 0 {
-		t.Error("expected valid ID even when channel full (message dropped silently)")
+	if id != -1 {
+		t.Errorf("expected -1 when channel full, got %d", id)
 	}
 
 	// Only one message in channel
@@ -306,4 +307,191 @@ func TestRouteRequestNilProgram(t *testing.T) {
 
 	// Should not panic
 	b.routeRequest(msg)
+}
+
+// --- SendRequestCmd tests ---
+
+func TestSendRequestCmdMarshal(t *testing.T) {
+	b := NewBackend()
+
+	_ = b.SendRequestCmd("session.list", struct{}{}, func(result json.RawMessage, rpcErr *RPCError) tea.Msg {
+		return backendSessionListMsg{}
+	})
+
+	// Verify the JSON-RPC request was placed in writeCh
+	select {
+	case data := <-b.writeCh:
+		var decoded map[string]interface{}
+		if err := json.Unmarshal(data, &decoded); err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+		if decoded["method"] != "session.list" {
+			t.Errorf("expected method=session.list, got %v", decoded["method"])
+		}
+		if decoded["jsonrpc"] != "2.0" {
+			t.Errorf("expected jsonrpc=2.0, got %v", decoded["jsonrpc"])
+		}
+		if decoded["id"] == nil {
+			t.Error("expected non-nil id")
+		}
+	default:
+		t.Error("expected message in writeCh")
+	}
+}
+
+func TestSendRequestCmdStoresPending(t *testing.T) {
+	b := NewBackend()
+
+	b.SendRequestCmd("session.list", struct{}{}, func(result json.RawMessage, rpcErr *RPCError) tea.Msg {
+		return backendSessionListMsg{}
+	})
+
+	// Drain the writeCh to get the message and find the ID
+	data := <-b.writeCh
+	var decoded map[string]interface{}
+	json.Unmarshal(data, &decoded)
+	id := int(decoded["id"].(float64))
+
+	// Should have a pending channel for this ID
+	_, ok := b.pending.Load(id)
+	if !ok {
+		t.Errorf("expected pending channel for ID %d", id)
+	}
+}
+
+func TestSendRequestCmdCallbackOnResponse(t *testing.T) {
+	b := NewBackend()
+
+	callbackCalled := false
+	cmd := b.SendRequestCmd("session.list", struct{}{}, func(result json.RawMessage, rpcErr *RPCError) tea.Msg {
+		callbackCalled = true
+		if rpcErr != nil {
+			return backendErrorMsg{Message: rpcErr.Message}
+		}
+		return backendSessionListMsg{}
+	})
+
+	// Drain writeCh and find the request ID
+	data := <-b.writeCh
+	var decoded map[string]interface{}
+	json.Unmarshal(data, &decoded)
+	id := int(decoded["id"].(float64))
+
+	// Simulate a response from the backend by routing it
+	responseMsg := RPCMessage{
+		JSONRPC: "2.0",
+		ID:      &id,
+		Result:  json.RawMessage(`{"sessions":[]}`),
+	}
+
+	// Route the response (this delivers to the pending channel)
+	go b.routeResponse(responseMsg)
+
+	// Execute the cmd (which blocks until the response arrives)
+	result := cmd()
+	if !callbackCalled {
+		t.Error("expected callback to be called")
+	}
+	if _, ok := result.(backendSessionListMsg); !ok {
+		t.Errorf("expected backendSessionListMsg, got %T", result)
+	}
+}
+
+func TestSendRequestCmdErrorResponse(t *testing.T) {
+	b := NewBackend()
+
+	cmd := b.SendRequestCmd("session.list", struct{}{}, func(result json.RawMessage, rpcErr *RPCError) tea.Msg {
+		if rpcErr != nil {
+			return backendErrorMsg{Message: rpcErr.Message}
+		}
+		return backendSessionListMsg{}
+	})
+
+	// Drain writeCh and get the ID
+	data := <-b.writeCh
+	var decoded map[string]interface{}
+	json.Unmarshal(data, &decoded)
+	id := int(decoded["id"].(float64))
+
+	// Simulate an error response
+	responseMsg := RPCMessage{
+		JSONRPC: "2.0",
+		ID:      &id,
+		Error:   &RPCError{Code: -32601, Message: "Method not found"},
+	}
+
+	go b.routeResponse(responseMsg)
+
+	result := cmd()
+	errMsg, ok := result.(backendErrorMsg)
+	if !ok {
+		t.Fatalf("expected backendErrorMsg, got %T", result)
+	}
+	if errMsg.Message != "Method not found" {
+		t.Errorf("expected error message 'Method not found', got '%s'", errMsg.Message)
+	}
+}
+
+func TestRouteResponseDelivers(t *testing.T) {
+	b := NewBackend()
+
+	// Manually register a pending channel
+	ch := make(chan RPCMessage, 1)
+	id := 42
+	b.pending.Store(id, ch)
+
+	// Route a response
+	responseMsg := RPCMessage{
+		JSONRPC: "2.0",
+		ID:      &id,
+		Result:  json.RawMessage(`{"ok": true}`),
+	}
+	b.routeResponse(responseMsg)
+
+	// Verify the channel received the message
+	select {
+	case msg := <-ch:
+		if msg.ID == nil || *msg.ID != 42 {
+			t.Errorf("expected ID=42 in routed response")
+		}
+		if string(msg.Result) != `{"ok": true}` {
+			t.Errorf("expected result={\"ok\": true}, got %s", string(msg.Result))
+		}
+	default:
+		t.Error("expected response message in pending channel")
+	}
+
+	// Pending entry should be deleted after delivery
+	_, ok := b.pending.Load(id)
+	if ok {
+		t.Error("expected pending entry deleted after delivery")
+	}
+}
+
+func TestSendRequestCmdWriteChFull(t *testing.T) {
+	b := &Backend{
+		writeCh: make(chan []byte, 1),
+	}
+	b.nextID.Store(1)
+
+	// Fill the write channel
+	b.writeCh <- []byte("filler")
+
+	// SendRequestCmd should return an error cmd when channel is full
+	cmd := b.SendRequestCmd("test", struct{}{}, func(result json.RawMessage, rpcErr *RPCError) tea.Msg {
+		return backendSessionListMsg{}
+	})
+
+	// Execute the cmd — should return an error message
+	result := cmd()
+	errMsg, ok := result.(backendErrorMsg)
+	if !ok {
+		t.Fatalf("expected backendErrorMsg when write channel full, got %T", result)
+	}
+	if !strings.Contains(errMsg.Message, "channel full") {
+		t.Errorf("expected 'channel full' in error, got '%s'", errMsg.Message)
+	}
+
+	// Drain filler
+	<-b.writeCh
 }

@@ -207,6 +207,28 @@ func TestViewThinkingCappedAt5Lines(t *testing.T) {
 	}
 }
 
+func TestViewDuringStageInit(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageInit
+	m.width = 80
+
+	view := m.View()
+
+	// During init stage, should still render the textInput and status bar
+	// The default case in the switch renders textInput
+	if view == "" {
+		t.Error("expected non-empty view during stageInit")
+	}
+	// Should contain status bar info (initial "..." values)
+	if !strings.Contains(view, "...") {
+		t.Errorf("expected status bar placeholder in init view, got:\n%s", view)
+	}
+	// Should contain separator
+	if !strings.Contains(view, "─") {
+		t.Errorf("expected separator in init view, got:\n%s", view)
+	}
+}
+
 func TestViewStreamBufCappedAt50Lines(t *testing.T) {
 	m := initialModel(nil)
 	m.stage = stageStreaming

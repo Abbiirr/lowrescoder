@@ -44,10 +44,10 @@ type model struct {
 	quitting bool
 
 	// Streaming buffers (pointers to avoid copy-by-value panic)
-	tokenBuf    *strings.Builder // Raw tokens accumulate here
-	streamBuf   *strings.Builder // Flushed content for display
-	thinkingBuf *strings.Builder // Thinking tokens
-	streamDirty bool             // Whether tokenBuf has unflushed content
+	tokenBuf     *strings.Builder // Raw tokens accumulate here
+	streamBuf    *strings.Builder // Flushed content for display
+	thinkingBuf  *strings.Builder // Thinking tokens
+	streamDirty  bool             // Whether tokenBuf has unflushed content
 	showThinking bool
 
 	// Tool calls for current turn
@@ -76,6 +76,12 @@ type model struct {
 
 	// Error display
 	lastError string
+
+	// Autocomplete dropdown items (for rendering when >1 match)
+	completions []string
+
+	// Session picker state
+	sessionPickerEntries []sessionEntry
 }
 
 // initialModel creates the initial model state.
@@ -85,6 +91,11 @@ func initialModel(backend *Backend) model {
 	ti.Focus()
 	ti.CharLimit = 2000
 	ti.Width = 60
+	ti.ShowSuggestions = true
+	ti.CompletionStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	// Disable Up/Down for suggestion cycling — they're used for history navigation
+	ti.KeyMap.NextSuggestion.SetEnabled(false)
+	ti.KeyMap.PrevSuggestion.SetEnabled(false)
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot

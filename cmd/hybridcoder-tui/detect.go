@@ -21,6 +21,11 @@ func shouldUseLegacy() bool {
 		return true
 	}
 
+	// Check if stdout is a terminal (avoid TUI in piped/non-interactive output)
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		return true
+	}
+
 	return false
 }
 

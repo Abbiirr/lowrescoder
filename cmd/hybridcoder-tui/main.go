@@ -41,6 +41,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Optional session resume injected by the Python CLI wrapper.
+	if sessionID := os.Getenv("HYBRIDCODER_SESSION_ID"); sessionID != "" {
+		backend.SendRequest("session.resume", SessionResumeParams{SessionID: sessionID})
+	}
+
 	// Print welcome banner (above the live area)
 	fmt.Println(welcomeStyle.Render("HybridCoder") + dimStyle.Render(" — Edge-native AI coding assistant"))
 	fmt.Println(dimStyle.Render("Type a message to start. Use /help for commands, Ctrl+D to quit."))

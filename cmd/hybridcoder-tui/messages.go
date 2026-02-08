@@ -69,3 +69,16 @@ type tickMsg struct {
 
 // queueDrainMsg triggers processing the next queued message.
 type queueDrainMsg struct{}
+
+// sessionEntry represents a session in the picker list.
+type sessionEntry struct {
+	ID       string
+	Title    string
+	Model    string
+	Provider string
+}
+
+// backendSessionListMsg carries the list of sessions from the backend.
+type backendSessionListMsg struct {
+	Sessions []sessionEntry
+}

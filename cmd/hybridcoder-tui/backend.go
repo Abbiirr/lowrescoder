@@ -2,13 +2,16 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -95,10 +98,21 @@ func (b *Backend) SendRequest(method string, params interface{}) int {
 
 	select {
 	case b.writeCh <- data:
+		return id
 	default:
-		// Channel full — drop the message
+		// Best effort for control-path messages: avoid dropping cancel/shutdown.
+		if method == "cancel" || method == "shutdown" {
+			select {
+			case b.writeCh <- data:
+				return id
+			case <-time.After(500 * time.Millisecond):
+			}
+		}
+		if b.program != nil {
+			b.program.Send(backendErrorMsg{Message: "backend write queue full; dropped request: " + method})
+		}
+		return -1
 	}
-	return id
 }
 
 // SendResponse sends a JSON-RPC response to the Python backend (for approval/ask_user answers).
@@ -117,19 +131,53 @@ func (b *Backend) SendResponse(id int, result interface{}) {
 	select {
 	case b.writeCh <- data:
 	default:
+		// Approval/ask-user responses are control-path messages. Block briefly
+		// before giving up so we don't strand the backend waiting for input.
+		select {
+		case b.writeCh <- data:
+		case <-time.After(500 * time.Millisecond):
+			if b.program != nil {
+				b.program.Send(backendErrorMsg{Message: "backend write queue full; dropped response"})
+			}
+		}
 	}
 }
 
 // Shutdown gracefully shuts down the backend.
 func (b *Backend) Shutdown() {
-	// Send shutdown request
+	// Best-effort orderly shutdown.
 	b.SendRequest("shutdown", struct{}{})
+
+	exited := make(chan struct{})
+	go func() {
+		if b.cmd != nil {
+			_ = b.cmd.Wait()
+		}
+		close(exited)
+	}()
+
+	select {
+	case <-exited:
+	case <-time.After(5 * time.Second):
+		if b.cancel != nil {
+			b.cancel()
+		}
+		if b.cmd != nil && b.cmd.Process != nil {
+			killProcessGroup(b.cmd)
+		}
+		select {
+		case <-exited:
+		case <-time.After(1 * time.Second):
+		}
+	}
 
 	if b.cancel != nil {
 		b.cancel()
 	}
+	if b.stdin != nil {
+		_ = b.stdin.Close()
+	}
 
-	// Wait for goroutines with timeout
 	done := make(chan struct{})
 	go func() {
 		b.wg.Wait()
@@ -138,14 +186,7 @@ func (b *Backend) Shutdown() {
 
 	select {
 	case <-done:
-	default:
-		if b.cmd != nil && b.cmd.Process != nil {
-			killProcessGroup(b.cmd)
-		}
-	}
-
-	if b.stdin != nil {
-		b.stdin.Close()
+	case <-time.After(2 * time.Second):
 	}
 }
 
@@ -153,44 +194,50 @@ func (b *Backend) Shutdown() {
 func (b *Backend) readLoop(ctx context.Context) {
 	defer b.wg.Done()
 
-	scanner := bufio.NewScanner(b.stdout)
-	scanner.Buffer(make([]byte, 0, 1024*1024), 1024*1024) // 1MB max line
+	reader := bufio.NewReader(b.stdout)
+	var exitErr error
 
-	for scanner.Scan() {
+	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
 		}
 
-		line := scanner.Bytes()
-		if len(line) == 0 {
-			continue
+		line, err := reader.ReadBytes('\n')
+		if len(line) > 0 {
+			line = bytes.TrimSpace(line)
+			if len(line) > 0 {
+				var msg RPCMessage
+				if unmarshalErr := json.Unmarshal(line, &msg); unmarshalErr != nil {
+					if b.program != nil {
+						b.program.Send(backendErrorMsg{Message: "[backend] invalid JSON-RPC message dropped"})
+					}
+				} else {
+					// Route message based on type
+					if msg.ID != nil && msg.Method == "" {
+						// Response to a request we sent
+						b.routeResponse(msg)
+					} else if msg.ID != nil && msg.Method != "" {
+						// Request from Python (approval/ask_user)
+						b.routeRequest(msg)
+					} else if msg.Method != "" {
+						// Notification
+						b.dispatchNotification(msg)
+					}
+				}
+			}
 		}
-
-		var msg RPCMessage
-		if err := json.Unmarshal(line, &msg); err != nil {
-			continue
-		}
-
-		// Route message based on type
-		if msg.ID != nil && msg.Method == "" {
-			// Response to a request we sent
-			b.routeResponse(msg)
-		} else if msg.ID != nil && msg.Method != "" {
-			// Request from Python (approval/ask_user)
-			b.routeRequest(msg)
-		} else if msg.Method != "" {
-			// Notification
-			b.dispatchNotification(msg)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			exitErr = err
+			break
 		}
 	}
 
 	// Backend process exited
-	var exitErr error
-	if err := scanner.Err(); err != nil {
-		exitErr = err
-	}
 	if b.program != nil {
 		b.program.Send(backendExitMsg{Err: exitErr})
 	}
@@ -249,6 +296,51 @@ func (b *Backend) drainStderr(ctx context.Context) {
 		// Surface backend stderr as error messages
 		if b.program != nil {
 			b.program.Send(backendErrorMsg{Message: "[backend] " + line})
+		}
+	}
+}
+
+// SendRequestCmd sends a JSON-RPC request and returns a tea.Cmd that blocks until the
+// response arrives, then calls the callback to produce a tea.Msg.
+func (b *Backend) SendRequestCmd(method string, params interface{}, callback func(json.RawMessage, *RPCError) tea.Msg) tea.Cmd {
+	id := int(b.nextID.Add(1) - 1)
+	req := RPCRequest{
+		JSONRPC: "2.0",
+		ID:      id,
+		Method:  method,
+		Params:  params,
+	}
+	data, err := json.Marshal(req)
+	if err != nil {
+		return func() tea.Msg {
+			return backendErrorMsg{Message: "failed to marshal request: " + err.Error()}
+		}
+	}
+	data = append(data, '\n')
+
+	// Register a pending channel BEFORE sending, so the response can't arrive first.
+	ch := make(chan RPCMessage, 1)
+	b.pending.Store(id, ch)
+
+	select {
+	case b.writeCh <- data:
+	default:
+		b.pending.Delete(id)
+		return func() tea.Msg {
+			return backendErrorMsg{Message: "backend write channel full"}
+		}
+	}
+
+	return func() tea.Msg {
+		select {
+		case resp := <-ch:
+			if resp.Error != nil {
+				return callback(nil, resp.Error)
+			}
+			return callback(resp.Result, nil)
+		case <-time.After(30 * time.Second):
+			b.pending.Delete(id)
+			return backendErrorMsg{Message: method + " timed out waiting for backend response"}
 		}
 	}
 }

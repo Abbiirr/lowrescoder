@@ -26,8 +26,8 @@ var (
 	toolCallStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("14"))
 
-	toolOKIcon  = lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Render("✓")
-	toolErrIcon = lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render("✗")
+	toolOKIcon   = lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Render("✓")
+	toolErrIcon  = lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render("✗")
 	toolWaitIcon = lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Render("⋯")
 	toolRunIcon  = lipgloss.NewStyle().Foreground(lipgloss.Color("14")).Render("▶")
 

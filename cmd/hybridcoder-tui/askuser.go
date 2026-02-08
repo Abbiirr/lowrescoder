@@ -84,6 +84,11 @@ func handleAskUserKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case "enter":
+		// Session picker mode: sentinel askRequestID == -1
+		if m.askRequestID == -1 {
+			return handleSessionPickerSelection(m, m.askCursor)
+		}
+
 		var answer string
 
 		// If textInput has text and allowText, use that
@@ -115,6 +120,16 @@ func handleAskUserKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Println(dimStyle.Render(fmt.Sprintf("  → %s", answer)))
 
 	case "escape", "esc", "ctrl+c":
+		// Session picker mode: just cancel and return to input
+		if m.askRequestID == -1 {
+			m.sessionPickerEntries = nil
+			m.stage = stageInput
+			m.textInput.SetValue("")
+			m.textInput.Placeholder = "Type a message..."
+			m.textInput.Focus()
+			return m, tea.Println(dimStyle.Render("  → (cancelled)"))
+		}
+
 		// Default answer
 		answer := ""
 		if len(m.askOptions) > 0 {

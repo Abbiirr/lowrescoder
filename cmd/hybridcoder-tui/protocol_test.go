@@ -392,3 +392,113 @@ func TestDoneParamsWithoutCancelled(t *testing.T) {
 		t.Error("expected cancelled=false by default")
 	}
 }
+
+// --- SessionListResult tests ---
+
+func TestSessionListResultUnmarshal(t *testing.T) {
+	raw := `{"sessions":[{"id":"abc-123","title":"My session","model":"qwen3:8b","provider":"ollama"},{"id":"def-456","title":"Another","model":"gpt-4","provider":"openrouter"}]}`
+	var result SessionListResult
+	if err := json.Unmarshal([]byte(raw), &result); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if len(result.Sessions) != 2 {
+		t.Fatalf("expected 2 sessions, got %d", len(result.Sessions))
+	}
+	if result.Sessions[0].ID != "abc-123" {
+		t.Errorf("expected id=abc-123, got %s", result.Sessions[0].ID)
+	}
+	if result.Sessions[0].Title != "My session" {
+		t.Errorf("expected title=My session, got %s", result.Sessions[0].Title)
+	}
+	if result.Sessions[0].Model != "qwen3:8b" {
+		t.Errorf("expected model=qwen3:8b, got %s", result.Sessions[0].Model)
+	}
+	if result.Sessions[0].Provider != "ollama" {
+		t.Errorf("expected provider=ollama, got %s", result.Sessions[0].Provider)
+	}
+	if result.Sessions[1].ID != "def-456" {
+		t.Errorf("expected second id=def-456, got %s", result.Sessions[1].ID)
+	}
+}
+
+func TestSessionListResultEmpty(t *testing.T) {
+	raw := `{"sessions":[]}`
+	var result SessionListResult
+	if err := json.Unmarshal([]byte(raw), &result); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if len(result.Sessions) != 0 {
+		t.Errorf("expected 0 sessions, got %d", len(result.Sessions))
+	}
+}
+
+func TestSessionInfoFieldsRoundTrip(t *testing.T) {
+	orig := SessionInfo{
+		ID:       "uuid-1234-5678",
+		Title:    "Test Session",
+		Model:    "qwen3:8b",
+		Provider: "ollama",
+	}
+	data, err := json.Marshal(orig)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	var decoded SessionInfo
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if decoded.ID != orig.ID {
+		t.Errorf("ID mismatch: %s != %s", decoded.ID, orig.ID)
+	}
+	if decoded.Title != orig.Title {
+		t.Errorf("Title mismatch: %s != %s", decoded.Title, orig.Title)
+	}
+	if decoded.Model != orig.Model {
+		t.Errorf("Model mismatch: %s != %s", decoded.Model, orig.Model)
+	}
+	if decoded.Provider != orig.Provider {
+		t.Errorf("Provider mismatch: %s != %s", decoded.Provider, orig.Provider)
+	}
+}
+
+func TestSessionListParamsMarshal(t *testing.T) {
+	params := SessionListParams{}
+	data, err := json.Marshal(params)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	// Should produce empty JSON object
+	if string(data) != "{}" {
+		t.Errorf("expected {}, got %s", string(data))
+	}
+}
+
+func TestSessionListResultMarshal(t *testing.T) {
+	result := SessionListResult{
+		Sessions: []SessionInfo{
+			{ID: "id1", Title: "t1", Model: "m1", Provider: "p1"},
+		},
+	}
+	data, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	var decoded map[string]interface{}
+	json.Unmarshal(data, &decoded)
+	sessions := decoded["sessions"].([]interface{})
+	if len(sessions) != 1 {
+		t.Errorf("expected 1 session, got %d", len(sessions))
+	}
+}
+
+func TestSessionInfoEmptyFields(t *testing.T) {
+	raw := `{"id":"x","title":"","model":"","provider":""}`
+	var info SessionInfo
+	json.Unmarshal([]byte(raw), &info)
+	if info.ID != "x" {
+		t.Errorf("expected id=x, got %s", info.ID)
+	}
+	if info.Title != "" {
+		t.Errorf("expected empty title, got %s", info.Title)
+	}
+}

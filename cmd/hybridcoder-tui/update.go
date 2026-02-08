@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -40,6 +41,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case backendTokenMsg:
+		if m.stage != stageStreaming {
+			// Not streaming (for example slash-command output): preserve formatting
+			// and print directly to scrollback.
+			if msg.Text == "" {
+				return m, nil
+			}
+			return m, tea.Printf("%s", msg.Text)
+		}
 		m.tokenBuf.WriteString(msg.Text)
 		if !m.streamDirty {
 			m.streamDirty = true
@@ -49,6 +58,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case backendThinkingMsg:
 		m.thinkingBuf.WriteString(msg.Text)
+		// Trigger a tick to force view refresh for live thinking display
+		if !m.streamDirty {
+			m.streamDirty = true
+			return m, tickCmd()
+		}
 		return m, nil
 
 	case backendToolCallMsg:
@@ -67,6 +81,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case backendAskUserRequestMsg:
 		return enterAskUser(m, msg), nil
+
+	case backendSessionListMsg:
+		if len(msg.Sessions) == 0 {
+			m.lastError = "No sessions found"
+			return m, nil
+		}
+		return enterSessionPicker(m, msg), nil
 
 	case backendExitMsg:
 		m.quitting = true
@@ -122,11 +143,19 @@ func (m model) handleInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case "enter":
+		// Accept autocomplete suggestion before submitting
+		if suggestion := m.textInput.CurrentSuggestion(); suggestion != "" {
+			m.textInput.SetValue(suggestion)
+			m.textInput.CursorEnd()
+		}
+
 		text := strings.TrimSpace(m.textInput.Value())
 		if text == "" {
 			return m, nil
 		}
 		m.textInput.SetValue("")
+		m.completions = nil
+		m.textInput.SetSuggestions(nil)
 		m.interruptCount = 0
 		m.lastError = ""
 
@@ -152,21 +181,10 @@ func (m model) handleInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.textInput.CursorEnd()
 		return m, nil
 
-	case "tab":
-		// Autocomplete
-		text := m.textInput.Value()
-		if strings.HasPrefix(text, "/") {
-			completions := getCompletions(text)
-			if len(completions) == 1 {
-				m.textInput.SetValue(completions[0] + " ")
-				m.textInput.CursorEnd()
-			}
-		}
-		return m, nil
-
 	default:
 		var cmd tea.Cmd
 		m.textInput, cmd = m.textInput.Update(msg)
+		m.updateCompletions()
 		return m, cmd
 	}
 }
@@ -303,7 +321,7 @@ func (m model) handleDone(msg backendDoneMsg) (tea.Model, tea.Cmd) {
 
 // handleSlashCommand processes Go-local commands or delegates to Python.
 func (m model) handleSlashCommand(text string) (tea.Model, tea.Cmd) {
-	cmd, _ := parseCommand(text)
+	cmd, args := parseCommand(text)
 
 	switch cmd {
 	case "exit", "quit", "q":
@@ -321,12 +339,43 @@ func (m model) handleSlashCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Println(dimStyle.Render("Thinking: " + state))
 
+	case "resume":
+		if m.backend == nil {
+			return m, tea.Println(errorStyle.Render("Backend not connected — /resume requires the Python backend"))
+		}
+		args = strings.TrimSpace(args)
+		if args != "" {
+			// Direct resume with session ID
+			return m, sessionResumeCmd(m.backend, args)
+		}
+		// No args: fetch session list and show picker
+		return m, m.backend.SendRequestCmd("session.list", SessionListParams{}, func(result json.RawMessage, rpcErr *RPCError) tea.Msg {
+			if rpcErr != nil {
+				return backendErrorMsg{Message: "session.list failed: " + rpcErr.Message}
+			}
+			var listResult SessionListResult
+			if err := json.Unmarshal(result, &listResult); err != nil {
+				return backendErrorMsg{Message: "failed to parse session list: " + err.Error()}
+			}
+			sessions := make([]sessionEntry, len(listResult.Sessions))
+			for i, s := range listResult.Sessions {
+				sessions[i] = sessionEntry{
+					ID:       s.ID,
+					Title:    s.Title,
+					Model:    s.Model,
+					Provider: s.Provider,
+				}
+			}
+			return backendSessionListMsg{Sessions: sessions}
+		})
+
 	default:
 		// Delegate to Python backend
 		if m.backend != nil {
 			m.backend.SendRequest("command", CommandParams{Cmd: text})
+			return m, nil
 		}
-		return m, nil
+		return m, tea.Println(errorStyle.Render("Backend not connected — " + text + " requires the Python backend"))
 	}
 }
 
@@ -351,4 +400,17 @@ func (m *model) updateToolCall(msg backendToolCallMsg) {
 		Result: msg.Result,
 		Args:   msg.Args,
 	})
+}
+
+// updateCompletions refreshes autocomplete suggestions based on current input.
+func (m *model) updateCompletions() {
+	text := m.textInput.Value()
+	if strings.HasPrefix(text, "/") && !strings.Contains(text, " ") {
+		completions := getCompletions(text)
+		m.completions = completions
+		m.textInput.SetSuggestions(completions)
+	} else {
+		m.completions = nil
+		m.textInput.SetSuggestions(nil)
+	}
 }

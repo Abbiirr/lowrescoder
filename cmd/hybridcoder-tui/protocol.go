@@ -9,12 +9,12 @@ import "encoding/json"
 // If ID is set and Method is set, it's a request.
 // If ID is set and Method is empty, it's a response.
 type RPCMessage struct {
-	JSONRPC string           `json:"jsonrpc"`
-	ID      *int             `json:"id,omitempty"`
-	Method  string           `json:"method,omitempty"`
-	Params  json.RawMessage  `json:"params,omitempty"`
-	Result  json.RawMessage  `json:"result,omitempty"`
-	Error   *RPCError        `json:"error,omitempty"`
+	JSONRPC string          `json:"jsonrpc"`
+	ID      *int            `json:"id,omitempty"`
+	Method  string          `json:"method,omitempty"`
+	Params  json.RawMessage `json:"params,omitempty"`
+	Result  json.RawMessage `json:"result,omitempty"`
+	Error   *RPCError       `json:"error,omitempty"`
 }
 
 // RPCRequest is sent from Go to Python.
@@ -136,4 +136,20 @@ type SessionResumeParams struct {
 type ConfigSetParams struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
+}
+
+// SessionListParams requests the list of available sessions.
+type SessionListParams struct{}
+
+// SessionListResult is the response from session.list.
+type SessionListResult struct {
+	Sessions []SessionInfo `json:"sessions"`
+}
+
+// SessionInfo describes a single session entry.
+type SessionInfo struct {
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	Model    string `json:"model"`
+	Provider string `json:"provider"`
 }

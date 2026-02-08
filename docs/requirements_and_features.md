@@ -142,8 +142,13 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 |---------|--------|------|
 | Command history (FileHistory) | DONE | `~/.hybridcoder/history` |
 | Hybrid completer (commands + files) | DONE | `src/hybridcoder/inline/completer.py` |
-| Auto-suggest (command completion) | DONE | `HybridAutoSuggest` |
+| Auto-suggest (command completion) | DONE | `HybridAutoSuggest` (Python), Go TUI: `textinput.SetSuggestions` |
+| Ghost text (grayed-out inline suggestion) | DONE | Go TUI: `textinput.ShowSuggestions` + `CompletionStyle` |
+| Tab to accept suggestion | DONE | Go TUI: built-in `textinput.KeyMap.AcceptSuggestion` |
+| Autocomplete dropdown (multiple matches) | DONE | Go TUI: `renderCompletionDropdown()` in `view.go` |
 | @file reference expansion | DONE | `src/hybridcoder/tui/file_completer.py` |
+| Session resume picker (arrow-key) | DONE | Go TUI: `session_picker.go`, reuses `stageAskUser` |
+| Slash commands disabled during streaming | DONE | Queued messages treated as plain chat text |
 
 ### 2.10 Slash Commands (14 Commands)
 
@@ -152,7 +157,7 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 | `/exit` | `/quit`, `/q` | Quit the application |
 | `/new` | — | Start a new session |
 | `/sessions` | `/s` | List sessions |
-| `/resume` | — | Resume a session by ID prefix |
+| `/resume` | — | Resume a session; shows arrow-key picker when no ID given |
 | `/help` | `/h`, `/?` | Show available commands |
 | `/model` | `/m` | Show or switch the LLM model |
 | `/mode` | `/permissions` | Show or switch approval mode |
@@ -257,6 +262,12 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 **Root cause:** `patch_stdout`'s `StdoutProxy` line-buffering means tokens appear bursty without explicit flush, but flushing causes prompt interleaving.
 **Impact:** Less smooth streaming compared to Claude Code's differential renderer.
 
+### 4.5 `/resume` copy-paste issue
+
+**Status:** Fixed
+**Root cause:** `/resume` without args dumped a plain-text session list requiring copy-paste of UUIDs.
+**Resolution:** Arrow-key session picker added (Go TUI). `/resume` without args shows an interactive picker via `stageAskUser` with sentinel `askRequestID == -1`. User navigates with Up/Down, selects with Enter, cancels with Escape. Full session ID sent via `session.resume` RPC.
+
 ---
 
 ## 5. Architecture Decision: Go Bubble Tea TUI Rewrite
@@ -311,7 +322,7 @@ See `docs/plan/go-bubble-tea-migration.md` for the full migration plan.
 | Agentic task completion | >50% on custom test suite | N/A (benchmark not built) |
 | Memory usage (idle) | <2GB RAM (stretch: <500MB) | Not profiled |
 | Memory usage (inference) | <8GB VRAM | Not profiled |
-| Unit tests | 500+ passing | **509+ passing** |
+| Unit tests | 500+ passing | **272 Go + 509 Python = 781+ passing** |
 
 ---
 
@@ -322,7 +333,7 @@ See `docs/plan/go-bubble-tea-migration.md` for the full migration plan.
 | Language | Python 3.11+ | Active |
 | Package Manager | uv | Active |
 | CLI Framework | Typer + Rich | Active |
-| TUI Frontend | **Go + Bubble Tea** (planned) | Planned |
+| TUI Frontend | **Go + Bubble Tea** | Active |
 | Parsing | tree-sitter 0.25.2 | Planned |
 | LSP Client | multilspy (Microsoft) | Planned |
 | Vector DB | LanceDB | Planned |

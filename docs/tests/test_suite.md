@@ -99,15 +99,16 @@ chmod +x build.sh && ./build.sh
 
 | File | Category | Tests | Description |
 |------|----------|-------|-------------|
-| `cmd/hybridcoder-tui/view_test.go` | Display | ~16 | View() rendering for all stages |
-| `cmd/hybridcoder-tui/update_test.go` | Core | ~45 | Update loop, display pipeline, parallel input, thinking, history |
-| `cmd/hybridcoder-tui/backend_test.go` | IPC | ~13 | Backend dispatch, routing, marshal, robustness |
+| `cmd/hybridcoder-tui/view_test.go` | Display | ~17 | View() rendering for all stages |
+| `cmd/hybridcoder-tui/update_test.go` | Core | ~62 | Update loop, display pipeline, parallel input, thinking, slash commands, /resume |
+| `cmd/hybridcoder-tui/backend_test.go` | IPC | ~20 | Backend dispatch, routing, marshal, robustness, SendRequestCmd |
 | `cmd/hybridcoder-tui/commands_test.go` | Commands | ~11 | Slash command parsing and handling |
 | `cmd/hybridcoder-tui/askuser_test.go` | Dialog | ~15 | Ask-user stage transitions, navigation, rendering |
 | `cmd/hybridcoder-tui/approval_test.go` | Dialog | 12 | Approval stage transitions, navigation, rendering |
-| `cmd/hybridcoder-tui/completion_test.go` | Autocomplete | ~10 | Prefix, fuzzy, Tab completion |
-| `cmd/hybridcoder-tui/e2e_test.go` | E2E | ~6 | Full message flow simulations |
-| `cmd/hybridcoder-tui/protocol_test.go` | Protocol | 25 | JSON-RPC wire format marshal/unmarshal |
+| `cmd/hybridcoder-tui/completion_test.go` | Autocomplete | ~21 | Prefix, fuzzy, Tab, ghost text, dropdown, cap, columns |
+| `cmd/hybridcoder-tui/e2e_test.go` | E2E | ~9 | Full message flow simulations including session resume |
+| `cmd/hybridcoder-tui/session_picker_test.go` | Session Picker | ~25 | Session picker transitions, labels, navigation, selection, cancel |
+| `cmd/hybridcoder-tui/protocol_test.go` | Protocol | ~31 | JSON-RPC wire format marshal/unmarshal including session types |
 | `cmd/hybridcoder-tui/model_test.go` | Model | 6 | Initial state, defaults |
 | `cmd/hybridcoder-tui/history_test.go` | History | 13 | Persistence, navigation, dedup |
 | `cmd/hybridcoder-tui/markdown_test.go` | Rendering | 10 | Glamour markdown rendering |
@@ -232,7 +233,25 @@ Tests that verify the token → display → scrollback pipeline.
 | `TestCompletionsSlashOnly` | completion_test.go | `/` returns all commands |
 | `TestCompletionsFuzzyFallback` | completion_test.go | `/hlp` → fuzzy match to `/help` |
 | `TestCompletionsMultiplePrefixMatches` | completion_test.go | `/s` → multiple matches |
-| `TestSlashCommandTabCompletion` | completion_test.go | Tab key triggers completion in update loop |
+
+## Category 11: Autocomplete UX Tests
+
+| Test | File | What It Verifies |
+|------|------|-----------------|
+| `TestSuggestionsSetOnKeyPress` | completion_test.go | After typing `/he`, textInput has suggestions set |
+| `TestDropdownRenderedForMultipleMatches` | completion_test.go | View shows dropdown when >1 completion match |
+| `TestDropdownHiddenForSingleMatch` | completion_test.go | No dropdown for exactly 1 match (ghost text only) |
+| `TestDropdownHiddenForNonSlash` | completion_test.go | No dropdown for regular (non-slash) text |
+| `TestDropdownClearedOnEnter` | completion_test.go | After Enter, completions list is cleared |
+| `TestTabAcceptsSuggestion` | completion_test.go | Tab accepts the current ghost text suggestion |
+| `TestGhostTextEnabledOnModel` | completion_test.go | ShowSuggestions is true on initial model |
+| `TestSlashExitViaEnter` | update_test.go | Type `/exit`, Enter → quitting=true |
+| `TestSlashThinkingViaEnter` | update_test.go | Type `/thinking`, Enter → showThinking toggled |
+| `TestSlashCommandBackendDelegatedNoBackend` | update_test.go | Backend-delegated command shows error when backend nil |
+| `TestSlashCommandClearsCompletions` | update_test.go | Completions cleared after slash command execution |
+| `TestUpdateCompletionsForSlashInput` | update_test.go | updateCompletions() populates for `/he` |
+| `TestUpdateCompletionsClearsForNonSlash` | update_test.go | updateCompletions() clears for non-slash input |
+| `TestUpdateCompletionsClearsAfterSpace` | update_test.go | updateCompletions() clears when command has args |
 
 ## Category 9: History & Queue Tests
 
@@ -270,3 +289,106 @@ Tests that verify the token → display → scrollback pipeline.
 ### Bug 3: Parallel Input Broken (FIXED — regression test)
 - **Test**: `TestTextInputStaysFocusedDuringStreaming`
 - **Verifies**: sendChat() does NOT call textInput.Blur()
+
+### Bug 4: /resume copy-paste issue (FIXED)
+- **Test**: `TestFullSessionResumeFlow`
+- **Verifies**: `/resume` shows arrow-key picker when no ID given, selecting sends `session.resume`
+
+---
+
+## Category 12: Session Resume Picker Tests
+
+Tests for the arrow-key session resume picker (`/resume` without args).
+
+### Session Picker State Tests (session_picker_test.go)
+
+| Test | File | What It Verifies |
+|------|------|-----------------|
+| `TestEnterSessionPickerSetsAskUserStage` | session_picker_test.go | stage=stageAskUser, askRequestID=-1 (sentinel) |
+| `TestEnterSessionPickerFormatsLabels` | session_picker_test.go | Labels include ID prefix + title + model in parens |
+| `TestEnterSessionPickerEmptyTitle` | session_picker_test.go | Shows "(untitled)" for empty titles |
+| `TestEnterSessionPickerLongTitle` | session_picker_test.go | Truncates titles >40 chars with "..." |
+| `TestEnterSessionPickerNoModel` | session_picker_test.go | Omits model parens when model is empty |
+| `TestEnterSessionPickerBlursInput` | session_picker_test.go | textInput blurred in picker mode |
+| `TestEnterSessionPickerStoresEntries` | session_picker_test.go | Full session entries stored (not truncated) |
+| `TestEnterSessionPickerSetsQuestion` | session_picker_test.go | Question set to "Select a session to resume:" |
+| `TestEnterSessionPickerCursorAtZero` | session_picker_test.go | Cursor reset to 0 on enter |
+| `TestEnterSessionPickerShortID` | session_picker_test.go | IDs shorter than 8 chars don't crash |
+| `TestEnterSessionPickerDisallowsText` | session_picker_test.go | askAllowText=false (no free-text in picker) |
+
+### Session Picker Navigation Tests (session_picker_test.go)
+
+| Test | File | What It Verifies |
+|------|------|-----------------|
+| `TestSessionPickerArrowNavigation` | session_picker_test.go | Up/Down with wrapping via ask-user handler |
+| `TestSessionPickerEnterSelectsSession` | session_picker_test.go | Enter sends session.resume with full ID, returns to stageInput |
+| `TestSessionPickerEnterFirstItem` | session_picker_test.go | First item selection sends correct ID |
+| `TestSessionPickerEscapeCancels` | session_picker_test.go | Escape returns to stageInput, clears entries |
+| `TestSessionPickerCtrlCCancels` | session_picker_test.go | Ctrl+C returns to stageInput, clears entries |
+| `TestSessionPickerDoesNotSendResponseToBackend` | session_picker_test.go | Sentinel prevents SendResponse on cancel |
+| `TestSessionPickerSelectionResetsState` | session_picker_test.go | sessionPickerEntries=nil, textInput cleared |
+| `TestSessionPickerViewRendersCorrectly` | session_picker_test.go | View shows question + formatted options |
+
+### Session Picker Edge Case Tests (session_picker_test.go)
+
+| Test | File | What It Verifies |
+|------|------|-----------------|
+| `TestSessionPickerInvalidIndex` | session_picker_test.go | Invalid index → error, returns to stageInput |
+| `TestSessionPickerNegativeIndex` | session_picker_test.go | Negative index → error, returns to stageInput |
+| `TestSessionPickerDuplicateTitles` | session_picker_test.go | Same-title sessions distinguishable by ID prefix |
+| `TestRegularAskUserNotAffectedBySentinel` | session_picker_test.go | Real ask-user works after picker used |
+| `TestSessionPickerSendsFullSessionID` | session_picker_test.go | Full UUID sent, not truncated 8-char prefix |
+
+### /resume Command Tests (update_test.go)
+
+| Test | File | What It Verifies |
+|------|------|-----------------|
+| `TestSlashResumeNoArgsTriggersSessionList` | update_test.go | `/resume` sends session.list RPC |
+| `TestSlashResumeWithArgsDelegatesToBackend` | update_test.go | `/resume abc` sends session.resume directly |
+| `TestSlashResumeNoBackend` | update_test.go | nil backend shows error |
+| `TestBackendSessionListMsgEntersSessionPicker` | update_test.go | Message triggers session picker |
+| `TestBackendSessionListMsgEmptySessions` | update_test.go | Empty list → "No sessions found" error |
+| `TestSlashResumeWithArgsTrimsWhitespace` | update_test.go | Whitespace trimmed from session ID arg |
+| `TestSlashResumeViaEnter` | update_test.go | Full path: type /resume, press Enter |
+| `TestTokenMsgEmptyText` | update_test.go | Empty text token doesn't crash |
+| `TestTokenMsgEmptyTextDuringInput` | update_test.go | Empty text during input produces no output |
+
+### SendRequestCmd Tests (backend_test.go)
+
+| Test | File | What It Verifies |
+|------|------|-----------------|
+| `TestSendRequestCmdMarshal` | backend_test.go | Sends valid JSON-RPC with method and ID |
+| `TestSendRequestCmdStoresPending` | backend_test.go | Stores pending channel in sync.Map |
+| `TestSendRequestCmdCallbackOnResponse` | backend_test.go | Callback produces correct tea.Msg on response |
+| `TestSendRequestCmdErrorResponse` | backend_test.go | RPC error → backendErrorMsg via callback |
+| `TestRouteResponseDelivers` | backend_test.go | pending map + channel delivery works correctly |
+| `TestSendRequestCmdWriteChFull` | backend_test.go | Returns error when write channel is full |
+
+### Protocol Wire Format Tests (protocol_test.go)
+
+| Test | File | What It Verifies |
+|------|------|-----------------|
+| `TestSessionListResultUnmarshal` | protocol_test.go | Correct deserialization of session list |
+| `TestSessionListResultEmpty` | protocol_test.go | Empty session array works |
+| `TestSessionInfoFieldsRoundTrip` | protocol_test.go | All SessionInfo fields round-trip |
+| `TestSessionListParamsMarshal` | protocol_test.go | Empty struct serializes to {} |
+| `TestSessionListResultMarshal` | protocol_test.go | SessionListResult serializes correctly |
+| `TestSessionInfoEmptyFields` | protocol_test.go | Empty string fields handled |
+
+### E2E Session Resume Tests (e2e_test.go)
+
+| Test | File | What It Verifies |
+|------|------|-----------------|
+| `TestFullSessionResumeFlow` | e2e_test.go | /resume → list → navigate → pick → session.resume sent |
+| `TestFullSessionResumeCancelFlow` | e2e_test.go | /resume → list → navigate → Escape → stageInput, no backend msg |
+| `TestFullSessionResumeDirectIDFlow` | e2e_test.go | /resume ID → session.resume sent, no picker |
+
+### Gap Tests (various files)
+
+| Test | File | What It Verifies |
+|------|------|-----------------|
+| `TestViewDuringStageInit` | view_test.go | View renders textInput + status bar during init |
+| `TestCompletionDropdownCapAt8Items` | completion_test.go | >8 items truncated to 8 |
+| `TestCompletionDropdownTwoColumns` | completion_test.go | Width>50 renders 2 columns, <=50 renders 1 |
+| `TestCompletionDropdownEmptyItems` | completion_test.go | Empty items list doesn't crash |
+| `TestCompletionDropdownSingleItem` | completion_test.go | Single item renders correctly |
