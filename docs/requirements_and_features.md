@@ -193,25 +193,94 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 
 ## 3. Features Planned (Phase 3-6)
 
-### 3.1 Phase 3 — Code Intelligence (Layer 1)
+### 3.1 Phase 3 — Code Intelligence (Layer 1 + Layer 2)
+
+> Phase 3 consolidates both deterministic analysis (L1) and retrieval/context (L2).
+> Structured as 3 gated sub-phases — each gate validates independently.
+> See `docs/plan/phase3-code-intelligence.md` for full plan.
+> See `docs/plan/phase3-review-notes.md` for review notes with R1-R5 recommendations.
+
+#### North Star Outcomes
+
+| Outcome | How Phase 3 Achieves It |
+|---------|------------------------|
+| **Reduced token cost** | 60-80% of queries answered with 0 LLM tokens via L1 deterministic routing |
+| **Reduced latency** | Structural queries in <50ms (vs 2-5s through LLM) |
+| **Fewer tool calls** | Router pre-answers "list symbols", "find definition", etc. — LLM never invoked |
+| **Better codebase understanding** | Tree-sitter extracts full symbol graph; repo map gives LLM structural context |
+| **Better search / RAG** | AST-aware chunking + hybrid BM25/vector search replaces naive grep |
+| **Better intellisense** | Deterministic symbol extraction, scope chains, type annotations, import analysis |
+| **Improved accuracy** | LLM receives curated context (repo map + search results + rules) instead of raw prompts |
+
+#### Phase 3-Alpha: Deterministic Intelligence (Gate 1)
+
+Sprints 3A + 3B. **This alone is a shippable demo of the core differentiator.**
 
 | Feature | Priority | Description |
 |---------|----------|-------------|
-| Tree-sitter parsing | P0 | Syntax analysis for Python, JS, Go, Java |
-| LSP integration (multilspy) | P0 | Types, references, definitions via Pyright/JDT-LS |
-| Static analysis (Semgrep) | P1 | Linting rules, known patterns |
-| Pattern matching | P1 | Known refactoring patterns (deterministic) |
+| Tree-sitter parser | P0 | Python parsing with mtime cache, <10ms per file, LRU 500 entries |
+| Symbol extraction | P0 | Functions, classes, methods, imports, variables with scope chains via QueryCursor API (0.25.x) |
+| Request router | P0 | 3-stage classification (regex → feature extraction → weighted scoring), no LLM. Routes 60-80% of queries to L1 |
+| Deterministic query handlers | P0 | `list_symbols`, `find_references` (grep), `find_definition`, `get_imports`, `get_signature`, `get_type_info` (AST annotation) |
+| Syntax/import validation | P1 | Validate Python syntax and imports via tree-sitter |
 
-### 3.2 Phase 4 — Context & Retrieval (Layer 2)
+**Gate 1 exit:** "list functions in X.py" returns correct results in <50ms with 0 tokens. Router classifies 90%+ of 25 test queries correctly.
+
+#### Phase 3-Beta: Retrieval Intelligence (Gate 2)
+
+Sprints 3D + 3E + 3F. Gives the LLM curated context instead of raw prompts.
 
 | Feature | Priority | Description |
 |---------|----------|-------------|
-| AST-aware code chunking | P0 | Intelligent code splitting for embedding |
-| Hybrid search (BM25 + vector) | P0 | LanceDB with jina-v2-base-code embeddings |
-| Project rules loading | P1 | `.rules/`, AGENTS.md, CLAUDE.md |
-| Repository map generation | P1 | Codebase structure overview |
+| AST-aware code chunker | P0 | Splits at function/class boundaries, 500-1500 token chunks, scope-aware |
+| Embedding engine | P0 | jina-v2-base-code (768-dim), CPU-only, lazy-loaded (~300MB, one-time download) |
+| LanceDB code index | P0 | Pydantic `LanceModel` schema, file-hash invalidation, incremental updates, gitignore-aware |
+| Hybrid search (BM25 + vector + RRF) | P0 | LanceDB built-in Tantivy FTS + vector search + Reciprocal Rank Fusion. BM25-only fallback when embeddings unavailable |
+| Repository map generator | P0 | Ranked symbol summary (query-aware boosting, recency, centrality), 800-token budget |
+| Rules loader | P1 | Loads CLAUDE.md, AGENTS.md, `.rules/*.md`, `.cursorrules`, `.hybridcoder/memory.md` |
+| Context assembler | P0 | Priority-based 5000-token budget: rules (300) + repo map (600) + chunks (2200) + file (800) + history (800) + buffer (300) |
 
-### 3.3 Phase 5 — Agentic Workflow (Layer 4)
+**Gate 2 exit:** Hybrid search returns relevant results (precision@3 > 60%). Context assembler stays within token budget. Index builds in <30s.
+
+#### Phase 3-Gamma: Integration + Polish (Gate 3)
+
+Sprint 3G. Wires everything into the product.
+
+| Feature | Priority | Description |
+|---------|----------|-------------|
+| 5 new agent tools | P0 | `find_references`, `find_definition`, `get_type_info`, `list_symbols`, `search_code` (11 total) |
+| `/index` slash command | P0 | Manual index rebuild with `--force` option |
+| L1 bypass in backend server | P0 | Router intercepts queries before agent loop — deterministic answers never touch LLM |
+| Layer indicator in Go TUI | P1 | Status bar shows `[L1]` or `[L4]` per response |
+| Context injection in system prompt | P0 | Repo map + rules + grounding instruction added to LLM prompts |
+| Layer1Config / Layer2Config | P1 | Configurable cache TTL, search top_k, chunk size, token budgets, relevance threshold |
+
+**Gate 3 exit:** All Phase 3 exit criteria pass. 11 tools registered. `make lint` passes.
+
+#### Deferred (Post-Phase 3)
+
+| Feature | Reason | Alternative |
+|---------|--------|-------------|
+| LSP integration (Sprint 3C) | multilspy v0.0.15 is early-stage; Python backend is Jedi not Pyright (weaker type inference) | Tree-sitter + grep covers 80%+ of use cases |
+| `get_diagnostics` tool | Requires LSP (no tree-sitter equivalent) | Deferred with Sprint 3C |
+| Multi-language support | Reduce scope risk; validate Python-first | Planned for post-Phase 3 |
+| Static analysis (Semgrep) | Not needed for core differentiator | Planned for Phase 5+ |
+| Pattern matching (refactoring) | Not needed for core differentiator | Planned for Phase 5+ |
+
+#### Phase 3 Test Targets
+
+| Metric | Target |
+|--------|--------|
+| New Python tests | ~157 |
+| New Go tests | ~5 |
+| Total tests (post-Phase 3) | ~671 (509 Python + 157 new + 202 Go + 5 new) |
+| Sprint verify tests | `tests/test_sprint_verify.py` Phase 3 section |
+| Coverage target | >70% |
+
+### 3.2 Phase 4 — Agentic Workflow (Layer 4)
+
+> L2 features (chunking, search, retrieval, context) moved to Phase 3.
+> Phase 4 is now the agentic workflow phase (previously numbered Phase 5).
 
 | Feature | Priority | Description |
 |---------|----------|-------------|
@@ -221,7 +290,7 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 | Compiler feedback loops (LLMLOOP) | P1 | Edit → compile → fix cycle |
 | Multi-file planning | P2 | Architect/editor pattern |
 
-### 3.4 Phase 6 — Polish & Benchmarking
+### 3.3 Phase 5 — Polish & Benchmarking
 
 | Feature | Priority | Description |
 |---------|----------|-------------|
@@ -229,7 +298,7 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 | Performance profiling | P1 | Memory, latency, token usage |
 | Documentation | P2 | User guide, API docs |
 
-### 3.5 Constrained Generation (Layer 3) — Cross-Phase
+### 3.4 Constrained Generation (Layer 3) — Cross-Phase
 
 | Feature | Priority | Description |
 |---------|----------|-------------|

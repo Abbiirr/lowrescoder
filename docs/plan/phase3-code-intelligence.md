@@ -13,7 +13,7 @@ Implement Layer 1 (deterministic analysis) and Layer 2 (retrieval & context) to 
 
 - Tree-sitter parsing extracts symbols, scopes, and imports in <10ms per file
 - A request router classifies queries and sends 60-80% of deterministic questions to Layer 1 with **zero LLM tokens**
-- LSP integration (Pyright via multilspy) provides type info, definitions, and references — with tree-sitter fallback when unavailable
+- LSP integration (Jedi via multilspy) provides type info, definitions, and references — with tree-sitter fallback when unavailable
 - AST-aware chunking splits code at function/class boundaries for semantic search
 - LanceDB-backed hybrid search (BM25 + vector + RRF) retrieves relevant code
 - Repository map and context assembler build optimized LLM prompts within a 6000-token budget
@@ -54,7 +54,7 @@ None of the major competitors route deterministic queries away from the LLM. The
 - Symbol extraction: functions, classes, methods, imports, variables with scope chains
 - Request router: regex + heuristic scoring, no LLM involved
 - Deterministic query handlers: list symbols, find references (grep fallback), get imports, get signatures
-- LSP client wrapper (multilspy + Pyright) with lazy server start and 30s cache TTL
+- LSP client wrapper (multilspy + Jedi) with lazy server start and 30s cache TTL
 - Graceful LSP degradation to tree-sitter + grep when server unavailable
 - AST-aware code chunker splitting at function/class boundaries
 - Embedding engine (jina-v2-base-code, CPU-only, lazy-loaded)
@@ -404,7 +404,7 @@ TestDeterministicQueryHandler:
 
 ### Sprint 3C: LSP Client Integration (2-3 days)
 
-**Goal:** Wrap multilspy for Pyright with lazy start, caching, and graceful degradation.
+**Goal:** Wrap multilspy for Jedi (Python's LSP backend in multilspy) with lazy start, caching, and graceful degradation.
 
 #### New File
 
@@ -469,11 +469,11 @@ TestLSPClient:
   test_shutdown_stops_server
 ```
 
-#### Integration Tests: `tests/integration/test_lsp_integration.py` (~6 tests, require Pyright)
+#### Integration Tests: `tests/integration/test_lsp_integration.py` (~6 tests, require multilspy + Jedi)
 ```
 @pytest.mark.integration
 TestLSPIntegration:
-  test_pyright_starts
+  test_jedi_lsp_starts
   test_definition_in_project
   test_references_in_project
   test_hover_info
