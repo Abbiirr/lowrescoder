@@ -432,7 +432,7 @@ tests/
 - [ ] Integration tests pass (if touching L1-L4)
 
 ### 7.2 Release Requirements (MVP)
-All 12 acceptance criteria from spec.md:
+All 12 acceptance criteria from plan.md Section 1.6 (MVP Acceptance Checklist):
 
 | # | Criterion | Test Suite |
 |---|-----------|-----------|

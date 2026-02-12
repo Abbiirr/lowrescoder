@@ -7,24 +7,7 @@
 
 ## 1. Project Overview
 
-**HybridCoder** is an edge-native AI coding assistant CLI that achieves Claude Code-level UX while running on consumer hardware (7-11B parameter models, 8GB VRAM, 16GB RAM).
-
-### Core Differentiators
-
-| Aspect | Cloud AI Coders | HybridCoder |
-|--------|----------------|-------------|
-| LLM Usage | First resort | **Last resort** |
-| Resource Requirement | Cloud API / 70B+ models | Local 7B model, 8GB VRAM |
-| Latency (simple queries) | 2-5 seconds | <100ms target |
-| Privacy | Data sent to cloud | **Fully local** |
-| Cost per task | $0.01-$0.50 | $0 after setup |
-
-### 4-Layer Intelligence Architecture
-
-1. **Layer 1 — Deterministic Analysis** (no LLM): Tree-sitter, LSP, static analysis, pattern matching. Target: <50ms, 0 tokens.
-2. **Layer 2 — Retrieval & Context** (no generative LLM): AST-aware chunking, BM25 + vector search, project rules. Target: 100-500ms, 0 tokens.
-3. **Layer 3 — Constrained Generation** (efficient LLM): Grammar-constrained decoding, small model (1.5B-3B). Target: 500ms-2s, 500-2000 tokens.
-4. **Layer 4 — Full Reasoning** (targeted LLM): 7B model for complex edits, architect/editor pattern. Target: 5-30s, 2000-8000 tokens.
+**HybridCoder** — Edge-native AI coding assistant CLI. Local-first, deterministic-first, consumer hardware (8GB VRAM). See `CLAUDE.md` for architecture (4-layer model), design principles, and technology stack.
 
 ---
 
@@ -197,8 +180,8 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 
 > Phase 3 consolidates both deterministic analysis (L1) and retrieval/context (L2).
 > Structured as 3 gated sub-phases — each gate validates independently.
-> See `docs/plan/phase3-code-intelligence.md` for full plan.
-> See `docs/plan/phase3-review-notes.md` for review notes with R1-R5 recommendations.
+> See `docs/plan/phase3-final-implementation.md` for authoritative plan.
+> Historical docs archived to `docs/archive/`.
 
 #### North Star Outcomes
 
@@ -251,7 +234,7 @@ Sprint 3G. Wires everything into the product.
 | 5 new agent tools | P0 | `find_references`, `find_definition`, `get_type_info`, `list_symbols`, `search_code` (11 total) |
 | `/index` slash command | P0 | Manual index rebuild with `--force` option |
 | L1 bypass in backend server | P0 | Router intercepts queries before agent loop — deterministic answers never touch LLM |
-| Layer indicator in Go TUI | P1 | Status bar shows `[L1]` or `[L4]` per response |
+| Layer indicator in Go TUI | P1 | Status bar shows `[L1]`, `[L2]`, or `[L4]` per response |
 | Context injection in system prompt | P0 | Repo map + rules + grounding instruction added to LLM prompts |
 | Layer1Config / Layer2Config | P1 | Configurable cache TTL, search top_k, chunk size, token budgets, relevance threshold |
 
@@ -308,54 +291,56 @@ Sprint 3G. Wires everything into the product.
 
 ---
 
-## 4. Current UX Issues
+## 4. Resolved UX Issues (Phase 2)
 
-### 4.1 Arrow-key selects removed in parallel mode
+All 8 Phase 2 UX issues have been resolved. Summary:
 
-**Status:** Fixed (Go TUI)
-**Root cause:** Nested prompt_toolkit Applications are unsafe while a `PromptSession` is active. Parallel mode replaced arrow-select with typed `y/s/n` responses.
-**Resolution:** Go Bubble Tea TUI uses stage-based model with dedicated `stageApproval` and `stageAskUser` stages. Arrow-key navigation works in all dialogs (approval, ask-user, session picker). 275 tests cover all interaction paths.
+| # | Issue | Resolution |
+|---|-------|-----------|
+| 4.1 | Arrow-key selects in parallel mode | Go TUI stage-based model with `stageApproval`/`stageAskUser` |
+| 4.2 | Input not fixed during streaming | Go Bubble Tea fixed input area via inline mode |
+| 4.3 | Cancel and message queue | `_cancel_generation()` clears queue |
+| 4.4 | Streaming smoothness | Go Bubble Tea 16ms tick batching, `tea.Println()` scrollback |
+| 4.5 | `/resume` copy-paste | Arrow-key session picker in Go TUI |
+| 4.6 | Shell enablement safety | Scoped to `run_command` tool only |
+| 4.7 | Backend shutdown race | Timeout-based wait: 5s grace, fallback kill, 2s drain |
+| 4.8 | Malformed JSON-RPC frames | Per-line unmarshal, invalid frames dropped not fatal |
 
-### 4.2 Input not visually fixed during streaming
+<details>
+<summary>Click for detailed root causes and resolutions</summary>
 
-**Status:** Fixed (Go TUI)
-**Root cause:** `patch_stdout` is line-buffered. Token streaming causes frequent flushes that trigger prompt re-rendering mid-line, producing interleaving (e.g., `Hello❯ who a`).
-**Resolution:** Go Bubble Tea renders a fixed input area at the bottom of the terminal via inline mode. `View()` always includes the input bar. Streaming content displays above it. No interleaving possible.
+**4.1 Arrow-key selects removed in parallel mode**
+Root cause: Nested prompt_toolkit Applications are unsafe while a `PromptSession` is active. Parallel mode replaced arrow-select with typed `y/s/n` responses.
+Resolution: Go Bubble Tea TUI uses stage-based model with dedicated `stageApproval` and `stageAskUser` stages. Arrow-key navigation works in all dialogs (approval, ask-user, session picker). 275 tests cover all interaction paths.
 
-### 4.3 Cancel and message queue
+**4.2 Input not visually fixed during streaming**
+Root cause: `patch_stdout` is line-buffered. Token streaming causes frequent flushes that trigger prompt re-rendering mid-line, producing interleaving.
+Resolution: Go Bubble Tea renders a fixed input area at the bottom of the terminal via inline mode. `View()` always includes the input bar. Streaming content displays above it.
 
-**Status:** Fixed
-**Resolution:** `_cancel_generation()` now calls `self._parallel_queue.clear()` (lines 446, 518, 581 in `app.py`). Cancel cancels current generation and clears the queue.
+**4.3 Cancel and message queue**
+Resolution: `_cancel_generation()` now calls `self._parallel_queue.clear()`. Cancel cancels current generation and clears the queue.
 
-### 4.4 Streaming smoothness
+**4.4 Streaming smoothness**
+Root cause: `patch_stdout`'s `StdoutProxy` line-buffering means tokens appear bursty without explicit flush, but flushing causes prompt interleaving.
+Resolution: Go Bubble Tea batches tokens at 16ms tick rate. Plain text streamed in `View()` live area, Glamour renders once on `on_done`, then `tea.Println()` commits to scrollback.
 
-**Status:** Fixed (Go TUI)
-**Root cause:** `patch_stdout`'s `StdoutProxy` line-buffering means tokens appear bursty without explicit flush, but flushing causes prompt interleaving.
-**Resolution:** Go Bubble Tea batches tokens at 16ms tick rate. Plain text streamed in `View()` live area, Glamour renders once on `on_done`, then `tea.Println()` commits to scrollback. No flicker or interleaving.
+**4.5 `/resume` copy-paste issue**
+Root cause: `/resume` without args dumped a plain-text session list requiring copy-paste of UUIDs.
+Resolution: Arrow-key session picker added. `/resume` without args shows interactive picker via `stageAskUser`. User navigates with Up/Down, selects with Enter, cancels with Escape.
 
-### 4.5 `/resume` copy-paste issue
+**4.6 Shell enablement safety**
+Root cause: `_approval_callback()` called `enable_shell()` for any "Yes, this session" approval regardless of tool type.
+Resolution: Shell enablement now scoped to `tool_name == "run_command"` only (Codex Entry 165).
 
-**Status:** Fixed
-**Root cause:** `/resume` without args dumped a plain-text session list requiring copy-paste of UUIDs.
-**Resolution:** Arrow-key session picker added (Go TUI). `/resume` without args shows an interactive picker via `stageAskUser` with sentinel `askRequestID == -1`. User navigates with Up/Down, selects with Enter, cancels with Escape. Full session ID sent via `session.resume` RPC. Additionally, backend validates empty/ambiguous prefixes with explicit errors.
+**4.7 Backend shutdown race**
+Root cause: Shutdown path used non-blocking `select`, immediately force-killing the process.
+Resolution: Real timeout-based wait: orderly shutdown request, 5s grace, fallback process-group kill, 2s goroutine drain (Codex Entry 165).
 
-### 4.6 Shell enablement safety
+**4.8 Malformed JSON-RPC frame resilience**
+Root cause: A single invalid JSON frame from the backend could terminate the entire TUI session.
+Resolution: Newline-framed reads with per-line unmarshal. Invalid frames are dropped with error surfaced to user, not session abort (Codex Entry 170).
 
-**Status:** Fixed
-**Root cause:** `_approval_callback()` called `enable_shell()` for any "Yes, this session" approval regardless of tool type. Approving `write_file` could silently enable shell execution.
-**Resolution:** Shell enablement now scoped to `tool_name == "run_command"` only (Codex Entry 165).
-
-### 4.7 Backend shutdown race
-
-**Status:** Fixed
-**Root cause:** Shutdown path used non-blocking `select`, immediately force-killing the process. No grace period.
-**Resolution:** Real timeout-based wait: orderly shutdown request, 5s grace, fallback process-group kill, 2s goroutine drain (Codex Entry 165).
-
-### 4.8 Malformed JSON-RPC frame resilience
-
-**Status:** Fixed
-**Root cause:** A single invalid JSON frame from the backend could terminate the entire TUI session.
-**Resolution:** Newline-framed reads with per-line unmarshal. Invalid frames are dropped with error surfaced to user, not session abort (Codex Entry 170).
+</details>
 
 ---
 

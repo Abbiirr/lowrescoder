@@ -101,6 +101,8 @@ Any participant can direct a message to one or more specific agents or humans. U
 
 **Note:** Always use `Directed to: <name>` in the header when handing off a task, so the target agent knows they own it.
 
+> For message templates and examples, see `docs/reference/comms-examples.md`.
+
 ## Review Principles
 
 - **Deterministic wins** — Prefer tree-sitter/LSP over embeddings over LLM generation.
@@ -115,6 +117,16 @@ Any participant can direct a message to one or more specific agents or humans. U
 - Prefer deterministic evidence over assumptions.
 - If blocking, say `Blocker: <reason>` and stop further action.
 - `AGENTS_CONVERSATION.MD` is the **single channel** — no side files, no review queues.
+
+## Reply and Archive Duty
+
+**Every agent session MUST check `AGENTS_CONVERSATION.MD` at startup and before finishing.**
+
+- **On startup**: Read the message log. If there are entries directed to you, respond to them before starting new work.
+- **Before finishing**: If you posted entries or received replies during this session, attempt to resolve and archive completed threads before the session ends.
+- **Reply promptly**: If an entry is directed to you, respond in the same session if possible. Do not let directed messages sit unacknowledged across multiple sessions.
+- **Archive aggressively**: Once a thread is fully resolved (both sides have acknowledged), the original author should archive it immediately — don't let resolved threads accumulate in the active log.
+- **Goal**: `AGENTS_CONVERSATION.MD` should have zero or near-zero entries at rest. Every entry should be either in-progress or archived.
 
 ## Workflow
 
@@ -159,78 +171,41 @@ A thread is **NOT resolved** if:
 
 ### When to read from archives
 
-Agents must **NOT** read from `docs/communication/old/` by default. Only read archived messages when:
+**Archives are OFF-LIMITS by default.** Agents must NOT read from `docs/communication/old/` unless one of these conditions is met:
 
 1. **The user explicitly asks** — e.g., "check the old conversation about X", "look up what was decided about Y"
-2. **An active entry references an archived thread** — e.g., "See `docs/communication/old/2026-02-05-kickoff.md` for prior context". Only read the specific file referenced, not the whole directory.
+2. **An active entry references a specific archived thread** — e.g., "See `docs/communication/old/2026-02-05-kickoff.md` for prior context". Only read the specific file referenced, not the whole directory.
 3. **Resolving a dispute** — If two agents disagree on a prior decision, the user may direct them to check the archive for evidence.
 
-In all other cases, treat archives as if they don't exist. Do not scan, list, or load archived files to "catch up" or "review history" — that defeats the purpose of archival.
+**In all other cases, treat archives as if they don't exist.** Do not scan, list, or load archived files to "catch up" or "review history". Do not read archives "just in case" or to build context. If you need context, read the active docs listed in CLAUDE.md's "Where to Find What" index. The whole point of archival is to keep agent context windows lean.
+
+## Mandatory Documentation Sync
+
+**Docs MUST always reflect the true state of the project. This is non-negotiable.**
+
+### Rules
+
+1. **Update docs WITH code changes, not after.** If you change code that affects plan.md, requirements_and_features.md, session-onramp.md, or any doc, update the doc in the SAME session. Do not leave doc updates for "later" — later never comes.
+
+2. **Never deviate from the plan silently.** If implementation diverges from what's documented in plan.md or phase execution docs:
+   - STOP and update the plan doc FIRST to reflect the new reality
+   - Log a comms entry explaining WHY the deviation happened
+   - Get user acknowledgment for significant deviations
+   - Only THEN continue with the divergent implementation
+
+3. **If you discover docs are out of sync**, fix them immediately or log a Critical severity concern in AGENTS_CONVERSATION.MD.
+
+4. **The user is the only authority** who can approve deviations from the plan. Agents cannot unilaterally decide to change direction.
+
+### Why this matters
+
+If we deviate from the plan and then update documents after the fact, we lose track of what actually happened and why. The project state becomes unknowable. Docs are the single source of truth — if they're wrong, everything built on them is unreliable.
 
 ## Testing Requirements
 
-**All agents MUST run tests before posting any review request or task completion message.**
+> Full testing commands: see CLAUDE.md "Testing (Required)" section.
 
-```bash
-# Required before any review request or task handoff
-uv run pytest tests/ -v
-uv run ruff check src/ tests/
-uv run mypy src/
-
-# Sprint verification (required at sprint boundaries)
-uv run pytest tests/test_sprint_verify.py -v
-```
-
+- All agents MUST run tests before posting any review request or task completion message.
 - If tests fail, fix the issues before posting. Do not send review requests with failing tests.
 - Include test results (pass count, any failures) in review requests and task completion messages.
 - New code must include tests. Reviewers should flag missing test coverage.
-
----
-
-## Examples
-
-### Concern (directed to a specific agent)
-
-```
-Agent: Codex | Role: Reviewer | Layer: 2 | Context: Plan review | Intent: Flag feasibility risk
-Directed to: Claude
-
-Concern: The timeline in `plan1.md:14` appears unfeasible given current scope.
-Severity: Medium
-Evidence: `plan1.md:14` targets full Layer 2 retrieval in 1 week; in similar builds, embedding pipeline + index tuning exceeded 2 weeks.
-Proposed Fix: Extend the milestone by one week or split into chunking first, embeddings/index second.
-Question: Is the 1-week target fixed due to an external deadline?
-```
-
-### Review (directed to multiple reviewers)
-
-```
-Agent: Claude | Role: Coder | Layer: 3 | Context: Phase 2D review request | Intent: Get code reviewed
-Directed to: Codex, OpenCode
-
-Phase 2D implementation complete. Requesting review of inline UX rewrite.
-Files: src/hybridcoder/inline/app.py, src/hybridcoder/inline/renderer.py
-Tests: 396 passed, ruff clean, mypy clean.
-```
-
-### Task Handoff (directed to an agent)
-
-```
-Agent: Claude | Role: Architect | Layer: N/A | Context: Sprint 0 setup | Intent: Assign project scaffolding to Codex
-Directed to: Codex
-
-Action requested: Create project scaffolding with pyproject.toml, src/hybridcoder/, and tests/ directories.
-Files involved: pyproject.toml, src/hybridcoder/__init__.py, tests/conftest.py
-Context: docs/claude/phase4-implementation.md Sprint 0
-Priority: High — blocks all other work.
-```
-
-### Asking the human for a decision
-
-```
-Agent: Codex | Role: Architect | Layer: N/A | Context: UX direction | Intent: Get product decision
-Directed to: User
-
-Question: Should we keep two UIs long-term (inline + Textual) or converge to a single renderer?
-Options: (A) Keep both, inline canonical. (B) Converge to custom renderer in Phase 5.
-```

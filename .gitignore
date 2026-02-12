@@ -42,3 +42,9 @@ cmd/hybridcoder-tui-spike/
 Thumbs.db
 .DS_Store
 nul
+
+.claude/
+sandboxes/
+docs/qa/test-results/
+docs/qa/e2e-test-results/
+docs/qa/phase3-benchmarks/

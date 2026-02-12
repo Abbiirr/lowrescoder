@@ -196,6 +196,10 @@ def chat(
     if verbose:
         config.ui.verbose = True
 
+    from hybridcoder.core.logging import setup_logging
+
+    setup_logging(config.logging, verbose=verbose)
+
     if legacy:
         asyncio.run(_chat_loop(config))
     elif tui or alternate_screen:
@@ -253,6 +257,10 @@ def ask(
     config = load_config()
     if verbose:
         config.ui.verbose = True
+
+    from hybridcoder.core.logging import setup_logging
+
+    setup_logging(config.logging, verbose=verbose)
     asyncio.run(_ask_once(question, config, file))
 
 
@@ -321,14 +329,10 @@ def serve(
 ) -> None:
     """Start JSON-RPC backend server for the Go TUI frontend."""
     from hybridcoder.backend.server import main as server_main
+    from hybridcoder.core.logging import setup_logging
 
-    if verbose:
-        import logging
-
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="%(levelname)s %(name)s: %(message)s",
-        )
+    config = load_config()
+    setup_logging(config.logging, verbose=verbose)
     asyncio.run(server_main())
 
 

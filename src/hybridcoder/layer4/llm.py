@@ -6,7 +6,9 @@ Provider selected by config.llm.provider.
 
 from __future__ import annotations
 
+import logging
 import os
+import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
@@ -14,6 +16,9 @@ from typing import Any, Protocol, runtime_checkable
 from pydantic import BaseModel
 
 from hybridcoder.config import HybridCoderConfig
+from hybridcoder.core.logging import log_event
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -178,6 +183,12 @@ class OllamaProvider:
         client = ollama.AsyncClient(host=self.api_base)
         options = {"temperature": self.temperature, "num_predict": self.max_tokens}
 
+        log_event(
+            logger, logging.DEBUG, "llm_request",
+            provider="ollama", model=self.model,
+        )
+        _start = time.monotonic()
+
         try:
             result = await client.chat(
                 model=self.model,
@@ -195,6 +206,7 @@ class OllamaProvider:
                 options=options,
             )
 
+        _duration_ms = int((time.monotonic() - _start) * 1000)
         raw_content = result.message.content or ""
         tool_calls: list[ToolCall] = []
 
@@ -216,6 +228,14 @@ class OllamaProvider:
 
         # Parse <think> tags (DeepSeek R1 style models on Ollama)
         content, reasoning = _parse_think_tags(raw_content)
+
+        log_event(
+            logger, logging.DEBUG, "llm_response",
+            provider="ollama", model=self.model,
+            duration_ms=_duration_ms,
+            content_length=len(content),
+            tool_calls_count=len(tool_calls),
+        )
 
         if on_chunk and content:
             on_chunk(content)
@@ -320,6 +340,12 @@ class OpenRouterProvider:
         if reasoning_enabled:
             extra_body["reasoning"] = {"enabled": True}
 
+        log_event(
+            logger, logging.DEBUG, "llm_request",
+            provider="openrouter", model=self.model,
+        )
+        _start = time.monotonic()
+
         content_parts: list[str] = []
         reasoning_parts: list[str] = []
         tool_call_data: dict[int, dict[str, Any]] = {}
@@ -413,10 +439,14 @@ class OpenRouterProvider:
             # If we got partial content before the error, include it
             # Otherwise re-raise so the caller (agent loop) handles it
             if not content_parts and not tool_call_data:
+                log_event(
+                    logger, logging.ERROR, "llm_error",
+                    provider="openrouter", model=self.model, error=str(e),
+                )
                 raise
-            import logging
-            logging.getLogger(__name__).warning("OpenRouter stream error (partial data kept): %s", e)
+            logger.warning("OpenRouter stream error (partial data kept): %s", e)
 
+        _duration_ms = int((time.monotonic() - _start) * 1000)
         content = "".join(content_parts) or None
         reasoning = "".join(reasoning_parts) or None
         tool_calls: list[ToolCall] = []
@@ -430,6 +460,14 @@ class OpenRouterProvider:
                 name=tc_data["name"],
                 arguments=args,
             ))
+
+        log_event(
+            logger, logging.DEBUG, "llm_response",
+            provider="openrouter", model=self.model,
+            duration_ms=_duration_ms,
+            content_length=len(content or ""),
+            tool_calls_count=len(tool_calls),
+        )
 
         return LLMResponse(
             content=content,

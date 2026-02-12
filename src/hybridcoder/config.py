@@ -118,6 +118,18 @@ class TUIConfig(BaseModel):
     alternate_screen: bool = False
 
 
+class LoggingConfig(BaseModel):
+    """Logging and observability configuration."""
+
+    console_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "WARNING"
+    file_enabled: bool = True
+    file_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "DEBUG"
+    log_dir: str = "~/.hybridcoder/logs"
+    max_file_size_mb: int = Field(default=10, ge=1, le=100)
+    max_files: int = Field(default=5, ge=1, le=50)
+    debug_prompts: bool = False
+
+
 # --- Top-level config ---
 
 
@@ -134,6 +146,7 @@ class HybridCoderConfig(BaseModel):
     shell: ShellConfig = Field(default_factory=ShellConfig)
     ui: UIConfig = Field(default_factory=UIConfig)
     tui: TUIConfig = Field(default_factory=TUIConfig)
+    logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
 
 # --- Config loading ---
@@ -176,6 +189,8 @@ def _apply_env_overrides(data: dict[str, object]) -> dict[str, object]:
         "HYBRIDCODER_LLM_TEMPERATURE": ("llm", "temperature"),
         "HYBRIDCODER_LLM_MAX_TOKENS": ("llm", "max_tokens"),
         "HYBRIDCODER_UI_VERBOSE": ("ui", "verbose"),
+        "HYBRIDCODER_LOG_LEVEL": ("logging", "console_level"),
+        "HYBRIDCODER_LOG_DEBUG_PROMPTS": ("logging", "debug_prompts"),
     }
 
     for env_var, (section, key) in env_map.items():

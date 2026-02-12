@@ -89,7 +89,7 @@ hybridcoder/
 │   └── conftest.py                  # Shared fixtures
 ├── docs/
 │   ├── plan.md
-│   ├── spec.md
+│   ├── archive/                     # Superseded/historical docs
 │   └── claude/                      # Research & plan documents
 ├── pyproject.toml
 ├── Makefile

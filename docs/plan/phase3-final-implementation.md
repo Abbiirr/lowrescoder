@@ -1,14 +1,17 @@
 # Phase 3: Code Intelligence — Final Implementation Plan
 
-> **This is the definitive implementation plan.** It defines scope, decisions, gates, exit criteria, and benchmarks. For implementation-level detail (class pseudocode, method signatures, regex patterns, full test names), see [`phase3-code-intelligence.md`](phase3-code-intelligence.md) — the original plan remains the implementation reference, but this document overrides it on all decisions listed below.
+> **This is the definitive implementation plan.** It defines the authoritative Phase 3 scope, tools, budgets, gates, exit criteria, and benchmark targets.
+>
+> The older document [`phase3-code-intelligence.md`](phase3-code-intelligence.md) is now a historical implementation notebook. Use it only for low-level pseudocode that does not conflict with this file.
 >
 > **Related documents:**
+> - [`phase3-execution-brief.md`](phase3-execution-brief.md) — One-page execution contract (daily implementation view)
 > - [`phase3-code-intelligence.md`](phase3-code-intelligence.md) — Implementation detail (pseudocode, class specs, method signatures, test lists)
 > - [`phase3-review-notes.md`](phase3-review-notes.md) — Review history (concerns, recommendations, review rounds)
 > - [`benchmark-testing-strategy.md`](benchmark-testing-strategy.md) — Full benchmark framework (9 industry benchmarks, 6 tiers, competitor comparison)
 >
-> Version: 2.0 | Date: 2026-02-09
-> Status: READY FOR REVIEW — pending Codex APPROVE before implementation begins
+> Version: 2.1 | Date: 2026-02-12
+> Status: DRIFT-FIXED DRAFT — aligned after Codex implementation-gap audit
 
 ---
 
@@ -23,6 +26,17 @@
 | **3 gated sub-phases** (Alpha/Beta/Gamma) | Review notes R5, user direction | Independent validation at each gate |
 | **Concern 2.8 resolved** (Pyright→Jedi was historical) | Codex Entry 179, Concern 4 | Plan now says Jedi everywhere |
 | **Layer indicator: L1/L2/L4** (not just L1/L4) | Codex Entry 179, Concern 5 | Protocol emits `layer_used=2` for retrieval path |
+
+## Implementation Source Of Truth
+
+| Topic in `phase3-code-intelligence.md` | Status | Replacement in this doc |
+|----------------------------------------|--------|--------------------------|
+| Sprint 3C (LSP) in active scope | **Superseded** | Section 4 ("What's Deferred") |
+| `get_diagnostics` as a Phase 3 tool | **Superseded** | Section 3 ("Tools After Phase 3: 11 Total") |
+| Tool count = 12 | **Superseded** | Section 3 + Section 5 (11 tools) |
+| Context budget = 6000 | **Superseded** | Section 3F + Section 5 (5000 budget) |
+| Layer indicator `[L1]/[L4]` only | **Superseded** | Section 2 (L1/L2/L4) |
+| "Pyright via multilspy" assumptions | **Superseded** | Section 4 (LSP deferred; Jedi note retained for future) |
 
 ---
 
@@ -234,10 +248,10 @@ Wire everything together. Add tools, update TUI, run full verification.
 |---|------|--------|-------|
 | 1 | `read_file` | Phase 2 (existing) | — |
 | 2 | `write_file` | Phase 2 (existing) | — |
-| 3 | `apply_diff` | Phase 2 (existing) | — |
-| 4 | `search_replace` | Phase 2 (existing) | — |
+| 3 | `list_files` | Phase 2 (existing) | — |
+| 4 | `search_text` | Phase 2 (existing) | — |
 | 5 | `run_command` | Phase 2 (existing) | — |
-| 6 | `list_directory` | Phase 2 (existing) | — |
+| 6 | `ask_user` | Phase 2 (existing) | — |
 | 7 | `find_references` | **Phase 3 (new)** | L1 — grep + tree-sitter |
 | 8 | `find_definition` | **Phase 3 (new)** | L1 — tree-sitter + grep |
 | 9 | `get_type_info` | **Phase 3 (new)** | L1 — AST type annotation only |
@@ -439,17 +453,37 @@ lsp = [
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `enabled` | bool | True | Enable L1 deterministic routing |
+| `cache_ttl` | int | 300 | Parse-cache TTL (seconds) |
 | `cache_max_entries` | int | 500 | Max cached parse trees |
 
 ### Layer2Config
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
+| `embedding_model` | str | jinaai/jina-embeddings-v2-base-code | Embedding model ID |
+| `search_top_k` | int | 10 | Default search result count |
+| `chunk_size` | int | 1000 | Chunk-size guardrail for chunker |
+| `hybrid_weight` | float | 0.5 | BM25 vs vector blend weight |
 | `db_path` | str | ~/.hybridcoder/index.lancedb | LanceDB storage path |
 | `relevance_threshold` | float | 0.3 | Minimum search relevance score |
 | `max_files` | int | 50000 | Max files to index |
 | `repomap_budget` | int | 600 | Repo map token budget |
 | `context_budget` | int | 5000 | Total context token budget |
+
+### Configuration Migration Rules
+
+| Existing key | Phase 3 behavior | Compatibility requirement |
+|--------------|------------------|---------------------------|
+| `layer1.cache_ttl` | Keep active | Backward-compatible; do not break existing configs |
+| `layer2.embedding_model` | Keep active | Backward-compatible |
+| `layer2.search_top_k` | Keep active | Backward-compatible |
+| `layer2.chunk_size` | Keep active | Backward-compatible |
+| `layer2.hybrid_weight` | Keep active | Backward-compatible |
+| `layer2.db_path` | New in Phase 3 | Default if missing |
+| `layer2.relevance_threshold` | New in Phase 3 | Default if missing |
+| `layer2.max_files` | New in Phase 3 | Default if missing |
+| `layer2.repomap_budget` | New in Phase 3 | Default if missing |
+| `layer2.context_budget` | New in Phase 3 | Default if missing |
 
 ---
 
@@ -499,10 +533,10 @@ lsp = [
 
 | # | Decision | Entry | Status |
 |---|----------|-------|--------|
-| 1 | Defer Sprint 3C (LSP) to post-Phase 3 | Review notes R2, Codex 174/179 | **Proposed — needs Codex APPROVE** |
+| 1 | Defer Sprint 3C (LSP) to post-Phase 3 | Review notes R2, Codex 174/179 | **Done** |
 | 2 | Pyright → Jedi in all plan references | Codex Entry 174 | **Done** |
-| 3 | `get_diagnostics` deferred (no multilspy API) | Codex Entry 179 | **Proposed — needs Codex APPROVE** |
-| 4 | 3 gated sub-phases (Alpha/Beta/Gamma) | Review notes R5, user direction | **Proposed — needs Codex APPROVE** |
-| 5 | Context budget 6000 → 5000 tokens | Review notes R4, Codex 174 | **Proposed — needs Codex APPROVE** |
-| 6 | Layer indicator L1/L2/L4 (not just L1/L4) | Codex Entry 179 | **Proposed — needs Codex APPROVE** |
-| 7 | Tool count 12 → 11 | Follows from decisions 1, 3 | **Proposed — needs Codex APPROVE** |
+| 3 | `get_diagnostics` deferred (no multilspy API) | Codex Entry 179 | **Done** |
+| 4 | 3 gated sub-phases (Alpha/Beta/Gamma) | Review notes R5, user direction | **Done** |
+| 5 | Context budget 6000 → 5000 tokens | Review notes R4, Codex 174 | **Done** |
+| 6 | Layer indicator L1/L2/L4 (not just L1/L4) | Codex Entry 179 | **Done** |
+| 7 | Tool count 12 → 11 | Follows from decisions 1, 3 | **Done** |

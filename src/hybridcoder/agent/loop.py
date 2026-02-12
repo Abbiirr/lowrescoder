@@ -9,6 +9,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from hybridcoder.agent.approval import ApprovalManager
+from hybridcoder.core.logging import log_event
 from hybridcoder.agent.prompts import build_system_prompt
 from hybridcoder.agent.tools import ToolRegistry
 from hybridcoder.layer4.llm import LLMResponse, ToolCall
@@ -76,6 +77,7 @@ class AgentLoop:
             The final assistant text response.
         """
         self._cancelled = False
+        _run_start = time.monotonic()
         logger.debug("AgentLoop.run start: %s", user_message[:80])
 
         # Store user message
@@ -91,6 +93,13 @@ class AgentLoop:
 
         tool_schemas = self.tool_registry.get_schemas_openai_format()
         logger.debug("Loaded %d tool schemas, %d messages", len(tool_schemas), len(messages))
+        log_event(
+            logger, logging.INFO, "agent_loop_start",
+            session_id=self.session_id,
+            user_message_length=len(user_message),
+            message_count=len(messages),
+            tool_count=len(tool_schemas),
+        )
 
         for _iteration in range(self.MAX_ITERATIONS):
             if self._cancelled:
@@ -99,14 +108,31 @@ class AgentLoop:
 
             # Call LLM with tools
             logger.debug("Iteration %d: calling generate_with_tools", _iteration)
+            log_event(
+                logger, logging.INFO, "llm_request",
+                session_id=self.session_id,
+                iteration=_iteration,
+                provider=getattr(self.provider, "model", "unknown"),
+            )
+            _llm_start = time.monotonic()
             response: LLMResponse = await self.provider.generate_with_tools(
                 messages, tool_schemas,
                 on_chunk=on_chunk,
                 on_thinking_chunk=on_thinking_chunk,
             )
+            _llm_ms = int((time.monotonic() - _llm_start) * 1000)
             logger.debug(
                 "LLM response: content=%s, tool_calls=%d, reasoning=%s",
                 bool(response.content), len(response.tool_calls), bool(response.reasoning),
+            )
+            log_event(
+                logger, logging.INFO, "llm_response",
+                session_id=self.session_id,
+                iteration=_iteration,
+                duration_ms=_llm_ms,
+                content_length=len(response.content or ""),
+                tool_calls_count=len(response.tool_calls),
+                finish_reason=response.finish_reason,
             )
 
             # If text-only response (no tool calls), we're done
@@ -114,6 +140,13 @@ class AgentLoop:
                 text = response.content or ""
                 self.session_store.add_message(self.session_id, "assistant", text)
                 logger.debug("Text-only response, returning (%d chars)", len(text))
+                log_event(
+                    logger, logging.INFO, "agent_loop_end",
+                    session_id=self.session_id,
+                    iterations=_iteration + 1,
+                    total_duration_ms=int((time.monotonic() - _run_start) * 1000),
+                    outcome="text_response",
+                )
                 return text
 
             # Process tool calls
@@ -148,8 +181,20 @@ class AgentLoop:
                 })
 
         # Max iterations reached — get final text response without tools
+        log_event(
+            logger, logging.WARNING, "agent_loop_max_iterations",
+            session_id=self.session_id,
+            iterations=self.MAX_ITERATIONS,
+        )
         final_text = response.content or "[Max iterations reached]"
         self.session_store.add_message(self.session_id, "assistant", final_text)
+        log_event(
+            logger, logging.INFO, "agent_loop_end",
+            session_id=self.session_id,
+            iterations=self.MAX_ITERATIONS,
+            total_duration_ms=int((time.monotonic() - _run_start) * 1000),
+            outcome="max_iterations",
+        )
         return final_text
 
     async def _handle_ask_user(
@@ -224,6 +269,12 @@ class AgentLoop:
             )
 
         logger.debug("Executing tool: %s(%s)", tc.name, list(tc.arguments.keys()))
+        log_event(
+            logger, logging.INFO, "tool_call_start",
+            session_id=self.session_id,
+            tool_name=tc.name,
+            argument_keys=list(tc.arguments.keys()),
+        )
         tool = self.tool_registry.get(tc.name)
         if tool is None:
             error = f"Unknown tool: {tc.name}"
@@ -234,6 +285,10 @@ class AgentLoop:
         # Check if blocked
         blocked, reason = self.approval_manager.is_blocked(tc.name, tc.arguments)
         if blocked:
+            log_event(
+                logger, logging.WARNING, "tool_blocked",
+                session_id=self.session_id, tool_name=tc.name, reason=reason,
+            )
             if on_tool_call:
                 on_tool_call(tc.name, "blocked", reason)
             return f"Blocked: {reason}"
@@ -256,6 +311,10 @@ class AgentLoop:
             if approval_callback:
                 approved = await approval_callback(tc.name, tc.arguments)
                 if not approved:
+                    log_event(
+                        logger, logging.WARNING, "tool_denied",
+                        session_id=self.session_id, tool_name=tc.name,
+                    )
                     if on_tool_call:
                         on_tool_call(tc.name, "denied", "User denied")
                     return "Tool call denied by user."
@@ -289,6 +348,11 @@ class AgentLoop:
             self.session_store.update_tool_call(
                 tc_row_id, result=result, status="completed", duration_ms=duration_ms,
             )
+            log_event(
+                logger, logging.INFO, "tool_call_end",
+                session_id=self.session_id, tool_name=tc.name,
+                duration_ms=duration_ms, status="completed",
+            )
             if on_tool_call:
                 on_tool_call(tc.name, "completed", result)
 
@@ -302,6 +366,11 @@ class AgentLoop:
             error = f"Error: {e}"
             self.session_store.update_tool_call(
                 tc_row_id, result=error, status="error", duration_ms=duration_ms,
+            )
+            log_event(
+                logger, logging.WARNING, "tool_call_end",
+                session_id=self.session_id, tool_name=tc.name,
+                duration_ms=duration_ms, status="error",
             )
             if on_tool_call:
                 on_tool_call(tc.name, "error", error)

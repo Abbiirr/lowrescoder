@@ -301,7 +301,7 @@ hybridcoder/
 ├── docs/
 │   ├── architecture.md         # This file
 │   ├── plan.md                 # Product roadmap
-│   ├── spec.md                 # System specification
+│   ├── archive/                # Superseded/historical docs
 │   └── plan/                   # Implementation plans
 ├── Makefile                    # Build targets
 ├── pyproject.toml              # Python project config

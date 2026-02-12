@@ -962,7 +962,7 @@ tests/benchmark/
 
 - Run subset of real SWE-bench Verified (5-10 cases)
 - Compare to Aider on Exercism problems (10 cases)
-- Measure against our own success criteria (from spec.md)
+- Measure against our own success criteria (from plan.md Section 1.6)
 
 **Acceptance criteria (from CLAUDE.md):**
 - LLM call reduction: 60-80% vs naive ✓

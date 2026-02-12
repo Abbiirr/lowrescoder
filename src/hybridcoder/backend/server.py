@@ -11,10 +11,12 @@ import asyncio
 import json
 import logging
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
 from hybridcoder.agent.approval import ApprovalManager, ApprovalMode
+from hybridcoder.core.logging import log_event
 from hybridcoder.agent.loop import AgentLoop
 from hybridcoder.agent.tools import ToolRegistry, create_default_registry
 from hybridcoder.config import HybridCoderConfig, load_config
@@ -523,7 +525,7 @@ class BackendServer:
             try:
                 msg = json.loads(line_str)
             except json.JSONDecodeError:
-                logger.warning("Invalid JSON: %s", line_str[:100])
+                log_event(logger, logging.WARNING, "rpc_error", error="invalid_json")
                 continue
 
             # Route message
@@ -557,6 +559,8 @@ class BackendServer:
 
     async def _dispatch(self, method: str, params: dict[str, Any], request_id: int) -> None:
         """Dispatch a JSON-RPC request to the appropriate handler."""
+        _dispatch_start = time.monotonic()
+        log_event(logger, logging.DEBUG, "rpc_request", method=method, request_id=request_id)
         if method == "chat":
             message = params.get("message", "")
             session_id = params.get("session_id")
@@ -588,14 +592,18 @@ class BackendServer:
         else:
             if request_id:
                 self.emit_response(request_id, {"error": f"Unknown method: {method}"})
+        log_event(
+            logger, logging.DEBUG, "rpc_response",
+            method=method, request_id=request_id,
+            duration_ms=int((time.monotonic() - _dispatch_start) * 1000),
+        )
 
 
 async def main() -> None:
     """Entry point for the JSON-RPC backend server."""
-    logging.basicConfig(
-        level=logging.WARNING,
-        format="%(levelname)s %(name)s: %(message)s",
-        stream=sys.stderr,
-    )
-    server = BackendServer()
+    from hybridcoder.core.logging import setup_logging
+
+    config = load_config()
+    setup_logging(config.logging)
+    server = BackendServer(config=config)
     await server.run()

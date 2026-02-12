@@ -57,7 +57,10 @@ mypy_path = "src"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["integration: marks tests requiring external services (deselected by default)"]
+markers = [
+    "integration: marks tests requiring external services (deselected by default)",
+    "benchmark: marks benchmark tests",
+]
 addopts = "-m 'not integration'"
 
 [dependency-groups]

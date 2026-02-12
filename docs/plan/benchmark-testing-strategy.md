@@ -29,7 +29,7 @@
 
 | Benchmark | What it Tests | Problems | Metrics | Suitable Phase |
 |-----------|--------------|----------|---------|----------------|
-| **SWE-Bench Verified** | Real GitHub issue resolution (human-verified subset) | 500 issues | resolved % | Phase 5-6 |
+| **SWE-Bench Verified** | Real GitHub issue resolution (human-verified subset) | 500 issues | resolved % | Phase 5+ |
 | **CodeArena** | Full application building, collective evaluation | ~400 challenges | collective score | Phase 6 |
 
 ### Benchmark Selection Rationale
@@ -44,7 +44,7 @@
 
 4. **SWE-Bench Verified**: The gold standard for agentic coding evaluation. Tests real-world bug fixing on popular open-source repos. The "Verified" subset (500 issues) is human-validated for solvability.
 
-5. **BigCodeBench / CodeArena**: Stretch goals for Phase 5-6. Tests complex, multi-library, real-world tasks beyond simple function completion.
+5. **BigCodeBench / CodeArena**: Stretch goals for Phase 5+. Tests complex, multi-library, real-world tasks beyond simple function completion.
 
 **What we're NOT using and why:**
 
@@ -79,9 +79,9 @@ Tests Layer 1 and Layer 2 capabilities individually.
 |------|--------|--------|
 | "List functions in X.py" returns correct names | 100% recall | Compare against tree-sitter ground truth |
 | "Find usages of ClassName" finds all references | >80% recall | Compare against grep ground truth |
-| "What type is variable X" returns type info | Correct when available | Compare against Pyright output |
+| "What type is variable X" returns type info | Correct when annotation is explicit | Compare against AST annotation fixtures (LSP deferred in Phase 3) |
 | Hybrid search returns relevant code chunks | precision@3 > 60% | Known-answer search queries |
-| Context assembler stays within token budget | 100% under 6000 tokens | Assert on 20 diverse queries |
+| Context assembler stays within token budget | 100% under 5000 tokens | Assert on 20 diverse queries |
 | Repo map includes key project symbols | Top-10 symbols present | Manual verification |
 | Rules loader finds CLAUDE.md | Always found when present | Test with/without file |
 
@@ -106,7 +106,7 @@ Measures whether HybridCoder's context pipeline **helps** the LLM generate bette
 | Edit verification (does code compile/pass tests?) | 100% verification runs | Automated compile + test after each edit |
 | Rollback safety (can we undo failed edits?) | 100% undoable | Git-based rollback on every failure |
 
-### Tier 4: Agentic Task Completion (Phase 5-6)
+### Tier 4: Agentic Task Completion (Phase 4-5)
 
 | Test | Target | Method |
 |------|--------|--------|
@@ -115,7 +115,7 @@ Measures whether HybridCoder's context pipeline **helps** the LLM generate bette
 | React calculator app (see separate doc) | >60 points / 100 | Full build + evaluation rubric |
 | Token efficiency vs naive approach | 60-80% fewer tokens | Compare token logs for same tasks |
 
-### Tier 5: Real-World Stress Tests (Phase 6)
+### Tier 5: Real-World Stress Tests (Phase 5+)
 
 | Test | Target | Method |
 |------|--------|--------|
@@ -166,7 +166,7 @@ DETERMINISTIC_QUERIES = [
     "show classes in layer1/parser.py",
     "what variables are in config.py",
     "find callers of emit_notification",
-    "show diagnostics for server.py",
+    "list imports in backend/server.py",
     "list symbols in context.py",
     # ... (25 total)
 ]
@@ -238,7 +238,7 @@ KNOWN_ANSWER_QUERIES = [
 # - Complex (multi-file question): context should approach but not exceed budget
 # - Edge case (empty project, no rules file, no index)
 
-# Assert: assembled context is ALWAYS under 6000 tokens (or configured budget)
+# Assert: assembled context is ALWAYS under 5000 tokens (or configured budget)
 # Token counting: approximate at 4 chars/token (same heuristic as context assembler)
 ```
 
@@ -346,7 +346,7 @@ After each phase, generate a benchmark report:
 |----------------|-----------|----------|---------|
 | Deterministic  | 0         | ~2000    | 100%    |
 | Search-augmented | 2500    | ~5000    | 50%     |
-| Complex/Chat   | 6000     | ~8000    | 25%     |
+| Complex/Chat   | 5000     | ~8000    | 37.5%   |
 
 ## Regressions
 (List any metrics that got worse since last report)
@@ -444,9 +444,8 @@ Not directly comparable (different model tier, IDE vs CLI). Include only for mar
 | Phase | Benchmark Tiers | Key Tests | When |
 |-------|----------------|-----------|------|
 | Phase 3 | Tier 0, Tier 1 | Routing, latency, search, budget | During Phase 3 sprints |
-| Phase 4 | Tier 2, Tier 3 | HumanEval, MBPP, Aider edit | After edit system ships |
-| Phase 5 | Tier 4 | SWE-Bench subset, React calculator | After agentic workflow ships |
-| Phase 6 | Tier 5 | Stress tests, competitor comparison | Final polish phase |
+| Phase 4 | Tier 2, Tier 3 | HumanEval, MBPP, Aider edit | After Phase 4 agentic workflow baseline |
+| Phase 5 | Tier 4, Tier 5 | SWE-Bench subset, React calculator, stress tests | During polish + benchmarking |
 
 ### Phase 3 Benchmark Checklist
 
@@ -500,3 +499,23 @@ uv run pytest tests/benchmark/ -v --benchmark-json=benchmark_results.json
 ```
 
 Benchmark tests should be marked with `@pytest.mark.benchmark` so they can be run separately from unit tests. They should NOT be included in the default `make test` run (they're slower and may require additional setup).
+
+## 8. Before/After Phase 3 Benchmark Protocol
+
+Run benchmark snapshots twice:
+- **Before Phase 3 implementation** (baseline)
+- **After Phase 3 implementation** (verification)
+
+Use:
+
+```bash
+./scripts/run_phase3_benchmark_snapshot.sh before
+./scripts/run_phase3_benchmark_snapshot.sh after
+```
+
+This generates timestamped reports and raw logs in `docs/qa/phase3-benchmarks/`.
+
+Comparison rule:
+- Keep command set identical between before/after runs.
+- Compare Tier 0/Tier 1 metrics first (routing, latency, budget, search).
+- Treat any regression in deterministic latency or accuracy as release-blocking.

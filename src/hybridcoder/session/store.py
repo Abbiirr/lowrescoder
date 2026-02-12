@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
+from hybridcoder.core.logging import log_event
 from hybridcoder.session.models import DDL, MessageRow, SessionRow
+
+logger = logging.getLogger(__name__)
 
 
 def _now_iso() -> str:
@@ -49,6 +53,10 @@ class SessionStore:
             (session_id, title, model, provider, project_dir, now, now),
         )
         self._conn.commit()
+        log_event(
+            logger, logging.INFO, "session_created",
+            session_id=session_id, model=model, provider=provider,
+        )
         return session_id
 
     def list_sessions(self) -> list[SessionRow]:

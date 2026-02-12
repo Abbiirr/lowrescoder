@@ -1,6 +1,11 @@
 # HybridCoder: Low-Resource AI Coding Agent
 ## Product Roadmap & Requirements Specification
 
+> Quick links for current implementation context:
+> - `docs/session-onramp.md` (fast session startup)
+> - `docs/plan/phase3-execution-brief.md` (one-page Phase 3 scope)
+> - `docs/plan/phase3-final-implementation.md` (authoritative Phase 3 plan)
+
 **Version:** 1.0
 **Last Updated:** February 8, 2026
 **Target:** Solo Developer MVP
@@ -25,7 +30,31 @@ A local-first AI coding assistant CLI that achieves Claude Code-level performanc
 | Privacy | Data sent to cloud | Fully local |
 | Cost per task | $0.01-$0.50 | $0 (after setup) |
 
-### 1.3 Success Metrics (MVP)
+### 1.3 Competitive Landscape (Feb 2026)
+
+| Tool | Local? | LLM-First? | Min VRAM | Cost | Edge-Native? |
+|------|--------|-----------|----------|------|-------------|
+| Claude Code | No | Yes | N/A | $$$ | No |
+| Cursor | No | Yes | N/A | $20/mo | No |
+| Copilot CLI | No | Yes | N/A | $10/mo | No |
+| Aider | Optional | Yes | 8GB+ | Free+API | No |
+| Cline | Optional | Yes | 8GB+ | Free+API | No |
+| **HybridCoder** | **Yes** | **No** | **8GB** | **$0** | **YES** |
+
+Additional positioning points:
+- **Zero-Cost After Setup** — Once installed, every task is free. No API keys, no subscriptions, no metered billing.
+- **Air-Gap Ready** — Works on laptops without internet, air-gapped corporate networks, developer machines in regions with poor connectivity, and for developers who refuse to send proprietary code to third-party servers.
+
+### 1.4 Target Users and Use Cases
+
+- Solo or small-team developers who want a local, privacy-preserving coding assistant.
+- Common tasks:
+  - Ask questions about a codebase (symbols, types, references).
+  - Generate or refactor code safely with diffs and undo.
+  - Run tests/lints and iterate on failures.
+  - Search across large repos with hybrid lexical + semantic retrieval.
+
+### 1.5 Success Metrics (MVP)
 | Metric | Target | Verification Method |
 |--------|--------|---------------------|
 | LLM call reduction | 60-80% vs naive approach | Instrumentation logging |
@@ -36,7 +65,26 @@ A local-first AI coding assistant CLI that achieves Claude Code-level performanc
 | Memory usage (idle) | <2GB RAM (stretch: <500MB) | System monitoring |
 | Memory usage (inference) | <8GB VRAM | System monitoring |
 
-### 1.4 Scope
+### 1.6 MVP Acceptance Checklist
+
+The following 12 criteria must ALL pass for MVP release:
+
+| # | Criterion | Pass Condition |
+|---|-----------|----------------|
+| 1 | CLI operational | `hybridcoder chat`, `ask`, `edit`, `config`, `--help` commands work |
+| 2 | Local LLM integration | Ollama provider streams responses with <2s to first token |
+| 3 | Edit success rate | >40% pass@1 on 50-task Aider benchmark subset |
+| 4 | Edit with retry | >75% success after up to 3 retries |
+| 5 | No data loss | 0 file corruptions across 100 edit operations |
+| 6 | Rollback works | 100% of failed edits restore original file state |
+| 7 | Layer 1 accuracy | 100% correct on deterministic query test suite (find refs, go-to-def, list symbols) |
+| 8 | Search relevance | >60% precision@3 on custom retrieval test suite |
+| 9 | Latency targets | Layer 1 <50ms, hybrid search <200ms, simple query <500ms |
+| 10 | Memory limits | Idle <2GB RAM, inference <8GB VRAM |
+| 11 | Sandbox enforced | Blocked commands rejected, timeout kills long-running processes |
+| 12 | Git safety | Every successful edit creates commit; `/undo` reverts cleanly |
+
+### 1.7 Scope
 
 **In Scope (MVP)**
 - Local CLI with chat, ask, edit, config, and help commands.
@@ -53,7 +101,7 @@ A local-first AI coding assistant CLI that achieves Claude Code-level performanc
 - Full multi-language support beyond Python/Java.
 - Automated code review or security scanning beyond basic rules.
 
-### 1.5 Open Questions and Decisions
+### 1.8 Open Questions and Decisions
 
 **Resolved:**
 - Memory target: <2GB idle (stretch goal: <500MB)
@@ -78,309 +126,29 @@ A local-first AI coding assistant CLI that achieves Claude Code-level performanc
 
 ### 2.1 Layered Intelligence Model
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        USER REQUEST                              │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  LAYER 1: DETERMINISTIC ANALYSIS (No LLM)                       │
-│  ├─ Tree-sitter parsing (syntax, structure)                     │
-│  ├─ LSP integration (types, references, definitions)            │
-│  ├─ Static analysis (Semgrep rules, linting)                    │
-│  └─ Pattern matching (known refactoring patterns)               │
-│  Latency: <50ms | Tokens: 0                                     │
-└─────────────────────────────────────────────────────────────────┘
-                                │ (if unresolved)
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  LAYER 2: RETRIEVAL & CONTEXT (No Generative LLM)               │
-│  ├─ AST-aware code chunking                                     │
-│  ├─ Hybrid search (BM25 + vector embeddings)                    │
-│  ├─ Project rules loading (.rules/, AGENTS.md)                  │
-│  └─ Repository map generation                                   │
-│  Latency: 100-500ms | Tokens: 0 (embeddings are not LLM calls)  │
-└─────────────────────────────────────────────────────────────────┘
-                                │ (if generation needed)
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  LAYER 3: CONSTRAINED GENERATION (Efficient LLM)                │
-│  ├─ Grammar-constrained decoding (valid syntax guaranteed)      │
-│  ├─ Small model for simple completions (1.5B-3B)                │
-│  └─ Structured output enforcement (JSON, tool calls)            │
-│  Latency: 500ms-2s | Tokens: 500-2000                           │
-└─────────────────────────────────────────────────────────────────┘
-                                │ (if complex reasoning needed)
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  LAYER 4: FULL REASONING (Targeted LLM)                         │
-│  ├─ 7B model for complex edits                                  │
-│  ├─ Multi-file planning and refactoring                         │
-│  ├─ Architect/Editor pattern for reliability                    │
-│  └─ Compiler feedback loops (LLMLOOP)                           │
-│  Latency: 5-30s | Tokens: 2000-8000                             │
-└─────────────────────────────────────────────────────────────────┘
-```
+> See CLAUDE.md "Architecture: 4-Layer Intelligence Model" for the canonical layer descriptions.
 
-### 2.2 Component Dependency Graph
-
-```
-Go TUI Frontend (Bubble Tea, inline mode)
-    │
-    ├── TextInput (fixed input bar, command history, completion)
-    ├── Live Area (streaming response, thinking indicator)
-    ├── StatusBar (model/mode/tokens/queue)
-    ├── Approval Prompt (arrow-key selection)
-    │
-    │   JSON-RPC over stdin/stdout
-    │
-    ▼
-Python Backend (subprocess launched by Go TUI)
-    │
-    ├── Request Router (decides which layer handles request)
-    │       │
-    │       ├── Layer 1: Deterministic Engine
-    │       │       ├── Tree-sitter Parser
-    │       │       ├── LSP Client (Pyright, JDT)
-    │       │       └── Semgrep Runner
-    │       │
-    │       ├── Layer 2: Context Engine
-    │       │       ├── Code Chunker
-    │       │       ├── Embedding Generator
-    │       │       ├── Vector Store (LanceDB)
-    │       │       └── Repo Map Generator
-    │       │
-    │       ├── Layer 3: Generation Engine
-    │       │       ├── LLM Client (llama-cpp-python + Outlines)
-    │       │       ├── Grammar Constraints (Outlines)
-    │       │       └── Output Parser
-    │       │
-    │       └── Layer 4: Agentic Engine
-    │               ├── Planner (Architect)
-    │               ├── Editor (code modifications)
-    │               ├── Tool Executor
-    │               └── Feedback Loop Manager
-    │
-    ├── File Manager
-    │       ├── Read/Write operations
-    │       └── Diff generation
-    │
-    ├── Git Manager
-    │       ├── Auto-commit
-    │       ├── Branch management
-    │       └── Undo/revert
-    │
-    └── Shell Executor (sandboxed)
-            ├── Test runner
-            └── Build commands
-
-Legacy: Python inline REPL (--legacy flag) remains as fallback.
-```
+Request flow: User Request → Layer 1 (deterministic, <50ms, 0 tokens) → Layer 2 (retrieval, 100-500ms, 0 tokens) → Layer 3 (constrained generation, 500ms-2s) → Layer 4 (full reasoning, 5-30s). Each layer escalates only if it cannot resolve the request.
 
 ---
 
 ## 3. Development Phases
 
-### Phase 0: Project Setup (Week 1)
+### Phase 0: Project Setup — COMPLETE
 
-#### Objectives
-- Repository structure established
-- Development environment configured
-- CI/CD pipeline operational
-- Core dependencies selected and tested
-
-#### Deliverables
-| Deliverable | Description | Acceptance Criteria |
-|-------------|-------------|---------------------|
-| D0.1 | Repository with standard structure | Has src/, tests/, docs/, configs |
-| D0.2 | Development environment | Python 3.11+, all deps install cleanly |
-| D0.3 | CI pipeline | Tests run on every push |
-| D0.4 | Dependency audit | All core libs tested in isolation |
-
-#### Technical Decisions Required
-- [ ] Primary language: Python (recommended) vs TypeScript
-- [ ] Package manager: uv (recommended) vs pip vs poetry
-- [ ] Test framework: pytest (recommended) vs unittest
-- [ ] CLI framework: Typer (recommended) vs Click vs argparse
-
-#### Exit Criteria
-- [ ] `make setup` creates working environment
-- [ ] `make test` runs (even with no tests)
-- [ ] `make lint` passes
-- [ ] README documents setup process
+Repository structure, development environment (Python 3.11+, uv), CI/CD pipeline, and core dependency audit all complete. See `docs/requirements_and_features.md` Section 2 for the full feature catalog.
 
 ---
 
-### Phase 1: Foundation - CLI & Basic LLM (Weeks 2-3)
+### Phase 1: Foundation - CLI & Basic LLM — COMPLETE
 
-#### Objectives
-- Functional CLI with REPL interface
-- LLM integration working (local + cloud fallback)
-- Basic file operations
-- Streaming output to terminal
-
-#### Deliverables
-| ID | Deliverable | Acceptance Criteria |
-|----|-------------|---------------------|
-| D1.1 | CLI entry point | `hybridcoder` command available after install |
-| D1.2 | Interactive REPL | Can type messages, see responses |
-| D1.3 | LLM client abstraction | Supports Ollama, OpenAI API, llama.cpp server |
-| D1.4 | Streaming output | Tokens appear as generated, not all at once |
-| D1.5 | File read tool | Can read files, partial reads (line ranges) |
-| D1.6 | File write tool | Can write/overwrite files |
-| D1.7 | Configuration system | Config file for model, API keys, preferences |
-| D1.8 | Command history | Up/down arrows recall previous commands |
-
-#### Functional Requirements
-
-**FR1.1: CLI Commands**
-```
-hybridcoder chat              # Start interactive session (Go TUI by default)
-hybridcoder chat --legacy     # Use Python inline REPL fallback
-hybridcoder ask "question"    # One-shot question
-hybridcoder edit file.py      # Edit mode for specific file
-hybridcoder config            # Show/edit configuration
-hybridcoder serve             # Launch Python backend (JSON-RPC mode, used by Go TUI)
-hybridcoder --help            # Show all commands
-```
-
-**FR1.2: LLM Provider Support**
-- Must support: Ollama (local)
-- Must support: OpenAI-compatible API (for llama.cpp server)
-- Should support: Anthropic API (cloud fallback)
-- Configuration via environment variables or config file
-
-**FR1.3: Streaming Requirements**
-- First token must appear within 2 seconds of request
-- Terminal must show tokens as they arrive
-- Support for cancellation (Ctrl+C)
-
-#### Technical Requirements
-
-**TR1.1: Model Configuration**
-```yaml
-# ~/.hybridcoder/config.yaml
-llm:
-  provider: ollama  # ollama | openai | anthropic
-  model: qwen3:8b-q4_K_M          # Layer 4 (full reasoning)
-  l3_model: qwen2.5-coder:1.5b-instruct-q4_K_M  # Layer 3 (constrained gen)
-  temperature: 0.2
-  max_tokens: 4096
-  context_length: 8192
-```
-
-**TR1.2: Response Format**
-- All LLM responses logged to debug file
-- Token count tracked per request
-- Latency measured and logged
-
-#### Verification Tests
-- [ ] VT1.1: Start REPL, send "Hello", receive response
-- [ ] VT1.2: Stream response shows character-by-character output
-- [ ] VT1.3: Read a file via chat command
-- [ ] VT1.4: Write a file via chat command
-- [ ] VT1.5: Switch between Ollama and OpenAI provider
-- [ ] VT1.6: Config file changes reflected without restart
-
-#### Exit Criteria
-- [ ] Can have multi-turn conversation with local LLM
-- [ ] File read/write works reliably
-- [ ] Latency under 3 seconds for first token (local model)
+Functional CLI (chat, ask, edit, config, serve, --help), Ollama + OpenRouter LLM providers, streaming output, file read/write tools, configuration system, and command history all complete. 6 agent tools, 14 slash commands, Go TUI + Python inline REPL. See `docs/requirements_and_features.md` Sections 2.1-2.12 for details.
 
 ---
 
-### Phase 2: Edit System (Weeks 4-5)
+### Phase 2: Edit System — COMPLETE
 
-#### Objectives
-- Reliable code editing via LLM
-- Multiple edit format support
-- Git integration for safety
-- Edit verification and retry
-
-#### Deliverables
-| ID | Deliverable | Acceptance Criteria |
-|----|-------------|---------------------|
-| D2.1 | Whole-file edit format | LLM can rewrite entire files |
-| D2.2 | Search/Replace parser | Parse <<<<<<< SEARCH blocks |
-| D2.3 | Fuzzy matching | 80%+ similarity threshold matching |
-| D2.4 | Git auto-commit | Every edit creates commit |
-| D2.5 | Undo command | `/undo` reverts last AI change |
-| D2.6 | Diff preview | Show diff before applying |
-| D2.7 | Edit retry logic | Auto-retry on parse failure (max 3) |
-
-#### Functional Requirements
-
-**FR2.1: Edit Formats**
-```
-Format 1: Whole File (default for MVP)
-- LLM outputs complete file content
-- Simplest, most reliable for small models
-- Higher token cost, but fewer failures
-
-Format 2: Search/Replace (Phase 2.5+)
-<<<<<<< SEARCH
-original code here
-=======
-replacement code here
->>>>>>> REPLACE
-```
-
-**FR2.2: Edit Verification Pipeline**
-1. Parse LLM output for edit instructions
-2. Validate syntax of proposed code (tree-sitter)
-3. Show diff to user (unless auto-apply mode)
-4. Apply edit to file
-5. Run linter on modified file
-6. If lint fails, offer to fix or revert
-7. Create git commit
-
-**FR2.3: Fuzzy Matching Requirements**
-- Exact match: Try first, fastest
-- Whitespace-normalized match: Ignore leading/trailing whitespace
-- Fuzzy match: Levenshtein distance, >80% similarity
-- Line-anchored match: Find by surrounding context
-- Report match confidence to user
-
-#### Technical Requirements
-
-**TR2.1: Edit Success Metrics**
-```python
-class EditResult:
-    success: bool
-    match_type: str  # exact | normalized | fuzzy | failed
-    match_confidence: float  # 0.0 - 1.0
-    lines_changed: int
-    tokens_used: int
-    retry_count: int
-```
-
-**TR2.2: Git Commit Format**
-```
-[AI] <action>: <brief description>
-
-Files modified:
-- path/to/file.py
-
-Prompt: <truncated user prompt>
-Model: qwen3:8b
-Tokens: 1234
-```
-
-#### Verification Tests
-- [ ] VT2.1: Edit a function, verify syntax valid after
-- [ ] VT2.2: Fuzzy match succeeds when LLM adds extra whitespace
-- [ ] VT2.3: Undo reverts to pre-edit state
-- [ ] VT2.4: Failed edit does not corrupt file
-- [ ] VT2.5: Git commit created for each successful edit
-- [ ] VT2.6: Multi-file edit creates single commit
-
-#### Exit Criteria
-- [ ] Edit success rate >60% on simple single-file edits
-- [ ] No data loss (file corruption) in 100 test edits
-- [ ] Git history clean and informative
-- [ ] Failure budget: <5% of edits require manual intervention after retries
-- [ ] Rollback success rate: 100% of failed edits restore original file state
+Whole-file edit format, search/replace parser, fuzzy matching (>80% threshold), git auto-commit, undo command, diff preview, edit retry logic (max 3), approval system, session management, Go Bubble Tea TUI rewrite. 784+ tests passing. See `docs/requirements_and_features.md` Sections 2.1-2.12 for details.
 
 ---
 
@@ -811,25 +579,27 @@ Phase 2 - Editor (execution):
 
 ### 4.1 Technology Stack
 
-| Component | Choice | Rationale | Alternatives |
-|-----------|--------|-----------|--------------|
-| Backend Language | Python 3.11+ | ML ecosystem, rapid dev | TypeScript |
-| TUI Frontend | Go + Bubble Tea | Single binary, inline mode, goroutines | Ink (Node.js), Ratatui (Rust) |
-| Frontend↔Backend | JSON-RPC over stdin/stdout | Language-agnostic, LSP-like | gRPC, REST |
-| CLI Framework | Typer + Rich | Modern, type-safe, beautiful | Click |
-| Parsing | tree-sitter | Industry standard, fast | - |
-| Python LSP | Pyright | Best type inference | pylsp |
-| Java LSP | JDT-LS | Most complete | - |
-| Vector DB | LanceDB | Embedded, hybrid search | Chroma |
-| Embeddings | jina-v2-base-code | Local, good quality | voyage-code-3 |
-| L4 LLM Runtime | Ollama | Easy setup, streaming | llama.cpp server |
-| L4 Model | Qwen3-8B Q4_K_M | Best 8B, thinking mode, ~5 GB VRAM | Qwen2.5-Coder-7B |
-| L3 LLM Runtime | llama-cpp-python + Outlines | Outlines needs direct access | N/A |
-| L3 Model | Qwen2.5-Coder-1.5B Q4_K_M | 72% HumanEval, 1GB VRAM | DeepSeek |
-| LSP Client | multilspy (Microsoft) | Multi-language, battle-tested | pylsp |
-| Package Manager | uv | 10-100x faster than pip | pip/poetry |
-| Git | GitPython | Pure Python | subprocess |
-| Testing | pytest | Standard | - |
+| Component | Choice | Rationale |
+|-----------|--------|-----------|
+| Backend Language | Python 3.11+ | ML ecosystem, rapid dev |
+| TUI Frontend | Go + Bubble Tea | Single binary, inline mode, goroutines |
+| Frontend↔Backend | JSON-RPC over stdin/stdout | Language-agnostic, LSP-like |
+| CLI Framework | Typer + Rich | Modern, type-safe, beautiful |
+| Parsing | tree-sitter | Industry standard, fast |
+| Python LSP | Pyright | Best type inference |
+| Java LSP | JDT-LS | Most complete |
+| Vector DB | LanceDB | Embedded, hybrid search |
+| Embeddings | jina-v2-base-code | Local, good quality |
+| L4 LLM Runtime | Ollama | Easy setup, streaming |
+| L4 Model | Qwen3-8B Q4_K_M | Best 8B, thinking mode, ~5 GB VRAM |
+| L3 LLM Runtime | llama-cpp-python + Outlines | Outlines needs direct access |
+| L3 Model | Qwen2.5-Coder-1.5B Q4_K_M | 72% HumanEval, 1GB VRAM |
+| LSP Client | multilspy (Microsoft) | Multi-language, battle-tested |
+| Package Manager | uv | 10-100x faster than pip |
+| Git | GitPython | Pure Python |
+| Testing | pytest | Standard |
+
+> For alternative evaluations and deep research, see `docs/claude/` research documents.
 
 ### 4.2 File Structure
 
@@ -1047,6 +817,19 @@ User request: {user_request}
 Create a numbered plan with specific, actionable steps:
 ```
 
+### 4.5 Observability Requirements
+
+- Per-request logs: latency, tokens, model, retries.
+- Debug log with full prompts and responses (local only).
+
+### 4.6 Sandbox Default Policy
+
+- Default allowed: `pytest`, `python`, `pip`, `mvn`, `gradle`, `java`, `javac`, `git status`, `git diff`
+- Default blocked: `rm -rf`, `sudo`, `curl`, `wget`, network commands
+- Working directory: restricted to project root
+- Timeout: 30s default, 300s max
+- **User override**: `~/.hybridcoder/config.yaml` allows custom `shell.allowed_commands` and `shell.blocked_commands` lists. Users can also set `shell.allow_network: true` to permit network access.
+
 ---
 
 ## 5. Risk Assessment
@@ -1201,6 +984,53 @@ HybridCoder aims to match the utility of frontier AI coding assistants while run
 - After any change to prompts, routing logic, or model configuration
 - Before each phase gate review
 - Before MVP release
+
+### E. Phased Execution Plan (Tech Stack → HLD → LLD → Code → Documentation)
+
+This appendix organizes the same work as Phases 0-6 but by engineering lifecycle stage rather than feature area.
+
+#### Phase A: Tech Stack Finalization
+1. Confirm supported languages (Python-only vs Python+Java) using scope and resource criteria.
+2. Select package/tooling stack (uv or pip/poetry, pytest, lint/format tools) and document exact commands.
+3. Validate LLM runtime defaults (Ollama vs llama.cpp server) on target hardware; set baseline model and quantization.
+4. Validate deterministic stack (tree-sitter, Pyright, JDT LS, Semgrep) install steps and performance budgets.
+5. Validate retrieval stack (LanceDB, embedding model) for disk and RAM usage; set index size limits.
+6. Define minimum hardware baseline and resource budgets per layer; document thresholds.
+7. Produce dependency matrix with versions, licenses, and install steps; update roadmap docs if needed.
+
+#### Phase B: High-Level Design (HLD)
+1. Define system context diagram and request flow across layers 1-4.
+2. Define component responsibilities and boundaries (CLI, router, layer engines, edit system, git, shell).
+3. Define configuration schema and defaults aligned to local-first and edge-first constraints.
+4. Define security model and sandbox boundaries.
+5. Define persistence layout for logs, cache, indexes, and config.
+6. Define performance budgets and SLAs per component; identify bottleneck risks.
+7. Review HLD against "LLM as last resort" and low-resource edge requirement.
+
+#### Phase C: Low-Level Design (LLD)
+1. Specify module layout under `src/hybridcoder/` with public interfaces and dependencies.
+2. Define data models for requests, tool calls, edit results, context bundles, and metrics.
+3. Detail algorithms: routing logic, chunking strategy, hybrid search scoring, fuzzy matching, retry rules.
+4. Define error handling and rollback behavior; state machine for multi-step tasks.
+5. Define cache keys, invalidation rules, and persistence schema (LanceDB tables, repo map).
+6. Define observability (structured logs, metrics, profiling hooks).
+7. Produce a test plan mapping each module to unit, integration, and benchmark coverage.
+
+#### Phase D: Implementation (Code)
+
+- **D0: Repo and Tooling Setup** — Project layout, packaging, dev tooling, CI scaffolding.
+- **D1: CLI + LLM Foundation** — Typer CLI, config, LLM provider abstraction, file tools.
+- **D2: Edit System + Git Safety** — Whole-file edit, syntax validation, git auto-commit, retry/rollback.
+- **D3: Layer 1 Deterministic Engine** — Tree-sitter, LSP clients, deterministic query router.
+- **D4: Layer 2 Retrieval + Context** — AST chunker, embeddings, LanceDB, hybrid search, repo map, rules loader.
+- **D5: Layer 4 Agentic Workflow** — Tool registry, architect/editor pattern, feedback loop, task persistence.
+- **D6: Testing + Benchmarking** — Test harnesses, benchmark runners, profiling, threshold tuning.
+
+#### Phase E: Documentation and Release
+1. Write installation, usage, configuration, and architecture docs in docs/.
+2. Document performance targets, benchmarks, and reproducibility steps.
+3. Provide example projects and .rules templates.
+4. Finalize release checklist and packaging (PyPI/test PyPI).
 
 ---
 

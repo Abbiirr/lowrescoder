@@ -1,8 +1,14 @@
+> ARCHIVED: Superseded by docs/plan/phase3-final-implementation.md
+
 # Phase 3 Plan Review Notes
 
 > Reviewer: Claude (Architect) | Date: 2026-02-09
 > Document reviewed: `docs/plan/phase3-code-intelligence.md` (~1400 lines)
 > Status: Review complete — strengths, concerns, and recommendations below
+>
+> Historical context note (2026-02-12): this document records review rounds against
+> the original Phase 3 draft. For implementation scope, use
+> `phase3-final-implementation.md`.
 
 ---
 

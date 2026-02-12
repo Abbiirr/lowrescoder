@@ -1,13 +1,10 @@
-# CLAUDE.md - AI Assistant Guidelines for HybridCoder
+# CLAUDE.md — AI Assistant Guidelines for HybridCoder
 
 ## Core Philosophy
 
 **I am here to help, but you must always understand what's going on.**
 
-This project is about building an AI coding assistant that YOU control and understand. The same principle applies to our collaboration:
-
 - **Ask questions** when something is unclear
-- **Request explanations** for any code or decisions I make
 - **Challenge my suggestions** if they don't make sense
 - **Don't blindly accept** any code changes without understanding them
 
@@ -17,157 +14,71 @@ You are the developer. I am a tool to accelerate your work, not replace your jud
 
 ## Project Overview
 
-**HybridCoder** is a local-first AI coding assistant CLI that aims to achieve Claude Code-level performance while running on consumer hardware (7-11B parameter models).
-
-### Market Positioning: Edge-Native AI Coding
-
-**This project MUST stand out from the market.** The core competitive advantage is:
-
-1. **Ultra-Low Resource Usage** - Runs on consumer hardware (8GB VRAM, 16GB RAM) where competitors require cloud APIs or 70B+ parameter models
-2. **Edge Computing First** - ALL intelligence runs locally on the user's machine. No cloud dependency, no API costs, no data leaves the device. This is not a "local mode" bolted onto a cloud product — edge computing IS the product.
-3. **Deterministic-First Architecture** - 60-80% of operations use zero LLM tokens. Classical AI (tree-sitter, LSP, static analysis) handles what it can; LLMs handle only what it can't. No competitor does this.
-
-**Why this matters:** As AI coding tools become commoditized, the winners will be those that work everywhere — on laptops without internet, on air-gapped corporate networks, on developer machines in regions with poor cloud connectivity, and for developers who refuse to send proprietary code to third-party servers. HybridCoder is built for ALL of these scenarios from day one.
-
-### Key Differentiator
-The system uses **deterministic classical AI techniques as the primary intelligence layer**, invoking LLMs only when necessary. This is the opposite of how most AI coders work.
-
-| Aspect | Traditional AI Coders | HybridCoder |
-|--------|----------------------|-------------|
-| LLM Usage | First resort | **Last resort** |
-| Resource Requirement | Cloud API / 70B+ models | Local 7B model, 8GB VRAM |
-| Latency (simple queries) | 2-5 seconds | <100ms |
-| Privacy | Data sent to cloud | Fully local |
-| Cost per task | $0.01-$0.50 | $0 (after setup) |
+**HybridCoder** is an edge-native AI coding assistant CLI. Local-first, deterministic-first, consumer hardware (8GB VRAM, 16GB RAM). The system uses deterministic classical AI as the primary intelligence layer, invoking LLMs only when necessary. This is the opposite of how most AI coders work.
 
 ---
 
-## Architecture: The 4-Layer Intelligence Model
+## Project Invariants (User-Approved Only)
 
-Understanding this architecture is critical to working on this project:
+These decisions are **locked** and do NOT change unless the user explicitly approves a change. Agents must not deviate from these without user authorization.
 
-### Layer 1: Deterministic Analysis (No LLM)
-- Tree-sitter parsing (syntax, structure)
-- LSP integration (types, references, definitions)
-- Static analysis (Semgrep rules, linting)
-- Pattern matching (known refactoring patterns)
-- **Latency: <50ms | Tokens: 0**
-
-### Layer 2: Retrieval & Context (No Generative LLM)
-- AST-aware code chunking
-- Hybrid search (BM25 + vector embeddings)
-- Project rules loading (.rules/, AGENTS.md, CLAUDE.md)
-- Repository map generation
-- **Latency: 100-500ms | Tokens: 0** (embeddings are encoder models, not LLM calls)
-
-### Layer 3: Constrained Generation (Efficient LLM)
-- Grammar-constrained decoding (valid syntax guaranteed)
-- Small model for simple completions (1.5B-3B)
-- Structured output enforcement (JSON, tool calls)
-- **Latency: 500ms-2s | Tokens: 500-2000**
-
-### Layer 4: Full Reasoning (Targeted LLM)
-- 7B model for complex edits
-- Multi-file planning and refactoring
-- Architect/Editor pattern for reliability
-- Compiler feedback loops (LLMLOOP)
-- **Latency: 5-30s | Tokens: 2000-8000**
+1. **LLM as last resort** — Deterministic tools first (tree-sitter, LSP, static analysis), LLM only when they can't solve it
+2. **4-Layer Architecture** — Layer 1 (deterministic) → Layer 2 (retrieval) → Layer 3 (constrained gen) → Layer 4 (full reasoning)
+3. **Edge-native** — ALL intelligence runs on the user's machine. No cloud dependency by default
+4. **Consumer hardware target** — 8GB VRAM, 16GB RAM, no 70B+ models required
+5. **Go TUI + Python backend** — Frontend in Go (Bubble Tea), backend in Python, JSON-RPC over stdin/stdout
+6. **Tech stack** — tree-sitter, Ollama (L4), llama-cpp-python + Outlines (L3), LanceDB, jina-v2-base-code embeddings
+7. **Docs are the single source of truth** — If docs say X and code does Y, the docs are wrong and must be fixed before continuing
 
 ---
 
-## Target Success Metrics (MVP)
+## Architecture: 4-Layer Intelligence Model
 
-| Metric | Target |
-|--------|--------|
-| LLM call reduction | 60-80% vs naive approach |
-| Edit success rate (first attempt) | >40% |
-| Edit success rate (with retry) | >75% |
-| Simple query latency | <500ms |
-| Agentic task completion | >50% on custom test suite |
-| Memory usage (idle) | <2GB RAM (stretch: <500MB) |
-| Memory usage (inference) | <8GB VRAM |
+| Layer | Purpose | Latency | Tokens |
+|-------|---------|---------|--------|
+| **L1: Deterministic** | Tree-sitter parsing, LSP (types/refs/defs), static analysis, pattern matching | <50ms | 0 |
+| **L2: Retrieval** | AST-aware chunking, BM25 + vector search, project rules, repo map | 100-500ms | 0 |
+| **L3: Constrained Gen** | Grammar-constrained decoding, small model (1.5B-3B), structured output | 500ms-2s | 500-2000 |
+| **L4: Full Reasoning** | 7B model, multi-file planning, architect/editor pattern, feedback loops | 5-30s | 2000-8000 |
 
 ---
 
 ## Technology Stack
 
-| Component | Choice | Rationale |
-|-----------|--------|-----------|
-| Backend Language | Python 3.11+ | ML ecosystem, rapid dev |
-| TUI Frontend | **Go + Bubble Tea** | Inline mode, native scrollback, single binary |
-| Frontend↔Backend | JSON-RPC over stdin/stdout | Language-agnostic, like LSP |
-| Package Manager | uv | 10-100x faster than pip |
-| CLI Framework | Typer + Rich | Modern, type-safe, beautiful |
-| Parsing | tree-sitter 0.25.2 | Industry standard, fast |
-| LSP Client | multilspy (Microsoft) | Multi-language, battle-tested |
-| Python LSP | Pyright | Best type inference |
-| Java LSP | JDT-LS | Most complete |
-| Vector DB | LanceDB | Embedded, hybrid search |
-| Embeddings | jina-v2-base-code | Local, 768-dim, proven quality |
-| L4 LLM Runtime | Ollama | Easy setup, streaming, model mgmt |
-| L4 Model | Qwen3-8B Q4_K_M | Best 8B model, thinking mode, ~5 GB VRAM |
-| L3 LLM Runtime | llama-cpp-python + Outlines | Outlines requires direct model access |
-| L3 Model | Qwen2.5-Coder-1.5B Q4_K_M | 72% HumanEval at 1GB VRAM |
+| Component | Choice |
+|-----------|--------|
+| Backend Language | Python 3.11+ |
+| TUI Frontend | Go + Bubble Tea (inline mode) |
+| Frontend↔Backend | JSON-RPC over stdin/stdout |
+| Package Manager | uv |
+| CLI Framework | Typer + Rich |
+| Parsing | tree-sitter 0.25.2 |
+| LSP Client | multilspy (Microsoft) |
+| Vector DB | LanceDB |
+| Embeddings | jina-v2-base-code (768-dim, local) |
+| L4 LLM Runtime | Ollama |
+| L4 Model | Qwen3-8B Q4_K_M (~5 GB VRAM) |
+| L3 LLM Runtime | llama-cpp-python + Outlines |
+| L3 Model | Qwen2.5-Coder-1.5B Q4_K_M (~1 GB VRAM) |
 
-> **Note:** Outlines does NOT integrate with Ollama's HTTP API. Layer 3 (constrained generation) uses llama-cpp-python directly. Layer 4 (full reasoning) uses Ollama. See `docs/claude/01-local-llm-inference-research.md` for details.
-
-### Frontend/Backend Split (Go TUI Migration)
-
-The TUI has been split into a **Go frontend** and **Python backend**:
-
-- **Go frontend** (Bubble Tea): Handles rendering, input, arrow-key approvals, autocomplete, thinking tokens display. Runs in inline mode (no alternate screen) to preserve native terminal scrollback. Communicates with Python via JSON-RPC over stdin/stdout.
-- **Python backend**: Unchanged — agent loop, tools, LLM providers, session store, approval logic. Exposes a thin JSON-RPC adapter (`hybridcoder serve`).
-- **Why**: Python `prompt_toolkit` has fundamental limitations (line-buffered `patch_stdout`, unsafe nested Applications) that prevent Claude Code-level UX. Go Bubble Tea's Elm Architecture solves all of these.
-- See `docs/plan/go-bubble-tea-migration.md` for the full migration plan.
-
----
-
-## Development Phases
-
-1. **Phase 0**: Project Setup
-2. **Phase 1**: Foundation - CLI & Basic LLM
-3. **Phase 2**: Edit System
-4. **Phase 3**: Code Intelligence - Layer 1
-5. **Phase 4**: Context & Retrieval - Layer 2
-6. **Phase 5**: Agentic Workflow - Layer 4
-7. **Phase 6**: Polish & Benchmarking
-
-See `docs/plan.md` for complete phase details and deliverables.
-
----
-
-## Working With Me On This Project
-
-### When I Write Code
-- I will explain WHY I'm making certain architectural decisions
-- I will reference which Layer (1-4) a component belongs to
-- Ask me to clarify if anything is unclear
-
-### When I Suggest Changes
-- I will describe what the change does and why
-- I will note any tradeoffs or alternatives considered
-- You should understand the change before accepting it
-
-### When Something Fails
-- I will help debug, but explain the debugging process
-- You should learn from the investigation, not just the fix
-
-### Questions to Ask Me
-- "Why did you structure it this way?"
-- "What alternatives did you consider?"
-- "What are the tradeoffs here?"
-- "Can you explain this part in more detail?"
-- "How does this fit into the Layer architecture?"
+> Outlines does NOT integrate with Ollama. L3 uses llama-cpp-python directly. L4 uses Ollama.
 
 ---
 
 ## Key Design Principles
 
-1. **LLM as last resort** - Always try deterministic approaches first
-2. **Fail fast, fail safe** - Verify edits before applying, git commit for safety
-3. **Transparent operations** - User should see what's happening
-4. **Local-first** - Privacy and cost are features, not afterthoughts
-5. **Incremental complexity** - Start with simple approaches, add sophistication as needed
+1. **LLM as last resort** — Always try deterministic approaches first
+2. **Fail fast, fail safe** — Verify edits before applying, git commit for safety
+3. **Transparent operations** — User should see what's happening
+4. **Local-first** — Privacy and cost are features, not afterthoughts
+5. **Incremental complexity** — Start with simple approaches, add sophistication as needed
+6. **Docs track reality** — Update documentation WITH code changes, never after (see AGENT_COMMUNICATION_RULES.md "Mandatory Documentation Sync")
+
+---
+
+## Current Phase
+
+Phases 0-2 complete. **Phase 3 (Code Intelligence)** is active. See `docs/plan/phase3-execution-brief.md` for daily scope.
 
 ---
 
@@ -178,7 +89,6 @@ See `docs/plan.md` for complete phase details and deliverables.
 ```bash
 # Unit tests (fast, run after every change)
 make test
-
 # Or directly:
 uv run pytest tests/ -v --cov=src/hybridcoder
 
@@ -195,36 +105,38 @@ uv run pytest -m integration tests/integration/
 **Rules:**
 - All unit tests must pass before requesting review or moving to the next sprint
 - New code must include tests — no exceptions
-- Sprint verification tests (`tests/test_sprint_verify.py`) must pass at each sprint boundary
+- Sprint verification tests must pass at each sprint boundary
 - Integration tests are skipped by default (require running servers / API keys)
 
 ---
 
-## Reference Documents
+## Where to Find What (Session Index)
 
-- `docs/plan.md` - Full product roadmap and requirements specification
-- `docs/spec.md` - System specification with MVP acceptance checklist
-- Project rules can be placed in `.rules/` directory
+| What you need | Where to find it |
+|---|---|
+| Fast session startup | `docs/session-onramp.md` |
+| Full product roadmap | `docs/plan.md` |
+| MVP acceptance checklist | `docs/plan.md` Section 1.6 |
+| Feature catalog (built vs planned) | `docs/requirements_and_features.md` |
+| Phase 3 plan (authoritative) | `docs/plan/phase3-final-implementation.md` |
+| Phase 3 daily execution | `docs/plan/phase3-execution-brief.md` |
+| Benchmark protocol | `docs/qa/phase3-before-after-benchmark-protocol.md` |
+| E2E benchmark guide | `docs/qa/e2e-benchmark-guide.md` |
+| Agent communication protocol | `AGENT_COMMUNICATION_RULES.md` |
+| Agent message log | `AGENTS_CONVERSATION.MD` |
+| Message format examples | `docs/reference/comms-examples.md` |
+| Tech research (deep dives) | `docs/claude/*.md` |
+| Vendor/tool reference | `docs/codex/*.md` |
+| Go TUI migration details | `docs/plan/go-bubble-tea-migration.md` |
+| Archived conversations | `docs/communication/old/` (read only when asked) |
+| Archived/superseded docs | `docs/archive/` |
 
-## Agent Communication (Required)
+---
 
-This project uses two files for cross-agent communication:
+## Agent Communication
 
-| File | Purpose |
-|------|---------|
-| `AGENT_COMMUNICATION_RULES.md` | **Rules** — protocols, message types, review principles, workflow, archival policy, examples. Read this first. |
-| `AGENTS_CONVERSATION.MD` | **Message log** — active/unresolved entries only. This is where you read and write messages. |
+All agent-to-agent communication goes through `AGENTS_CONVERSATION.MD`. Protocol rules are in `AGENT_COMMUNICATION_RULES.md`. Use `/comms` to manage messages.
 
-**Before any action**, check `AGENTS_CONVERSATION.MD` for pending items or messages from other agents.
-
-### How to Communicate with Other Agents
-
-- **NEVER run Codex CLI directly** (no `codex exec`, `codex review`, or `codex` commands). The user launches Codex separately.
-- To send a message to Codex (or any agent): write it in `AGENTS_CONVERSATION.MD` following the rules in `AGENT_COMMUNICATION_RULES.md`. The user will relay it by running the other agent.
-- To respond to Codex: read their entries in `AGENTS_CONVERSATION.MD`, then append your reply as the next entry.
-
-### Archival Rules
-- When a conversation thread is fully resolved, move resolved entries to `docs/communication/old/<date>-<topic>.md` and remove them from the message log.
-- **NEVER delete archived conversations.** They are permanent records.
-- **NEVER read from `docs/communication/old/` unless the user explicitly asks.** Archives exist for human reference only — do not load them into context unprompted.
-
+- **Before any action**: check `AGENTS_CONVERSATION.MD` for pending items directed to you
+- **NEVER run Codex CLI directly** — write messages in `AGENTS_CONVERSATION.MD`, the user launches other agents
+- **NEVER read from `docs/communication/old/`** unless the user explicitly asks — archives are off-limits by default

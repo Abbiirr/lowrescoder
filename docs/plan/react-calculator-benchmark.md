@@ -3,7 +3,7 @@
 > HybridCoder — Edge-Native AI Coding Assistant
 > Version: 1.0 | Date: 2026-02-09
 > Purpose: Real-world benchmark for agentic task completion (Tier 4)
-> Phase: 5-6 (requires agentic workflow + edit system)
+> Phase: 4-5 (requires agentic workflow + edit system)
 
 ---
 
@@ -442,7 +442,7 @@ Any AI coding agent can be evaluated against this same rubric, enabling fair com
 
 ## 9. Baseline Expectations
 
-### For Qwen3-8B via HybridCoder (Phase 5-6)
+### For Qwen3-8B via HybridCoder (Phase 4-5)
 
 | Metric | Conservative | Optimistic |
 |--------|-------------|-----------|

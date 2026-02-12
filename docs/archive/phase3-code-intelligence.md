@@ -1,9 +1,16 @@
+> ARCHIVED: Superseded by docs/plan/phase3-final-implementation.md
+
 # Phase 3: Code Intelligence
 
 > HybridCoder — Edge-Native AI Coding Assistant
 > Version: 1.0 | Date: 2026-02-06
 > Depends on: Phase 2 (TUI Prototype) — COMPLETE
 > Consensus: Reached via agent comms
+>
+> **Important status note (2026-02-12):** This file is a historical draft.
+> The authoritative implementation scope is `phase3-final-implementation.md`.
+> In particular, older assumptions here around 12 tools, 6000-token budget,
+> active Sprint 3C/LSP scope, and `get_diagnostics` in Phase 3 are superseded.
 
 ---
 

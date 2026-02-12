@@ -603,7 +603,7 @@ Layer Distribution:
 ## 11. Next Steps
 
 1. **Read full research:** `docs/plan/benchmark_research_2026.md`
-2. **Review acceptance criteria:** `docs/spec.md` and `CLAUDE.md`
+2. **Review acceptance criteria:** `docs/plan.md` Section 1.6 (MVP Acceptance Checklist) and `CLAUDE.md`
 3. **Create benchmark skeleton:**
    ```bash
    mkdir -p tests/benchmark/cases/{edit_accuracy,search_retrieval,bug_localization}
