@@ -1,6 +1,6 @@
 # Session Onramp (Current State)
 
-Last updated: 2026-02-12
+Last updated: 2026-02-13
 
 This is the fastest way to rebuild working context for HybridCoder in a new session.
 
@@ -8,9 +8,10 @@ This is the fastest way to rebuild working context for HybridCoder in a new sess
 
 1. `AGENTS.md` — repo rules, command set, and communication protocol.
 2. `CLAUDE.md` — architecture principles, project invariants, session index.
-3. `docs/requirements_and_features.md` — what is done vs planned.
-4. `docs/plan/phase3-final-implementation.md` — authoritative Phase 3 plan.
-5. `docs/qa/phase3-before-after-benchmark-protocol.md` — required benchmark workflow.
+3. `TESTING.md` — how to test, evaluate, and interpret results.
+4. `docs/requirements_and_features.md` — what is done vs planned.
+5. `docs/plan/phase3-final-implementation.md` — authoritative Phase 3 plan.
+6. `docs/qa/phase3-before-after-benchmark-protocol.md` — required benchmark workflow.
 
 ## 2) Authoritative vs Historical Docs
 
@@ -41,6 +42,8 @@ This is the fastest way to rebuild working context for HybridCoder in a new sess
 - Session state: `src/hybridcoder/session/`
 - Go TUI transport and event loop: `cmd/hybridcoder-tui/backend.go`, `cmd/hybridcoder-tui/update.go`
 - Benchmarks: `tests/benchmark/`
+- E2E scenario runner: `scripts/e2e/`
+- E2E seed fixtures: `scripts/e2e/fixtures/`
 
 ## 5) Phase 3 Plan Snapshot
 
@@ -65,9 +68,20 @@ For a compact execution version, use `docs/plan/phase3-execution-brief.md`.
 - Lint/typecheck:
   - `uv run ruff check src/ tests/`
   - `uv run mypy src/hybridcoder/`
-- **E2E benchmark (React calculator):**
-  - `.\scripts\run_e2e_benchmark.ps1`
-  - See `docs/qa/e2e-benchmark-guide.md` for full details
+- **E2E benchmarks:**
+  - `uv run python scripts/run_calculator_benchmark.py` — Calculator benchmark
+  - `uv run python scripts/e2e/run_scenario.py E2E-BugFix` — BugFix scenario
+  - `uv run python scripts/e2e/run_scenario.py E2E-CLI` — CLI scenario
+  - `uv run python scripts/e2e/run_scenario.py --list` — Show all scenarios
+  - `.\scripts\run_e2e_benchmark.ps1` — PowerShell wrapper (calculator default)
+  - `.\scripts\run_e2e_benchmark.ps1 -Scenario E2E-BugFix` — PS wrapper for BugFix
+  - `.\scripts\run_e2e_benchmark.ps1 -Scenario E2E-CLI` — PS wrapper for CLI
+  - See `TESTING.md` for full guide, or `docs/qa/e2e-benchmark-guide.md` for deep details
+- **External benchmarks (requires Docker + Harbor):**
+  - `uv run python scripts/e2e/external/run_external_pilot.py --agent codex --suite swebench` — SWE-bench pilot
+  - `uv run python scripts/e2e/external/run_external_pilot.py --agent claude-code --suite terminalbench` — Terminal-Bench pilot
+  - `uv run python scripts/e2e/external/run_external_pilot.py --help` — All options
+  - See `docs/plan/agentic-benchmarks/external-benchmark-runbook.md` for full setup
 - Before/after Phase 3 benchmark snapshots:
   - `./scripts/run_phase3_benchmark_snapshot.sh before`
   - `./scripts/run_phase3_benchmark_snapshot.sh after`
@@ -80,15 +94,18 @@ For a compact execution version, use `docs/plan/phase3-execution-brief.md`.
 - Phase 3 before/after snapshots: `docs/qa/phase3-benchmarks/`
 - Real-life benchmark standards: `docs/qa/real-life-benchmark-standards.md`
 - **E2E benchmark guide: `docs/qa/e2e-benchmark-guide.md`**
+- **External benchmark runbook: `docs/plan/agentic-benchmarks/external-benchmark-runbook.md`**
 - E2E UI reference images: `docs/qa/e2e-tests/calculator-app/`
 - E2E sandbox outputs: `sandboxes/`
 
-## 8) Known Baseline QA State (as of 2026-02-12)
+## 8) Known Baseline QA State (as of 2026-02-13)
 
 From stored artifacts in `docs/qa/test-results/`:
-- pytest suite: passing (`587 passed, 10 deselected`)
+- pytest suite: passing (`601 passed, 1 skipped, 10 deselected`)
 - ruff: failing baseline issues (30)
 - mypy: failing baseline issues (2 in `src/hybridcoder/backend/server.py`)
+- E2E scenarios: E2E-BugFix, E2E-CLI, E2E-Calculator defined and runnable
+- E2E verdict system: PASS (exit 0), FAIL (exit 1), INFRA_FAIL (exit 2)
 
 Treat ruff/mypy failures above as pre-existing baseline until explicitly fixed.
 

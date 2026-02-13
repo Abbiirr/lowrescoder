@@ -48,3 +48,6 @@ sandboxes/
 docs/qa/test-results/
 docs/qa/e2e-test-results/
 docs/qa/phase3-benchmarks/
+
+
+toolsharbor-cli/

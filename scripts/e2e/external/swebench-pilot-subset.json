@@ -1,0 +1,161 @@
+{
+  "_meta": {
+    "description": "SWE-bench Verified pilot subset: 25 representative tasks",
+    "selection_criteria": "5 repos x 5 difficulty tiers, no GPU required, test suite <120s",
+    "stratification": "Each (repo, difficulty) pair contributes 1 task",
+    "source": "https://github.com/princeton-nlp/SWE-bench",
+    "note": "Task IDs are representative selections from published dataset. Confirm exact availability when dataset is downloaded."
+  },
+  "tasks": [
+    {
+      "task_id": "django__django-11099",
+      "repo": "django",
+      "difficulty": "trivial",
+      "description": "Fix UsernameValidator to accept trailing newline"
+    },
+    {
+      "task_id": "django__django-11133",
+      "repo": "django",
+      "difficulty": "easy",
+      "description": "HttpResponse.delete_cookie should allow setting samesite"
+    },
+    {
+      "task_id": "django__django-11283",
+      "repo": "django",
+      "difficulty": "medium",
+      "description": "Migration auth.0011_update_proxy_permissions fails"
+    },
+    {
+      "task_id": "django__django-11620",
+      "repo": "django",
+      "difficulty": "hard",
+      "description": "When using Subquery, the columns are not quoted properly"
+    },
+    {
+      "task_id": "django__django-11742",
+      "repo": "django",
+      "difficulty": "complex",
+      "description": "Mail backend closes connection on error, preventing retries"
+    },
+    {
+      "task_id": "sympy__sympy-13031",
+      "repo": "sympy",
+      "difficulty": "trivial",
+      "description": "Matrix hstack and vstack with 0-row/column matrices"
+    },
+    {
+      "task_id": "sympy__sympy-13146",
+      "repo": "sympy",
+      "difficulty": "easy",
+      "description": "Exponent not simplified correctly"
+    },
+    {
+      "task_id": "sympy__sympy-13480",
+      "repo": "sympy",
+      "difficulty": "medium",
+      "description": ".subs on coth(log(tan(x))) fails"
+    },
+    {
+      "task_id": "sympy__sympy-13647",
+      "repo": "sympy",
+      "difficulty": "hard",
+      "description": "Matrix.col_insert() wrong result for inserting column"
+    },
+    {
+      "task_id": "sympy__sympy-13971",
+      "repo": "sympy",
+      "difficulty": "complex",
+      "description": "SeqFormula doesn't print LaTeX correctly"
+    },
+    {
+      "task_id": "scikit-learn__scikit-learn-10297",
+      "repo": "scikit-learn",
+      "difficulty": "trivial",
+      "description": "LinearRegression wrong in case of near-collinear features"
+    },
+    {
+      "task_id": "scikit-learn__scikit-learn-10508",
+      "repo": "scikit-learn",
+      "difficulty": "easy",
+      "description": "LabelEncoder.transform inconsistent with unseen labels"
+    },
+    {
+      "task_id": "scikit-learn__scikit-learn-10949",
+      "repo": "scikit-learn",
+      "difficulty": "medium",
+      "description": "warn_on_dtype option in check_array being ignored"
+    },
+    {
+      "task_id": "scikit-learn__scikit-learn-11281",
+      "repo": "scikit-learn",
+      "difficulty": "hard",
+      "description": "Missing validation for mixture models"
+    },
+    {
+      "task_id": "scikit-learn__scikit-learn-12471",
+      "repo": "scikit-learn",
+      "difficulty": "complex",
+      "description": "OneHotEncoder handle_unknown='ignore' with drop"
+    },
+    {
+      "task_id": "pallets__flask-4045",
+      "repo": "flask",
+      "difficulty": "trivial",
+      "description": "Raise error on blueprint name with a dot"
+    },
+    {
+      "task_id": "pallets__flask-4074",
+      "repo": "flask",
+      "difficulty": "easy",
+      "description": "Add a file mode parameter to Flask.open_resource"
+    },
+    {
+      "task_id": "pallets__flask-4992",
+      "repo": "flask",
+      "difficulty": "medium",
+      "description": "Add --app auto-detection for app factory patterns"
+    },
+    {
+      "task_id": "pallets__flask-5063",
+      "repo": "flask",
+      "difficulty": "hard",
+      "description": "Support nested blueprints"
+    },
+    {
+      "task_id": "pallets__flask-5014",
+      "repo": "flask",
+      "difficulty": "complex",
+      "description": "Duplicate URL rules created for blueprints"
+    },
+    {
+      "task_id": "psf__requests-1963",
+      "repo": "requests",
+      "difficulty": "trivial",
+      "description": "session.resolve_redirects copies the original request"
+    },
+    {
+      "task_id": "psf__requests-2317",
+      "repo": "requests",
+      "difficulty": "easy",
+      "description": "Method in prepared request is not uppercased"
+    },
+    {
+      "task_id": "psf__requests-2674",
+      "repo": "requests",
+      "difficulty": "medium",
+      "description": "urllib3 exceptions not wrapped properly"
+    },
+    {
+      "task_id": "psf__requests-3362",
+      "repo": "requests",
+      "difficulty": "hard",
+      "description": "Uncertain about content vs text decoding"
+    },
+    {
+      "task_id": "psf__requests-863",
+      "repo": "requests",
+      "difficulty": "complex",
+      "description": "Allow lists as values in params"
+    }
+  ]
+}

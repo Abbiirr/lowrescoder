@@ -13,10 +13,14 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import json
 import os
+import re
 import shutil
+import signal
+import statistics
 import subprocess
 import sys
 import time
@@ -93,6 +97,12 @@ NPM_TIMEOUT = 300
 API_RETRY_COOLDOWN = 60  # Seconds to wait after a rate-limit error before retrying
 MAX_API_RETRIES = 3  # Maximum number of retry attempts after API errors
 
+BENCHMARK_VERSION = "1.1.0"
+RUBRIC_VERSION = "2.0.0"
+PROMPT_VERSION = "3.0.0"
+
+DEFAULT_KEEP_LAST = 3
+
 
 # --- Helpers ---
 
@@ -157,28 +167,36 @@ def check_prerequisites() -> None:
 # --- Phase B: Setup ---
 
 
-def clean_old_sandboxes() -> None:
-    """Remove all previous bench_* directories inside sandboxes/."""
+def clean_old_sandboxes(keep_last: int = DEFAULT_KEEP_LAST) -> None:
+    """Remove old bench_* directories, keeping the most recent `keep_last`."""
     sandboxes_dir = PROJECT_ROOT / "sandboxes"
     if not sandboxes_dir.exists():
         return
-    for child in sandboxes_dir.iterdir():
-        if child.is_dir() and child.name.startswith("bench_"):
-            try:
-                shutil.rmtree(child)
-            except OSError:
-                # On Windows, node_modules binaries may be locked — kill node first
-                if sys.platform == "win32":
-                    subprocess.run(
-                        ["taskkill", "/F", "/IM", "node.exe"],
-                        capture_output=True, check=False,
-                    )
-                    try:
-                        shutil.rmtree(child)
-                    except OSError as e:
-                        print(f"  WARNING: Could not remove {child.name}: {e}")
-                else:
-                    print(f"  WARNING: Could not remove {child.name}")
+    bench_dirs = sorted(
+        [c for c in sandboxes_dir.iterdir() if c.is_dir() and c.name.startswith("bench_")],
+        key=lambda p: p.name,
+        reverse=True,
+    )
+    to_remove = bench_dirs[keep_last:]
+    for child in to_remove:
+        try:
+            SandboxProcessTracker(child).kill_all()
+        except Exception:
+            pass
+        try:
+            shutil.rmtree(child)
+        except OSError:
+            if sys.platform == "win32":
+                subprocess.run(
+                    ["taskkill", "/F", "/IM", "node.exe"],
+                    capture_output=True, check=False,
+                )
+                try:
+                    shutil.rmtree(child)
+                except OSError as e:
+                    print(f"  WARNING: Could not remove {child.name}: {e}")
+            else:
+                print(f"  WARNING: Could not remove {child.name}")
 
 
 def create_sandbox() -> Path:
@@ -187,6 +205,49 @@ def create_sandbox() -> Path:
     sandbox = PROJECT_ROOT / "sandboxes" / f"bench_{ts}"
     sandbox.mkdir(parents=True, exist_ok=True)
     return sandbox
+
+
+class SandboxProcessTracker:
+    """Track and kill processes spawned inside a benchmark sandbox."""
+
+    def __init__(self, sandbox: Path) -> None:
+        self._pid_file = sandbox / ".sandbox-pids.json"
+        self._pids: list[int] = []
+
+    def register(self, pid: int) -> None:
+        self._pids.append(pid)
+        self._save()
+
+    def _save(self) -> None:
+        self._pid_file.write_text(
+            json.dumps({"pids": self._pids}), encoding="utf-8",
+        )
+
+    def kill_all(self) -> None:
+        """Kill all tracked processes."""
+        if self._pid_file.exists():
+            try:
+                data = json.loads(self._pid_file.read_text(encoding="utf-8"))
+                pids = data.get("pids", [])
+            except (json.JSONDecodeError, OSError):
+                pids = []
+        else:
+            pids = self._pids
+
+        for pid in pids:
+            try:
+                if sys.platform == "win32":
+                    subprocess.run(
+                        ["taskkill", "/F", "/T", "/PID", str(pid)],
+                        capture_output=True, check=False,
+                    )
+                else:
+                    os.kill(pid, signal.SIGTERM)
+            except (OSError, ProcessLookupError):
+                pass
+
+
+_active_tracker: SandboxProcessTracker | None = None
 
 
 class BenchmarkLogger:
@@ -239,6 +300,8 @@ def _benchmark_run_command(command: str, timeout: int = 30) -> str:
                 text=True,
                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
             )
+            if _active_tracker:
+                _active_tracker.register(proc.pid)
             try:
                 stdout, stderr = proc.communicate(timeout=timeout)
                 output = stdout
@@ -595,6 +658,197 @@ def run_npm_validation(sandbox: Path) -> dict:
     return results
 
 
+def validate_imports_vs_deps(project_root: Path) -> dict:
+    """Scan JS/TS files for import/require and compare to package.json deps."""
+    NODE_BUILTINS = {
+        "path", "fs", "os", "url", "http", "https", "crypto", "util", "stream",
+        "events", "buffer", "child_process", "assert", "querystring", "net",
+        "tls", "zlib", "dns", "domain", "cluster", "readline", "repl", "vm",
+        "string_decoder", "timers", "tty", "dgram", "v8", "perf_hooks",
+        "worker_threads", "inspector", "async_hooks", "wasi", "trace_events",
+        "node:path", "node:fs", "node:os", "node:url", "node:http",
+        "node:https", "node:crypto", "node:util", "node:stream",
+    }
+    IMPLICIT_PACKAGES = {"react/jsx-runtime", "react-dom/client"}
+
+    pkg_path = project_root / "package.json"
+    if not pkg_path.exists():
+        return {"valid": False, "declared": [], "imported": [], "missing": [], "unused": []}
+
+    try:
+        pkg = json.loads(pkg_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {"valid": False, "declared": [], "imported": [], "missing": [], "unused": []}
+
+    declared = set()
+    for dep_group in ("dependencies", "devDependencies", "peerDependencies"):
+        declared.update(pkg.get(dep_group, {}).keys())
+
+    src_dir = project_root / "src"
+    if not src_dir.exists():
+        return {
+            "valid": True, "declared": sorted(declared),
+            "imported": [], "missing": [], "unused": sorted(declared),
+        }
+
+    import_re = re.compile(
+        r"""(?:import\s+.*?\s+from\s+['"]([^'"./][^'"]*?)['"]"""
+        r"""|require\s*\(\s*['"]([^'"./][^'"]*?)['"]\s*\))""",
+    )
+
+    imported = set()
+    for path in src_dir.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in {".js", ".jsx", ".ts", ".tsx"}:
+            continue
+        try:
+            content = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        for m in import_re.finditer(content):
+            raw = m.group(1) or m.group(2)
+            # Extract package name: @scope/pkg or just pkg
+            if raw.startswith("@"):
+                parts = raw.split("/")
+                pkg_name = "/".join(parts[:2]) if len(parts) >= 2 else raw
+            else:
+                pkg_name = raw.split("/")[0]
+            imported.add(pkg_name)
+
+    # Filter out builtins and implicit packages
+    imported = {
+        p for p in imported
+        if p not in NODE_BUILTINS and p not in IMPLICIT_PACKAGES
+        and not p.startswith("node:")
+    }
+
+    missing = sorted(imported - declared)
+    unused = sorted(declared - imported)
+
+    return {
+        "valid": len(missing) == 0,
+        "declared": sorted(declared),
+        "imported": sorted(imported),
+        "missing": missing,
+        "unused": unused,
+    }
+
+
+def run_security_checks(project_root: Path) -> dict:
+    """Run security hygiene checks on the generated project."""
+    result: dict = {
+        "npm_audit": None,
+        "secrets_detected": [],
+        "typosquat_warnings": [],
+    }
+
+    # npm audit
+    if (project_root / "node_modules").exists() and shutil.which("npm"):
+        try:
+            proc = _run_npm(["audit", "--json"], cwd=project_root, timeout=60)
+            try:
+                audit_data = json.loads(proc.stdout)
+                result["npm_audit"] = {
+                    "critical": audit_data.get("metadata", {}).get("vulnerabilities", {}).get("critical", 0),
+                    "high": audit_data.get("metadata", {}).get("vulnerabilities", {}).get("high", 0),
+                    "moderate": audit_data.get("metadata", {}).get("vulnerabilities", {}).get("moderate", 0),
+                    "low": audit_data.get("metadata", {}).get("vulnerabilities", {}).get("low", 0),
+                }
+            except json.JSONDecodeError:
+                result["npm_audit"] = {"error": "Could not parse npm audit output"}
+        except (subprocess.TimeoutExpired, OSError):
+            result["npm_audit"] = {"error": "npm audit failed or timed out"}
+
+    # Secret detection
+    secret_patterns = [
+        (r'(?:api[_-]?key|secret|token|password)\s*[=:]\s*["\'][A-Za-z0-9+/=_-]{16,}["\']', "hardcoded_secret"),
+        (r'sk-[A-Za-z0-9]{20,}', "openai_key"),
+        (r'ghp_[A-Za-z0-9]{36}', "github_token"),
+        (r'-----BEGIN (?:RSA |EC )?PRIVATE KEY-----', "private_key"),
+    ]
+    seen_secrets: set[tuple[str, str]] = set()
+    secrets: list[dict] = []
+
+    # Scan all project files
+    for path in project_root.rglob("*"):
+        if not path.is_file():
+            continue
+        if any(part in {"node_modules", "dist", ".git", ".venv"} for part in path.parts):
+            continue
+        if path.stat().st_size > 1_000_000:
+            continue
+        try:
+            content = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        rel = str(path.relative_to(project_root))
+        for pattern, secret_type in secret_patterns:
+            if re.search(pattern, content, re.IGNORECASE):
+                key = (rel, secret_type)
+                if key not in seen_secrets:
+                    seen_secrets.add(key)
+                    secrets.append({"file": rel, "type": secret_type})
+
+    # Also check explicit root-level .env files
+    for env_name in (".env", ".env.local", ".env.production"):
+        env_path = project_root / env_name
+        if env_path.exists():
+            try:
+                content = env_path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            for pattern, secret_type in secret_patterns:
+                if re.search(pattern, content, re.IGNORECASE):
+                    key = (env_name, secret_type)
+                    if key not in seen_secrets:
+                        seen_secrets.add(key)
+                        secrets.append({"file": env_name, "type": secret_type})
+
+    result["secrets_detected"] = secrets
+
+    # Typosquat detection
+    POPULAR_PACKAGES = {
+        "react", "express", "lodash", "axios", "moment", "webpack",
+        "typescript", "eslint", "prettier", "jest", "mocha", "chalk",
+        "commander", "inquirer", "dotenv", "cors", "body-parser",
+        "mongoose", "sequelize", "prisma", "next", "vue", "angular",
+    }
+    pkg_path = project_root / "package.json"
+    if pkg_path.exists():
+        try:
+            pkg = json.loads(pkg_path.read_text(encoding="utf-8"))
+            all_deps = set()
+            for dep_group in ("dependencies", "devDependencies"):
+                all_deps.update(pkg.get(dep_group, {}).keys())
+            for dep in all_deps:
+                for popular in POPULAR_PACKAGES:
+                    if dep != popular and _levenshtein_distance(dep, popular) == 1:
+                        result["typosquat_warnings"].append({
+                            "package": dep, "similar_to": popular,
+                        })
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    return result
+
+
+def _levenshtein_distance(s1: str, s2: str) -> int:
+    """Compute Levenshtein distance between two strings."""
+    if len(s1) < len(s2):
+        return _levenshtein_distance(s2, s1)
+    if len(s2) == 0:
+        return len(s1)
+    prev_row = list(range(len(s2) + 1))
+    for i, c1 in enumerate(s1):
+        curr_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = prev_row[j + 1] + 1
+            deletions = curr_row[j] + 1
+            substitutions = prev_row[j] + (c1 != c2)
+            curr_row.append(min(insertions, deletions, substitutions))
+        prev_row = curr_row
+    return prev_row[-1]
+
+
 # --- Phase E: Scoring ---
 
 
@@ -622,6 +876,210 @@ def score_project(sandbox: Path) -> dict[str, int]:
     return score_react_calculator_project(sandbox, run_build=False)
 
 
+def get_anti_patterns(project_root: Path) -> dict:
+    """Get anti-pattern analysis for the project."""
+    import types
+
+    if "pytest" not in sys.modules:
+        stub = types.ModuleType("pytest")
+        stub.fixture = lambda *a, **kw: (lambda f: f)  # type: ignore[attr-defined]
+        stub.skip = lambda *a, **kw: None  # type: ignore[attr-defined]
+        mark = types.SimpleNamespace(
+            integration=lambda *a, **kw: (lambda f: f),
+            benchmark=lambda *a, **kw: (lambda f: f),
+        )
+        stub.mark = mark  # type: ignore[attr-defined]
+        sys.modules["pytest"] = stub
+
+    sys.path.insert(0, str(PROJECT_ROOT / "tests"))
+    from benchmark.test_project_creation import _detect_anti_patterns, _project_text
+
+    raw_text = _project_text(project_root)
+    return _detect_anti_patterns(raw_text)
+
+
+class BenchmarkVerdict:
+    """Verdict constants for benchmark results."""
+
+    PASS = "PASS"
+    FAIL = "FAIL"
+    INFRA_FAIL = "INFRA_FAIL"
+
+
+def classify_result(
+    scores: dict,
+    npm_result: dict,
+    agent_result: dict,
+    min_score: int = 30,
+) -> tuple[str, list[str]]:
+    """Classify benchmark result as PASS, FAIL, or INFRA_FAIL."""
+    reasons: list[str] = []
+
+    # Check for API/infra errors in turns
+    turns = agent_result.get("turns", [])
+    api_errors = [t for t in turns if t.get("error")]
+    if api_errors:
+        reasons.append(f"API errors in {len(api_errors)} turn(s)")
+        return BenchmarkVerdict.INFRA_FAIL, reasons
+
+    total = scores.get("total", 0)
+    if total < min_score:
+        reasons.append(f"Score {total} < minimum {min_score}")
+
+    build_result = npm_result.get("build") or {}
+    if not build_result.get("success", False):
+        reasons.append("npm build failed")
+
+    if reasons:
+        return BenchmarkVerdict.FAIL, reasons
+
+    return BenchmarkVerdict.PASS, []
+
+
+def analyze_trace(log_path: Path) -> dict:
+    """Analyze a benchmark event log for quality metrics."""
+    events = []
+    try:
+        with open(log_path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        events.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
+    except OSError:
+        return {"total_events": 0, "tool_calls": {"total": 0, "failures": 0}}
+
+    tool_calls = [e for e in events if e.get("event") == "tool_call"]
+    failures = [e for e in tool_calls if e.get("status") == "error"]
+
+    # Count tool calls by name
+    by_name: dict[str, int] = {}
+    for tc in tool_calls:
+        name = tc.get("name", "unknown")
+        by_name[name] = by_name.get(name, 0) + 1
+
+    # Find repeated failures (same tool, 3+)
+    failure_names: dict[str, int] = {}
+    for f in failures:
+        name = f.get("name", "unknown")
+        failure_names[name] = failure_names.get(name, 0) + 1
+    repeated_failures = {k: v for k, v in failure_names.items() if v >= 3}
+
+    # Duration
+    durations = [e.get("elapsed_s", 0) for e in events if "elapsed_s" in e]
+    total_duration = max(durations) if durations else 0
+
+    # API errors
+    api_errors = [e for e in events if e.get("event") == "api_error"]
+
+    # Warnings
+    warnings = []
+    failure_rate = len(failures) / max(len(tool_calls), 1)
+    if failure_rate > 0.30:
+        warnings.append(f"High failure rate: {failure_rate:.0%}")
+    if total_duration > 1800:
+        warnings.append(f"Excessive duration: {total_duration:.0f}s")
+    if len(tool_calls) < 5:
+        warnings.append(f"Few tool calls: {len(tool_calls)}")
+
+    return {
+        "total_events": len(events),
+        "duration_s": round(total_duration, 1),
+        "tool_calls": {
+            "total": len(tool_calls),
+            "failures": len(failures),
+            "by_name": by_name,
+            "repeated_failures": repeated_failures,
+        },
+        "api_errors": len(api_errors),
+        "warnings": warnings,
+    }
+
+
+# Budget constants
+BUDGET_MAX_WALL_TIME_S = 1800
+BUDGET_MAX_TOOL_CALLS = 100
+BUDGET_MAX_TURNS = 5
+
+
+def check_budgets(agent_result: dict, bench_log: object) -> dict:
+    """Check if the benchmark stayed within budget limits."""
+    wall_time = agent_result.get("total_duration_s", 0)
+    tool_calls = agent_result.get("total_tool_calls", 0)
+    turns = len(agent_result.get("turns", []))
+
+    return {
+        "wall_time": {
+            "value": wall_time,
+            "limit": BUDGET_MAX_WALL_TIME_S,
+            "passed": wall_time <= BUDGET_MAX_WALL_TIME_S,
+        },
+        "tool_calls": {
+            "value": tool_calls,
+            "limit": BUDGET_MAX_TOOL_CALLS,
+            "passed": tool_calls <= BUDGET_MAX_TOOL_CALLS,
+        },
+        "turns": {
+            "value": turns,
+            "limit": BUDGET_MAX_TURNS,
+            "passed": turns <= BUDGET_MAX_TURNS,
+        },
+    }
+
+
+# Strict mode constants
+STRICT_MIN_SCORE = 60
+STRICT_REQUIRE_BUILD = True
+
+
+def classify_result_strict(
+    scores: dict,
+    npm_result: dict,
+    agent_result: dict,
+    anti_patterns: dict | None = None,
+    budgets: dict | None = None,
+) -> tuple[str, list[str]]:
+    """Strict mode classification with higher thresholds."""
+    reasons: list[str] = []
+
+    # Check for API/infra errors first
+    turns = agent_result.get("turns", [])
+    api_errors = [t for t in turns if t.get("error")]
+    if api_errors:
+        reasons.append(f"API errors in {len(api_errors)} turn(s)")
+        return BenchmarkVerdict.INFRA_FAIL, reasons
+
+    total = scores.get("total", 0)
+    if total < STRICT_MIN_SCORE:
+        reasons.append(f"Score {total} < strict minimum {STRICT_MIN_SCORE}")
+
+    build_result = npm_result.get("build") or {}
+    if STRICT_REQUIRE_BUILD and not build_result.get("success", False):
+        reasons.append("npm build failed (required in strict mode)")
+
+    # Critical anti-patterns block in strict mode
+    if anti_patterns and anti_patterns.get("critical"):
+        for name, findings in anti_patterns["critical"].items():
+            if findings:
+                reasons.append(f"Critical anti-pattern: {name}")
+
+    # Budget enforcement in strict mode
+    if budgets:
+        for budget_name, budget_data in budgets.items():
+            if not budget_data.get("passed", True):
+                reasons.append(
+                    f"Budget exceeded: {budget_name} "
+                    f"({budget_data['value']} > {budget_data['limit']})",
+                )
+
+    if reasons:
+        return BenchmarkVerdict.FAIL, reasons
+
+    return BenchmarkVerdict.PASS, []
+
+
 # --- Phase F: Report & Storage ---
 
 
@@ -631,6 +1089,13 @@ def generate_report(
     npm_result: dict,
     scores: dict[str, int],
     bench_log: BenchmarkLogger,
+    verdict: str = "",
+    verdict_reasons: list[str] | None = None,
+    anti_patterns: dict | None = None,
+    import_validation: dict | None = None,
+    trace_analysis: dict | None = None,
+    budgets: dict | None = None,
+    security: dict | None = None,
 ) -> str:
     """Generate markdown report."""
     provider = agent_result.get("provider", "unknown")
@@ -645,8 +1110,20 @@ def generate_report(
 **Provider:** {provider}
 **Model:** {model}
 **Sandbox:** `{sandbox.name}`
+**Benchmark Version:** {BENCHMARK_VERSION}
+**Rubric Version:** {RUBRIC_VERSION}
+**Prompt Version:** {PROMPT_VERSION}
 
-## Score: {scores.get('total', 0)} / 100
+## Verdict: {verdict or 'N/A'}
+
+"""
+    if verdict_reasons:
+        report += "**Reasons:**\n"
+        for r in verdict_reasons:
+            report += f"- {r}\n"
+        report += "\n"
+
+    report += f"""## Score: {scores.get('total', 0)} / 100
 
 | Category | Score | Max |
 |----------|-------|-----|
@@ -665,7 +1142,80 @@ def generate_report(
 | npm install | {'PASS' if npm_install_ok else 'FAIL'} |
 | npm run build | {'PASS' if npm_build_ok else 'FAIL / SKIPPED'} |
 
-## Agent Execution
+"""
+
+    # Anti-patterns section
+    if anti_patterns:
+        report += "## Anti-Pattern Detection\n\n"
+        report += f"**Penalty:** {anti_patterns.get('penalty', 0)} points\n\n"
+        if anti_patterns.get("critical"):
+            report += "**Critical:**\n"
+            for name, findings in anti_patterns["critical"].items():
+                if findings:
+                    report += f"- {name}: {findings} occurrence(s)\n"
+        if anti_patterns.get("minor"):
+            report += "**Minor:**\n"
+            for name, findings in anti_patterns["minor"].items():
+                if findings:
+                    report += f"- {name}: {findings}\n"
+        report += "\n"
+
+    # Import validation section
+    if import_validation:
+        report += "## Import Validation\n\n"
+        report += f"**Valid:** {import_validation.get('valid', False)}\n"
+        if import_validation.get("missing"):
+            report += f"**Missing deps:** {', '.join(import_validation['missing'])}\n"
+        if import_validation.get("unused"):
+            report += f"**Unused deps:** {', '.join(import_validation['unused'])}\n"
+        report += "\n"
+
+    # Budgets section
+    if budgets:
+        report += "## Budget Gates\n\n"
+        report += "| Budget | Value | Limit | Status |\n"
+        report += "|--------|-------|-------|--------|\n"
+        for name, data in budgets.items():
+            status = "PASS" if data["passed"] else "FAIL"
+            report += f"| {name} | {data['value']} | {data['limit']} | {status} |\n"
+        report += "\n"
+
+    # Trace analysis section
+    if trace_analysis:
+        report += "## Trace Analysis\n\n"
+        report += f"- Total events: {trace_analysis.get('total_events', 0)}\n"
+        report += f"- Duration: {trace_analysis.get('duration_s', 0)}s\n"
+        tc = trace_analysis.get("tool_calls", {})
+        report += f"- Tool calls: {tc.get('total', 0)} (failures: {tc.get('failures', 0)})\n"
+        report += f"- API errors: {trace_analysis.get('api_errors', 0)}\n"
+        if trace_analysis.get("warnings"):
+            report += "**Warnings:**\n"
+            for w in trace_analysis["warnings"]:
+                report += f"- {w}\n"
+        report += "\n"
+
+    # Security section
+    if security:
+        report += "## Security Hygiene\n\n"
+        audit = security.get("npm_audit")
+        if audit and "error" not in audit:
+            report += f"**npm audit:** critical={audit.get('critical', 0)}, "
+            report += f"high={audit.get('high', 0)}, "
+            report += f"moderate={audit.get('moderate', 0)}, "
+            report += f"low={audit.get('low', 0)}\n"
+        secrets = security.get("secrets_detected", [])
+        if secrets:
+            report += f"**Secrets detected:** {len(secrets)}\n"
+            for s in secrets:
+                report += f"- {s['file']}: {s['type']}\n"
+        typos = security.get("typosquat_warnings", [])
+        if typos:
+            report += f"**Typosquat warnings:** {len(typos)}\n"
+            for t in typos:
+                report += f"- {t['package']} (similar to {t['similar_to']})\n"
+        report += "\n"
+
+    report += f"""## Agent Execution
 
 | Metric | Value |
 |--------|-------|
@@ -701,9 +1251,18 @@ def save_results(
     scores: dict[str, int],
     agent_result: dict,
     npm_result: dict,
-) -> None:
-    """Save all result artifacts."""
-    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    ts: str | None = None,
+    verdict: str = "",
+    verdict_reasons: list[str] | None = None,
+    anti_patterns: dict | None = None,
+    import_validation: dict | None = None,
+    trace_analysis: dict | None = None,
+    budgets: dict | None = None,
+    security: dict | None = None,
+) -> tuple[str, Path]:
+    """Save all result artifacts. Returns (ts, results_dir)."""
+    if ts is None:
+        ts = datetime.now().strftime("%Y%m%d-%H%M%S")
     results_dir = PROJECT_ROOT / "docs" / "qa" / "test-results"
     results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -720,41 +1279,163 @@ def save_results(
     # Machine-readable JSON in sandbox
     json_path = sandbox / ".hybridcoder-benchmark.json"
     json_data = {
+        "benchmark_version": BENCHMARK_VERSION,
+        "rubric_version": RUBRIC_VERSION,
+        "prompt_version": PROMPT_VERSION,
         "timestamp": ts,
+        "verdict": verdict,
+        "verdict_reasons": verdict_reasons or [],
         "provider": agent_result.get("provider", "unknown"),
         "model": agent_result.get("model", "unknown"),
         "scores": scores,
         "agent": agent_result,
         "npm": npm_result,
         "event_count": len(bench_log.events),
+        "anti_patterns": anti_patterns,
+        "import_validation": import_validation,
+        "trace_analysis": trace_analysis,
+        "budgets": budgets,
+        "security": security,
     }
     json_path.write_text(
         json.dumps(json_data, indent=2, default=str), encoding="utf-8",
     )
     print(f"JSON results saved: {json_path}", flush=True)
 
+    return ts, results_dir
 
-# --- Main ---
+
+def verify_artifacts(
+    sandbox: Path,
+    results_dir: Path,
+    ts: str,
+    strict: bool = False,
+) -> list[str]:
+    """Verify that all expected benchmark artifacts exist."""
+    expected = [
+        (sandbox / ".hybridcoder-benchmark.json", "Benchmark JSON"),
+        (sandbox / ".benchmark-events.jsonl", "Event log (sandbox)"),
+        (results_dir / f"{ts}-e2e-react-calculator.md", "Markdown report"),
+        (results_dir / f"{ts}-e2e-react-calculator.log", "Event log (results)"),
+    ]
+
+    errors = []
+    for path, label in expected:
+        if not path.exists():
+            msg = f"Missing artifact: {label} ({path.name})"
+            errors.append(msg)
+            if strict:
+                print(f"  ERROR: {msg}", flush=True)
+            else:
+                print(f"  WARNING: {msg}", flush=True)
+
+    if not errors:
+        print("  All artifacts present", flush=True)
+
+    return errors
 
 
-async def main() -> int:
-    """Run the full E2E benchmark."""
+# --- Replay Mode ---
+
+
+def replay_benchmark(sandbox: Path, score_only: bool = False) -> int:
+    """Re-score an existing benchmark sandbox without running the agent."""
+    json_path = sandbox / ".hybridcoder-benchmark.json"
+    if not json_path.exists():
+        print(f"ERROR: No benchmark JSON found at {json_path}", flush=True)
+        return 1
+
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    original_ts = data.get("timestamp", "unknown")
+
     print("=" * 60)
-    print("HybridCoder E2E Benchmark: React Calculator")
+    print(f"REPLAY MODE — Re-scoring sandbox: {sandbox.name}")
+    print(f"Original timestamp: {original_ts}")
     print("=" * 60)
 
-    # Phase A: Prerequisites (exits if .env is incomplete)
-    print("\n[Phase A] Checking prerequisites...")
-    check_prerequisites()
-    print("  All required config found in .env")
+    project_root = find_project_root(sandbox)
 
-    # Phase B: Setup
-    print("\n[Phase B] Cleaning old sandboxes...")
-    clean_old_sandboxes()
-    print("  Old sandboxes removed")
-    print("[Phase B] Setting up sandbox...")
+    # npm validation (skip if score_only)
+    if score_only:
+        npm_result = data.get("npm", {"install": None, "build": None})
+        print("\n[Replay] Skipping npm validation (--score-only)", flush=True)
+    else:
+        print("\n[Replay] Running npm validation...", flush=True)
+        npm_result = run_npm_validation(project_root)
+
+    # Re-score
+    print("\n[Replay] Scoring project with current rubric...", flush=True)
+    scores = score_project(project_root)
+    print(f"  Total score: {scores.get('total', 0)} / 100")
+
+    # Anti-patterns
+    anti_patterns = get_anti_patterns(project_root)
+
+    # Import validation
+    import_val = validate_imports_vs_deps(project_root)
+
+    # Trace analysis
+    log_path = sandbox / ".benchmark-events.jsonl"
+    trace = analyze_trace(log_path) if log_path.exists() else None
+
+    # Classify
+    agent_result = data.get("agent", {"turns": []})
+    verdict, reasons = classify_result(scores, npm_result, agent_result)
+
+    # Generate replay report
+    bench_log = BenchmarkLogger(sandbox / ".replay-events.jsonl")
+    bench_log.log("replay_start", original_ts=original_ts)
+
+    report = generate_report(
+        sandbox, agent_result, npm_result, scores, bench_log,
+        verdict=verdict, verdict_reasons=reasons,
+        anti_patterns=anti_patterns, import_validation=import_val,
+        trace_analysis=trace,
+    )
+
+    # Add replay header
+    replay_ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    report = f"<!-- REPLAY of {original_ts} at {replay_ts} -->\n\n" + report
+
+    bench_log.log("replay_end", scores=scores, verdict=verdict)
+    bench_log.close()
+
+    # Save replay report
+    results_dir = PROJECT_ROOT / "docs" / "qa" / "test-results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    replay_path = results_dir / f"{original_ts}-replay-{replay_ts}-e2e-react-calculator.md"
+    replay_path.write_text(report, encoding="utf-8")
+    print(f"\nReplay report saved: {replay_path}", flush=True)
+
+    print(f"\nREPLAY VERDICT: {verdict}")
+    if reasons:
+        for r in reasons:
+            print(f"  - {r}")
+
+    if verdict == BenchmarkVerdict.PASS:
+        return 0
+    elif verdict == BenchmarkVerdict.INFRA_FAIL:
+        return 2
+    return 1
+
+
+# --- Multi-Run ---
+
+
+async def run_single_benchmark(
+    strict: bool = False,
+    min_score: int = 30,
+) -> dict:
+    """Run a single benchmark iteration (Phases B-F).
+
+    Returns a dict with all results from the run.
+    Does NOT check prerequisites or clean old sandboxes.
+    """
     sandbox = create_sandbox()
     print(f"  Sandbox: {sandbox}")
+
+    global _active_tracker
+    _active_tracker = SandboxProcessTracker(sandbox)
 
     bench_log = BenchmarkLogger(sandbox / ".benchmark-events.jsonl")
     bench_log.log("benchmark_start")
@@ -778,7 +1459,7 @@ async def main() -> int:
             "model": "unknown",
         }
 
-    # Detect actual project root (model may nest in a subdirectory)
+    # Detect actual project root
     project_root = find_project_root(sandbox)
     if project_root != sandbox:
         print(f"\n  NOTE: Project found in subdirectory: {project_root.name}/")
@@ -787,30 +1468,420 @@ async def main() -> int:
     print("\n[Phase D] Running npm validation...")
     npm_result = run_npm_validation(project_root)
 
+    # Import validation
+    print("\n[Phase D.1] Validating imports vs deps...")
+    import_val = validate_imports_vs_deps(project_root)
+    if import_val.get("missing"):
+        print(f"  WARNING: Missing deps: {', '.join(import_val['missing'])}")
+
+    # Security checks
+    print("\n[Phase D.2] Running security checks...")
+    security = run_security_checks(project_root)
+
     # Phase E: Scoring
     print("\n[Phase E] Scoring project...")
     scores = score_project(project_root)
     print(f"  Total score: {scores.get('total', 0)} / 100")
-    for cat, val in scores.items():
-        if cat != "total":
-            print(f"    {cat}: {val}")
+
+    # Anti-patterns
+    anti_patterns = get_anti_patterns(project_root)
+    if anti_patterns.get("penalty", 0) < 0:
+        print(f"  Anti-pattern penalty: {anti_patterns['penalty']}")
+
+    # Trace analysis
+    bench_log.log("benchmark_end", scores=scores)
+    bench_log.close()
+    trace = analyze_trace(bench_log.log_path)
+
+    # Budget check
+    budgets = check_budgets(agent_result, bench_log)
+
+    # Classify verdict
+    if strict:
+        verdict, reasons = classify_result_strict(
+            scores, npm_result, agent_result,
+            anti_patterns=anti_patterns, budgets=budgets,
+        )
+    else:
+        verdict, reasons = classify_result(scores, npm_result, agent_result, min_score=min_score)
 
     # Phase F: Report & Storage
     print("\n[Phase F] Saving results...")
-    report = generate_report(sandbox, agent_result, npm_result, scores, bench_log)
-    bench_log.log("benchmark_end", scores=scores)
-    bench_log.close()
+    report = generate_report(
+        sandbox, agent_result, npm_result, scores, bench_log,
+        verdict=verdict, verdict_reasons=reasons,
+        anti_patterns=anti_patterns, import_validation=import_val,
+        trace_analysis=trace, budgets=budgets, security=security,
+    )
 
-    save_results(sandbox, report, bench_log, scores, agent_result, npm_result)
+    ts, results_dir = save_results(
+        sandbox, report, bench_log, scores, agent_result, npm_result,
+        verdict=verdict, verdict_reasons=reasons,
+        anti_patterns=anti_patterns, import_validation=import_val,
+        trace_analysis=trace, budgets=budgets, security=security,
+    )
+
+    # Verify artifacts
+    artifact_errors = verify_artifacts(sandbox, results_dir, ts, strict=strict)
 
     # Summary
     print("\n" + "=" * 60)
-    print(f"BENCHMARK COMPLETE - Score: {scores.get('total', 0)} / 100")
+    print(f"BENCHMARK {verdict} - Score: {scores.get('total', 0)} / 100")
     print(f"Sandbox: {sandbox}")
+    if reasons:
+        for r in reasons:
+            print(f"  - {r}")
     print("=" * 60)
+
+    return {
+        "sandbox": str(sandbox),
+        "scores": scores,
+        "verdict": verdict,
+        "verdict_reasons": reasons,
+        "npm_result": npm_result,
+        "npm_build": (npm_result.get("build") or {}).get("success", False),
+        "agent_result": agent_result,
+        "anti_patterns": anti_patterns,
+        "import_validation": import_val,
+        "trace_analysis": trace,
+        "budgets": budgets,
+        "security": security,
+        "artifact_errors": artifact_errors,
+        "ts": ts,
+    }
+
+
+def aggregate_multi_run(
+    results: list[dict],
+    strict: bool = False,
+    min_score: int = 30,
+) -> dict:
+    """Aggregate results from multiple benchmark runs.
+
+    INFRA_FAIL runs are excluded from product statistics per Codex Entry 219.
+    """
+    product_runs = [r for r in results if r["verdict"] != BenchmarkVerdict.INFRA_FAIL]
+    infra_fails = [r for r in results if r["verdict"] == BenchmarkVerdict.INFRA_FAIL]
+
+    if not product_runs:
+        return {
+            "total_runs": len(results),
+            "product_runs": 0,
+            "infra_fails": len(infra_fails),
+            "pass_rate": 0.0,
+            "scores": {"min": 0, "max": 0, "median": 0, "mean": 0.0},
+            "build_pass_rate": 0.0,
+            "verdicts": [r["verdict"] for r in results],
+        }
+
+    product_scores = [r["scores"].get("total", 0) for r in product_runs]
+    passes = [r for r in product_runs if r["verdict"] == BenchmarkVerdict.PASS]
+    builds = [r for r in product_runs if r.get("npm_build", False)]
+
+    return {
+        "total_runs": len(results),
+        "product_runs": len(product_runs),
+        "infra_fails": len(infra_fails),
+        "pass_rate": len(passes) / len(product_runs),
+        "scores": {
+            "min": min(product_scores),
+            "max": max(product_scores),
+            "median": statistics.median(product_scores),
+            "mean": round(statistics.mean(product_scores), 1),
+        },
+        "build_pass_rate": len(builds) / len(product_runs),
+        "verdicts": [r["verdict"] for r in results],
+    }
+
+
+async def run_multi(
+    n_runs: int,
+    strict: bool = False,
+    min_score: int = 30,
+) -> int:
+    """Run the benchmark N times and aggregate results."""
+    print(f"\n{'=' * 60}")
+    print(f"MULTI-RUN MODE: {n_runs} runs")
+    print(f"{'=' * 60}")
+
+    results = []
+    for i in range(n_runs):
+        print(f"\n--- Run {i + 1}/{n_runs} ---")
+        result = await run_single_benchmark(strict=strict, min_score=min_score)
+        results.append(result)
+
+    agg = aggregate_multi_run(results, strict=strict, min_score=min_score)
+
+    print(f"\n{'=' * 60}")
+    print("MULTI-RUN SUMMARY")
+    print(f"{'=' * 60}")
+    print(f"  Total runs: {agg['total_runs']}")
+    print(f"  Product runs: {agg['product_runs']}")
+    print(f"  INFRA_FAIL: {agg['infra_fails']}")
+    print(f"  Pass rate: {agg['pass_rate']:.0%}")
+    print(f"  Build pass rate: {agg['build_pass_rate']:.0%}")
+    print(f"  Scores: min={agg['scores']['min']}, max={agg['scores']['max']}, "
+          f"median={agg['scores']['median']}, mean={agg['scores']['mean']}")
+    print(f"  Verdicts: {agg['verdicts']}")
+
+    # Save multi-run summary
+    results_dir = PROJECT_ROOT / "docs" / "qa" / "test-results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    summary_path = results_dir / f"{ts}-multi-run-summary.json"
+    summary_path.write_text(
+        json.dumps(agg, indent=2, default=str), encoding="utf-8",
+    )
+    print(f"\nMulti-run summary saved: {summary_path}")
+
+    # Return: 0 if all product runs passed, 2 if all infra-fail, 1 otherwise
+    if agg["product_runs"] == 0:
+        return 2
+    if agg["pass_rate"] >= 1.0:
+        return 0
+    return 1
+
+
+# --- Matrix Mode ---
+
+
+async def run_matrix(matrix_path: Path) -> int:
+    """Run benchmarks across multiple model/config combinations."""
+    if not matrix_path.exists():
+        print(f"ERROR: Matrix config not found: {matrix_path}", flush=True)
+        return 1
+
+    matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
+    configs = matrix.get("configs", [])
+    if not configs:
+        print("ERROR: No configs in matrix file", flush=True)
+        return 1
+
+    print(f"\n{'=' * 60}")
+    print(f"MATRIX MODE: {len(configs)} configurations")
+    print(f"{'=' * 60}")
+
+    all_results = []
+    for i, config in enumerate(configs):
+        name = config.get("name", f"config-{i}")
+        print(f"\n--- Config {i + 1}/{len(configs)}: {name} ---")
+
+        # Save original env
+        saved_env = {}
+        env_overrides = config.get("env", {})
+        for key, value in env_overrides.items():
+            saved_env[key] = os.environ.get(key)
+            os.environ[key] = str(value)
+
+        try:
+            n_runs = config.get("runs", 1)
+            min_score = config.get("min_score", 30)
+            strict = config.get("strict", False)
+
+            if n_runs > 1:
+                results = []
+                for j in range(n_runs):
+                    r = await run_single_benchmark(strict=strict, min_score=min_score)
+                    results.append(r)
+                agg = aggregate_multi_run(results, strict=strict, min_score=min_score)
+                all_results.append({"config": name, "aggregate": agg, "runs": results})
+            else:
+                result = await run_single_benchmark(strict=strict, min_score=min_score)
+                all_results.append({"config": name, "runs": [result]})
+        finally:
+            # Restore env
+            for key, orig in saved_env.items():
+                if orig is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = orig
+
+    # Save matrix results
+    results_dir = PROJECT_ROOT / "docs" / "qa" / "test-results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    matrix_results_path = results_dir / f"{ts}-matrix-results.json"
+
+    # Summarize for JSON (avoid serializing full run data)
+    summary = []
+    for entry in all_results:
+        config_summary = {"config": entry["config"]}
+        if "aggregate" in entry:
+            config_summary["aggregate"] = entry["aggregate"]
+        else:
+            run = entry["runs"][0]
+            config_summary["score"] = run["scores"].get("total", 0)
+            config_summary["verdict"] = run["verdict"]
+        summary.append(config_summary)
+
+    matrix_results_path.write_text(
+        json.dumps(summary, indent=2, default=str), encoding="utf-8",
+    )
+
+    print(f"\n{'=' * 60}")
+    print("MATRIX RESULTS")
+    print(f"{'=' * 60}")
+    print(f"| {'Config':<30} | {'Score':>5} | {'Verdict':<12} |")
+    print(f"|{'-'*32}|{'-'*7}|{'-'*14}|")
+    for entry in summary:
+        score = entry.get("score", entry.get("aggregate", {}).get("scores", {}).get("median", "N/A"))
+        verdict = entry.get("verdict", entry.get("aggregate", {}).get("verdicts", ["N/A"])[0])
+        print(f"| {entry['config']:<30} | {score:>5} | {verdict:<12} |")
+
+    print(f"\nMatrix results saved: {matrix_results_path}")
 
     return 0
 
 
+# --- Flake Triage ---
+
+
+async def run_with_flake_triage(
+    strict: bool = False,
+    min_score: int = 30,
+) -> int:
+    """Run benchmark with automatic flake triage.
+
+    If first run passes, done. If it fails/infra-fails, rerun once.
+    Classify as DETERMINISTIC_FAIL, FLAKY, or INFRA_FAIL.
+    """
+    print(f"\n{'=' * 60}")
+    print("FLAKE TRIAGE MODE")
+    print(f"{'=' * 60}")
+
+    print("\n--- Run 1 ---")
+    result1 = await run_single_benchmark(strict=strict, min_score=min_score)
+
+    if result1["verdict"] == BenchmarkVerdict.PASS:
+        print("\nFlake triage: PASS on first run — done.")
+        return 0
+
+    print(f"\nFirst run: {result1['verdict']} — rerunning for triage...")
+    print("\n--- Run 2 (triage) ---")
+    result2 = await run_single_benchmark(strict=strict, min_score=min_score)
+
+    # Classify
+    v1, v2 = result1["verdict"], result2["verdict"]
+    if v1 == BenchmarkVerdict.INFRA_FAIL and v2 == BenchmarkVerdict.INFRA_FAIL:
+        triage = "INFRA_FAIL"
+        exit_code = 2
+    elif v2 == BenchmarkVerdict.PASS:
+        triage = "FLAKY"
+        exit_code = 0  # Flaky counts as soft pass
+    else:
+        triage = "DETERMINISTIC_FAIL"
+        exit_code = 1
+
+    print(f"\n{'=' * 60}")
+    print(f"FLAKE TRIAGE RESULT: {triage}")
+    print(f"  Run 1: {v1} (score={result1['scores'].get('total', 0)})")
+    print(f"  Run 2: {v2} (score={result2['scores'].get('total', 0)})")
+    print(f"{'=' * 60}")
+
+    return exit_code
+
+
+# --- Argparse ---
+
+
+def build_arg_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser."""
+    parser = argparse.ArgumentParser(
+        description="HybridCoder E2E Benchmark: React Calculator",
+    )
+
+    # Modes (mutually exclusive)
+    mode_group = parser.add_mutually_exclusive_group()
+    mode_group.add_argument(
+        "--replay", type=Path, default=None,
+        help="Replay/re-score an existing benchmark sandbox (path to sandbox dir)",
+    )
+    mode_group.add_argument(
+        "--matrix", type=Path, default=None,
+        help="Run matrix benchmark with config file (path to JSON)",
+    )
+    mode_group.add_argument(
+        "--flake-triage", action="store_true", default=False,
+        help="Run with automatic flake triage (rerun on failure)",
+    )
+
+    # Modifiers
+    parser.add_argument(
+        "--strict", action="store_true", default=False,
+        help="Enable strict mode (higher thresholds, enforced budgets)",
+    )
+    parser.add_argument(
+        "--runs", type=int, default=1,
+        help="Number of benchmark runs (default: 1)",
+    )
+    parser.add_argument(
+        "--min-score", type=int, default=30,
+        help="Minimum acceptable score (default: 30)",
+    )
+    parser.add_argument(
+        "--keep-last", type=int, default=DEFAULT_KEEP_LAST,
+        help=f"Number of old sandboxes to keep (default: {DEFAULT_KEEP_LAST})",
+    )
+    parser.add_argument(
+        "--score-only", action="store_true", default=False,
+        help="In replay mode, skip npm validation and only re-score",
+    )
+
+    return parser
+
+
+# --- Main ---
+
+
+async def main(
+    strict: bool = False,
+    min_score: int = 30,
+    keep_last: int = DEFAULT_KEEP_LAST,
+    runs: int = 1,
+) -> int:
+    """Run the full E2E benchmark."""
+    print("=" * 60)
+    print("HybridCoder E2E Benchmark: React Calculator")
+    print(f"Version: {BENCHMARK_VERSION}")
+    print("=" * 60)
+
+    # Phase A: Prerequisites (exits if .env is incomplete)
+    print("\n[Phase A] Checking prerequisites...")
+    check_prerequisites()
+    print("  All required config found in .env")
+
+    # Phase B: Setup
+    print("\n[Phase B] Cleaning old sandboxes...")
+    clean_old_sandboxes(keep_last=keep_last)
+    print("  Old sandboxes cleaned (keeping last {})".format(keep_last))
+
+    if runs > 1:
+        return await run_multi(n_runs=runs, strict=strict, min_score=min_score)
+
+    result = await run_single_benchmark(strict=strict, min_score=min_score)
+
+    verdict = result["verdict"]
+    if verdict == BenchmarkVerdict.PASS:
+        return 0
+    elif verdict == BenchmarkVerdict.INFRA_FAIL:
+        return 2
+    return 1
+
+
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    args = build_arg_parser().parse_args()
+    if args.replay:
+        sys.exit(replay_benchmark(args.replay.resolve(), score_only=args.score_only))
+    elif args.matrix:
+        sys.exit(asyncio.run(run_matrix(args.matrix.resolve())))
+    elif args.flake_triage:
+        sys.exit(asyncio.run(run_with_flake_triage(
+            strict=args.strict, min_score=args.min_score,
+        )))
+    else:
+        sys.exit(asyncio.run(main(
+            strict=args.strict,
+            min_score=args.min_score,
+            keep_last=args.keep_last,
+            runs=args.runs,
+        )))

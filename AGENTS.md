@@ -40,7 +40,7 @@ If you introduce a formatter/linter (for example, ruff or black), document it he
 
 ## Testing Guidelines
 - Framework: `pytest`. Run with `uv run pytest tests/ -v` or `make test`.
-- Tests are organized under `tests/unit/`, `tests/integration/`, and `tests/benchmarks/`.
+- Tests are organized under `tests/unit/`, `tests/integration/`, and `tests/benchmark/`.
 - Name test files `test_*.py`.
 - Integration tests are deselected by default via pytest config (`-m 'not integration'` in `pyproject.toml`). Run them explicitly with `uv run pytest -m integration tests/integration/`.
 - Add or update tests for every functional change.

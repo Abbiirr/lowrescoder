@@ -1,0 +1,72 @@
+{
+  "_meta": {
+    "description": "Terminal-Bench 2.0 pilot subset: 10 category-diverse tasks",
+    "selection_criteria": "One task per category, diverse difficulty, deterministic grading, completable within budget caps",
+    "source": "https://github.com/terminal-bench/terminal-bench",
+    "id_format": "kebab-case task slugs from terminal-bench-core dataset",
+    "last_verified": "2026-02-13",
+    "provenance": "Task IDs sourced from published Terminal-Bench 2.0 dataset (terminal-bench-core). Verified against dataset catalog via web research."
+  },
+  "tasks": [
+    {
+      "task_id": "hello-world",
+      "category": "scripting",
+      "description": "Basic script creation and execution",
+      "estimated_time_s": 30
+    },
+    {
+      "task_id": "fix-git",
+      "category": "version_control",
+      "description": "Fix a broken git repository state",
+      "estimated_time_s": 60
+    },
+    {
+      "task_id": "fix-permissions",
+      "category": "permissions",
+      "description": "Repair file/directory permission issues",
+      "estimated_time_s": 45
+    },
+    {
+      "task_id": "csv-to-parquet",
+      "category": "data_processing",
+      "description": "Convert CSV data to Parquet format",
+      "estimated_time_s": 60
+    },
+    {
+      "task_id": "chess-best-move",
+      "category": "algorithmic",
+      "description": "Determine the best chess move from a given board state",
+      "estimated_time_s": 90
+    },
+    {
+      "task_id": "fibonacci-server",
+      "category": "networking",
+      "description": "Build a server that responds with Fibonacci numbers",
+      "estimated_time_s": 90
+    },
+    {
+      "task_id": "extract-safely",
+      "category": "file_operations",
+      "description": "Safely extract archive contents with validation",
+      "estimated_time_s": 45
+    },
+    {
+      "task_id": "count-dataset-tokens",
+      "category": "text_processing",
+      "description": "Count tokens in a dataset using specified tokenizer",
+      "estimated_time_s": 60
+    },
+    {
+      "task_id": "blind-maze-explorer-5x5",
+      "category": "algorithmic",
+      "description": "Navigate a 5x5 maze without visibility of full layout",
+      "estimated_time_s": 120
+    },
+    {
+      "task_id": "conda-env-conflict-resolution",
+      "category": "package_management",
+      "description": "Resolve conflicting package dependencies in conda environment",
+      "estimated_time_s": 90
+    }
+  ]
+}

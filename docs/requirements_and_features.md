@@ -1,7 +1,7 @@
 # HybridCoder — Requirements & Feature Catalog
 
 > Comprehensive catalog of all features built, planned, current UX issues, and architecture decisions.
-> Last updated: 2026-02-08
+> Last updated: 2026-02-13
 
 ---
 
@@ -165,12 +165,34 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 
 ### 2.12 Tests
 
-- **275 Go + 509 Python = 784+ unit tests passing**
+- **275 Go + 601 Python = 876+ unit tests passing**
 - Go test files (15 files): update, protocol, session_picker, backend, completion, view, commands, askuser, history, approval, e2e, markdown, model
 - Python test files cover: CLI, agent loop, tools, approval, session store, inline app, inline renderer, inline completer, TUI commands, file tools, config, type-ahead, parallel mode, backend server
 - Sprint verification tests: `tests/test_sprint_verify.py`
 - Integration tests (skipped by default): `tests/integration/`
 - Full test catalog: `docs/tests/test_suite.md`
+- **Full testing & evaluation guide: `TESTING.md`**
+
+### 2.13 E2E Evaluation System — DONE
+
+Multi-scenario benchmark framework that drives HybridCoder autonomously and produces verdicts.
+
+| Component | Status | File |
+|-----------|--------|------|
+| Calculator benchmark engine (1,888 lines) | DONE | `scripts/run_calculator_benchmark.py` |
+| Generic scenario runner | DONE | `scripts/e2e/run_scenario.py` |
+| Scenario manifest contract | DONE | `scripts/e2e/scenario_contract.py` |
+| Acceptance check runner + scoring | DONE | `scripts/e2e/scoring.py` |
+| E2E-BugFix scenario (fix bugs in seeded project) | DONE | `scripts/e2e/scenarios/bugfix.py` |
+| E2E-CLI scenario (build CLI tool from scratch) | DONE | `scripts/e2e/scenarios/cli_tool.py` |
+| Seed fixture (3 intentional bugs, 5 tests) | DONE | `scripts/e2e/fixtures/bugfix-seed/` |
+| Budget enforcement (wall time, tool calls, turns) | DONE | Inline in runner |
+| Manifest validation (fail-fast at startup) | DONE | `validate_manifest()` |
+| Verdict system (PASS/FAIL/INFRA_FAIL) | DONE | Exit codes 0/1/2 |
+| Multi-run, replay, matrix, flake triage modes | DONE | Calculator benchmark |
+| Markdown + JSON report generation | DONE | Saved to `docs/qa/test-results/` |
+
+**PR Core baseline:** E2E-Calculator + E2E-BugFix + E2E-CLI.
 
 ---
 
@@ -393,10 +415,10 @@ See `docs/plan/go-bubble-tea-migration.md` for the full migration plan.
 | Edit success rate (first attempt) | >40% | N/A (edit system not built) |
 | Edit success rate (with retry) | >75% | N/A |
 | Simple query latency | <500ms | Depends on LLM provider |
-| Agentic task completion | >50% on custom test suite | N/A (benchmark not built) |
+| Agentic task completion | >50% on custom test suite | E2E eval system built (3 scenarios: Calculator, BugFix, CLI) |
 | Memory usage (idle) | <2GB RAM (stretch: <500MB) | Not profiled |
 | Memory usage (inference) | <8GB VRAM | Not profiled |
-| Unit tests | 500+ passing | **275 Go + 509 Python = 784+ passing** |
+| Unit tests | 500+ passing | **275 Go + 601 Python = 876+ passing** |
 
 ---
 

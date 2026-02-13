@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -50,6 +51,52 @@ def _count_page_files(project_root: Path) -> int:
     return count
 
 
+def _detect_anti_patterns(text: str) -> dict:
+    """Detect anti-patterns in raw (non-lowered) project text.
+
+    Returns dict with findings, penalty, critical, and minor categories.
+    """
+    penalty = 0
+    critical: dict[str, int] = {}
+    minor: dict[str, int] = {}
+
+    # Critical patterns (-3 each, max -6 per type)
+    eval_matches = len(re.findall(r"\beval\s*\(", text))
+    func_matches = len(re.findall(r"\bFunction\s*\(", text))
+    eval_total = eval_matches + func_matches
+    if eval_total > 0:
+        critical["eval_usage"] = eval_total
+        penalty -= min(eval_total * 3, 6)
+
+    dangerous_html = len(re.findall(r"dangerouslySetInnerHTML", text))
+    if dangerous_html > 0:
+        critical["dangerous_html"] = dangerous_html
+        penalty -= min(dangerous_html * 3, 6)
+
+    # Minor patterns
+    todo_count = len(re.findall(r"\b(?:TODO|FIXME)\b", text, re.IGNORECASE))
+    if todo_count > 3:
+        minor["todo_fixme"] = todo_count
+        penalty -= 1
+
+    empty_catch = len(re.findall(r"catch\s*\([^)]*\)\s*\{\s*\}", text))
+    if empty_catch > 2:
+        minor["empty_catch"] = empty_catch
+        penalty -= 1
+
+    console_log = len(re.findall(r"\bconsole\.log\s*\(", text))
+    if console_log > 10:
+        minor["console_log_spam"] = console_log
+        penalty -= 1
+
+    return {
+        "findings": {**critical, **minor},
+        "penalty": penalty,
+        "critical": critical,
+        "minor": minor,
+    }
+
+
 def score_react_calculator_project(project_root: Path, run_build: bool = False) -> dict[str, int]:
     """Score a generated calculator project from 0-100.
 
@@ -62,7 +109,8 @@ def score_react_calculator_project(project_root: Path, run_build: bool = False) 
         quality:    10  — code organization, constants, tests
         ui:         25  — dark theme, grid layout, visual polish
     """
-    text = _project_text(project_root).lower()
+    raw_text = _project_text(project_root)
+    text = raw_text.lower()
     scores = {
         "scaffold": 0,
         "regular": 0,
@@ -229,6 +277,10 @@ def score_react_calculator_project(project_root: Path, run_build: bool = False) 
                 scores["scaffold"] = max(scores["scaffold"] - 5, 0)
         except (OSError, subprocess.SubprocessError):
             scores["scaffold"] = max(scores["scaffold"] - 5, 0)
+
+    # Anti-pattern penalty (applied to quality score)
+    anti = _detect_anti_patterns(raw_text)
+    scores["quality"] = max(scores["quality"] + anti["penalty"], 0)
 
     scores["total"] = sum(scores.values())
     return scores

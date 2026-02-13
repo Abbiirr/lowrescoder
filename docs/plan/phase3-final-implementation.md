@@ -2,12 +2,12 @@
 
 > **This is the definitive implementation plan.** It defines the authoritative Phase 3 scope, tools, budgets, gates, exit criteria, and benchmark targets.
 >
-> The older document [`phase3-code-intelligence.md`](phase3-code-intelligence.md) is now a historical implementation notebook. Use it only for low-level pseudocode that does not conflict with this file.
+> The older document [`phase3-code-intelligence.md`](../archive/phase3-code-intelligence.md) is now a historical implementation notebook (archived). Use it only for low-level pseudocode that does not conflict with this file.
 >
 > **Related documents:**
 > - [`phase3-execution-brief.md`](phase3-execution-brief.md) — One-page execution contract (daily implementation view)
-> - [`phase3-code-intelligence.md`](phase3-code-intelligence.md) — Implementation detail (pseudocode, class specs, method signatures, test lists)
-> - [`phase3-review-notes.md`](phase3-review-notes.md) — Review history (concerns, recommendations, review rounds)
+> - [`phase3-code-intelligence.md`](../archive/phase3-code-intelligence.md) — Implementation detail, archived (pseudocode, class specs, method signatures, test lists)
+> - [`phase3-review-notes.md`](../archive/phase3-review-notes.md) — Review history, archived (concerns, recommendations, review rounds)
 > - [`benchmark-testing-strategy.md`](benchmark-testing-strategy.md) — Full benchmark framework (9 industry benchmarks, 6 tiers, competitor comparison)
 >
 > Version: 2.1 | Date: 2026-02-12

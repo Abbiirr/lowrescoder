@@ -115,6 +115,7 @@ uv run pytest -m integration tests/integration/
 | What you need | Where to find it |
 |---|---|
 | Fast session startup | `docs/session-onramp.md` |
+| Testing & evaluation guide | `TESTING.md` |
 | Full product roadmap | `docs/plan.md` |
 | MVP acceptance checklist | `docs/plan.md` Section 1.6 |
 | Feature catalog (built vs planned) | `docs/requirements_and_features.md` |
@@ -122,6 +123,7 @@ uv run pytest -m integration tests/integration/
 | Phase 3 daily execution | `docs/plan/phase3-execution-brief.md` |
 | Benchmark protocol | `docs/qa/phase3-before-after-benchmark-protocol.md` |
 | E2E benchmark guide | `docs/qa/e2e-benchmark-guide.md` |
+| External benchmark runbook | `docs/plan/agentic-benchmarks/external-benchmark-runbook.md` |
 | Agent communication protocol | `AGENT_COMMUNICATION_RULES.md` |
 | Agent message log | `AGENTS_CONVERSATION.MD` |
 | Message format examples | `docs/reference/comms-examples.md` |
