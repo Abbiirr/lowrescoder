@@ -128,7 +128,20 @@ For `context_length = 8192` (Qwen3-8B default):
 ## 3. Sprint 4A: Context Engine + Task System
 
 **Duration:** ~1 week
-**Goal:** Automatic context management + LLM-driven task tracking
+**Goal:** Automatic context management + LLM-driven task tracking + Phase 3 carry-forward fixes
+
+### 3.0 Phase 3 Carry-Forward Fixes (Pre-Sprint)
+
+> **Source:** Codex review findings from Entries 296/298/301/304 (archived to `docs/communication/old/2026-02-13-phase3-review-and-benchmarks.md`). These items were deferred from Phase 3 component delivery and must be completed before or alongside Sprint 4A.
+
+| # | Fix | Files | Priority |
+|---|-----|-------|----------|
+| CF-1 | **Go layer badge reset** — Reset `statusBar.Layer` on new turn start and cancel/error, not just in `handleDone` | `cmd/hybridcoder-tui/update.go` | Medium |
+| CF-2 | **Deterministic handler bounded iteration** — Replace `list(...rglob())[:100]` with `itertools.islice` to avoid full file-list materialization on large repos | `src/hybridcoder/layer1/queries.py` | Medium |
+| CF-3 | **`search_code` tool index reuse** — Refactor to query existing index state instead of rebuilding index per call; keep rebuild on explicit `/index` only | `src/hybridcoder/agent/tools.py` | Medium |
+| CF-4 | **E2E backend integration tests** — Add tests that exercise `handle_chat` and assert emitted `on_done.layer_used` for L1/L2/L4 routes (not just contract-level dict assertions) | `tests/unit/test_integration_router_agent.py` (or new test file) | Medium |
+
+CF-1 through CF-3 are small targeted fixes. CF-4 ties into Section 4.9 (L2 Runtime Wiring) — the E2E tests should validate the newly wired L2 path.
 
 ### 3.1 ContextEngine (`agent/context.py`)
 
@@ -1614,6 +1627,10 @@ Phase 4 must not break existing tests. Key integration risks:
 
 ### Sprint 4A
 
+- [ ] **CF-1:** Go layer badge resets on new turn start and cancel/error
+- [ ] **CF-2:** Deterministic handlers use bounded iteration (`itertools.islice`)
+- [ ] **CF-3:** `search_code` queries existing index instead of rebuilding per call
+- [ ] **CF-4:** E2E integration tests assert `layer_used` for L1/L2/L4 routes
 - [ ] ContextEngine correctly counts tokens and enforces budget
 - [ ] Auto-compaction triggers at 75% and produces valid summaries
 - [ ] Tool results >500 tokens are truncated
@@ -1621,7 +1638,7 @@ Phase 4 must not break existing tests. Key integration risks:
 - [ ] LLM can create, update, and list tasks via tools
 - [ ] Task summary injected into system prompt each iteration
 - [ ] `/tasks` command shows task board
-- [ ] 21 new tests pass, all 840 existing tests pass
+- [ ] 21+ new tests pass, all 840 existing tests pass
 - [ ] `ruff check` and `mypy` pass
 
 ### Sprint 4B
@@ -1689,4 +1706,4 @@ Phase 4 IS a prerequisite for:
 
 ---
 
-*Plan v2.0 — 2026-02-13. Updated for Phase 3 completion (840 tests), L2 runtime wiring scope, Codex review feedback.*
+*Plan v2.1 — 2026-02-13. Added Phase 3 carry-forward fixes (CF-1 through CF-4) from Codex review Entries 296/298/301/304. v2.0: L2 runtime wiring scope, Codex review feedback.*
