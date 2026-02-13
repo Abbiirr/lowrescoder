@@ -8,8 +8,6 @@ import logging.handlers
 import sys
 from pathlib import Path
 
-import pytest
-
 from hybridcoder.config import LoggingConfig
 from hybridcoder.core.logging import (
     JSONFormatter,

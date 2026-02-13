@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
 
 
 class RequestType(Enum):
@@ -98,6 +99,16 @@ class SearchResult:
     chunk: CodeChunk
     score: float
     match_type: str  # bm25, vector, hybrid
+
+
+@dataclass
+class ParseResult:
+    """Result from tree-sitter parsing."""
+
+    tree: Any  # tree_sitter.Tree
+    file_path: str
+    mtime: float
+    language: str
 
 
 @dataclass

@@ -9,9 +9,9 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from hybridcoder.agent.approval import ApprovalManager
-from hybridcoder.core.logging import log_event
 from hybridcoder.agent.prompts import build_system_prompt
 from hybridcoder.agent.tools import ToolRegistry
+from hybridcoder.core.logging import log_event
 from hybridcoder.layer4.llm import LLMResponse, ToolCall
 from hybridcoder.session.store import SessionStore
 

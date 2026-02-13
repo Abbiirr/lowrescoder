@@ -55,6 +55,7 @@ type DoneParams struct {
 	TokensIn  int  `json:"tokens_in"`
 	TokensOut int  `json:"tokens_out"`
 	Cancelled bool `json:"cancelled,omitempty"`
+	LayerUsed int  `json:"layer_used,omitempty"`
 }
 
 // ToolCallParams carries tool call status updates.

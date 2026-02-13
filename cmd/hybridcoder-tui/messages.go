@@ -19,6 +19,7 @@ type backendDoneMsg struct {
 	TokensIn  int
 	TokensOut int
 	Cancelled bool
+	LayerUsed int
 }
 
 // backendToolCallMsg carries a tool call status update.

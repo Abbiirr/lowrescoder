@@ -84,6 +84,7 @@ class TestCommandRouter:
             "freeze",
             "thinking",
             "clear",
+            "index",
         }
         assert names == expected
 

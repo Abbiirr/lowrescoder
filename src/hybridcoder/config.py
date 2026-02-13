@@ -51,6 +51,7 @@ class Layer1Config(BaseModel):
 
     enabled: bool = True
     cache_ttl: int = Field(default=300, description="Cache TTL in seconds")
+    cache_max_entries: int = Field(default=500, ge=1, description="Max LRU cache entries")
 
 
 class Layer2Config(BaseModel):
@@ -61,6 +62,11 @@ class Layer2Config(BaseModel):
     search_top_k: int = Field(default=10, ge=1)
     chunk_size: int = Field(default=1000, gt=0)
     hybrid_weight: float = Field(default=0.5, ge=0.0, le=1.0, description="BM25 vs vector weight")
+    db_path: str = Field(default="~/.hybridcoder/index.lancedb", description="LanceDB index path")
+    relevance_threshold: float = Field(default=0.3, ge=0.0, le=1.0)
+    max_files: int = Field(default=50000, ge=1, description="Max files to index")
+    repomap_budget: int = Field(default=600, ge=1, description="Repo map token budget")
+    context_budget: int = Field(default=5000, ge=1, description="Total context token budget")
 
 
 class Layer4Config(BaseModel):

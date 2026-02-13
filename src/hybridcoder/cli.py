@@ -232,7 +232,8 @@ def chat(
                 raise typer.Exit(0)
 
             console.print(
-                f"[yellow]Go TUI exited with code {result.returncode}. Falling back to Python inline REPL.[/]"
+                f"[yellow]Go TUI exited with code {result.returncode}. "
+                "Falling back to Python inline REPL.[/]"
             )
         else:
             console.print("[yellow]Go TUI binary not found. Falling back to Python inline REPL.[/]")

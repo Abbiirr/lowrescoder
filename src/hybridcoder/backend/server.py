@@ -16,10 +16,10 @@ from pathlib import Path
 from typing import Any
 
 from hybridcoder.agent.approval import ApprovalManager, ApprovalMode
-from hybridcoder.core.logging import log_event
 from hybridcoder.agent.loop import AgentLoop
 from hybridcoder.agent.tools import ToolRegistry, create_default_registry
 from hybridcoder.config import HybridCoderConfig, load_config
+from hybridcoder.core.logging import log_event
 from hybridcoder.layer4.llm import create_provider
 from hybridcoder.session.store import SessionStore
 from hybridcoder.tui.commands import CommandRouter, create_default_router
@@ -306,7 +306,7 @@ class BackendServer:
         if approved and tool_name == "run_command" and self._approval_manager:
             self._approval_manager.enable_shell()
 
-        return approved
+        return approved  # type: ignore[no-any-return]
 
     async def _ask_user_callback(
         self,
@@ -324,7 +324,7 @@ class BackendServer:
         except asyncio.CancelledError:
             return options[0] if options else ""
 
-        return result.get("answer", "")
+        return result.get("answer", "")  # type: ignore[no-any-return]
 
     # --- Request handlers ---
 
@@ -338,6 +338,39 @@ class BackendServer:
             title = message[:60] + ("..." if len(message) > 60 else "")
             self.session_store.update_session(self.session_id, title=title)
             self._session_titled = True
+
+        # --- Layer routing (Phase 3) ---
+        layer_used = 4  # Default to L4
+
+        try:
+            from hybridcoder.core.router import RequestRouter
+            from hybridcoder.core.types import RequestType
+
+            router = RequestRouter(self.config.layer1)
+
+            if self.config.layer1.enabled:
+                request_type = router.classify(message)
+
+                # L1 bypass: deterministic queries (zero tokens, <50ms)
+                if request_type == RequestType.DETERMINISTIC_QUERY:
+                    try:
+                        from hybridcoder.layer1.queries import DeterministicQueryHandler
+
+                        handler = DeterministicQueryHandler(
+                            project_root=self.project_root,
+                        )
+                        response = handler.handle(message)
+                        self.emit_notification("on_token", {"text": response.content})
+                        self.emit_notification("on_done", {
+                            "tokens_in": 0,
+                            "tokens_out": 0,
+                            "layer_used": 1,
+                        })
+                        return
+                    except ImportError:
+                        pass  # tree-sitter not available, fall through to L4
+        except ImportError:
+            pass  # Router not available, use L4
 
         try:
             agent_loop = self._ensure_agent_loop()
@@ -358,6 +391,7 @@ class BackendServer:
                 "tokens_in": 0,
                 "tokens_out": 0,
                 "cancelled": True,
+                "layer_used": layer_used,
             })
             return
         except Exception as e:
@@ -367,6 +401,7 @@ class BackendServer:
         self.emit_notification("on_done", {
             "tokens_in": 0,
             "tokens_out": 0,
+            "layer_used": layer_used,
         })
 
     async def handle_cancel(self, request_id: int) -> None:

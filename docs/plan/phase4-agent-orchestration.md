@@ -1,10 +1,12 @@
 # Phase 4: Agent Orchestration & Context Intelligence
 
-> **Version:** 1.0
+> **Version:** 2.0
 > **Created:** 2026-02-06
-> **Status:** DRAFT — Awaiting Review
+> **Updated:** 2026-02-13
+> **Status:** APPROVED — Ready for Implementation
 > **Research:** [`docs/claude/09-agent-orchestration-research.md`](../claude/09-agent-orchestration-research.md)
-> **Prerequisites:** Phase 2 complete (307 tests passing), Sprint 2C (inline mode) in progress
+> **Prerequisites:** Phase 3 complete (840 Python + 275 Go tests passing), all gates passed
+> **Phase 3 deliverables:** tree-sitter parser, request router, hybrid search, 5 code intelligence tools, L1 bypass in server
 > **Estimated effort:** ~2.5 weeks (Sprint 4A: ~1 week, Sprint 4B: ~1.5 weeks)
 
 ---
@@ -35,18 +37,19 @@
 3. **Subagents** spawn in background, share LLM via asyncio.Lock, return summaries
 4. **Episodic memories** extracted from sessions and injected into prompts
 5. **Checkpoints** can be created and restored for resumable workflows
-6. **~45 new tests** passing, all existing 307 tests still pass (target: ~352+)
+6. **~45 new tests** passing, all existing 840 Python tests still pass (target: ~885+)
 
 ### Non-Goals (Deferred)
 
 | Item | Deferred To | Reason |
 |------|------------|--------|
 | Architect/Editor split | Phase 5 | Requires Layer 3 constrained generation |
-| LLMLOOP feedback | Phase 5 | Requires tree-sitter + LSP (Layer 1) |
-| Vector memory | Phase 4 Layer 2 | Requires embedding infrastructure |
+| LLMLOOP feedback | Phase 5 | tree-sitter built (Phase 3), but needs Architect/Editor split first |
 | Dynamic agent swarms | Never | Not feasible on single GPU |
 | MCP server | Phase 5+ | Out of scope for orchestration core |
-| Git integration | Phase 3 | Separate concern |
+| Git integration | Phase 5+ | Separate concern |
+
+> **Note:** Vector memory (embedding infrastructure) is now available via Phase 3's jina-v2-base-code embeddings and LanceDB. Phase 4 uses this for L2 runtime wiring (see Section 4.9).
 
 ---
 
@@ -109,7 +112,7 @@ For `context_length = 8192` (Qwen3-8B default):
 |-----------|--------|---|-------|
 | System prompt (base) | 400 | 5% | Static instructions |
 | Environment section | 200 | 2% | Shell, approval, model info |
-| Tool definitions | 600 | 7% | 6 base + 5 new tools |
+| Tool definitions | 600 | 7% | 11 base + 5 new tools (16 total) |
 | Memory context | 500 | 6% | Top-N memories by relevance |
 | Task summary | 300 | 4% | Current task state (compact) |
 | Subagent status | 200 | 2% | Running subagent summaries |
@@ -1261,6 +1264,70 @@ class HybridCoderApp(App[None]):
         return self._agent_loop
 ```
 
+### 4.9 L2 Runtime Wiring (`backend/server.py`)
+
+> **Context:** Codex review (Entry 304) identified that `handle_chat` in `server.py` currently routes L1 queries via the request router but falls through to L4 for everything else. Phase 3 built the L2 retrieval infrastructure (hybrid search, context assembler, embeddings) but did not wire `handle_chat` to serve L2 queries. This section closes that gap.
+
+#### 4.9.1 Changes to `handle_chat`
+
+Wire `SEMANTIC_SEARCH` and `SIMPLE_EDIT` query types (as classified by the request router) to use L2 context assembly before invoking the LLM:
+
+```python
+async def handle_chat(self, params: dict) -> dict:
+    message = params["message"]
+    query_type = self._router.classify(message)
+
+    # L1: Deterministic (already implemented in Phase 3)
+    if query_type.layer == 1:
+        result = self._handle_l1_query(message, query_type)
+        return {"layer_used": 1, "response": result}
+
+    # L2: Retrieval-augmented (NEW in Phase 4)
+    if query_type.layer == 2:
+        # Assemble curated context from hybrid search
+        context = self._context_assembler.assemble(
+            query=message,
+            project_root=self._project_root,
+            budget=self._config.layer2.context_budget,
+        )
+        # Inject context into system prompt and call LLM
+        response = await self._llm_with_context(message, context)
+        return {"layer_used": 2, "response": response}
+
+    # L4: Full reasoning (existing path)
+    response = await self._agent_loop.run(message)
+    return {"layer_used": 4, "response": response}
+```
+
+#### 4.9.2 Context Assembly Flow
+
+```
+handle_chat(message)
+    ↓
+Router classifies → layer=2 (SEMANTIC_SEARCH, SIMPLE_EDIT, etc.)
+    ↓
+ContextAssembler.assemble():
+  1. Hybrid search (BM25 + vector, Phase 3 infrastructure)
+  2. Repo map (ranked symbols, 600 tokens)
+  3. Rules context (CLAUDE.md, .rules/)
+  4. Priority-based assembly within 5000-token budget
+    ↓
+Inject assembled context into system prompt
+    ↓
+LLM call with curated context (fewer tokens, more relevant)
+    ↓
+Return response with layer_used=2
+```
+
+#### 4.9.3 Key Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| L2 uses existing `ContextAssembler` | Already built in Phase 3, tested, 5000-token budget |
+| L2 still calls LLM | Context assembly reduces token waste, but LLM generates the response |
+| `layer_used=2` in `on_done` | TUI shows `[L2]` indicator, differentiating from L4 full reasoning |
+| No new tools needed | L2 wiring is a server-side routing change, not a new agent tool |
+
 ### 4.8 Sprint 4B Test Plan
 
 | Test File | Tests | What It Covers |
@@ -1516,10 +1583,10 @@ These are only included when non-empty, saving tokens when not in use.
 
 | Sprint | New Tests | Cumulative |
 |--------|-----------|------------|
-| Existing (Phase 2) | 307 | 307 |
-| Sprint 4A | 21 | 328 |
-| Sprint 4B | 24 | 352 |
-| **Total** | **45** | **352+** |
+| Existing (Phase 0-3) | 840 | 840 |
+| Sprint 4A | 21 | 861 |
+| Sprint 4B | 24 | 885 |
+| **Total** | **45** | **885+** |
 
 ### 9.2 Testing Patterns
 
@@ -1554,7 +1621,7 @@ Phase 4 must not break existing tests. Key integration risks:
 - [ ] LLM can create, update, and list tasks via tools
 - [ ] Task summary injected into system prompt each iteration
 - [ ] `/tasks` command shows task board
-- [ ] 21 new tests pass, all 307 existing tests pass
+- [ ] 21 new tests pass, all 840 existing tests pass
 - [ ] `ruff check` and `mypy` pass
 
 ### Sprint 4B
@@ -1569,7 +1636,7 @@ Phase 4 must not break existing tests. Key integration risks:
 - [ ] CheckpointStore saves and restores state
 - [ ] `/memory` and `/checkpoint` commands work
 - [ ] TaskPanel widget displays in TUI
-- [ ] 24 new tests pass, all 328 existing tests pass (total 352+)
+- [ ] 24 new tests pass, all 861 existing tests pass (total 885+)
 - [ ] `ruff check` and `mypy` pass
 
 ---
@@ -1610,9 +1677,11 @@ Sprint 4B: SubagentLoop + SubagentManager + MemoryStore + CheckpointStore
 
 ### 12.3 Cross-Phase Dependencies
 
-Phase 4 does NOT depend on:
-- Phase 3 (Layer 1 tree-sitter/LSP) — context/tasks work without deterministic analysis
-- Sprint 2C (inline mode) — both rendering modes share the same agent backend
+Phase 4 builds on Phase 3:
+- Uses tree-sitter parser for L1 deterministic queries
+- Uses jina-v2-base-code embeddings + LanceDB for L2 context assembly
+- Uses hybrid search (BM25 + vector + RRF) for retrieval
+- Phase 4 includes L2 runtime wiring (`handle_chat` → context assembly → `layer_used=2`)
 
 Phase 4 IS a prerequisite for:
 - Phase 5 (Architect/Editor) — needs task system for multi-step plans
@@ -1620,4 +1689,4 @@ Phase 4 IS a prerequisite for:
 
 ---
 
-*Plan v1.0 — 2026-02-06. Subject to review and revision.*
+*Plan v2.0 — 2026-02-13. Updated for Phase 3 completion (840 tests), L2 runtime wiring scope, Codex review feedback.*

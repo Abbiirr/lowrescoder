@@ -246,8 +246,101 @@ def _handle_ask_user_placeholder(**kwargs: Any) -> str:
     return "ask_user requires an interactive UI callback."
 
 
+# --- Layer 1 tool handlers (Sprint 3G) ---
+
+
+def _handle_find_references(symbol: str, file: str = "", project_root: str = "") -> str:
+    """Find all references to a symbol in the project."""
+    try:
+        from hybridcoder.layer1.queries import DeterministicQueryHandler
+
+        handler = DeterministicQueryHandler(project_root=project_root or None)
+        query = f"find references of {symbol}"
+        if file:
+            query += f" in {file}"
+        response = handler.handle(query)
+        return response.content
+    except Exception as e:
+        return f"Error finding references: {e}"
+
+
+def _handle_find_definition(symbol: str, file: str = "", project_root: str = "") -> str:
+    """Find the definition of a symbol."""
+    try:
+        from hybridcoder.layer1.queries import DeterministicQueryHandler
+
+        handler = DeterministicQueryHandler(project_root=project_root or None)
+        query = f"find definition of {symbol}"
+        if file:
+            query += f" in {file}"
+        response = handler.handle(query)
+        return response.content
+    except Exception as e:
+        return f"Error finding definition: {e}"
+
+
+def _handle_get_type_info(symbol: str, file: str = "", project_root: str = "") -> str:
+    """Get type information for a symbol."""
+    try:
+        from hybridcoder.layer1.queries import DeterministicQueryHandler
+
+        handler = DeterministicQueryHandler(project_root=project_root or None)
+        query = f"show signature of {symbol}"
+        if file:
+            query += f" in {file}"
+        response = handler.handle(query)
+        return response.content
+    except Exception as e:
+        return f"Error getting type info: {e}"
+
+
+def _handle_list_symbols(file: str, kind: str = "symbols", project_root: str = "") -> str:
+    """List symbols (functions, classes, methods) in a file."""
+    try:
+        from hybridcoder.layer1.queries import DeterministicQueryHandler
+
+        handler = DeterministicQueryHandler(project_root=project_root or None)
+        response = handler.handle(f"list {kind} in {file}")
+        return response.content
+    except Exception as e:
+        return f"Error listing symbols: {e}"
+
+
+def _handle_search_code(query: str, top_k: int = 5, project_root: str = "") -> str:
+    """Search code using hybrid BM25 + vector search."""
+    try:
+        from hybridcoder.layer2.embeddings import EmbeddingEngine
+        from hybridcoder.layer2.index import CodeIndex
+        from hybridcoder.layer2.search import HybridSearch
+
+        root = project_root or "."
+        index = CodeIndex()
+        index.build(root)
+        engine = EmbeddingEngine()
+        search = HybridSearch(index, embeddings=engine)
+        results = search.search(query, top_k=top_k)
+
+        if not results:
+            return "No results found."
+
+        lines = [f"Found {len(results)} results:\n"]
+        for r in results:
+            lines.append(
+                f"**{r.chunk.file_path}:{r.chunk.start_line}** "
+                f"(score: {r.score:.3f}, {r.match_type})"
+            )
+            preview = r.chunk.content[:200]
+            if len(r.chunk.content) > 200:
+                preview += "..."
+            lines.append(f"```\n{preview}\n```\n")
+
+        return "\n".join(lines)
+    except Exception as e:
+        return f"Error searching code: {e}"
+
+
 def create_default_registry(project_root: str = "") -> ToolRegistry:
-    """Create a registry with the 6 built-in tools."""
+    """Create a registry with the 11 built-in tools (6 original + 5 L1/L2)."""
     registry = ToolRegistry()
 
     registry.register(ToolDefinition(
@@ -363,6 +456,98 @@ def create_default_registry(project_root: str = "") -> ToolRegistry:
             "required": ["question"],
         },
         handler=_handle_ask_user_placeholder,
+        requires_approval=False,
+    ))
+
+    # --- Layer 1/2 tools (Sprint 3G) ---
+
+    registry.register(ToolDefinition(
+        name="find_references",
+        description="Find all references to a symbol in the project (zero LLM tokens).",
+        parameters={
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "description": "Symbol name to find references for"},
+                "file": {"type": "string", "description": "Optional file to search in"},
+            },
+            "required": ["symbol"],
+        },
+        handler=lambda **kwargs: _handle_find_references(project_root=project_root, **kwargs),
+        requires_approval=False,
+    ))
+
+    registry.register(ToolDefinition(
+        name="find_definition",
+        description="Find the definition of a symbol in the project (zero LLM tokens).",
+        parameters={
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "description": "Symbol name to find definition for"},
+                "file": {"type": "string", "description": "Optional file to search in"},
+            },
+            "required": ["symbol"],
+        },
+        handler=lambda **kwargs: _handle_find_definition(project_root=project_root, **kwargs),
+        requires_approval=False,
+    ))
+
+    registry.register(ToolDefinition(
+        name="get_type_info",
+        description="Get type/signature information for a symbol (zero LLM tokens).",
+        parameters={
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "description": "Symbol name to get type info for"},
+                "file": {"type": "string", "description": "Optional file to search in"},
+            },
+            "required": ["symbol"],
+        },
+        handler=lambda **kwargs: _handle_get_type_info(project_root=project_root, **kwargs),
+        requires_approval=False,
+    ))
+
+    registry.register(ToolDefinition(
+        name="list_symbols",
+        description=(
+            "List symbols (functions, classes, methods) in a file (zero LLM tokens). "
+            "Use kind='functions', 'classes', 'methods', or 'symbols' for all."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "file": {"type": "string", "description": "File path to list symbols from"},
+                "kind": {
+                    "type": "string",
+                    "description": (
+                        "Kind of symbols: functions, classes, methods, "
+                        "symbols (default: symbols)"
+                    ),
+                },
+            },
+            "required": ["file"],
+        },
+        handler=lambda **kwargs: _handle_list_symbols(project_root=project_root, **kwargs),
+        requires_approval=False,
+    ))
+
+    registry.register(ToolDefinition(
+        name="search_code",
+        description=(
+            "Search the codebase using hybrid BM25 + vector search. "
+            "Returns relevant code chunks ranked by relevance."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Search query"},
+                "top_k": {
+                    "type": "integer",
+                    "description": "Number of results (default: 5)",
+                },
+            },
+            "required": ["query"],
+        },
+        handler=lambda **kwargs: _handle_search_code(project_root=project_root, **kwargs),
         requires_approval=False,
     ))
 

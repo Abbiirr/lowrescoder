@@ -18,6 +18,7 @@ var knownCommands = []string{
 	"/freeze", "/scroll-lock",
 	"/thinking", "/think",
 	"/clear", "/cls",
+	"/index",
 }
 
 // parseCommand extracts the command name and arguments from slash command text.

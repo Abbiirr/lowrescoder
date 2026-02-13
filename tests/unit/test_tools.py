@@ -34,11 +34,13 @@ class TestToolRegistry:
     def test_get_schemas_openai_format(self) -> None:
         registry = create_default_registry()
         schemas = registry.get_schemas_openai_format()
-        assert len(schemas) == 6
+        assert len(schemas) == 11
         names = {s["function"]["name"] for s in schemas}
         assert names == {
             "read_file", "write_file", "list_files",
             "search_text", "run_command", "ask_user",
+            "find_references", "find_definition", "get_type_info",
+            "list_symbols", "search_code",
         }
         for schema in schemas:
             assert schema["type"] == "function"

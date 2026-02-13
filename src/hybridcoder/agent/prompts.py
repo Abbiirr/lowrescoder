@@ -32,13 +32,15 @@ def build_system_prompt(
     *,
     shell_enabled: bool = False,
     approval_mode: str = "suggest",
+    context: str | None = None,
 ) -> str:
-    """Build the full system prompt, optionally including project memory.
+    """Build the full system prompt, optionally including project memory and context.
 
     Args:
         memory_content: Project memory text to inject.
         shell_enabled: Whether shell execution is enabled.
         approval_mode: Current approval mode (read-only, suggest, auto).
+        context: Assembled context from Layer 2 (repo map, search results, rules).
     """
     prompt = SYSTEM_PROMPT
 
@@ -56,4 +58,8 @@ def build_system_prompt(
 
     if memory_content:
         prompt += f"\n## Project Memory\n{memory_content}\n"
+
+    if context:
+        prompt += f"\n## Project Context\n{context}\n"
+
     return prompt

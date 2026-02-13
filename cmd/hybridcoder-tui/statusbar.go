@@ -7,6 +7,7 @@ type statusBarModel struct {
 	Model    string
 	Provider string
 	Mode     string
+	Layer    string
 	Tokens   int
 	Edits    int
 	Queue    int
@@ -19,6 +20,10 @@ func (s statusBarModel) View() string {
 		fmt.Sprintf("Model: %s", s.Model),
 		fmt.Sprintf("Provider: %s", s.Provider),
 		fmt.Sprintf("Mode: %s", s.Mode),
+	}
+
+	if s.Layer != "" {
+		parts = append(parts, s.Layer)
 	}
 
 	if s.Queue > 0 {

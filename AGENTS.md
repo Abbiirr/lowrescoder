@@ -17,8 +17,8 @@ Current layout has two UI frontends:
 ## Session Context (Read First)
 For fast session startup and current-state context, read in this order:
 - `docs/session-onramp.md` — compact codebase + plan + command context
-- `docs/plan/phase3-execution-brief.md` — one-page Phase 3 execution contract
-- `docs/plan/phase3-final-implementation.md` — authoritative full Phase 3 plan
+- `docs/plan/phase4-agent-orchestration.md` — Phase 4 plan (active phase)
+- `docs/archive/plan/phase3-execution-brief.md` — Phase 3 completion summary (archived)
 
 ## Build, Test, and Development Commands
 Current commands:

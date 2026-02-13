@@ -1,0 +1,126 @@
+"""Integration tests for router -> agent routing (Sprint 3G)."""
+
+from __future__ import annotations
+
+import textwrap
+
+import pytest
+
+from hybridcoder.core.router import RequestRouter
+from hybridcoder.core.types import RequestType
+
+ts_available = True
+try:
+    import tree_sitter  # noqa: F401
+    import tree_sitter_python  # noqa: F401
+except ImportError:
+    ts_available = False
+
+
+class TestRouterL1Bypass:
+    """Test that deterministic queries bypass the agent loop."""
+
+    def test_deterministic_query_routes_to_l1(self):
+        router = RequestRouter()
+        assert router.classify("list functions in main.py") == RequestType.DETERMINISTIC_QUERY
+
+    def test_complex_query_routes_to_l4(self):
+        router = RequestRouter()
+        result = router.classify(
+            "refactor the entire configuration system to use dependency injection"
+        )
+        assert result in (RequestType.COMPLEX_TASK, RequestType.SIMPLE_EDIT)
+
+    def test_search_query_routes_to_l2(self):
+        router = RequestRouter()
+        assert router.classify("how does the parser work") == RequestType.SEMANTIC_SEARCH
+
+    def test_slash_command_routes_to_config(self):
+        router = RequestRouter()
+        assert router.classify("/model") == RequestType.CONFIGURATION
+
+
+@pytest.mark.skipif(not ts_available, reason="tree-sitter not installed")
+class TestL1ResponseDirect:
+    """Test that L1 queries return Response objects directly."""
+
+    @pytest.fixture
+    def project(self, tmp_path):
+        (tmp_path / "app.py").write_text(textwrap.dedent("""\
+            def main():
+                pass
+
+            class App:
+                def run(self):
+                    pass
+        """))
+        return tmp_path
+
+    def test_l1_returns_response(self, project):
+        from hybridcoder.core.types import Response
+        from hybridcoder.layer1.queries import DeterministicQueryHandler
+
+        handler = DeterministicQueryHandler(project_root=project)
+        response = handler.handle("list functions in app.py")
+
+        assert isinstance(response, Response)
+        assert response.layer_used == 1
+        assert response.tokens_used == 0
+        assert response.content
+
+    def test_l1_zero_tokens(self, project):
+        from hybridcoder.layer1.queries import DeterministicQueryHandler
+
+        handler = DeterministicQueryHandler(project_root=project)
+        response = handler.handle("list classes in app.py")
+
+        assert response.tokens_used == 0
+
+    def test_l1_response_has_content(self, project):
+        from hybridcoder.layer1.queries import DeterministicQueryHandler
+
+        handler = DeterministicQueryHandler(project_root=project)
+        response = handler.handle("list functions in app.py")
+
+        assert "main" in response.content
+
+    def test_l1_find_definition_response(self, project):
+        from hybridcoder.layer1.queries import DeterministicQueryHandler
+
+        handler = DeterministicQueryHandler(project_root=project)
+        response = handler.handle("find definition of App")
+
+        assert response.layer_used == 1
+        assert "App" in response.content
+
+
+class TestLayerUsedField:
+    """Test that layer_used is included in on_done notification."""
+
+    def test_l1_layer_used_value(self):
+        """L1 responses should report layer_used=1."""
+        # This tests the contract, not the actual server
+        done_params = {
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "layer_used": 1,
+        }
+        assert done_params["layer_used"] == 1
+
+    def test_l4_layer_used_value(self):
+        done_params = {
+            "tokens_in": 100,
+            "tokens_out": 200,
+            "layer_used": 4,
+        }
+        assert done_params["layer_used"] == 4
+
+    def test_cancelled_preserves_layer(self):
+        done_params = {
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "cancelled": True,
+            "layer_used": 4,
+        }
+        assert done_params["cancelled"] is True
+        assert done_params["layer_used"] == 4

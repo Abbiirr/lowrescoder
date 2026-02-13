@@ -54,7 +54,7 @@
 | System prompt builder | DONE | `src/hybridcoder/agent/prompts.py` |
 | Project memory loading (`.hybridcoder/memory.md`) | DONE | `InlineApp._ensure_agent_loop()` |
 
-### 2.4 Tool Registry (6 Tools)
+### 2.4 Tool Registry (11 Tools)
 
 | Tool | Requires Approval | Description |
 |------|-------------------|-------------|
@@ -64,6 +64,11 @@
 | `search_text` | No | Regex search (ripgrep → grep → Python fallback) |
 | `run_command` | **Yes** | Execute shell commands (PowerShell on Windows) |
 | `ask_user` | No | Ask the user questions with options or free-text |
+| `find_references` | No | Find all usages of a symbol across files (Phase 3) |
+| `find_definition` | No | Go to definition of a symbol (Phase 3) |
+| `get_type_info` | No | Get type annotation for a symbol (Phase 3) |
+| `list_symbols` | No | List functions/classes/methods in a file (Phase 3) |
+| `search_code` | No | Hybrid BM25 + vector code search (Phase 3) |
 
 All tools defined in `src/hybridcoder/agent/tools.py`.
 
@@ -133,7 +138,7 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 | Session resume picker (arrow-key) | DONE | Go TUI: `session_picker.go`, reuses `stageAskUser` |
 | Slash commands disabled during streaming | DONE | Queued messages treated as plain chat text |
 
-### 2.10 Slash Commands (14 Commands)
+### 2.10 Slash Commands (15 Commands)
 
 | Command | Aliases | Description |
 |---------|---------|-------------|
@@ -151,6 +156,7 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 | `/freeze` | `/scroll-lock` | Toggle auto-scroll |
 | `/thinking` | `/think` | Toggle thinking token visibility |
 | `/clear` | `/cls` | Clear terminal screen |
+| `/index` | — | Rebuild code search index (Phase 3) |
 
 ### 2.11 Configuration
 
@@ -165,9 +171,10 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 
 ### 2.12 Tests
 
-- **275 Go + 601 Python = 876+ unit tests passing**
-- Go test files (15 files): update, protocol, session_picker, backend, completion, view, commands, askuser, history, approval, e2e, markdown, model
-- Python test files cover: CLI, agent loop, tools, approval, session store, inline app, inline renderer, inline completer, TUI commands, file tools, config, type-ahead, parallel mode, backend server
+- **275 Go + 840 Python = 1115+ unit tests passing**
+- Go test files (16 files): update, protocol, session_picker, backend, completion, view, commands, askuser, history, approval, e2e, markdown, model, statusbar
+- Python test files cover: CLI, agent loop, tools, approval, session store, inline app, inline renderer, inline completer, TUI commands, file tools, config, type-ahead, parallel mode, backend server, parser, router, chunker, embeddings, index, search, repomap, context, new tools, integration router-agent
+- Benchmark tests: deterministic routing (50 queries), L1 latency, search relevance (precision@3), context budget compliance
 - Sprint verification tests: `tests/test_sprint_verify.py`
 - Integration tests (skipped by default): `tests/integration/`
 - Full test catalog: `docs/tests/test_suite.md`
@@ -194,116 +201,94 @@ Multi-scenario benchmark framework that drives HybridCoder autonomously and prod
 
 **PR Core baseline:** E2E-Calculator + E2E-BugFix + E2E-CLI.
 
+### 2.14 Phase 3: Code Intelligence (Layer 1 + Layer 2) — DONE
+
+Phase 3 implemented 2026-02-13. All gates passed. 840 Python tests, all Go tests passing, ruff clean, mypy clean.
+
+#### Layer 1: Deterministic Intelligence
+
+| Feature | Status | Files |
+|---------|--------|-------|
+| Tree-sitter Python parser (mtime LRU cache, 500 entries) | DONE | `src/hybridcoder/layer1/parser.py` |
+| Symbol extraction (functions, classes, methods, imports, variables) | DONE | `src/hybridcoder/layer1/symbols.py` |
+| Request router (3-stage: regex → features → weighted scoring) | DONE | `src/hybridcoder/core/router.py` |
+| Deterministic query handlers (list_symbols, find_def, find_refs, get_imports, show_signature) | DONE | `src/hybridcoder/layer1/queries.py` |
+| Syntax/import validation via tree-sitter | DONE | `src/hybridcoder/layer1/validators.py` |
+
+#### Layer 2: Retrieval Intelligence
+
+| Feature | Status | Files |
+|---------|--------|-------|
+| AST-aware code chunker (function/class boundaries, 200-800 token chunks) | DONE | `src/hybridcoder/layer2/chunker.py` |
+| Embedding engine (jina-v2-base-code, 768-dim, lazy-loaded, CPU-only) | DONE | `src/hybridcoder/layer2/embeddings.py` |
+| BM25 keyword search with TF-IDF scoring | DONE | `src/hybridcoder/layer2/embeddings.py` |
+| LanceDB code index (file-hash invalidation, incremental, gitignore-aware) | DONE | `src/hybridcoder/layer2/index.py` |
+| Hybrid search (BM25 + vector + RRF fusion, k=60) | DONE | `src/hybridcoder/layer2/search.py` |
+| Repository map generator (ranked symbols, 600-token budget) | DONE | `src/hybridcoder/layer2/repomap.py` |
+| Rules loader (CLAUDE.md, .rules/, .cursorrules) | DONE | `src/hybridcoder/layer2/rules.py` |
+| Context assembler (5000-token budget, priority-based) | DONE | `src/hybridcoder/core/context.py` |
+
+#### Integration
+
+| Feature | Status | Files |
+|---------|--------|-------|
+| 5 new agent tools (11 total) | DONE | `src/hybridcoder/agent/tools.py` |
+| `/index` slash command | DONE | `src/hybridcoder/tui/commands.py` |
+| L1 bypass in backend server (0 tokens, <50ms) | DONE | `src/hybridcoder/backend/server.py` |
+| Layer indicator in Go TUI (`[L1]`/`[L2]`/`[L4]`) | DONE | `cmd/hybridcoder-tui/statusbar.go` |
+| Context injection in system prompt | DONE | `src/hybridcoder/agent/prompts.py` |
+| `layer_used` in `on_done` notification | DONE | `cmd/hybridcoder-tui/protocol.go`, `messages.go`, `backend.go`, `update.go` |
+
+#### Gate Results
+
+| Gate | Criteria | Result |
+|------|----------|--------|
+| Gate 1 | Router accuracy >= 90%, L1 latency < 50ms, 0 tokens | PASS |
+| Gate 2 | Search precision@3 > 60%, context <= 5000 tokens, BM25 fallback | PASS |
+| Gate 3 | 11 tools, layer indicator, `/index`, 840 tests pass, lint clean, mypy clean | PASS |
+
+#### Deferred (Not Phase 3)
+
+| Feature | Reason |
+|---------|--------|
+| LSP integration (Sprint 3C) | multilspy early-stage; tree-sitter + grep covers 80%+ |
+| `get_diagnostics` tool | Requires LSP |
+| Multi-language support | Python-first approach validated |
+
 ---
 
-## 3. Features Planned (Phase 3-6)
+## 3. Features Planned (Phase 4-6)
 
-### 3.1 Phase 3 — Code Intelligence (Layer 1 + Layer 2)
+### 3.1 Phase 4 — Agent Orchestration & Context Intelligence
 
-> Phase 3 consolidates both deterministic analysis (L1) and retrieval/context (L2).
-> Structured as 3 gated sub-phases — each gate validates independently.
-> See `docs/plan/phase3-final-implementation.md` for authoritative plan.
-> Historical docs archived to `docs/archive/`.
+> Plan: `docs/plan/phase4-agent-orchestration.md` (v2.0)
 
-#### North Star Outcomes
+| Feature | Priority | Sprint | Description |
+|---------|----------|--------|-------------|
+| ContextEngine (auto-compaction) | P0 | 4A | Token budget enforcement, auto-compaction at 75%, tool result truncation |
+| TaskStore (DAG dependencies) | P0 | 4A | SQLite-backed task storage, dependency tracking, compact summaries |
+| Task LLM tools (create/update/list) | P0 | 4A | LLM-driven task management via tool calls |
+| `/tasks` slash command | P1 | 4A | View/clear task board |
+| L2 runtime wiring | P0 | 4A | Wire handle_chat → context assembly → layer_used=2 |
+| SubagentLoop (explore/plan/execute) | P0 | 4B | Isolated agent loops with restricted tools, max 5 iterations |
+| SubagentManager | P0 | 4B | Spawn/monitor/cancel subagents, max 3 concurrent |
+| Subagent LLM tools (spawn/check) | P0 | 4B | LLM spawns and checks background subagents |
+| MemoryStore (episodic) | P1 | 4B | Relevance-decaying memories extracted from sessions |
+| CheckpointStore | P1 | 4B | Save/restore agent state for resumable workflows |
+| `/memory` and `/checkpoint` commands | P2 | 4B | View/save/restore memories and checkpoints |
+| TaskPanel TUI widget | P2 | 4B | Collapsible task display in fullscreen TUI |
+| AgentConfig | P1 | 4A | Config section for compaction, subagents, memory settings |
 
-| Outcome | How Phase 3 Achieves It |
-|---------|------------------------|
-| **Reduced token cost** | 60-80% of queries answered with 0 LLM tokens via L1 deterministic routing |
-| **Reduced latency** | Structural queries in <50ms (vs 2-5s through LLM) |
-| **Fewer tool calls** | Router pre-answers "list symbols", "find definition", etc. — LLM never invoked |
-| **Better codebase understanding** | Tree-sitter extracts full symbol graph; repo map gives LLM structural context |
-| **Better search / RAG** | AST-aware chunking + hybrid BM25/vector search replaces naive grep |
-| **Better intellisense** | Deterministic symbol extraction, scope chains, type annotations, import analysis |
-| **Improved accuracy** | LLM receives curated context (repo map + search results + rules) instead of raw prompts |
-
-#### Phase 3-Alpha: Deterministic Intelligence (Gate 1)
-
-Sprints 3A + 3B. **This alone is a shippable demo of the core differentiator.**
-
-| Feature | Priority | Description |
-|---------|----------|-------------|
-| Tree-sitter parser | P0 | Python parsing with mtime cache, <10ms per file, LRU 500 entries |
-| Symbol extraction | P0 | Functions, classes, methods, imports, variables with scope chains via QueryCursor API (0.25.x) |
-| Request router | P0 | 3-stage classification (regex → feature extraction → weighted scoring), no LLM. Routes 60-80% of queries to L1 |
-| Deterministic query handlers | P0 | `list_symbols`, `find_references` (grep), `find_definition`, `get_imports`, `get_signature`, `get_type_info` (AST annotation) |
-| Syntax/import validation | P1 | Validate Python syntax and imports via tree-sitter |
-
-**Gate 1 exit:** "list functions in X.py" returns correct results in <50ms with 0 tokens. Router classifies 90%+ of 25 test queries correctly.
-
-#### Phase 3-Beta: Retrieval Intelligence (Gate 2)
-
-Sprints 3D + 3E + 3F. Gives the LLM curated context instead of raw prompts.
+### 3.2 Phase 5 — Architect/Editor & Constrained Generation
 
 | Feature | Priority | Description |
 |---------|----------|-------------|
-| AST-aware code chunker | P0 | Splits at function/class boundaries, 500-1500 token chunks, scope-aware |
-| Embedding engine | P0 | jina-v2-base-code (768-dim), CPU-only, lazy-loaded (~300MB, one-time download) |
-| LanceDB code index | P0 | Pydantic `LanceModel` schema, file-hash invalidation, incremental updates, gitignore-aware |
-| Hybrid search (BM25 + vector + RRF) | P0 | LanceDB built-in Tantivy FTS + vector search + Reciprocal Rank Fusion. BM25-only fallback when embeddings unavailable |
-| Repository map generator | P0 | Ranked symbol summary (query-aware boosting, recency, centrality), 800-token budget |
-| Rules loader | P1 | Loads CLAUDE.md, AGENTS.md, `.rules/*.md`, `.cursorrules`, `.hybridcoder/memory.md` |
-| Context assembler | P0 | Priority-based 5000-token budget: rules (300) + repo map (600) + chunks (2200) + file (800) + history (800) + buffer (300) |
+| Architect/Editor split | P0 | Separate planning and execution agents |
+| LLMLOOP (edit → compile → fix) | P0 | Compiler feedback loops using tree-sitter (built in Phase 3) |
+| Layer 3 constrained generation | P1 | llama-cpp-python + Outlines, Qwen2.5-Coder-1.5B |
+| MCP server | P2 | External tool integration protocol |
 
-**Gate 2 exit:** Hybrid search returns relevant results (precision@3 > 60%). Context assembler stays within token budget. Index builds in <30s.
-
-#### Phase 3-Gamma: Integration + Polish (Gate 3)
-
-Sprint 3G. Wires everything into the product.
-
-| Feature | Priority | Description |
-|---------|----------|-------------|
-| 5 new agent tools | P0 | `find_references`, `find_definition`, `get_type_info`, `list_symbols`, `search_code` (11 total) |
-| `/index` slash command | P0 | Manual index rebuild with `--force` option |
-| L1 bypass in backend server | P0 | Router intercepts queries before agent loop — deterministic answers never touch LLM |
-| Layer indicator in Go TUI | P1 | Status bar shows `[L1]`, `[L2]`, or `[L4]` per response |
-| Context injection in system prompt | P0 | Repo map + rules + grounding instruction added to LLM prompts |
-| Layer1Config / Layer2Config | P1 | Configurable cache TTL, search top_k, chunk size, token budgets, relevance threshold |
-
-**Gate 3 exit:** All Phase 3 exit criteria pass. 11 tools registered. `make lint` passes.
-
-#### Deferred (Post-Phase 3)
-
-| Feature | Reason | Alternative |
-|---------|--------|-------------|
-| LSP integration (Sprint 3C) | multilspy v0.0.15 is early-stage; Python backend is Jedi not Pyright (weaker type inference) | Tree-sitter + grep covers 80%+ of use cases |
-| `get_diagnostics` tool | Requires LSP (no tree-sitter equivalent) | Deferred with Sprint 3C |
-| Multi-language support | Reduce scope risk; validate Python-first | Planned for post-Phase 3 |
-| Static analysis (Semgrep) | Not needed for core differentiator | Planned for Phase 5+ |
-| Pattern matching (refactoring) | Not needed for core differentiator | Planned for Phase 5+ |
-
-#### Phase 3 Test Targets
-
-| Metric | Target |
-|--------|--------|
-| New Python tests | ~157 |
-| New Go tests | ~5 |
-| Total tests (post-Phase 3) | ~671 (509 Python + 157 new + 202 Go + 5 new) |
-| Sprint verify tests | `tests/test_sprint_verify.py` Phase 3 section |
-| Coverage target | >70% |
-
-### 3.2 Phase 4 — Agentic Workflow (Layer 4)
-
-> L2 features (chunking, search, retrieval, context) moved to Phase 3.
-> Phase 4 is now the agentic workflow phase (previously numbered Phase 5).
-
-| Feature | Priority | Description |
-|---------|----------|-------------|
-| Edit system (whole-file + search/replace) | P0 | Reliable code editing |
-| Git integration (auto-commit, undo) | P0 | Safety net for edits |
-| Shell sandbox | P1 | Secure command execution |
-| Compiler feedback loops (LLMLOOP) | P1 | Edit → compile → fix cycle |
-| Multi-file planning | P2 | Architect/editor pattern |
-
-### 3.3 Phase 5 — Polish & Benchmarking
-
-| Feature | Priority | Description |
-|---------|----------|-------------|
-| Custom benchmark suite | P0 | Test agentic task completion |
-| Performance profiling | P1 | Memory, latency, token usage |
-| Documentation | P2 | User guide, API docs |
-
-### 3.4 Constrained Generation (Layer 3) — Cross-Phase
+### 3.3 Constrained Generation (Layer 3) — Cross-Phase
 
 | Feature | Priority | Description |
 |---------|----------|-------------|
@@ -403,7 +388,7 @@ After extensive research (web search, Claude Code internals analysis, Ink/Bubble
 - Communication via **JSON-RPC over stdin/stdout** (like LSP)
 - Python inline mode stays as `--legacy` fallback
 
-See `docs/plan/go-bubble-tea-migration.md` for the full migration plan.
+See `docs/archive/plan/go-bubble-tea-migration.md` for the full migration plan.
 
 ---
 
@@ -411,14 +396,14 @@ See `docs/plan/go-bubble-tea-migration.md` for the full migration plan.
 
 | Metric | Target | Current |
 |--------|--------|---------|
-| LLM call reduction | 60-80% vs naive approach | Not measured (Layer 1-2 not built) |
+| LLM call reduction | 60-80% vs naive approach | Layer 1-2 built; router + deterministic handlers active |
 | Edit success rate (first attempt) | >40% | N/A (edit system not built) |
 | Edit success rate (with retry) | >75% | N/A |
 | Simple query latency | <500ms | Depends on LLM provider |
 | Agentic task completion | >50% on custom test suite | E2E eval system built (3 scenarios: Calculator, BugFix, CLI) |
 | Memory usage (idle) | <2GB RAM (stretch: <500MB) | Not profiled |
 | Memory usage (inference) | <8GB VRAM | Not profiled |
-| Unit tests | 500+ passing | **275 Go + 601 Python = 876+ passing** |
+| Unit tests | 500+ passing | **275 Go + 840 Python = 1115+ passing** |
 
 ---
 
@@ -430,10 +415,10 @@ See `docs/plan/go-bubble-tea-migration.md` for the full migration plan.
 | Package Manager | uv | Active |
 | CLI Framework | Typer + Rich | Active |
 | TUI Frontend | **Go + Bubble Tea** | Active |
-| Parsing | tree-sitter 0.25.2 | Planned |
+| Parsing | tree-sitter 0.25.2 | Active |
 | LSP Client | multilspy (Microsoft) | Planned |
-| Vector DB | LanceDB | Planned |
-| Embeddings | jina-v2-base-code | Planned |
+| Vector DB | LanceDB | Active |
+| Embeddings | jina-v2-base-code | Active |
 | L4 LLM Runtime | Ollama | Active |
 | L4 Model | Qwen3-8B Q4_K_M | Active |
 | L3 LLM Runtime | llama-cpp-python + Outlines | Planned |

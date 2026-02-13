@@ -429,6 +429,7 @@ func (b *Backend) dispatchNotification(msg RPCMessage) {
 			TokensIn:  params.TokensIn,
 			TokensOut: params.TokensOut,
 			Cancelled: params.Cancelled,
+			LayerUsed: params.LayerUsed,
 		})
 
 	case "on_error":

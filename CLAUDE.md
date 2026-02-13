@@ -78,7 +78,7 @@ These decisions are **locked** and do NOT change unless the user explicitly appr
 
 ## Current Phase
 
-Phases 0-2 complete. **Phase 3 (Code Intelligence)** is active. See `docs/plan/phase3-execution-brief.md` for daily scope.
+Phases 0-3 complete. **Phase 4 (Agent Orchestration)** is next. See `docs/archive/plan/phase3-execution-brief.md` for Phase 3 completion summary. See `docs/plan/phase4-agent-orchestration.md` for the Phase 4 plan.
 
 ---
 
@@ -119,8 +119,9 @@ uv run pytest -m integration tests/integration/
 | Full product roadmap | `docs/plan.md` |
 | MVP acceptance checklist | `docs/plan.md` Section 1.6 |
 | Feature catalog (built vs planned) | `docs/requirements_and_features.md` |
-| Phase 3 plan (authoritative) | `docs/plan/phase3-final-implementation.md` |
-| Phase 3 daily execution | `docs/plan/phase3-execution-brief.md` |
+| Phase 4 plan (active) | `docs/plan/phase4-agent-orchestration.md` |
+| Phase 3 plan (archived) | `docs/archive/plan/phase3-final-implementation.md` |
+| Phase 3 execution brief (archived) | `docs/archive/plan/phase3-execution-brief.md` |
 | Benchmark protocol | `docs/qa/phase3-before-after-benchmark-protocol.md` |
 | E2E benchmark guide | `docs/qa/e2e-benchmark-guide.md` |
 | External benchmark runbook | `docs/plan/agentic-benchmarks/external-benchmark-runbook.md` |
@@ -129,7 +130,7 @@ uv run pytest -m integration tests/integration/
 | Message format examples | `docs/reference/comms-examples.md` |
 | Tech research (deep dives) | `docs/claude/*.md` |
 | Vendor/tool reference | `docs/codex/*.md` |
-| Go TUI migration details | `docs/plan/go-bubble-tea-migration.md` |
+| Go TUI migration details | `docs/archive/plan/go-bubble-tea-migration.md` |
 | Archived conversations | `docs/communication/old/` (read only when asked) |
 | Archived/superseded docs | `docs/archive/` |
 

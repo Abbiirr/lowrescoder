@@ -3,11 +3,11 @@
 
 > Quick links for current implementation context:
 > - `docs/session-onramp.md` (fast session startup)
-> - `docs/plan/phase3-execution-brief.md` (one-page Phase 3 scope)
-> - `docs/plan/phase3-final-implementation.md` (authoritative Phase 3 plan)
+> - `docs/plan/phase4-agent-orchestration.md` (Phase 4 plan — active phase)
+> - `docs/archive/plan/phase3-execution-brief.md` (Phase 3 completion summary)
 
 **Version:** 1.0
-**Last Updated:** February 8, 2026
+**Last Updated:** February 13, 2026
 **Target:** Solo Developer MVP
 **Languages:** Python, Java
 **Platform:** Local CLI Tool (Windows, macOS, Linux)
@@ -118,7 +118,7 @@ The following 12 criteria must ALL pass for MVP release:
 - Two-tier LLM: Ollama (L4) + llama-cpp-python/Outlines (L3)
 - LSP client: multilspy (Microsoft)
 - Package manager: uv
-- TUI Frontend: Go + Bubble Tea (inline mode, JSON-RPC over stdin/stdout to Python backend). See `docs/plan/go-bubble-tea-migration.md` for full plan.
+- TUI Frontend: Go + Bubble Tea (inline mode, JSON-RPC over stdin/stdout to Python backend). See `docs/archive/plan/go-bubble-tea-migration.md` for full plan.
 
 ---
 
@@ -152,213 +152,42 @@ Whole-file edit format, search/replace parser, fuzzy matching (>80% threshold), 
 
 ---
 
-### Phase 3: Code Intelligence - Layer 1 (Weeks 6-7)
+### Phase 3: Code Intelligence (Layer 1 + Layer 2) — COMPLETE
 
-#### Objectives
-- Tree-sitter parsing for Python and Java
-- LSP integration for type information
-- Deterministic query handling
-- Latency under 50ms for Layer 1 queries
+Phase 3 consolidated both deterministic analysis (L1) and retrieval/context (L2) into a single phase. Implementation completed 2026-02-13. 840 Python tests passing, ruff clean, mypy clean, all Go tests passing.
 
-#### Deliverables
-| ID | Deliverable | Acceptance Criteria |
-|----|-------------|---------------------|
-| D3.1 | Tree-sitter Python parser | Parse any valid Python file |
-| D3.2 | Tree-sitter Java parser | Parse any valid Java file |
-| D3.3 | Symbol extraction | Extract functions, classes, methods |
-| D3.4 | Pyright integration | Get type info for Python symbols |
-| D3.5 | JDT integration | Get type info for Java symbols |
-| D3.6 | Reference finder | Find all usages of a symbol |
-| D3.7 | Definition jumper | Go to definition of a symbol |
-| D3.8 | Query router | Route deterministic queries to Layer 1 |
+#### What Was Built
 
-#### Functional Requirements
+| Sprint | Deliverables |
+|--------|-------------|
+| 3A | Tree-sitter Python parser with mtime LRU cache (500 entries), symbol extraction (functions, classes, methods, imports, variables) |
+| 3B | 3-stage request router (regex → feature extraction → weighted scoring), deterministic query handlers (list_symbols, find_definition, find_references, get_imports, show_signature) |
+| 3D | AST-aware chunker (function/class boundaries, 200-800 token chunks), embedding engine (jina-v2-base-code, lazy-loaded), BM25 fallback |
+| 3E | LanceDB code index (file-hash invalidation, incremental updates, gitignore-aware), hybrid search (BM25 + vector + RRF fusion) |
+| 3F | Repo map generator (ranked symbol summary, 600-token budget), rules loader (CLAUDE.md, .rules/, .cursorrules), context assembler (5000-token budget) |
+| 3G | 5 new agent tools (11 total), L1 bypass in server, `/index` command, Go TUI layer indicator `[L1]`/`[L2]`/`[L4]`, context injection in prompts, syntax validator |
 
-**FR3.1: Deterministic Query Types**
-These queries MUST be handled without LLM:
-- "Find all usages of X"
-- "Go to definition of X"
-- "What type is X?"
-- "List all functions in file Y"
-- "Show signature of function X"
-- "Find all imports in file Y"
+#### Deferred (Not Phase 3)
+- Sprint 3C: LSP integration (multilspy/Jedi)
+- `get_diagnostics` tool (requires LSP)
+- Java support (Python-first approach validated)
 
-**FR3.2: Tree-sitter Queries Required**
-```scheme
-# Functions (Python)
-(function_definition name: (identifier) @name)
+#### Gate Results
 
-# Classes (Python)
-(class_definition name: (identifier) @name)
+- [x] **Gate 1 (Deterministic):** Router accuracy >= 90% on 50-query benchmark. L1 latency p95 < 50ms. 0 tokens used.
+- [x] **Gate 2 (Retrieval):** Search precision@3 > 60%. Context budget <= 5000 tokens. BM25-only fallback works.
+- [x] **Gate 3 (Integration):** 11 tools registered. `on_done` includes `layer_used`. TUI shows layer indicator. `/index` command works. 840 tests pass. Ruff clean. Mypy clean.
 
-# Methods (Python)
-(class_definition 
-  body: (block 
-    (function_definition name: (identifier) @method)))
+#### New Files (14 Python source + 15 test files)
+- `src/hybridcoder/layer1/`: `__init__.py`, `parser.py`, `symbols.py`, `queries.py`, `validators.py`
+- `src/hybridcoder/layer2/`: `__init__.py`, `chunker.py`, `embeddings.py`, `index.py`, `search.py`, `repomap.py`, `rules.py`
+- `src/hybridcoder/core/`: `router.py`, `context.py`
 
-# Imports (Python)
-(import_statement) @import
-(import_from_statement) @import
-
-# Similar for Java...
-```
-
-**FR3.3: LSP Operations Required**
-- textDocument/hover → Type information
-- textDocument/definition → Jump to definition
-- textDocument/references → Find all usages
-- textDocument/documentSymbol → List all symbols
-- textDocument/diagnostic → Get errors/warnings
-
-#### Technical Requirements
-
-**TR3.1: Latency Budgets**
-| Operation | Target | Maximum |
-|-----------|--------|---------|
-| Parse single file | <10ms | 50ms |
-| Extract symbols | <20ms | 100ms |
-| Find references (LSP) | <100ms | 500ms |
-| Query routing decision | <5ms | 20ms |
-
-**TR3.2: Caching Strategy**
-- Parse tree cached per file, invalidated on change
-- Symbol table cached per project, incremental update
-- LSP results cached with 30-second TTL
-
-#### Verification Tests
-- [ ] VT3.1: Parse 100 Python files without error
-- [ ] VT3.2: Parse 100 Java files without error
-- [ ] VT3.3: Extract all functions from Django codebase
-- [ ] VT3.4: "Find usages of X" returns correct results
-- [ ] VT3.5: Latency under 50ms for symbol extraction
-- [ ] VT3.6: Query "what functions are in this file" uses no LLM tokens
-
-#### Exit Criteria
-- [ ] 100% of deterministic queries handled without LLM
-- [ ] Parsing works on real-world codebases (Django, Spring)
-- [ ] LSP integration stable for 1-hour session
+See `docs/archive/plan/phase3-final-implementation.md` for the authoritative spec and `docs/archive/plan/phase3-execution-brief.md` for completion summary.
 
 ---
 
-### Phase 4: Context & Retrieval - Layer 2 (Weeks 8-9)
-
-#### Objectives
-- AST-aware code chunking
-- Vector store with hybrid search
-- Repository map generation
-- Project rules system
-
-#### Deliverables
-| ID | Deliverable | Acceptance Criteria |
-|----|-------------|---------------------|
-| D4.1 | AST-aware chunker | Chunks respect function/class boundaries |
-| D4.2 | Embedding generator | Generate embeddings for code chunks |
-| D4.3 | LanceDB integration | Store and query embeddings |
-| D4.4 | Hybrid search | Combined BM25 + vector search |
-| D4.5 | Repository map | Generate ranked symbol summary |
-| D4.6 | Project rules loader | Load .rules/, AGENTS.md, CLAUDE.md |
-| D4.7 | Context assembler | Build optimal context for LLM |
-| D4.8 | Index management | Create, update, rebuild index |
-
-#### Functional Requirements
-
-**FR4.1: Chunking Requirements**
-- Chunk at function/class boundaries (never mid-function)
-- Maximum chunk size: 1000 tokens
-- Minimum chunk size: 50 tokens
-- Include metadata: file path, scope chain, imports
-- Overlap: 10 lines for context continuity
-
-**FR4.2: Chunk Metadata Schema**
-```yaml
-chunk:
-  id: unique_hash
-  file_path: src/auth/service.py
-  language: python
-  chunk_type: function | class | module
-  name: authenticate_user
-  start_line: 45
-  end_line: 78
-  scope: AuthService.authenticate_user
-  imports: [jwt, datetime, User]
-  content: <actual code>
-  embedding: <vector>
-```
-
-**FR4.3: Search Requirements**
-- Hybrid search: 50% BM25 + 50% vector (configurable)
-- Return top-k results (default k=10)
-- Include relevance score
-- Support filters: language, file path pattern, chunk type
-
-**FR4.4: Repository Map Format**
-```
-Repository Map (ranked by importance):
-
-src/auth/service.py:
-  class AuthService:
-    def authenticate(user_id: str) -> User
-    def refresh_token(token: str) -> str
-    def revoke_token(token: str) -> bool
-
-src/models/user.py:
-  class User:
-    id: str
-    email: str
-    def validate() -> bool
-...
-```
-
-**FR4.5: Project Rules**
-- Load from: `.rules/*.md`, `AGENTS.md`, `CLAUDE.md`, `.cursorrules`
-- Rules injected into system prompt
-- Support for language-specific rules
-- Support for directory-specific rules
-
-#### Technical Requirements
-
-**TR4.1: Embedding Model Options**
-| Model | Dimensions | Local | Quality | Speed |
-|-------|------------|-------|---------|-------|
-| voyage-code-3 | 1024 | No (API) | Best | Fast |
-| jina-v2-base-code | 768 | Yes | Good | Fast |
-| CodeSage-large-v2 | 2048 | Yes | Very Good | Slow |
-| all-MiniLM-L6-v2 | 384 | Yes | Okay | Very Fast |
-
-Default: jina-v2-base-code (local, good quality)
-
-**TR4.2: Index Performance**
-| Operation | Target | Maximum |
-|-----------|--------|---------|
-| Index 1000 files | <60s | 180s |
-| Single file update | <1s | 3s |
-| Hybrid search query | <200ms | 500ms |
-| Repo map generation | <2s | 5s |
-
-**TR4.3: Context Budget**
-- Total context budget: 6000 tokens (leaves room for response)
-- Repository map: 500-1000 tokens
-- Retrieved chunks: 2000-3000 tokens
-- Project rules: 500-1000 tokens
-- User message + history: 1000-2000 tokens
-
-#### Verification Tests
-- [ ] VT4.1: Chunk Django codebase, no mid-function chunks
-- [ ] VT4.2: Search "authentication" returns auth-related code
-- [ ] VT4.3: BM25 finds exact function name matches
-- [ ] VT4.4: Vector search finds semantically similar code
-- [ ] VT4.5: Repo map fits in 1000 tokens for 50-file project
-- [ ] VT4.6: Project rules loaded and present in prompts
-- [ ] VT4.7: Index survives restart (persistence)
-
-#### Exit Criteria
-- [ ] Search relevance: correct result in top-3 for 80% of queries
-- [ ] Indexing completes for 10,000 file project
-- [ ] Context assembly under 500ms
-
----
-
-### Phase 5: Agentic Workflow - Layer 4 (Weeks 10-12)
+### Phase 4: Agentic Workflow - Layer 4 (Weeks 10-12)
 
 #### Objectives
 - Multi-step task execution
@@ -490,7 +319,7 @@ Phase 2 - Editor (execution):
 
 ---
 
-### Phase 6: Testing & Benchmarking (Weeks 13-14)
+### Phase 5: Testing & Benchmarking (Weeks 13-14)
 
 #### Objectives
 - Comprehensive testing (unit, integration, benchmark harness)

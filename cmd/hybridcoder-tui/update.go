@@ -276,6 +276,18 @@ func (m model) handleDone(msg backendDoneMsg) (tea.Model, tea.Cmd) {
 	// Update stats
 	m.statusBar.Tokens += msg.TokensIn + msg.TokensOut
 
+	// Update layer indicator
+	switch msg.LayerUsed {
+	case 1:
+		m.statusBar.Layer = "[L1]"
+	case 2:
+		m.statusBar.Layer = "[L2]"
+	case 4:
+		m.statusBar.Layer = "[L4]"
+	default:
+		m.statusBar.Layer = ""
+	}
+
 	// Build scrollback output
 	var cmds []tea.Cmd
 

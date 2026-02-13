@@ -318,9 +318,9 @@ class TestSprint2Session:
 
 
 class TestSprint2Tools:
-    """S2.3: ToolRegistry registers 6 tools."""
+    """S2.3: ToolRegistry registers 11 tools."""
 
-    def test_six_tools_registered(self) -> None:
+    def test_eleven_tools_registered(self) -> None:
         from hybridcoder.agent.tools import create_default_registry
 
         registry = create_default_registry()
@@ -333,6 +333,11 @@ class TestSprint2Tools:
             "search_text",
             "run_command",
             "ask_user",
+            "find_references",
+            "find_definition",
+            "get_type_info",
+            "list_symbols",
+            "search_code",
         }
 
 
@@ -384,6 +389,7 @@ class TestSprint2Commands:
             "freeze",
             "thinking",
             "clear",
+            "index",
         }
         assert names == expected
 
@@ -577,13 +583,13 @@ class TestSprint2D:
         assert hasattr(app, "_session_approved_tools")
         assert isinstance(app._session_approved_tools, set)
 
-    def test_fourteen_commands_registered(self) -> None:
-        """14 slash commands are registered (12 original + /thinking + /clear)."""
+    def test_fifteen_commands_registered(self) -> None:
+        """15 slash commands are registered (12 original + /thinking + /clear + /index)."""
         from hybridcoder.tui.commands import create_default_router
 
         router = create_default_router()
         commands = router.get_all()
-        assert len(commands) == 14
+        assert len(commands) == 15
 
 
 # ============================================================
@@ -698,17 +704,17 @@ class TestSprint2E:
         assert hasattr(renderer, "print_goodbye")
         assert callable(renderer.print_goodbye)
 
-    def test_all_fourteen_commands(self) -> None:
-        """14 commands registered with correct names."""
+    def test_all_fifteen_commands(self) -> None:
+        """15 commands registered with correct names."""
         from hybridcoder.tui.commands import create_default_router
 
         router = create_default_router()
         commands = router.get_all()
         names = {c.name for c in commands}
-        assert len(names) == 14
+        assert len(names) == 15
         expected = {
             "exit", "new", "sessions", "resume", "help", "model",
             "mode", "compact", "init", "shell", "copy", "freeze",
-            "thinking", "clear",
+            "thinking", "clear", "index",
         }
         assert names == expected

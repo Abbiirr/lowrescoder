@@ -390,6 +390,29 @@ async def _handle_clear(app: AppContext, args: str) -> None:
     app.add_system_message("Screen cleared.")
 
 
+async def _handle_index(app: AppContext, args: str) -> None:
+    """Build or rebuild the code index for the current project."""
+    try:
+        from hybridcoder.layer2.index import CodeIndex
+
+        app.add_system_message("Building code index...")
+        index = CodeIndex()
+        stats = index.build(app.project_root)
+        app.add_system_message(
+            f"Index built: {stats['files_scanned']} files scanned, "
+            f"{stats['files_indexed']} indexed, "
+            f"{stats['total_chunks']} chunks, "
+            f"{stats['time_ms']}ms"
+        )
+    except ImportError:
+        app.add_system_message(
+            "Layer 2 dependencies not installed. "
+            "Run: uv pip install -e '.[layer1,layer2]'"
+        )
+    except Exception as e:
+        app.add_system_message(f"Index build failed: {e}")
+
+
 async def _handle_freeze(app: AppContext, args: str) -> None:
     # Textual TUI has a frozen ChatView; inline mode uses native scrollback
     if hasattr(app, "query_one"):
@@ -512,5 +535,10 @@ def create_default_router() -> CommandRouter:
         name="clear", aliases=["cls"],
         description="Clear the terminal screen",
         handler=_handle_clear,
+    ))
+    router.register(SlashCommand(
+        name="index", aliases=[],
+        description="Build or rebuild the code search index",
+        handler=_handle_index,
     ))
     return router
