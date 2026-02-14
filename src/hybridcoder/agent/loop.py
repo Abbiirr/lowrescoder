@@ -45,6 +45,7 @@ class AgentLoop:
         task_store: TaskStore | None = None,
         event_recorder: EventRecorder | None = None,
         subagent_manager: Any | None = None,
+        memory_context: str = "",
     ) -> None:
         self.provider = provider
         self.tool_registry = tool_registry
@@ -56,6 +57,7 @@ class AgentLoop:
         self._task_store = task_store
         self._event_recorder = event_recorder
         self._subagent_manager = subagent_manager
+        self._memory_context = memory_context
         self._current_episode_id: str | None = None
         self._cancelled = False
         self._mode: AgentMode = AgentMode.NORMAL
@@ -84,6 +86,7 @@ class AgentLoop:
             task_summary=task_summary,
             subagent_status=subagent_status,
             plan_mode=self._mode == AgentMode.PLANNING,
+            memory_context=self._memory_context,
         )
 
     def cancel(self) -> None:

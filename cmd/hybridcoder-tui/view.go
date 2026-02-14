@@ -26,7 +26,12 @@ func (m model) View() string {
 		b.WriteString("\n")
 	}
 
-	// 2. Tool call log (current turn)
+	// 2. Task panel (between thinking and tool calls)
+	if taskPanel := renderTaskPanel(m.taskPanelTasks, m.taskPanelSubagents, m.width); taskPanel != "" {
+		b.WriteString(taskPanel)
+	}
+
+	// 3. Tool call log (current turn)
 	for _, tc := range m.toolCalls {
 		icon := toolIcon(tc.Status)
 		line := fmt.Sprintf(" %s %s", icon, toolCallStyle.Render(tc.Name))
@@ -44,7 +49,7 @@ func (m model) View() string {
 		b.WriteString("\n")
 	}
 
-	// 3. Streaming text (plain text — no Glamour during streaming)
+	// 4. Streaming text (plain text — no Glamour during streaming)
 	if m.stage == stageStreaming {
 		content := m.streamBuf.String()
 		if content == "" && m.tokenBuf.Len() == 0 {
@@ -66,22 +71,22 @@ func (m model) View() string {
 		}
 	}
 
-	// 4. Error display
+	// 5. Error display
 	if m.lastError != "" {
 		b.WriteString(errorStyle.Render("Error: " + m.lastError))
 		b.WriteString("\n")
 	}
 
-	// 5. Autocomplete dropdown (when multiple matches)
+	// 6. Autocomplete dropdown (when multiple matches)
 	if len(m.completions) > 1 {
 		b.WriteString(renderCompletionDropdown(m.completions, m.width))
 	}
 
-	// 6. Separator line
+	// 7. Separator line
 	b.WriteString(separator(m.width))
 	b.WriteString("\n")
 
-	// 7. Input area (depends on stage)
+	// 8. Input area (depends on stage)
 	switch m.stage {
 	case stageApproval:
 		b.WriteString(renderApprovalView(m))
@@ -92,7 +97,7 @@ func (m model) View() string {
 	}
 	b.WriteString("\n")
 
-	// 8. Status bar
+	// 9. Status bar
 	m.statusBar.Queue = len(m.messageQueue)
 	b.WriteString(m.statusBar.View())
 

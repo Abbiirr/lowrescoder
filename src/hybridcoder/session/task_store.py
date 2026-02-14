@@ -180,8 +180,12 @@ class TaskStore:
             "dependencies": deps,
         }
 
-    def restore_from_snapshot(self, snapshot: dict) -> None:
-        """Restore tasks and dependencies from a snapshot."""
+    def restore_from_snapshot(self, snapshot: dict, *, autocommit: bool = True) -> None:
+        """Restore tasks and dependencies from a snapshot.
+
+        When autocommit=False, the caller controls the transaction boundary
+        (used by CheckpointStore for transactional restore).
+        """
         # Clear existing tasks for this session
         self._conn.execute(
             "DELETE FROM task_dependencies WHERE session_id = ?",
@@ -210,7 +214,8 @@ class TaskStore:
                 (self._session_id, dep["task_id"], dep["depends_on"]),
             )
 
-        self._conn.commit()
+        if autocommit:
+            self._conn.commit()
 
     def _build_graph(self) -> dict[str, set[str]]:
         """Build the dependency graph from the database."""

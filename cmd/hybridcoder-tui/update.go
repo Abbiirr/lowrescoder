@@ -89,6 +89,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return enterSessionPicker(m, msg), nil
 
+	case backendTaskStateMsg:
+		m.taskPanelTasks = msg.Tasks
+		m.taskPanelSubagents = msg.Subagents
+		return m, nil
+
 	case backendExitMsg:
 		m.quitting = true
 		return m, tea.Quit
@@ -283,6 +288,8 @@ func (m model) handleDone(msg backendDoneMsg) (tea.Model, tea.Cmd) {
 		m.statusBar.Layer = "[L1]"
 	case 2:
 		m.statusBar.Layer = "[L2]"
+	case 3:
+		m.statusBar.Layer = "[L3]"
 	case 4:
 		m.statusBar.Layer = "[L4]"
 	default:

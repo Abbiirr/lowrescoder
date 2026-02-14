@@ -127,6 +127,20 @@ Implemented 2026-02-14. All tests passing, ruff clean.
 - Tests: 942 collected, 819 passed, 113 skipped, 0 failed. 30 Sprint 4B tests across 4 files.
 - Test artifacts: `docs/qa/test-results/20260214-132120-sprint-4b-rereview-fixes.md`
 
+### 5f) Sprint 4C — Memory + Checkpoints + L2/L3 + Plan Artifact + Go Task Panel
+
+- **MemoryStore:** Episodic memory scoped to project_id. Save/retrieve, Jaccard dedup (0.7 threshold), relevance decay (0.95x per session), context budget for prompt injection, LLM-powered learning via scheduler.
+- **CheckpointStore:** Save/restore task state snapshots with transactional rollback. `autocommit=False` params added to `SessionStore.add_message()` and `TaskStore.restore_from_snapshot()` for BEGIN IMMEDIATE transaction boundary.
+- **L3Provider:** llama-cpp-python + Outlines wrapper with lazy model loading, generate/generate_structured, graceful ImportError degradation, VRAM cleanup.
+- **PlanArtifact:** Export task state as `.hybridcoder/plans/<session-id>.md` with checkboxes, sync checkbox changes back to TaskStore.
+- **L2/L3 routing in server:** SEMANTIC_SEARCH → L2 (ContextAssembler + HybridSearch + cache reuse), SIMPLE_EDIT → L3 (constrained gen), fallback to L4.
+- **BUG-20 fixed:** `on_task_state` notification emitted from task tool completions AND subagent lifecycle events (spawn/done) via `on_state_change` callback on SubagentManager.
+- **Go TUI task panel:** `backendTaskStateMsg`, `TaskStateParams`, `dispatchNotification` handler, `taskpanel.go` renderer, task panel in view between thinking and tool calls. L3 layer indicator added.
+- **New commands:** `/memory` (alias: `mem`), `/checkpoint` (alias: `ckpt`). `/plan` extended with `export`/`sync` subcommands.
+- Slash commands: **19** (17 + `/memory` + `/checkpoint`).
+- Tests: 975 collected, 852 passed, 113 skipped, 0 failed. 33 new Sprint 4C tests across 6 files.
+- Test artifacts: `docs/qa/test-results/20260214-151816-phase4-unit.md`
+
 ## 6) Commands You Actually Need
 
 - Setup:

@@ -53,7 +53,7 @@ def build_system_prompt(
     task_summary: str = "",
     subagent_status: str = "",
     plan_mode: bool = False,
-    # memory_context: str = "",  # Sprint 4C
+    memory_context: str = "",
 ) -> str:
     """Build the full system prompt, optionally including project memory and context.
 
@@ -65,6 +65,7 @@ def build_system_prompt(
         task_summary: Task board state.
         subagent_status: Running/completed subagent summaries.
         plan_mode: Whether plan mode is active (blocks mutating tools).
+        memory_context: Learned patterns from MemoryStore.
     """
     prompt = SYSTEM_PROMPT
 
@@ -97,5 +98,8 @@ def build_system_prompt(
 
     if subagent_status:
         prompt += f"\n## Background Work\n{subagent_status}\n"
+
+    if memory_context:
+        prompt += f"\n## Learned Patterns\n{memory_context}\n"
 
     return prompt

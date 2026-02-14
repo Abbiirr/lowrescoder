@@ -88,7 +88,30 @@ CREATE TABLE IF NOT EXISTS episode_events (
     data TEXT NOT NULL DEFAULT '{}'
 );
 CREATE INDEX IF NOT EXISTS idx_events_episode ON episode_events(episode_id);
--- Sprint 4C: add memories, checkpoints tables here
+-- Sprint 4C: memories + checkpoints
+CREATE TABLE IF NOT EXISTS memories (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    project_id TEXT NOT NULL,
+    category TEXT NOT NULL,
+    content TEXT NOT NULL,
+    relevance REAL NOT NULL DEFAULT 1.0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_memories_session ON memories(session_id);
+CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_id);
+
+CREATE TABLE IF NOT EXISTS checkpoints (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    label TEXT NOT NULL,
+    tasks_snapshot TEXT NOT NULL DEFAULT '{}',
+    context_summary TEXT NOT NULL DEFAULT '',
+    active_files TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_checkpoints_session ON checkpoints(session_id);
 """
 
 
@@ -142,6 +165,31 @@ class TaskRow(BaseModel):
     status: str = "pending"
     created_at: datetime
     updated_at: datetime
+
+
+class MemoryRow(BaseModel):
+    """A learned memory record scoped to a project."""
+
+    id: str
+    session_id: str
+    project_id: str
+    category: str
+    content: str
+    relevance: float = 1.0
+    created_at: datetime
+    updated_at: datetime
+
+
+class CheckpointRow(BaseModel):
+    """A checkpoint snapshot of task state."""
+
+    id: str
+    session_id: str
+    label: str
+    tasks_snapshot: str = "{}"
+    context_summary: str = ""
+    active_files: str = "[]"
+    created_at: datetime
 
 
 def ensure_tables(conn: sqlite3.Connection) -> None:

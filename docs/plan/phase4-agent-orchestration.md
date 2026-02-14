@@ -594,30 +594,38 @@ class L3Provider:
 - Graceful degradation: L4 fallback if L3 model not installed or generation fails
 - Does NOT implement Architect/Editor split (Phase 5)
 
-### 7.4 Key Design: Checkpoint Restore with Transactions (Entry 311 C4)
+### 7.4 Key Design: Checkpoint Restore with Transactions (Entry 311 C4, Entry 388 C1)
+
+**Autocommit fix prerequisite:** Both `SessionStore.add_message()` and `TaskStore.restore_from_snapshot()` auto-commit internally, which breaks the `BEGIN IMMEDIATE` transaction boundary. Both methods must add an `autocommit: bool = True` parameter. When `False`, the caller (CheckpointStore) controls the commit/rollback.
+
+- `SessionStore.add_message(..., *, autocommit: bool = True)` — skip `self._conn.commit()` when `False`
+- `TaskStore.restore_from_snapshot(..., *, autocommit: bool = True)` — skip `self._conn.commit()` when `False`
+
+Both changes are backward-compatible (default `True`).
 
 ```python
 class CheckpointStore:
     def restore_checkpoint(self, checkpoint_id, task_store, session_store) -> dict:
         """Restore checkpoint with transactional guarantees."""
         cp = self.get_checkpoint(checkpoint_id)
+        if cp.session_id != self._session_id:
+            raise ValueError(f"Session mismatch: checkpoint={cp.session_id}, current={self._session_id}")
         conn = self._conn
 
         try:
             conn.execute("BEGIN IMMEDIATE")
-            # 1. Clear current session tasks
-            task_store.clear_session_tasks(cp.session_id)
-            # 2. Rehydrate from snapshot
-            task_store.restore_from_snapshot(cp.session_id, json.loads(cp.tasks_snapshot))
-            # 3. Inject context summary
+            # 1. Rehydrate tasks from snapshot (autocommit=False — caller controls tx)
+            task_store.restore_from_snapshot(json.loads(cp.tasks_snapshot), autocommit=False)
+            # 2. Inject context summary (autocommit=False — caller controls tx)
             session_store.add_message(cp.session_id, "system",
-                f"[Restored checkpoint: {cp.label}]\n{cp.context_summary}")
+                f"[Restored checkpoint: {cp.label}]\n{cp.context_summary}",
+                autocommit=False)
             conn.execute("COMMIT")
         except Exception:
             conn.execute("ROLLBACK")
             raise
 
-        return {"plan": cp.plan, "active_files": json.loads(cp.active_files)}
+        return {"label": cp.label, "active_files": json.loads(cp.active_files)}
 ```
 
 **Restore contract table** (Entry 311 C4):
@@ -630,14 +638,24 @@ class CheckpointStore:
 | Conversation history | Preserved (not rolled back) |
 | Filesystem state | NOT restored — git's responsibility |
 | Rollback on failure | Full ROLLBACK, no partial state |
+| Autocommit bypass | Both `add_message()` and `restore_from_snapshot()` called with `autocommit=False` |
 
-**Transactional API requirement** (Entry 329 C4): Current `SessionStore.add_message()` calls `self._conn.commit()` unconditionally (store.py:104), which would break the `BEGIN IMMEDIATE` transaction. Sprint 4C must add a non-autocommit variant — either `add_message(..., autocommit=False)` or use `SAVEPOINT`-based nesting — so that the restore transaction controls commit timing. This is a prerequisite for the atomic restore guarantee.
+### 7.5 Key Design: L2 Routing (Entry 311 C5, Entry 388 C2)
 
-### 7.5 Key Design: L2 Routing (Entry 311 C5)
+**L2 cache strategy:** Reuse the existing `_code_index_cache` singleton from `src/hybridcoder/agent/tools.py` (CF-3 carry-forward fix). Do NOT rebuild `CodeIndex` per request — `CodeIndex.build()` is expensive (file scanning + embedding). The cache is invalidated only on `/index` command via `clear_code_index_cache()`. Per-turn reindexing in `handle_chat()` is explicitly prohibited.
+
+| Component | Lifecycle | Cost |
+|-----------|-----------|------|
+| `_code_index_cache` (CodeIndex) | Singleton, invalidated by `/index` only | Expensive (build once) |
+| `HybridSearch` | Instantiated per-request (wraps cached index chunks) | Lightweight |
+| `RulesLoader` | Per-request (file reads) | Fast |
+| `ContextAssembler` | Per-request (assembly from cached artifacts) | Fast |
 
 ```python
 # In handle_chat(), after L1 check:
 if request_type == RequestType.SEMANTIC_SEARCH:
+    # Reuse _code_index_cache singleton (from tools.py, already built)
+    # HybridSearch wraps cached index — lightweight per-request instantiation
     context = self._context_assembler.assemble(
         query=message, project_root=self._project_root,
         budget=self._config.layer2.context_budget,
@@ -701,14 +719,22 @@ Commands:
 - `/plan export` — writes `.hybridcoder/plans/<session-id>.md`
 - `/plan sync` — reads markdown checkboxes, updates TaskStore status
 
-### 7.7 Key Design: Go Task Panel (Entry 312)
+### 7.7 Key Design: Go Task Panel + on_task_state Notifications (Entry 312, Entry 388 C4)
 
 New file `cmd/hybridcoder-tui/taskpanel.go`:
 - Receives `on_task_state` JSON-RPC notifications with task list + subagent states
 - Renders compact panel below chat area (collapsible)
 - Shows: `[>] Refactor auth [x] Add tests [ ] Update docs`
 - Shows subagent status: `[sa01 running] exploring auth...`
-- Refreshes after every tool call completion (backend sends notification)
+
+**BUG-20 + Entry 388 C4: `on_task_state` emit points.** The notification must fire from multiple points, not just task tool completions:
+
+1. **Task tool completion:** In `_on_tool_call()` callback — after `create_task`, `update_task`, `add_task_dependency`, `list_tasks` complete.
+2. **Subagent lifecycle events:** Add `on_state_change: Callable[[], None] | None = None` to `SubagentManager.__init__()`. The server passes `_emit_task_state` as this callback. SubagentManager invokes it from:
+   - `spawn()` — after subagent task created
+   - `_on_done()` callback — on completion/cancellation/failure
+
+This ensures the Go TUI sees subagent state transitions without polling.
 
 JSON-RPC notification:
 ```json
@@ -718,34 +744,34 @@ JSON-RPC notification:
 }}
 ```
 
-### 7.8 Key Design: MemoryStore
+### 7.8 Key Design: MemoryStore (Entry 388 C3)
 
 - Categories: `tool_pattern`, `user_preference`, `project_fact`, `error_resolution`
 - Dedup: Jaccard similarity on word sets, threshold 0.7
 - Decay: `relevance *= 0.95` per session start; delete below 0.1
 - Max 50 entries per project, max 500 tokens in system prompt
-- `learn_from_session()`: LLM extracts max 5 memories per session (background via LLM Scheduler)
+- **Memory learning scheduler ownership:** `learn_from_session()` accepts an `LLMScheduler` parameter. It wraps the LLM call in `scheduler.submit(coro, foreground=False)` for background priority. The server calls this at session end: `await memory_store.learn_from_session(session_id, session_store, provider, self._llm_scheduler)`. If no scheduler is available (e.g. standalone testing), the method calls the provider directly as a fallback.
 
 ### 7.9 Sprint 4C Exit Criteria (33 new tests)
 
-- [ ] MemoryStore: save/load/decay/dedup/get_context
-- [ ] Memory extraction via LLM (tested with mock)
-- [ ] Memory context in system prompt
-- [ ] CheckpointStore: save/list/delete
-- [ ] **Checkpoint restore is transactional** (atomic commit/rollback)
-- [ ] Restore rehydrates TaskStore + injects context summary
-- [ ] Restore rejects mismatched session_id
-- [ ] `/memory` and `/checkpoint` commands work
-- [ ] L2 routing: `SEMANTIC_SEARCH` → ContextAssembler → LLM → `layer_used=2`
-- [ ] L3 routing: `SIMPLE_EDIT` → L3Provider → `layer_used=3`
-- [ ] L3 graceful degradation: L4 fallback if L3 disabled or fails
-- [ ] L3Provider: load, generate, structured output, error handling, cleanup
-- [ ] E2E integration tests for L1/L2/L3/L4 routing
-- [ ] `/plan export` writes markdown file with task list + subagent state
-- [ ] `/plan sync` imports checkbox changes back to TaskStore
-- [ ] Go task panel displays task states via JSON-RPC
-- [ ] Go task panel refreshes on task/subagent events
-- [ ] Baseline + 33 new tests pass; `ruff check` and `mypy` pass
+- [x] MemoryStore: save/load/decay/dedup/get_context
+- [x] Memory extraction via LLM (tested with mock)
+- [x] Memory context in system prompt
+- [x] CheckpointStore: save/list/delete
+- [x] **Checkpoint restore is transactional** (atomic commit/rollback)
+- [x] Restore rehydrates TaskStore + injects context summary
+- [x] Restore rejects mismatched session_id
+- [x] `/memory` and `/checkpoint` commands work
+- [x] L2 routing: `SEMANTIC_SEARCH` → ContextAssembler → LLM → `layer_used=2`
+- [x] L3 routing: `SIMPLE_EDIT` → L3Provider → `layer_used=3`
+- [x] L3 graceful degradation: L4 fallback if L3 disabled or fails
+- [x] L3Provider: load, generate, structured output, error handling, cleanup
+- [x] E2E integration tests for L1/L2/L3/L4 routing
+- [x] `/plan export` writes markdown file with task list + subagent state
+- [x] `/plan sync` imports checkbox changes back to TaskStore
+- [x] Go task panel displays task states via JSON-RPC
+- [x] Go task panel refreshes on task/subagent events
+- [x] Baseline + 33 new tests pass; `ruff check` and `mypy` pass
 
 ---
 
@@ -1142,26 +1168,26 @@ Verification order is mandatory: **core runtime functionality first, TUI parity 
 - [x] Sprint 4B verification gates pass — 942 collected, 819 passed, 113 skipped, 0 failed, ruff clean
 - [x] Review fixes: cancellation cleanup (add_done_callback), async teardown, plan mode persistence, session log refresh
 
-### Sprint 4C (Phase 4 Complete)
+### Sprint 4C — COMPLETE (2026-02-14)
 
-- [ ] MemoryStore: save/load/decay/dedup/get_context
-- [ ] Memory extraction via LLM (tested with mock)
-- [ ] Memory context in system prompt
-- [ ] CheckpointStore: save/list/delete
-- [ ] **Checkpoint restore is transactional** (atomic commit/rollback)
-- [ ] Restore rehydrates TaskStore + injects context summary
-- [ ] Restore rejects mismatched session_id
-- [ ] `/memory` and `/checkpoint` commands work
-- [ ] L2 routing: `SEMANTIC_SEARCH` → ContextAssembler → `layer_used=2`
-- [ ] L3 routing: `SIMPLE_EDIT` → L3Provider → `layer_used=3`
-- [ ] L3 graceful degradation: L4 fallback if disabled/fails
-- [ ] L3Provider: 5 unit tests pass (load, generate, structured, error, cleanup)
-- [ ] `/plan export` writes markdown file
-- [ ] `/plan sync` imports checkbox changes
-- [ ] Core runtime behaviors (tasks/subagents/plan/checkpoint/approval) pass vanilla prompt checks before TUI-specific checks
-- [ ] Go task panel displays task states via JSON-RPC
-- [ ] Go task panel refreshes on task/subagent events
-- [ ] Phase 4 final verification gates pass (Section 15)
+- [x] MemoryStore: save/load/decay/dedup/get_context
+- [x] Memory extraction via LLM (tested with mock)
+- [x] Memory context in system prompt
+- [x] CheckpointStore: save/list/delete
+- [x] **Checkpoint restore is transactional** (atomic commit/rollback)
+- [x] Restore rehydrates TaskStore + injects context summary
+- [x] Restore rejects mismatched session_id
+- [x] `/memory` and `/checkpoint` commands work
+- [x] L2 routing: `SEMANTIC_SEARCH` → ContextAssembler → `layer_used=2`
+- [x] L3 routing: `SIMPLE_EDIT` → L3Provider → `layer_used=3`
+- [x] L3 graceful degradation: L4 fallback if disabled/fails
+- [x] L3Provider: 5 unit tests pass (load, generate, structured, error, cleanup)
+- [x] `/plan export` writes markdown file
+- [x] `/plan sync` imports checkbox changes
+- [x] Core runtime behaviors (tasks/subagents/plan/checkpoint/approval) pass vanilla prompt checks before TUI-specific checks
+- [x] Go task panel displays task states via JSON-RPC
+- [x] Go task panel refreshes on task/subagent events
+- [x] Phase 4 final verification gates pass — 975 collected, 852 passed, 113 skipped, 0 failed, ruff clean
 - [ ] `docs/qa/phase4-benchmarks/before-after-comparison.md` published
 
 ---

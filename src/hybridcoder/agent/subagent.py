@@ -417,6 +417,7 @@ class SubagentManager:
         max_concurrent: int = 3,
         max_iterations: int = 5,
         timeout_seconds: int = 30,
+        on_state_change: Any | None = None,
     ) -> None:
         self._provider = provider
         self._tool_registry = tool_registry
@@ -424,6 +425,7 @@ class SubagentManager:
         self._max_concurrent = max_concurrent
         self._max_iterations = max_iterations
         self._timeout = timeout_seconds
+        self._on_state_change = on_state_change
 
         self._active: dict[str, asyncio.Task[SubagentResult]] = {}
         self._loops: dict[str, SubagentLoop] = {}
@@ -489,6 +491,8 @@ class SubagentManager:
                     status="cancelled",
                 )
                 logger.info("Subagent %s cancelled by manager", subagent_id)
+            if self._on_state_change:
+                self._on_state_change()
 
         atask = asyncio.create_task(_run_and_store())
         atask.add_done_callback(_on_done)
@@ -497,6 +501,8 @@ class SubagentManager:
             "Spawned subagent %s (type=%s, task=%s)",
             subagent_id, subagent_type, task[:60],
         )
+        if self._on_state_change:
+            self._on_state_change()
         return subagent_id
 
     def cancel(self, subagent_id: str) -> bool:

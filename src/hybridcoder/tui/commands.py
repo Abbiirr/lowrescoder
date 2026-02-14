@@ -391,13 +391,14 @@ async def _handle_clear(app: AppContext, args: str) -> None:
 
 
 async def _handle_plan(app: AppContext, args: str) -> None:
-    """Toggle or query plan mode."""
+    """Toggle or query plan mode, or export/sync plan artifacts."""
     arg = args.strip().lower()
 
     if not arg:
         app.add_system_message(
             "Usage: `/plan on` (enter plan mode), "
-            "`/plan approve` or `/plan off` (exit plan mode)"
+            "`/plan approve` or `/plan off` (exit plan mode), "
+            "`/plan export` (save plan), `/plan sync <path>` (sync from markdown)"
         )
         return
 
@@ -416,11 +417,98 @@ async def _handle_plan(app: AppContext, args: str) -> None:
             app.add_system_message("**Plan mode OFF** — all tools are available.")
         else:
             app.add_system_message("Plan mode is not supported in this context.")
+    elif arg == "export":
+        try:
+            from hybridcoder.agent.plan_artifact import export
+            from hybridcoder.session.task_store import TaskStore
+
+            conn = app.session_store.get_connection()
+            task_store = TaskStore(conn, app.session_id)
+            path = export(app.session_id, task_store, project_root=app.project_root)
+            app.add_system_message(f"Plan exported to: {path}")
+        except Exception as e:
+            app.add_system_message(f"Export failed: {e}")
+    elif arg.startswith("sync"):
+        sync_path = args.strip()[4:].strip()
+        if not sync_path:
+            app.add_system_message("Usage: `/plan sync <path-to-markdown>`")
+            return
+        try:
+            from hybridcoder.agent.plan_artifact import sync_from_markdown
+            from hybridcoder.session.task_store import TaskStore
+
+            conn = app.session_store.get_connection()
+            task_store = TaskStore(conn, app.session_id)
+            updated = sync_from_markdown(app.session_id, task_store, sync_path)
+            if updated:
+                app.add_system_message(f"Synced {len(updated)} tasks: {', '.join(updated)}")
+            else:
+                app.add_system_message("No task status changes found in plan file.")
+        except Exception as e:
+            app.add_system_message(f"Sync failed: {e}")
     else:
         app.add_system_message(
             f"Unknown plan argument: {arg}. "
-            "Use: `/plan on`, `/plan off`, or `/plan approve`"
+            "Use: `/plan on`, `/plan off`, `/plan approve`, `/plan export`, `/plan sync <path>`"
         )
+
+
+async def _handle_memory(app: AppContext, args: str) -> None:
+    """Show learned patterns from MemoryStore."""
+    try:
+        from hybridcoder.agent.memory import MemoryStore
+        from hybridcoder.session.models import ensure_tables
+
+        conn = app.session_store.get_connection()
+        ensure_tables(conn)
+        project_id = str(app.project_root)
+        store = MemoryStore(conn, project_id)
+        memories = store.get_memories(limit=20)
+        if not memories:
+            app.add_system_message("No learned patterns yet.")
+            return
+        lines = ["**Learned Patterns:**"]
+        for mem in memories:
+            lines.append(
+                f"- [{mem['category']}] {mem['content'][:80]} "
+                f"(relevance: {mem['relevance']:.2f})"
+            )
+        app.add_system_message("\n".join(lines))
+    except Exception as e:
+        app.add_system_message(f"Error loading memories: {e}")
+
+
+async def _handle_checkpoint(app: AppContext, args: str) -> None:
+    """List or save checkpoints."""
+    try:
+        from hybridcoder.session.checkpoint_store import CheckpointStore
+        from hybridcoder.session.models import ensure_tables
+        from hybridcoder.session.task_store import TaskStore
+
+        conn = app.session_store.get_connection()
+        ensure_tables(conn)
+
+        arg = args.strip().lower()
+        if arg.startswith("save"):
+            label = args.strip()[4:].strip() or "checkpoint"
+            task_store = TaskStore(conn, app.session_id)
+            cp_store = CheckpointStore(conn, app.session_id)
+            cp_id = cp_store.save_checkpoint(task_store, label)
+            app.add_system_message(f"Checkpoint saved: `{cp_id}` ({label})")
+        else:
+            cp_store = CheckpointStore(conn, app.session_id)
+            checkpoints = cp_store.list_checkpoints()
+            if not checkpoints:
+                app.add_system_message(
+                    "No checkpoints. Use `/checkpoint save <label>` to create one."
+                )
+                return
+            lines = ["**Checkpoints:**"]
+            for cp in checkpoints:
+                lines.append(f"- `{cp.id[:8]}` {cp.label} ({cp.created_at})")
+            app.add_system_message("\n".join(lines))
+    except Exception as e:
+        app.add_system_message(f"Error: {e}")
 
 
 async def _handle_tasks(app: AppContext, args: str) -> None:
@@ -596,7 +684,17 @@ def create_default_router() -> CommandRouter:
     ))
     router.register(SlashCommand(
         name="plan", aliases=[],
-        description="Plan mode: /plan on, /plan approve, /plan off",
+        description="Plan mode: /plan on, /plan approve, /plan off, /plan export, /plan sync",
         handler=_handle_plan,
+    ))
+    router.register(SlashCommand(
+        name="memory", aliases=["mem"],
+        description="Show learned patterns",
+        handler=_handle_memory,
+    ))
+    router.register(SlashCommand(
+        name="checkpoint", aliases=["ckpt"],
+        description="List or save checkpoints: /checkpoint, /checkpoint save <label>",
+        handler=_handle_checkpoint,
     ))
     return router

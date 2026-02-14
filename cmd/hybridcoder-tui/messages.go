@@ -83,3 +83,24 @@ type sessionEntry struct {
 type backendSessionListMsg struct {
 	Sessions []sessionEntry
 }
+
+// taskEntry represents a task in the task panel.
+type taskEntry struct {
+	ID     string `json:"id"`
+	Title  string `json:"title"`
+	Status string `json:"status"`
+}
+
+// subagentEntry represents a subagent in the task panel.
+type subagentEntry struct {
+	ID      string `json:"id"`
+	Type    string `json:"type"`
+	Status  string `json:"status"`
+	Summary string `json:"summary"`
+}
+
+// backendTaskStateMsg carries task and subagent state from the backend.
+type backendTaskStateMsg struct {
+	Tasks     []taskEntry
+	Subagents []subagentEntry
+}

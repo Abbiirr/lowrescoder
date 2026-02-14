@@ -316,7 +316,7 @@ Phase 3 implemented 2026-02-13. All gates passed. 840 Python tests, all Go tests
 | Backend wiring | DONE | LLMScheduler + SubagentManager lifecycle, 4 RPC handlers, cancel propagation, session reset |
 | Prompt updates | DONE | Delegation guidance, subagent status injection, plan mode indicator |
 
-#### Sprint 4C: Memory + Checkpoints + L2/L3 + Go Panel — PLANNED
+#### Sprint 4C: Memory + Checkpoints + L2/L3 + Go Panel — DONE
 
 | Feature | Priority | Sprint | Description |
 |---------|----------|--------|-------------|

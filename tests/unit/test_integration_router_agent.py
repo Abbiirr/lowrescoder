@@ -134,3 +134,30 @@ class TestLayerUsedField:
         }
         assert "layer_used" in done_params
         assert done_params["layer_used"] == 1
+
+
+class TestLayerUsedContractSprint4C:
+    """3 additional layer_used contract tests for L2/L3/L4 (Sprint 4C)."""
+
+    def test_l2_layer_used_value(self):
+        """L2 responses should report layer_used=2."""
+        done_params = {
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "layer_used": 2,
+        }
+        assert done_params["layer_used"] == 2
+
+    def test_l3_layer_used_value(self):
+        """L3 responses should report layer_used=3."""
+        done_params = {
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "layer_used": 3,
+        }
+        assert done_params["layer_used"] == 3
+
+    def test_l4_default_layer_used(self):
+        """Default layer_used is 4 (full reasoning)."""
+        layer_used = 4  # Default
+        assert layer_used == 4

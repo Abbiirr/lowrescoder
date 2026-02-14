@@ -31,7 +31,6 @@ class SessionStore:
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.executescript(DDL)
         ensure_tables(self._conn)  # idempotent, ensures task tables exist
-        # Sprint 4C: add_message(..., autocommit=False) variant for checkpoint restore
 
     def get_connection(self) -> sqlite3.Connection:
         """Return the underlying SQLite connection."""
@@ -99,15 +98,22 @@ class SessionStore:
         role: str,
         content: str,
         token_count: int = 0,
+        *,
+        autocommit: bool = True,
     ) -> int:
-        """Add a message to a session, returning its row ID."""
+        """Add a message to a session, returning its row ID.
+
+        When autocommit=False, the caller controls the transaction boundary
+        (used by CheckpointStore for transactional restore).
+        """
         now = _now_iso()
         cursor = self._conn.execute(
             "INSERT INTO messages (session_id, role, content, token_count, created_at) "
             "VALUES (?, ?, ?, ?, ?)",
             (session_id, role, content, token_count, now),
         )
-        self._conn.commit()
+        if autocommit:
+            self._conn.commit()
         return cursor.lastrowid or 0
 
     def get_messages(self, session_id: str) -> list[MessageRow]:

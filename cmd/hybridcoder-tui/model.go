@@ -67,6 +67,10 @@ type model struct {
 	askCursor    int
 	askAllowText bool
 
+	// Task panel state
+	taskPanelTasks     []taskEntry
+	taskPanelSubagents []subagentEntry
+
 	// Message queue
 	messageQueue []string
 	queueMax     int

@@ -79,6 +79,12 @@ type StatusParams struct {
 	SessionID string `json:"session_id,omitempty"`
 }
 
+// TaskStateParams carries task and subagent state updates.
+type TaskStateParams struct {
+	Tasks     []taskEntry    `json:"tasks"`
+	Subagents []subagentEntry `json:"subagents"`
+}
+
 // --- Request param types (Python -> Go, with ID) ---
 
 // ApprovalRequestParams is sent when the backend needs tool approval.

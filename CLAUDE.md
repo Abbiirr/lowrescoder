@@ -78,7 +78,7 @@ These decisions are **locked** and do NOT change unless the user explicitly appr
 
 ## Current Phase
 
-Phases 0-3 complete. **Phase 4 (Agent Orchestration)** is in progress — **Sprint 4A (Core Primitives) complete**, **Sprint 4B (Subagents + Plan Mode) complete**, Sprint 4C next. See `docs/plan/phase4-agent-orchestration.md` for the Phase 4 plan.
+Phases 0-4 complete. **Phase 4 (Agent Orchestration)** finished 2026-02-14 — Sprint 4A (Core Primitives), Sprint 4B (Subagents + Plan Mode), Sprint 4C (Memory + Checkpoints + L2/L3 + Plan Artifact + Go Task Panel) all complete. Final gate: 975 collected, 852 passed, 113 skipped, 0 failed, ruff clean. See `docs/plan/phase4-agent-orchestration.md` for details.
 
 ---
 

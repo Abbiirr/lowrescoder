@@ -87,6 +87,8 @@ class TestCommandRouter:
             "index",
             "tasks",
             "plan",
+            "memory",
+            "checkpoint",
         }
         assert names == expected
 

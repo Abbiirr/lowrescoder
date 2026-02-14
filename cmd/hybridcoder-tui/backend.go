@@ -450,5 +450,15 @@ func (b *Backend) dispatchNotification(msg RPCMessage) {
 			Mode:      params.Mode,
 			SessionID: params.SessionID,
 		})
+
+	case "on_task_state":
+		var params TaskStateParams
+		if err := json.Unmarshal(msg.Params, &params); err != nil {
+			return
+		}
+		b.program.Send(backendTaskStateMsg{
+			Tasks:     params.Tasks,
+			Subagents: params.Subagents,
+		})
 	}
 }

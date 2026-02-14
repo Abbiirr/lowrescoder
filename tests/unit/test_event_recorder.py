@@ -9,10 +9,10 @@ from unittest.mock import patch
 
 import pytest
 
+from hybridcoder.agent.event_recorder import EventRecorder
 from hybridcoder.core.blob_store import BlobStore
 from hybridcoder.session.episode_store import EpisodeStore
 from hybridcoder.session.models import ensure_tables
-from hybridcoder.agent.event_recorder import EventRecorder
 
 
 @pytest.fixture()

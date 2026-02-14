@@ -19,6 +19,7 @@ from hybridcoder.agent.approval import ApprovalManager, ApprovalMode
 from hybridcoder.agent.context import ContextEngine
 from hybridcoder.agent.event_recorder import EventRecorder
 from hybridcoder.agent.loop import AgentLoop, AgentMode
+from hybridcoder.agent.memory import MemoryStore
 from hybridcoder.agent.subagent import LLMScheduler, SubagentManager
 from hybridcoder.agent.subagent_tools import register_subagent_tools
 from hybridcoder.agent.task_tools import register_task_tools
@@ -27,6 +28,7 @@ from hybridcoder.config import HybridCoderConfig, load_config
 from hybridcoder.core.blob_store import BlobStore
 from hybridcoder.core.logging import log_event, setup_session_logging
 from hybridcoder.layer4.llm import create_provider
+from hybridcoder.session.checkpoint_store import CheckpointStore
 from hybridcoder.session.episode_store import EpisodeStore
 from hybridcoder.session.store import SessionStore
 from hybridcoder.session.task_store import TaskStore
@@ -172,6 +174,10 @@ class BackendServer:
         self._task_store: TaskStore | None = None
         self._llm_scheduler: LLMScheduler | None = None
         self._subagent_manager: SubagentManager | None = None
+        self._memory_store: MemoryStore | None = None
+        self._checkpoint_store: CheckpointStore | None = None
+        self._l3_provider: Any = None
+        self._context_assembler: Any = None
         self._session_titled: bool = False
 
         # Plan mode (persisted across loop recreation)
@@ -275,6 +281,33 @@ class BackendServer:
             )
             register_task_tools(self._tool_registry, self._task_store)
 
+            # Sprint 4C: MemoryStore + CheckpointStore
+            project_id = str(self.project_root)
+            conn = self.session_store.get_connection()
+            self._memory_store = MemoryStore(conn, project_id)
+            self._memory_store.apply_decay()  # decay at session start
+            self._checkpoint_store = CheckpointStore(conn, self.session_id)
+
+            # Sprint 4C: L3Provider (graceful degradation)
+            try:
+                from hybridcoder.layer3.provider import L3Provider
+                self._l3_provider = L3Provider(
+                    model_path=self.config.layer3.model_path,
+                    grammar_constrained=self.config.layer3.grammar_constrained,
+                )
+            except ImportError:
+                logger.warning("L3 dependencies not installed; L3 disabled")
+                self._l3_provider = None
+
+            # Sprint 4C: ContextAssembler
+            try:
+                from hybridcoder.core.context import ContextAssembler
+                self._context_assembler = ContextAssembler(
+                    context_budget=self.config.layer2.context_budget,
+                )
+            except ImportError:
+                self._context_assembler = None
+
             # Create LLM Scheduler and SubagentManager
             self._llm_scheduler = LLMScheduler()
             self._llm_scheduler.start()
@@ -285,6 +318,7 @@ class BackendServer:
                 max_concurrent=self.config.agent.max_subagents,
                 max_iterations=self.config.agent.subagent_max_iterations,
                 timeout_seconds=self.config.agent.subagent_timeout_seconds,
+                on_state_change=self._emit_task_state,
             )
             register_subagent_tools(self._tool_registry, self._subagent_manager)
 
@@ -309,6 +343,11 @@ class BackendServer:
                 )
                 event_recorder = EventRecorder(episode_store)
 
+            # Sprint 4C: inject learned memory context
+            memory_context = ""
+            if self._memory_store:
+                memory_context = self._memory_store.get_context()
+
             self._agent_loop = AgentLoop(
                 provider=self._provider,
                 tool_registry=self._tool_registry,
@@ -320,6 +359,7 @@ class BackendServer:
                 task_store=self._task_store,
                 event_recorder=event_recorder,
                 subagent_manager=self._subagent_manager,
+                memory_context=memory_context,
             )
 
             # Apply persisted plan mode
@@ -348,6 +388,25 @@ class BackendServer:
         # Track edits
         if status in ("completed", "success") and tool_name == "write_file":
             self._edit_count += 1
+
+        # BUG-20: emit task state on task-related tool completions
+        task_tools = {"create_task", "update_task", "add_task_dependency", "list_tasks"}
+        if tool_name in task_tools and status in ("completed", "success"):
+            self._emit_task_state()
+
+    def _emit_task_state(self) -> None:
+        """Emit on_task_state notification with tasks and subagents."""
+        tasks: list[dict[str, Any]] = []
+        if self._task_store:
+            for t in self._task_store.list_tasks():
+                tasks.append(t.model_dump(mode="json"))
+        subagents: list[dict[str, Any]] = []
+        if self._subagent_manager:
+            subagents = self._subagent_manager.list_all()
+        self.emit_notification("on_task_state", {
+            "tasks": tasks,
+            "subagents": subagents,
+        })
 
     async def _approval_callback(self, tool_name: str, arguments: dict[str, Any]) -> bool:
         """Approval callback -> request on_tool_request, waits for Go response."""
@@ -409,8 +468,14 @@ class BackendServer:
         if self._llm_scheduler:
             await self._llm_scheduler.shutdown()
             self._llm_scheduler = None
+        if self._l3_provider and hasattr(self._l3_provider, "cleanup"):
+            self._l3_provider.cleanup()
+            self._l3_provider = None
         self._agent_loop = None
         self._task_store = None
+        self._memory_store = None
+        self._checkpoint_store = None
+        self._context_assembler = None
 
     # --- Request handlers ---
 
@@ -462,6 +527,77 @@ class BackendServer:
                         pass  # tree-sitter not available, fall through to L4
         except ImportError:
             pass  # Router not available, use L4
+
+        # --- L2 routing: semantic search + context assembly ---
+        if layer_used == 4:
+            try:
+                from hybridcoder.core.router import RequestRouter
+                from hybridcoder.core.types import RequestType
+
+                router = RequestRouter(self.config.layer1)
+                if self.config.layer2.enabled and self._context_assembler:
+                    request_type = router.classify(message)
+                    if request_type == RequestType.SEMANTIC_SEARCH:
+                        try:
+                            from hybridcoder.agent.tools import _code_index_cache
+                            from hybridcoder.layer2.rules import RulesLoader
+                            from hybridcoder.layer2.search import HybridSearch
+
+                            if _code_index_cache is not None:
+                                search = HybridSearch(_code_index_cache)
+                                top_k = self.config.layer2.search_top_k
+                                results = search.search(message, top_k=top_k)
+                                rules_loader = RulesLoader()
+                                rules_text = rules_loader.load(self.project_root)
+                                self._context_assembler.assemble(
+                                    message, rules=rules_text,
+                                    search_results=results,
+                                )
+                                # Run agent loop with injected context
+                                agent_loop = self._ensure_agent_loop()
+                                agent_loop.session_id = self.session_id
+                                await agent_loop.run(
+                                    message,
+                                    on_chunk=self._on_chunk,
+                                    on_thinking_chunk=self._on_thinking_chunk,
+                                    on_tool_call=self._on_tool_call,
+                                    approval_callback=self._approval_callback,
+                                    ask_user_callback=self._ask_user_callback,
+                                )
+                                self.emit_notification("on_done", {
+                                    "tokens_in": 0, "tokens_out": 0, "layer_used": 2,
+                                })
+                                return
+                        except ImportError:
+                            pass  # L2 deps not available, fall through
+            except ImportError:
+                pass
+
+        # --- L3 routing: constrained generation ---
+        if layer_used == 4:
+            try:
+                from hybridcoder.core.router import RequestRouter
+                from hybridcoder.core.types import RequestType
+
+                router = RequestRouter(self.config.layer1)
+                if self.config.layer3.enabled and self._l3_provider:
+                    request_type = router.classify(message)
+                    if request_type == RequestType.SIMPLE_EDIT:
+                        try:
+                            result_text = await self._l3_provider.generate(message)
+                            self.session_store.add_message(self.session_id, "user", message)
+                            self.session_store.add_message(
+                                self.session_id, "assistant", result_text,
+                            )
+                            self.emit_notification("on_token", {"text": result_text})
+                            self.emit_notification("on_done", {
+                                "tokens_in": 0, "tokens_out": 0, "layer_used": 3,
+                            })
+                            return
+                        except Exception:
+                            pass  # L3 failed, fall through to L4
+            except ImportError:
+                pass
 
         try:
             agent_loop = self._ensure_agent_loop()
@@ -662,6 +798,51 @@ class BackendServer:
         self._emit_status()
         self.emit_response(request_id, {"ok": True})
 
+    async def handle_memory_list(self, request_id: int) -> None:
+        """List learned memories for the current project."""
+        if self._memory_store is None:
+            self.emit_response(request_id, {"memories": []})
+            return
+        memories = self._memory_store.get_memories()
+        self.emit_response(request_id, {"memories": memories})
+
+    async def handle_checkpoint_list(self, request_id: int) -> None:
+        """List checkpoints for the current session."""
+        if self._checkpoint_store is None:
+            self.emit_response(request_id, {"checkpoints": []})
+            return
+        checkpoints = self._checkpoint_store.list_checkpoints()
+        self.emit_response(request_id, {
+            "checkpoints": [cp.model_dump(mode="json") for cp in checkpoints],
+        })
+
+    async def handle_plan_export(self, request_id: int) -> None:
+        """Export task state as a markdown plan artifact."""
+        if self._task_store is None:
+            self.emit_response(request_id, {"error": "No task store"})
+            return
+        try:
+            from hybridcoder.agent.plan_artifact import export
+            path = export(
+                self.session_id, self._task_store,
+                self._subagent_manager, self.project_root,
+            )
+            self.emit_response(request_id, {"path": str(path)})
+        except Exception as e:
+            self.emit_response(request_id, {"error": str(e)})
+
+    async def handle_plan_sync(self, path: str, request_id: int) -> None:
+        """Sync task state from a markdown plan artifact."""
+        if self._task_store is None:
+            self.emit_response(request_id, {"error": "No task store"})
+            return
+        try:
+            from hybridcoder.agent.plan_artifact import sync_from_markdown
+            updated = sync_from_markdown(self.session_id, self._task_store, path)
+            self.emit_response(request_id, {"updated": updated})
+        except Exception as e:
+            self.emit_response(request_id, {"error": str(e)})
+
     async def handle_shutdown(self, request_id: int) -> None:
         """Gracefully shut down the server."""
         await self._teardown_agent_resources()
@@ -784,6 +965,15 @@ class BackendServer:
             key = params.get("key", "")
             value = params.get("value", "")
             await self.handle_config_set(key, value, request_id)
+        elif method == "memory.list":
+            await self.handle_memory_list(request_id)
+        elif method == "checkpoint.list":
+            await self.handle_checkpoint_list(request_id)
+        elif method == "plan.export":
+            await self.handle_plan_export(request_id)
+        elif method == "plan.sync":
+            path = params.get("path", "")
+            await self.handle_plan_sync(path, request_id)
         elif method == "shutdown":
             await self.handle_shutdown(request_id)
         else:
