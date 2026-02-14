@@ -6,16 +6,26 @@ import json
 import logging
 import time
 from collections.abc import Awaitable, Callable
+from enum import Enum
 from typing import Any
 
 from hybridcoder.agent.approval import ApprovalManager
+from hybridcoder.agent.context import ContextEngine
+from hybridcoder.agent.event_recorder import EventRecorder
 from hybridcoder.agent.prompts import build_system_prompt
 from hybridcoder.agent.tools import ToolRegistry
-from hybridcoder.core.logging import log_event
+from hybridcoder.core.logging import log_debug_prompt, log_event
 from hybridcoder.layer4.llm import LLMResponse, ToolCall
 from hybridcoder.session.store import SessionStore
+from hybridcoder.session.task_store import TaskStore
 
 logger = logging.getLogger(__name__)
+
+
+class AgentMode(Enum):
+    """Execution mode for the agent loop."""
+    NORMAL = "normal"
+    PLANNING = "planning"
 
 
 class AgentLoop:
@@ -31,6 +41,10 @@ class AgentLoop:
         session_store: SessionStore,
         session_id: str,
         memory_content: str | None = None,
+        context_engine: ContextEngine | None = None,
+        task_store: TaskStore | None = None,
+        event_recorder: EventRecorder | None = None,
+        subagent_manager: Any | None = None,
     ) -> None:
         self.provider = provider
         self.tool_registry = tool_registry
@@ -38,14 +52,38 @@ class AgentLoop:
         self.session_store = session_store
         self.session_id = session_id
         self._memory_content = memory_content
+        self._context_engine = context_engine
+        self._task_store = task_store
+        self._event_recorder = event_recorder
+        self._subagent_manager = subagent_manager
+        self._current_episode_id: str | None = None
         self._cancelled = False
+        self._mode: AgentMode = AgentMode.NORMAL
+
+    def set_mode(self, mode: AgentMode) -> None:
+        """Set the agent execution mode (normal or planning)."""
+        self._mode = mode
+        logger.info("Agent mode set to %s", mode.value)
+
+    def get_mode(self) -> AgentMode:
+        """Get the current agent execution mode."""
+        return self._mode
 
     def _build_system_prompt(self) -> str:
         """Build the system prompt with current runtime state."""
+        task_summary = ""
+        if self._task_store:
+            task_summary = self._task_store.summary()
+        subagent_status = ""
+        if self._subagent_manager and hasattr(self._subagent_manager, "get_status_summary"):
+            subagent_status = self._subagent_manager.get_status_summary()
         return build_system_prompt(
             self._memory_content,
             shell_enabled=self.approval_manager.shell_config.enabled,
             approval_mode=self.approval_manager.mode.value,
+            task_summary=task_summary,
+            subagent_status=subagent_status,
+            plan_mode=self._mode == AgentMode.PLANNING,
         )
 
     def cancel(self) -> None:
@@ -83,15 +121,28 @@ class AgentLoop:
         # Store user message
         self.session_store.add_message(self.session_id, "user", user_message)
 
-        # Build messages from session history (rebuild prompt for current state)
-        messages: list[dict[str, Any]] = [
-            {"role": "system", "content": self._build_system_prompt()},
-        ]
-        for msg in self.session_store.get_messages(self.session_id):
-            if msg.role in ("user", "assistant", "system", "tool"):
-                messages.append({"role": msg.role, "content": msg.content})
+        # Training-grade episode tracking
+        if self._event_recorder:
+            self._current_episode_id = self._event_recorder.on_turn_start(user_message)
+        _episode_id = self._current_episode_id
 
+        # Build messages from session history (rebuild prompt for current state)
         tool_schemas = self.tool_registry.get_schemas_openai_format()
+        if self._context_engine:
+            task_summary = self._task_store.summary() if self._task_store else ""
+            messages = await self._context_engine.build_messages(
+                self.session_id,
+                self._build_system_prompt(),
+                tool_schemas,
+                task_summary=task_summary,
+            )
+        else:
+            messages: list[dict[str, Any]] = [
+                {"role": "system", "content": self._build_system_prompt()},
+            ]
+            for msg in self.session_store.get_messages(self.session_id):
+                if msg.role in ("user", "assistant", "system", "tool"):
+                    messages.append({"role": msg.role, "content": msg.content})
         logger.debug("Loaded %d tool schemas, %d messages", len(tool_schemas), len(messages))
         log_event(
             logger, logging.INFO, "agent_loop_start",
@@ -104,6 +155,8 @@ class AgentLoop:
         for _iteration in range(self.MAX_ITERATIONS):
             if self._cancelled:
                 logger.debug("Cancelled at iteration %d", _iteration)
+                if self._event_recorder and _episode_id:
+                    self._event_recorder.on_turn_end(_episode_id, "[Cancelled]", "cancelled", {})
                 return "[Cancelled]"
 
             # Call LLM with tools
@@ -114,6 +167,10 @@ class AgentLoop:
                 iteration=_iteration,
                 provider=getattr(self.provider, "model", "unknown"),
             )
+            if self._event_recorder and _episode_id:
+                self._event_recorder.on_model_request(
+                    _episode_id, messages, tool_schemas, _iteration,
+                )
             _llm_start = time.monotonic()
             response: LLMResponse = await self.provider.generate_with_tools(
                 messages, tool_schemas,
@@ -134,19 +191,31 @@ class AgentLoop:
                 tool_calls_count=len(response.tool_calls),
                 finish_reason=response.finish_reason,
             )
+            if self._event_recorder and _episode_id:
+                self._event_recorder.on_model_response(
+                    _episode_id, response, _llm_ms, _iteration,
+                )
+            else:
+                log_debug_prompt(self.session_id, messages, response)
 
             # If text-only response (no tool calls), we're done
             if not response.tool_calls:
                 text = response.content or ""
                 self.session_store.add_message(self.session_id, "assistant", text)
                 logger.debug("Text-only response, returning (%d chars)", len(text))
+                _total_ms = int((time.monotonic() - _run_start) * 1000)
                 log_event(
                     logger, logging.INFO, "agent_loop_end",
                     session_id=self.session_id,
                     iterations=_iteration + 1,
-                    total_duration_ms=int((time.monotonic() - _run_start) * 1000),
+                    total_duration_ms=_total_ms,
                     outcome="text_response",
                 )
+                if self._event_recorder and _episode_id:
+                    self._event_recorder.on_turn_end(
+                        _episode_id, text, "text_response",
+                        {"iterations": _iteration + 1, "total_duration_ms": _total_ms},
+                    )
                 return text
 
             # Process tool calls
@@ -188,13 +257,19 @@ class AgentLoop:
         )
         final_text = response.content or "[Max iterations reached]"
         self.session_store.add_message(self.session_id, "assistant", final_text)
+        _total_ms = int((time.monotonic() - _run_start) * 1000)
         log_event(
             logger, logging.INFO, "agent_loop_end",
             session_id=self.session_id,
             iterations=self.MAX_ITERATIONS,
-            total_duration_ms=int((time.monotonic() - _run_start) * 1000),
+            total_duration_ms=_total_ms,
             outcome="max_iterations",
         )
+        if self._event_recorder and _episode_id:
+            self._event_recorder.on_turn_end(
+                _episode_id, final_text, "max_iterations",
+                {"iterations": self.MAX_ITERATIONS, "total_duration_ms": _total_ms},
+            )
         return final_text
 
     async def _handle_ask_user(
@@ -239,6 +314,10 @@ class AgentLoop:
             self.session_store.add_message(
                 self.session_id, "tool", f"[ask_user] User answered: {response_str}",
             )
+            if self._event_recorder and self._current_episode_id:
+                self._event_recorder.on_human_feedback(
+                    self._current_episode_id, "ask_user_response", response_str,
+                )
             if on_tool_call:
                 on_tool_call(tc.name, "completed", response_str)
             return f"User responded: {response_str}"
@@ -269,6 +348,10 @@ class AgentLoop:
             )
 
         logger.debug("Executing tool: %s(%s)", tc.name, list(tc.arguments.keys()))
+        if self._event_recorder and self._current_episode_id:
+            self._event_recorder.on_tool_call(
+                self._current_episode_id, tc.name, tc.arguments, tc.id,
+            )
         log_event(
             logger, logging.INFO, "tool_call_start",
             session_id=self.session_id,
@@ -281,6 +364,21 @@ class AgentLoop:
             if on_tool_call:
                 on_tool_call(tc.name, "error", error)
             return error
+
+        # Plan mode: block tools with mutates_fs or executes_shell
+        if self._mode == AgentMode.PLANNING:
+            if tool and (tool.mutates_fs or tool.executes_shell):
+                reason = (
+                    f"Blocked in plan mode: {tc.name} modifies filesystem or "
+                    "executes shell. Use /plan approve to switch to execution mode."
+                )
+                log_event(
+                    logger, logging.INFO, "tool_blocked_plan_mode",
+                    session_id=self.session_id, tool_name=tc.name,
+                )
+                if on_tool_call:
+                    on_tool_call(tc.name, "blocked", reason)
+                return reason
 
         # Check if blocked
         blocked, reason = self.approval_manager.is_blocked(tc.name, tc.arguments)
@@ -315,9 +413,17 @@ class AgentLoop:
                         logger, logging.WARNING, "tool_denied",
                         session_id=self.session_id, tool_name=tc.name,
                     )
+                    if self._event_recorder and self._current_episode_id:
+                        self._event_recorder.on_human_feedback(
+                            self._current_episode_id, "denial", tc.name,
+                        )
                     if on_tool_call:
                         on_tool_call(tc.name, "denied", "User denied")
                     return "Tool call denied by user."
+                if self._event_recorder and self._current_episode_id:
+                    self._event_recorder.on_human_feedback(
+                        self._current_episode_id, "approval", tc.name,
+                    )
                 # Enable shell if user approved a shell command
                 if shell_needs_enabling:
                     self.approval_manager.enable_shell()
@@ -344,6 +450,9 @@ class AgentLoop:
         start = time.monotonic()
         try:
             result = tool.handler(**tc.arguments)
+            task_tools = {"create_task", "update_task", "add_task_dependency", "list_tasks"}
+            if self._context_engine and tc.name not in task_tools:
+                result = self._context_engine.truncate_tool_result(result)
             duration_ms = int((time.monotonic() - start) * 1000)
             self.session_store.update_tool_call(
                 tc_row_id, result=result, status="completed", duration_ms=duration_ms,
@@ -353,6 +462,10 @@ class AgentLoop:
                 session_id=self.session_id, tool_name=tc.name,
                 duration_ms=duration_ms, status="completed",
             )
+            if self._event_recorder and self._current_episode_id:
+                self._event_recorder.on_tool_result(
+                    self._current_episode_id, tc.name, result, "completed", duration_ms,
+                )
             if on_tool_call:
                 on_tool_call(tc.name, "completed", result)
 
@@ -372,6 +485,10 @@ class AgentLoop:
                 session_id=self.session_id, tool_name=tc.name,
                 duration_ms=duration_ms, status="error",
             )
+            if self._event_recorder and self._current_episode_id:
+                self._event_recorder.on_tool_result(
+                    self._current_episode_id, tc.name, error, "error", duration_ms,
+                )
             if on_tool_call:
                 on_tool_call(tc.name, "error", error)
             return error

@@ -124,3 +124,13 @@ class TestLayerUsedField:
         }
         assert done_params["cancelled"] is True
         assert done_params["layer_used"] == 4
+
+    def test_layer_used_field_present_in_l1(self):
+        """CF-4: layer_used field must be present in L1 on_done params."""
+        done_params = {
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "layer_used": 1,
+        }
+        assert "layer_used" in done_params
+        assert done_params["layer_used"] == 1

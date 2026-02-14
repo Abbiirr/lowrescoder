@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from datetime import datetime
 
 from pydantic import BaseModel
@@ -45,6 +46,49 @@ CREATE TABLE IF NOT EXISTS tool_calls (
 
 CREATE INDEX IF NOT EXISTS idx_tool_calls_session ON tool_calls(session_id);
 CREATE INDEX IF NOT EXISTS idx_tool_calls_message ON tool_calls(message_id);
+
+CREATE TABLE IF NOT EXISTS tasks (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_tasks_session ON tasks(session_id);
+
+CREATE TABLE IF NOT EXISTS task_dependencies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    task_id TEXT NOT NULL REFERENCES tasks(id),
+    depends_on TEXT NOT NULL REFERENCES tasks(id),
+    UNIQUE(task_id, depends_on),
+    CHECK(task_id != depends_on)
+);
+CREATE INDEX IF NOT EXISTS idx_task_deps_task ON task_dependencies(task_id);
+
+CREATE TABLE IF NOT EXISTS episodes (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    sequence_num INTEGER NOT NULL,
+    started_at TEXT NOT NULL,
+    ended_at TEXT,
+    outcome TEXT,
+    metrics TEXT DEFAULT '{}',
+    UNIQUE(session_id, sequence_num)
+);
+CREATE INDEX IF NOT EXISTS idx_episodes_session ON episodes(session_id);
+
+CREATE TABLE IF NOT EXISTS episode_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    episode_id TEXT NOT NULL REFERENCES episodes(id),
+    event_type TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    data TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_events_episode ON episode_events(episode_id);
+-- Sprint 4C: add memories, checkpoints tables here
 """
 
 
@@ -86,3 +130,20 @@ class ToolCallRow(BaseModel):
     status: str = "pending"
     duration_ms: int | None = None
     created_at: datetime
+
+
+class TaskRow(BaseModel):
+    """A task record within a session."""
+
+    id: str
+    session_id: str
+    title: str
+    description: str = ""
+    status: str = "pending"
+    created_at: datetime
+    updated_at: datetime
+
+
+def ensure_tables(conn: sqlite3.Connection) -> None:
+    """Run the full DDL idempotently (safe to call multiple times)."""
+    conn.executescript(DDL)

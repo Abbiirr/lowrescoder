@@ -15,14 +15,16 @@ from hybridcoder.tui.file_completer import fuzzy_complete
 
 
 class HybridAutoSuggest(AutoSuggest):
-    """Auto-suggest ghost text for slash commands (like Claude Code).
+    """Auto-suggest ghost text for slash commands and @file paths.
 
     Shows grayed-out completion after the cursor as the user types.
     Example: user types "/res" → ghost text "ume" appears dimmed.
+    Example: user types "@src/hy" → ghost text "bridcoder/..." appears dimmed.
     """
 
-    def __init__(self, command_router: CommandRouter) -> None:
+    def __init__(self, command_router: CommandRouter, project_root: Path | None = None) -> None:
         self.command_router = command_router
+        self.project_root = project_root or Path.cwd()
 
     def get_suggestion(
         self, buffer: Buffer, document: Document,
@@ -38,6 +40,15 @@ class HybridAutoSuggest(AutoSuggest):
                 for alias in cmd.aliases:
                     if alias.startswith(partial) and alias != partial:
                         return Suggestion(alias[len(partial):])
+
+        # @file ghost text: @src/hy → bridcoder/... (grayed out)
+        if "@" in text:
+            at_pos = text.rfind("@")
+            partial = text[at_pos + 1:]
+            if partial:
+                matches = fuzzy_complete(partial, self.project_root)
+                if matches and matches[0].lower().startswith(partial.lower()):
+                    return Suggestion(matches[0][len(partial):])
 
         return None
 

@@ -124,16 +124,40 @@ class TUIConfig(BaseModel):
     alternate_screen: bool = False
 
 
+class TrainingLogConfig(BaseModel):
+    """Training-grade event logging for dataset generation."""
+
+    enabled: bool = False  # Opt-in only
+    blob_dir: str = "blobs"  # Relative to log_dir
+    blob_min_size: int = Field(default=1024, ge=0, description="Min bytes to externalize to blob")
+    max_episodes_per_session: int = Field(default=200, ge=10)
+
+
 class LoggingConfig(BaseModel):
     """Logging and observability configuration."""
 
     console_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "WARNING"
     file_enabled: bool = True
     file_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "DEBUG"
-    log_dir: str = "~/.hybridcoder/logs"
+    log_dir: str = "logs"
     max_file_size_mb: int = Field(default=10, ge=1, le=100)
     max_files: int = Field(default=5, ge=1, le=50)
     debug_prompts: bool = False
+    training: TrainingLogConfig = Field(default_factory=TrainingLogConfig)
+
+
+class AgentConfig(BaseModel):
+    """Agent orchestration configuration (Phase 4)."""
+
+    compaction_threshold: float = Field(default=0.75, ge=0.5, le=0.95)
+    compaction_kept_messages: int = Field(default=4, ge=1)
+    tool_result_max_tokens: int = Field(default=500, ge=50)
+    max_subagents: int = Field(default=3, ge=1)  # Sprint 4B
+    subagent_max_iterations: int = Field(default=5, ge=1)  # Sprint 4B
+    subagent_timeout_seconds: int = Field(default=30, ge=5)  # Sprint 4B
+    memory_max_entries: int = Field(default=50, ge=10)  # Sprint 4C
+    memory_decay_factor: float = Field(default=0.95, ge=0.5, le=1.0)  # Sprint 4C
+    memory_context_max_tokens: int = Field(default=500, ge=50)  # Sprint 4C
 
 
 # --- Top-level config ---
@@ -153,6 +177,7 @@ class HybridCoderConfig(BaseModel):
     ui: UIConfig = Field(default_factory=UIConfig)
     tui: TUIConfig = Field(default_factory=TUIConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    agent: AgentConfig = Field(default_factory=AgentConfig)
 
 
 # --- Config loading ---

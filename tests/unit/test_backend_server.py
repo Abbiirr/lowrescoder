@@ -43,6 +43,8 @@ def server(tmp_path: Path, temp_db: str) -> BackendServer:
         config.shell.allowed_commands = ["pytest"]
         config.shell.blocked_commands = ["rm -rf"]
         config.shell.allow_network = False
+        config.logging.file_enabled = False
+        config.logging.log_dir = str(tmp_path / "logs")
         config.ui.verbose = False
         config.model_dump.return_value = {
             "llm": {"model": "qwen3:8b", "provider": "ollama"},
@@ -798,6 +800,52 @@ class TestSessionState:
         await server.handle_session_new("Fresh", 51)
         assert server._agent_loop is None
 
+    @pytest.mark.asyncio
+    async def test_session_new_resets_task_store(self, server: BackendServer) -> None:
+        server._task_store = MagicMock()
+        await server.handle_session_new("Fresh", 52)
+        assert server._task_store is None
+
+    @pytest.mark.asyncio
+    async def test_session_resume_resets_task_store(self, server: BackendServer) -> None:
+        server._task_store = MagicMock()
+        prefix = server.session_id[:8]
+        await server.handle_session_resume(prefix, 53)
+        assert server._task_store is None
+
+    @pytest.mark.asyncio
+    async def test_handle_chat_session_switch_resets_task_store(
+        self, server: BackendServer,
+    ) -> None:
+        server._task_store = MagicMock()
+        server._agent_loop = MagicMock()
+
+        with patch.object(server, "_ensure_agent_loop") as mock_ensure:
+            mock_loop = AsyncMock()
+            mock_loop.run = AsyncMock(return_value="ok")
+            mock_loop.session_id = server.session_id
+            mock_ensure.return_value = mock_loop
+
+            await server.handle_chat("test", "different-session-id", 54)
+            assert server._task_store is None
+            assert server.session_id == "different-session-id"
+
+    @pytest.mark.asyncio
+    async def test_handle_chat_session_switch_clears_approved_tools(
+        self, server: BackendServer,
+    ) -> None:
+        server._session_approved_tools.add("write_file")
+        server._session_approved_tools.add("run_command")
+
+        with patch.object(server, "_ensure_agent_loop") as mock_ensure:
+            mock_loop = AsyncMock()
+            mock_loop.run = AsyncMock(return_value="ok")
+            mock_loop.session_id = server.session_id
+            mock_ensure.return_value = mock_loop
+
+            await server.handle_chat("test", "other-session", 55)
+            assert len(server._session_approved_tools) == 0
+
     def test_show_thinking_toggle(self, server: BackendServer) -> None:
         assert server._show_thinking is False
         ctx = _ServerAppContext(server)
@@ -805,3 +853,37 @@ class TestSessionState:
         assert server._show_thinking is True
         ctx.show_thinking = False
         assert server._show_thinking is False
+
+    @pytest.mark.asyncio
+    async def test_session_new_resets_scheduler_and_manager(
+        self, server: BackendServer,
+    ) -> None:
+        server._llm_scheduler = MagicMock()
+        server._llm_scheduler.shutdown = AsyncMock()
+        server._subagent_manager = MagicMock()
+        server._subagent_manager.cancel_all = MagicMock(return_value=0)
+        await server.handle_session_new("Fresh", 60)
+        assert server._llm_scheduler is None
+        assert server._subagent_manager is None
+
+    @pytest.mark.asyncio
+    async def test_shutdown_calls_teardown(self, server: BackendServer) -> None:
+        server._llm_scheduler = MagicMock()
+        server._llm_scheduler.shutdown = AsyncMock()
+        server._subagent_manager = MagicMock()
+        server._subagent_manager.cancel_all = MagicMock(return_value=0)
+        await server.handle_shutdown(61)
+        assert server._llm_scheduler is None
+        assert server._subagent_manager is None
+        assert server._running is False
+
+    @pytest.mark.asyncio
+    async def test_plan_mode_persists_across_loop_recreation(
+        self, server: BackendServer,
+    ) -> None:
+        server._plan_mode_enabled = True
+        assert server._plan_mode_enabled is True
+        # Teardown resets agent loop but not plan mode
+        await server._teardown_agent_resources()
+        assert server._plan_mode_enabled is True
+        assert server._agent_loop is None

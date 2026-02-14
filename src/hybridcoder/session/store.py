@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from hybridcoder.core.logging import log_event
-from hybridcoder.session.models import DDL, MessageRow, SessionRow
+from hybridcoder.session.models import DDL, MessageRow, SessionRow, ensure_tables
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,12 @@ class SessionStore:
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.executescript(DDL)
+        ensure_tables(self._conn)  # idempotent, ensures task tables exist
+        # Sprint 4C: add_message(..., autocommit=False) variant for checkpoint restore
+
+    def get_connection(self) -> sqlite3.Connection:
+        """Return the underlying SQLite connection."""
+        return self._conn
 
     def close(self) -> None:
         self._conn.close()

@@ -7,6 +7,7 @@ Handles "list functions", "find definition", "get imports", "show signature",
 from __future__ import annotations
 
 import re
+from itertools import islice
 from pathlib import Path
 
 from hybridcoder.core.types import Response, Symbol
@@ -184,7 +185,7 @@ class DeterministicQueryHandler:
         if file_path:
             search_files = [file_path]
         else:
-            search_files = list(self._project_root.rglob("*.py"))[:100]
+            search_files = list(islice(self._project_root.rglob("*.py"), 100))
 
         for fpath in search_files:
             try:
@@ -224,7 +225,7 @@ class DeterministicQueryHandler:
         if file_path:
             search_files = [file_path]
         else:
-            search_files = list(self._project_root.rglob("*.py"))[:100]
+            search_files = list(islice(self._project_root.rglob("*.py"), 100))
 
         refs: list[str] = []
         for fpath in search_files:
@@ -296,7 +297,7 @@ class DeterministicQueryHandler:
         if file_path:
             search_files = [file_path]
         else:
-            search_files = list(self._project_root.rglob("*.py"))[:100]
+            search_files = list(islice(self._project_root.rglob("*.py"), 100))
 
         for fpath in search_files:
             try:

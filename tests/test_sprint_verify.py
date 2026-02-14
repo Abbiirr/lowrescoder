@@ -366,7 +366,7 @@ class TestSprint2Agent:
 
 
 class TestSprint2Commands:
-    """S2.5: All 14 slash commands registered."""
+    """S2.5: All slash commands registered (16 with /tasks)."""
 
     def test_all_commands_registered(self) -> None:
         from hybridcoder.tui.commands import create_default_router
@@ -390,6 +390,8 @@ class TestSprint2Commands:
             "thinking",
             "clear",
             "index",
+            "tasks",
+            "plan",
         }
         assert names == expected
 
@@ -584,12 +586,12 @@ class TestSprint2D:
         assert isinstance(app._session_approved_tools, set)
 
     def test_fifteen_commands_registered(self) -> None:
-        """15 slash commands are registered (12 original + /thinking + /clear + /index)."""
+        """17 slash commands are registered (15 original + /tasks + /plan)."""
         from hybridcoder.tui.commands import create_default_router
 
         router = create_default_router()
         commands = router.get_all()
-        assert len(commands) == 15
+        assert len(commands) == 17
 
 
 # ============================================================
@@ -705,16 +707,16 @@ class TestSprint2E:
         assert callable(renderer.print_goodbye)
 
     def test_all_fifteen_commands(self) -> None:
-        """15 commands registered with correct names."""
+        """17 commands registered with correct names."""
         from hybridcoder.tui.commands import create_default_router
 
         router = create_default_router()
         commands = router.get_all()
         names = {c.name for c in commands}
-        assert len(names) == 15
+        assert len(names) == 17
         expected = {
             "exit", "new", "sessions", "resume", "help", "model",
             "mode", "compact", "init", "shell", "copy", "freeze",
-            "thinking", "clear", "index",
+            "thinking", "clear", "index", "tasks", "plan",
         }
         assert names == expected

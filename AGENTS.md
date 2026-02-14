@@ -65,3 +65,10 @@ Full protocol: `AGENT_COMMUNICATION_RULES.md`. Message log: `AGENTS_CONVERSATION
 - **Before any action**: check `AGENTS_CONVERSATION.MD` for pending items directed to you
 - **Reviews**: focus on technical risks, behavior, and architecture — not grammar/style nitpicks
 - **Archives** (`docs/communication/old/`): OFF-LIMITS unless user explicitly asks
+
+## Agent Roles & Review Verification
+
+- **Codex role:** Reviewer / Architect.
+- For **Codex review-only tasks** (no implementation changes), Codex does **not** need to rerun tests if valid artifacts already exist under `docs/qa/test-results/`.
+- In those review-only cases, Codex may cite existing stored test/lint/typecheck/benchmark artifacts as verification evidence.
+- If Codex (or any agent) makes implementation changes, follow normal testing guidance and generate fresh artifacts with `./scripts/store_test_results.sh <label> -- <command>`.

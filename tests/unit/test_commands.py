@@ -65,7 +65,7 @@ class TestCommandRouter:
         assert cmd.name == "compact"
 
     def test_all_commands_registered(self) -> None:
-        """All 14 slash commands are registered."""
+        """All 17 slash commands are registered."""
         router = create_default_router()
         commands = router.get_all()
         names = {c.name for c in commands}
@@ -85,6 +85,8 @@ class TestCommandRouter:
             "thinking",
             "clear",
             "index",
+            "tasks",
+            "plan",
         }
         assert names == expected
 
@@ -580,3 +582,21 @@ class TestTitleTruncation:
         output = "\n".join(messages)
         assert long_title not in output
         assert "..." in output
+
+
+class TestSystemPromptContent:
+    """Test system prompt includes required policy rules (BUG-24)."""
+
+    def test_write_file_directory_rule_in_prompt(self) -> None:
+        """SYSTEM_PROMPT includes the path-scoped write intent rule."""
+        from hybridcoder.agent.prompts import SYSTEM_PROMPT
+
+        assert "write files directly inside that directory" in SYSTEM_PROMPT
+        assert "write_file tool automatically creates parent directories" in SYSTEM_PROMPT
+
+    def test_build_system_prompt_includes_rule(self) -> None:
+        """build_system_prompt() output includes the directory write rule."""
+        from hybridcoder.agent.prompts import build_system_prompt
+
+        prompt = build_system_prompt()
+        assert "write files directly inside that directory" in prompt

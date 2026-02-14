@@ -20,6 +20,9 @@ class ToolDefinition:
     parameters: dict[str, Any]  # JSON Schema for parameters
     handler: Callable[..., str]
     requires_approval: bool = False
+    mutates_fs: bool = False
+    executes_shell: bool = False
+    # Sprint 4B: AgentMode.PLANNING blocks tools with mutates_fs=True or executes_shell=True
 
 
 class ToolRegistry:
@@ -306,16 +309,28 @@ def _handle_list_symbols(file: str, kind: str = "symbols", project_root: str = "
         return f"Error listing symbols: {e}"
 
 
+_code_index_cache: Any = None
+
+
+def clear_code_index_cache() -> None:
+    """Clear the cached CodeIndex instance (e.g. after /index rebuild)."""
+    global _code_index_cache  # noqa: PLW0603
+    _code_index_cache = None
+
+
 def _handle_search_code(query: str, top_k: int = 5, project_root: str = "") -> str:
     """Search code using hybrid BM25 + vector search."""
     try:
+        global _code_index_cache  # noqa: PLW0603
         from hybridcoder.layer2.embeddings import EmbeddingEngine
         from hybridcoder.layer2.index import CodeIndex
         from hybridcoder.layer2.search import HybridSearch
 
         root = project_root or "."
-        index = CodeIndex()
-        index.build(root)
+        if _code_index_cache is None:
+            _code_index_cache = CodeIndex()
+            _code_index_cache.build(root)
+        index = _code_index_cache
         engine = EmbeddingEngine()
         search = HybridSearch(index, embeddings=engine)
         results = search.search(query, top_k=top_k)
@@ -372,6 +387,7 @@ def create_default_registry(project_root: str = "") -> ToolRegistry:
         },
         handler=lambda **kwargs: _handle_write_file(project_root=project_root, **kwargs),
         requires_approval=True,
+        mutates_fs=True,
     ))
 
     registry.register(ToolDefinition(
@@ -427,6 +443,7 @@ def create_default_registry(project_root: str = "") -> ToolRegistry:
         },
         handler=_handle_run_command,
         requires_approval=True,
+        executes_shell=True,
     ))
 
     registry.register(ToolDefinition(

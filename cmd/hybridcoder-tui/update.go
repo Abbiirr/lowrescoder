@@ -252,6 +252,7 @@ func (m model) sendChat(text string) (tea.Model, tea.Cmd) {
 	m.lastError = ""
 	m.streamDirty = false
 	m.interruptCount = 0
+	m.statusBar.Layer = ""
 
 	// Send to backend — keep textInput focused for parallel typing
 	m.stage = stageStreaming
@@ -417,8 +418,8 @@ func (m *model) updateToolCall(msg backendToolCallMsg) {
 // updateCompletions refreshes autocomplete suggestions based on current input.
 func (m *model) updateCompletions() {
 	text := m.textInput.Value()
-	if strings.HasPrefix(text, "/") && !strings.Contains(text, " ") {
-		completions := getCompletions(text)
+	completions := getCompletions(text)
+	if len(completions) > 0 {
 		m.completions = completions
 		m.textInput.SetSuggestions(completions)
 	} else {

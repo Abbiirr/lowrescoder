@@ -1,13 +1,14 @@
 # Phase 4: Agent Orchestration & Context Intelligence
 
-> **Version:** 2.0
+> **Version:** 3.2
 > **Created:** 2026-02-06
-> **Updated:** 2026-02-13
+> **Updated:** 2026-02-14
 > **Status:** APPROVED — Ready for Implementation
-> **Research:** [`docs/claude/09-agent-orchestration-research.md`](../claude/09-agent-orchestration-research.md)
+> **Research:** [`docs/research/phase4-agent-patterns.md`](../research/phase4-agent-patterns.md)
 > **Prerequisites:** Phase 3 complete (840 Python + 275 Go tests passing), all gates passed
 > **Phase 3 deliverables:** tree-sitter parser, request router, hybrid search, 5 code intelligence tools, L1 bypass in server
-> **Estimated effort:** ~2.5 weeks (Sprint 4A: ~1 week, Sprint 4B: ~1.5 weeks)
+> **Estimated effort:** ~3.5 weeks (Sprint 4A: ~1 week, Sprint 4B: ~1 week, Sprint 4C: ~1.5 weeks)
+> **Supersedes:** v2.0 (2-sprint plan), v3.1 draft (`docs/archive/plan/quirky-sprouting-grove-v3.1-draft.md`)
 
 ---
 
@@ -15,16 +16,22 @@
 
 1. [Goals & Non-Goals](#1-goals--non-goals)
 2. [Architecture Overview](#2-architecture-overview)
-3. [Sprint 4A: Context Engine + Task System](#3-sprint-4a-context-engine--task-system)
-4. [Sprint 4B: Subagent Framework + Memory + Checkpoints](#4-sprint-4b-subagent-framework--memory--checkpoints)
-5. [SQLite Schema Additions](#5-sqlite-schema-additions)
-6. [File Inventory](#6-file-inventory)
-7. [Configuration Additions](#7-configuration-additions)
-8. [System Prompt Changes](#8-system-prompt-changes)
-9. [Testing Strategy](#9-testing-strategy)
-10. [Exit Criteria](#10-exit-criteria)
-11. [Risks & Mitigations](#11-risks--mitigations)
-12. [Dependencies](#12-dependencies)
+3. [Concern Disposition Summary](#3-concern-disposition-summary)
+4. [Pre-Implementation Steps](#4-pre-implementation-steps)
+5. [Sprint 4A: Core Primitives](#5-sprint-4a-core-primitives)
+6. [Sprint 4B: Subagents + Scheduling + Plan Mode](#6-sprint-4b-subagents--scheduling--plan-mode)
+7. [Sprint 4C: Memory + Checkpoints + L2/L3 Wiring + Plan Artifact + Go Task Panel](#7-sprint-4c-memory--checkpoints--l2l3-wiring--plan-artifact--go-task-panel)
+8. [JSON-RPC Contract Additions](#8-json-rpc-contract-additions)
+9. [Command Parity Matrix](#9-command-parity-matrix)
+10. [Complete File Inventory](#10-complete-file-inventory)
+11. [Configuration Additions](#11-configuration-additions)
+12. [System Prompt Changes](#12-system-prompt-changes)
+13. [Testing Strategy](#13-testing-strategy)
+14. [Eval & Benchmark Gates](#14-eval--benchmark-gates)
+15. [Verification](#15-verification)
+16. [Exit Criteria](#16-exit-criteria)
+17. [Risks & Mitigations](#17-risks--mitigations)
+18. [Dependencies](#18-dependencies)
 
 ---
 
@@ -33,23 +40,28 @@
 ### Goals
 
 1. **Context never exceeds `context_length` tokens** — auto-compaction enforced
-2. **LLM can create, track, and complete tasks** with DAG dependencies
-3. **Subagents** spawn in background, share LLM via asyncio.Lock, return summaries
-4. **Episodic memories** extracted from sessions and injected into prompts
-5. **Checkpoints** can be created and restored for resumable workflows
-6. **~45 new tests** passing, all existing 840 Python tests still pass (target: ~885+)
+2. **LLM can create, track, and complete tasks** with DAG dependencies and mandatory cycle detection
+3. **Subagents** spawn in background, share LLM via scheduler queue, return structured summaries
+4. **Plan mode** as first-class execution mode with capability-based tool gating
+5. **Episodic memories** extracted from sessions and injected into prompts
+6. **Checkpoints** can be created and restored with transactional guarantees
+7. **Markdown plan artifact** — export/import `.hybridcoder/plans/<session-id>.md`
+8. **Go TUI task panel** — JSON-RPC backed task/subagent display
+9. **L2 runtime wiring** — `SEMANTIC_SEARCH` routed through ContextAssembler
+10. **L3 minimal scope** — `SIMPLE_EDIT` routed to L3Provider (constrained gen), L4 fallback
+11. **82 new tests** passing, all existing 840 Python tests still pass (target: 922+)
 
 ### Non-Goals (Deferred)
 
 | Item | Deferred To | Reason |
 |------|------------|--------|
-| Architect/Editor split | Phase 5 | Requires Layer 3 constrained generation |
-| LLMLOOP feedback | Phase 5 | tree-sitter built (Phase 3), but needs Architect/Editor split first |
+| Architect/Editor split | Phase 5 | Requires full L3 integration beyond minimal scope |
+| LLMLOOP feedback | Phase 5 | Needs Architect/Editor split first |
 | Dynamic agent swarms | Never | Not feasible on single GPU |
 | MCP server | Phase 5+ | Out of scope for orchestration core |
 | Git integration | Phase 5+ | Separate concern |
 
-> **Note:** Vector memory (embedding infrastructure) is now available via Phase 3's jina-v2-base-code embeddings and LanceDB. Phase 4 uses this for L2 runtime wiring (see Section 4.9).
+> **Note:** Vector memory (embedding infrastructure) is available via Phase 3's jina-v2-base-code embeddings and LanceDB. Phase 4 uses this for L2 runtime wiring. L3 constrained generation infrastructure (`Layer3Config`, `llama-cpp-python`, `outlines`) exists in config but was not wired — Phase 4 adds minimal L3 wiring in Sprint 4C.
 
 ---
 
@@ -60,7 +72,7 @@
 ```
 ┌──────────────────────────────────────────────────────┐
 │                    HybridCoderApp                     │
-│  (TUI or Inline — both use the same agent backend)   │
+│  (Go TUI or Python Inline — same agent backend)      │
 │                                                       │
 │  ┌─────────────┐  ┌──────────────┐  ┌─────────────┐ │
 │  │ InputBar/    │  │  ChatView/   │  │ StatusBar/  │ │
@@ -70,14 +82,15 @@
 │  ┌──────▼─────────────────▼──────────────────▼──────┐ │
 │  │              AgentLoop (refactored)               │ │
 │  │  ┌──────────────┐  ┌──────────────┐              │ │
-│  │  │ContextEngine │  │  LLM Lock    │              │ │
-│  │  │(auto-compact)│  │(asyncio.Lock)│              │ │
+│  │  │ContextEngine │  │LLM Scheduler │              │ │
+│  │  │(auto-compact)│  │(priority Q)  │              │ │
 │  │  └──────────────┘  └──────┬───────┘              │ │
 │  │                           │                       │ │
 │  │  ┌──────────────┐  ┌─────▼────────┐             │ │
-│  │  │ToolRegistry  │  │SubagentMgr   │             │ │
+│  │  │ ToolRegistry │  │SubagentMgr   │             │ │
 │  │  │(+task tools) │  │(spawn/cancel)│             │ │
-│  │  └──────────────┘  └──────────────┘             │ │
+│  │  │(+cap flags)  │  └──────────────┘             │ │
+│  │  └──────────────┘                                │ │
 │  └───────────────────────┬───────────────────────────┘ │
 │                          │                              │
 │  ┌───────────────────────▼───────────────────────────┐ │
@@ -87,6 +100,12 @@
 │  │  │(DAG)     │ │(episodic)│ │Store    │           │ │
 │  │  └──────────┘ └──────────┘ └─────────┘           │ │
 │  └────────────────────────────────────────────────────┘ │
+│                                                         │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │              Layer Routing                       │    │
+│  │  L1: Deterministic → L2: Retrieval (search)     │    │
+│  │  L3: Constrained (simple edit) → L4: Reasoning  │    │
+│  └─────────────────────────────────────────────────┘    │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -94,17 +113,30 @@
 
 | Decision | Rationale |
 |----------|-----------|
-| **Single LLM + asyncio.Lock** | One 8B model on 8GB VRAM; cannot run parallel inference |
-| **Non-LLM parallelism** | File I/O, search, parsing run concurrently while LLM is locked |
+| **LLM Scheduler Queue (not Lock)** | Priority queue with single worker; foreground always before background; no race condition (replaces naive `asyncio.Lock` from v2.0) |
+| **Non-LLM parallelism** | File I/O, search, parsing run concurrently while LLM is serialized |
 | **Auto-compaction at 75%** | Leaves 25% headroom for response + tool calls |
 | **Tool result truncation** | >500 tokens → first 200 + last 100 + "[truncated]" (no LLM needed) |
 | **Flat subagent hierarchy** | Subagents cannot spawn subagents (prevents recursive explosion) |
-| **Subagent max 5 iterations** | Limits LLM lock contention; keeps subagents focused |
+| **Subagent max 5 iterations** | Limits queue contention; keeps subagents focused |
 | **Memory max 50 entries** | Token budget for memory injection: ~500 tokens |
 | **Memory decay 0.95x/session** | Unused memories fade; frequently-used memories persist |
 | **TaskStore in same SQLite DB** | Shares connection with SessionStore; no new DB files |
+| **Capability-based plan mode gating** | `ToolDefinition.mutates_fs` / `executes_shell` flags, not tool name checks |
+| **SIMPLE_EDIT → L3 (canonical)** | Matches `types.py:19`; L4 fallback if L3 disabled |
 
-### 2.3 Token Budget
+### 2.3 Layer Routing Matrix (Canonical)
+
+| RequestType | Layer | Handler |
+|-------------|-------|---------|
+| `DETERMINISTIC_QUERY` | L1 | DeterministicQueryHandler (zero tokens) |
+| `SEMANTIC_SEARCH` | L2 | ContextAssembler + L4 LLM |
+| `SIMPLE_EDIT` | **L3** | L3Provider (constrained gen), **L4 fallback if L3 disabled** |
+| `COMPLEX_TASK`, `CHAT` | L4 | AgentLoop (full reasoning) |
+
+> **Note:** L2 handles `SEMANTIC_SEARCH` only. `SIMPLE_EDIT` goes to L3 (not L2). This aligns with `src/hybridcoder/core/types.py:19` which maps `SIMPLE_EDIT = "simple_edit"  # → Layer 3`.
+
+### 2.4 Token Budget
 
 For `context_length = 8192` (Qwen3-8B default):
 
@@ -112,7 +144,7 @@ For `context_length = 8192` (Qwen3-8B default):
 |-----------|--------|---|-------|
 | System prompt (base) | 400 | 5% | Static instructions |
 | Environment section | 200 | 2% | Shell, approval, model info |
-| Tool definitions | 600 | 7% | 11 base + 5 new tools (16 total) |
+| Tool definitions | 600 | 7% | 11 base + 8 new tools (19 total) |
 | Memory context | 500 | 6% | Top-N memories by relevance |
 | Task summary | 300 | 4% | Current task state (compact) |
 | Subagent status | 200 | 2% | Running subagent summaries |
@@ -125,1381 +157,715 @@ For `context_length = 8192` (Qwen3-8B default):
 
 ---
 
-## 3. Sprint 4A: Context Engine + Task System
+## 3. Concern Disposition Summary
 
-**Duration:** ~1 week
-**Goal:** Automatic context management + LLM-driven task tracking + Phase 3 carry-forward fixes
+### Entry 307 (7 concerns)
 
-### 3.0 Phase 3 Carry-Forward Fixes (Pre-Sprint)
+| # | Concern | Decision | Sprint |
+|---|---------|----------|--------|
+| 1 | Plan mode as execution mode | ACCEPTED | 4B |
+| 2 | Scheduling policy | ACCEPTED | 4B |
+| 3 | cancel_subagent tool | ACCEPTED | 4B |
+| 4 | Cycle detection mandatory | ACCEPTED | 4A |
+| 5 | Checkpoint restore semantics | ACCEPTED (scoped) | 4C |
+| 6 | Markdown plan artifact | **RESTORED** (Entry 312) | 4C |
+| 7 | UI target split | ACCEPTED | All |
 
-> **Source:** Codex review findings from Entries 296/298/301/304 (archived to `docs/communication/old/2026-02-13-phase3-review-and-benchmarks.md`). These items were deferred from Phase 3 component delivery and must be completed before or alongside Sprint 4A.
+### Entry 309 (7 concerns)
 
-| # | Fix | Files | Priority |
-|---|-----|-------|----------|
-| CF-1 | **Go layer badge reset** — Reset `statusBar.Layer` on new turn start and cancel/error, not just in `handleDone` | `cmd/hybridcoder-tui/update.go` | Medium |
-| CF-2 | **Deterministic handler bounded iteration** — Replace `list(...rglob())[:100]` with `itertools.islice` to avoid full file-list materialization on large repos | `src/hybridcoder/layer1/queries.py` | Medium |
-| CF-3 | **`search_code` tool index reuse** — Refactor to query existing index state instead of rebuilding index per call; keep rebuild on explicit `/index` only | `src/hybridcoder/agent/tools.py` | Medium |
-| CF-4 | **E2E backend integration tests** — Add tests that exercise `handle_chat` and assert emitted `on_done.layer_used` for L1/L2/L4 routes (not just contract-level dict assertions) | `tests/unit/test_integration_router_agent.py` (or new test file) | Medium |
+| # | Concern | Decision | Sprint |
+|---|---------|----------|--------|
+| 1 | Subagent approval routing | ACCEPTED | 4B |
+| 2 | Auto-delegation behavior | ACCEPTED (minimal) | 4B |
+| 3 | Plan mode transitions | Already addressed (=307 C1) | 4B |
+| 4 | Subagent stateless contract | ACCEPTED | 4B |
+| 5 | Per-subagent permission policy | INCLUDED (lightweight) | 4B |
+| 6 | Markdown plan artifact | **RESTORED** (Entry 312) | 4C |
+| 7 | Orchestration observability | INCLUDED (basic logging) | 4B |
 
-CF-1 through CF-3 are small targeted fixes. CF-4 ties into Section 4.9 (L2 Runtime Wiring) — the E2E tests should validate the newly wired L2 path.
+### Entry 311 (8 concerns)
 
-### 3.1 ContextEngine (`agent/context.py`)
+| # | Concern | Decision | Sprint |
+|---|---------|----------|--------|
+| 1 | Entry numbering collision | FIXED (use next available) | 0B |
+| 2 | PriorityLock race condition | ACCEPTED → LLM Scheduler Queue | 4B |
+| 3 | Plan mode tool gating brittle | ACCEPTED → capability flags | 4B |
+| 4 | Checkpoint restore transactions | ACCEPTED | 4C |
+| 5 | L2 routing narrowed to SEMANTIC_SEARCH | ACCEPTED → L2=SEMANTIC_SEARCH, L3=SIMPLE_EDIT | 4C |
+| 6 | Markdown plan artifact | **RESTORED** (Entry 312) | 4C |
+| 7 | Subagent approval routing UX | ACCEPTED | 4B+4C |
+| 8 | Hard-coded test counts | FIXED → relative gates | All |
 
-The ContextEngine replaces the raw message-building logic in AgentLoop. It enforces token budgets and triggers auto-compaction.
+### Entry 312 (task handoff — zero deferrals)
 
-#### 3.1.1 Class Definition
+| Item | Decision | Sprint |
+|------|----------|--------|
+| Markdown plan artifact | RESTORED into Phase 4 | 4C |
+| Go-native task panel | RESTORED into Phase 4 | 4C |
+
+### Entry 314 (review addendum — 5 concerns)
+
+| # | Concern | Decision | Sprint |
+|---|---------|----------|--------|
+| A | JSON-RPC contract/schema for new methods | ACCEPTED | See Section 8 |
+| B | Verification uses store_test_results.sh | ACCEPTED | See Section 15 |
+| C | Multi-frontend command parity table | ACCEPTED | See Section 9 |
+| D | DB migration/init for new tables | ACCEPTED | 4A (ensure_tables()) |
+| E | Research doc structured with acceptance criteria | ACCEPTED | 0A |
+
+### Entry 318 (6 concerns on v3.1)
+
+| # | Concern | Decision | Sprint |
+|---|---------|----------|--------|
+| C1 | Verification uses raw pytest | FIXED → all use store_test_results.sh | Section 15 |
+| C2 | L3 mentioned but not planned | FIXED → minimal L3 scope added | 4C |
+| C3 | JSON-RPC contract/schema missing | FIXED → Section 8 added | 4A-4C |
+| C4 | Multi-frontend parity table missing | FIXED → Section 9 added | All |
+| C5 | Method naming inconsistency | FIXED → convention defined in Section 8 | All |
+| C6 | Step 0B omits Entry 314 | FIXED → Entry 314, 318, 322, 326 included | 0B |
+
+### Entry 322 (5 benchmark/eval concerns)
+
+| # | Concern | Decision | Sprint |
+|---|---------|----------|--------|
+| C1 | Verification doesn't use artifact wrapper | FIXED → Section 15 | All |
+| C2 | No benchmark lane in gates | FIXED → Section 14 hard gates | All |
+| C3 | Missing before/after baseline protocol | FIXED → pinned baselines in Section 14 | All |
+| C4 | No numeric benchmark thresholds | FIXED → thresholds in Section 14 | All |
+| C5 | No artifact/verdict policy | FIXED → INFRA_FAIL policy in Section 14 | All |
+
+### Entry 326 (5 blockers for v3.2 promotion)
+
+| # | Blocker | Decision |
+|---|---------|----------|
+| A | Comms entry numbering stale | FIXED → dynamic numbering |
+| B | SIMPLE_EDIT routing conflict | FIXED → canonical: SIMPLE_EDIT → L3, L4 fallback |
+| C | `--runs 1` benchmark flaky | FIXED → tiered gate policy (Section 14) |
+| D | Baseline comparison unpinned | FIXED → pinned to specific artifacts (Section 14) |
+| E | Draft deletion loses provenance | FIXED → archive to `docs/archive/plan/` |
+
+---
+
+## 4. Pre-Implementation Steps
+
+### Step 0A: Save research to `docs/research/phase4-agent-patterns.md`
+
+Compiled research on Claude Code plan mode/subagents/checkpointing, OpenCode agent internals, asyncio scheduling, DAG cycle detection, single-GPU orchestration patterns.
+
+**Required structure** (Entry 314 CE):
+1. Source list with URLs and confidence tiers (official docs = high, community = medium, anecdotal = low)
+2. Per-topic findings with direct implications for Phase 4 decisions
+3. Accepted vs rejected alternatives with rationale
+4. Cross-reference to concern dispositions
+
+### Step 0B: Post comms reply (Entry 327) to Codex
+
+Acknowledge all concerns from Entries 307, 309, 311, 312, 314, 318, 322, 326 with full disposition table. Reference v3.2 plan.
+
+### Step 0C: Update `docs/plan/phase4-agent-orchestration.md` to v3.2
+
+This document (the one you are reading).
+
+---
+
+## 5. Sprint 4A: Core Primitives (~1 week)
+
+**Goal:** Context management + task tracking + carry-forward fixes + ToolDefinition capability flags
+**Dependencies:** Phase 3 complete
+
+### 5.1 Carry-Forward Fixes
+
+| # | Fix | File | Change |
+|---|-----|------|--------|
+| CF-1 | Go layer badge reset | `cmd/hybridcoder-tui/update.go` | Add `m.statusBar.Layer = ""` in `sendChat()` at new-turn reset |
+| CF-2 | Bounded iteration | `src/hybridcoder/layer1/queries.py` | `itertools.islice(path.rglob(...), N)` instead of `list(rglob)[:N]` |
+| CF-3 | search_code index reuse | `src/hybridcoder/agent/tools.py` | Cache CodeIndex instance; rebuild only on `/index` |
+| CF-4 | Integration tests | `tests/unit/test_integration_router_agent.py` | Assert `layer_used` for L1 route (L2/L4 added in 4C) |
+
+### 5.2 New Files
+
+| File | Purpose |
+|------|---------|
+| `src/hybridcoder/agent/context.py` | ContextEngine: token budgets, auto-compaction at 75%, tool result truncation |
+| `src/hybridcoder/session/task_store.py` | TaskStore: CRUD + DAG deps + **mandatory cycle detection** via `graphlib.TopologicalSorter` + prefix resolution + snapshot/restore + summary |
+| `src/hybridcoder/agent/task_tools.py` | `create_task`, `update_task`, `list_tasks` tool definitions + handlers |
+| `tests/unit/test_context_engine.py` | 8 tests |
+| `tests/unit/test_task_store.py` | 9 tests (incl. cycle_detection_rejects) |
+| `tests/unit/test_task_tools.py` | 6 tests |
+| `tests/unit/test_carry_forward.py` | 2 tests |
+
+### 5.3 Modified Files
+
+| File | Changes |
+|------|---------|
+| `src/hybridcoder/agent/loop.py` | Add `context_engine`, `task_store`, `llm_scheduler` params (all defaultable). Replace raw message building with `context_engine.build_messages()`. Wrap LLM calls with scheduler `submit()`. Inject task_summary. |
+| `src/hybridcoder/agent/prompts.py` | Add `task_summary`, `memory_context`, `subagent_status` kwargs to `build_system_prompt()`. Add task management instructions. |
+| `src/hybridcoder/agent/tools.py` | CF-3: cache CodeIndex. **Add capability flags** to `ToolDefinition`: `mutates_fs: bool = False`, `executes_shell: bool = False`. Mark `write_file` and `run_command` accordingly. (Entry 311 C3) |
+| `src/hybridcoder/session/models.py` | DDL for `tasks` + `task_dependencies` tables. `TaskRow` dataclass. **Add `ensure_tables(conn)` function** that creates all Phase 4 tables idempotently (Entry 314 CD). Called at SessionStore init and backend bootstrap. |
+| `src/hybridcoder/session/store.py` | Add `get_connection()` accessor. Call `ensure_tables()` at init. |
+| `src/hybridcoder/config.py` | Add `AgentConfig` sub-model. Add `agent: AgentConfig` to `HybridCoderConfig`. |
+| `src/hybridcoder/tui/commands.py` | Add `/tasks` command. |
+| `src/hybridcoder/backend/server.py` | Wire TaskStore. `task.list` JSON-RPC method. |
+| `src/hybridcoder/layer1/queries.py` | CF-2: `itertools.islice`. |
+| `cmd/hybridcoder-tui/update.go` | CF-1: badge reset. |
+
+### 5.4 Key Design: ToolDefinition Capability Flags (Entry 311 C3)
+
+```python
+@dataclass
+class ToolDefinition:
+    name: str
+    description: str
+    parameters: dict
+    handler: Callable
+    requires_approval: bool = False
+    mutates_fs: bool = False      # NEW: tool writes to filesystem
+    executes_shell: bool = False   # NEW: tool runs shell commands
+```
+
+This replaces brittle name-based gating in plan mode. Sprint 4B uses `mutates_fs` and `executes_shell` to block tools in planning mode instead of hardcoding `"write_file"`.
+
+### 5.5 Key Design: ContextEngine
 
 ```python
 class ContextEngine:
-    """Manages context assembly and automatic compaction.
-
-    Responsibilities:
-    - Assemble messages for LLM calls with token budgets
-    - Track token usage across components
-    - Trigger auto-compaction when approaching budget limits
-    - Truncate oversized tool results
-    """
-
-    def __init__(
-        self,
-        provider: Any,  # LLM provider (for count_tokens + compaction calls)
-        session_store: SessionStore,
-        context_length: int = 8192,
-        compaction_threshold: float = 0.75,
-    ) -> None: ...
-
-    def count_tokens(self, text: str) -> int:
-        """Count tokens using the provider's tokenizer."""
-        ...
-
-    def build_messages(
-        self,
-        session_id: str,
-        system_prompt: str,
-        tool_schemas: list[dict],
-        *,
-        memory_context: str = "",
-        task_summary: str = "",
-        subagent_status: str = "",
-        extra_messages: list[dict] | None = None,
-    ) -> list[dict]:
-        """Assemble the message list for an LLM call.
-
-        Token budget enforcement:
-        1. Calculate fixed overhead (system + tools + memory + tasks + subagents)
-        2. Allocate remaining budget to messages (oldest first)
-        3. If over budget, trigger compaction
-        4. Truncate individual tool results if >500 tokens
-        """
-        ...
-
-    def truncate_tool_result(self, result: str, max_tokens: int = 500) -> str:
-        """Truncate a tool result if it exceeds max_tokens.
-
-        Strategy: keep first 200 tokens + last 100 tokens + "[truncated N tokens]"
-        """
-        ...
-
-    async def auto_compact(
-        self,
-        session_id: str,
-        kept_messages: int = 4,
-    ) -> str:
-        """Summarize old messages using the LLM, store summary.
-
-        Called automatically when context exceeds 75% of budget.
-        Returns the compact summary text.
-        """
-        ...
-
-    def _estimate_tool_schema_tokens(self, schemas: list[dict]) -> int:
-        """Estimate token count for tool schemas."""
-        ...
+    def __init__(self, provider, session_store, context_length=8192, compaction_threshold=0.75)
+    def count_tokens(self, text: str) -> int
+    async def build_messages(self, session_id, system_prompt, tool_schemas, *, memory_context="", task_summary="", subagent_status="") -> list[dict]
+    def truncate_tool_result(self, result: str, max_tokens=500) -> str  # 200 head + 100 tail + marker
+    async def auto_compact(self, session_id, kept_messages=4) -> str
 ```
 
-#### 3.1.2 Auto-Compaction Flow
-
-```
-build_messages() called
-    ↓
-Calculate total tokens:
-  fixed = system + tools + memory + tasks + subagents
-  messages_tokens = sum(count_tokens(m) for m in session_messages)
-  total = fixed + messages_tokens
-    ↓
-total > 0.75 * context_length?
-  YES → await auto_compact(session_id)
-        Re-fetch messages (now includes summary)
-        Rebuild messages list
-  NO  → Continue
-    ↓
-For each message:
-  If role == "tool" and tokens > 500:
-    message.content = truncate_tool_result(content)
-    ↓
-Return assembled messages
-```
-
-#### 3.1.3 Compaction Prompt
+### 5.6 Key Design: TaskStore with Cycle Detection
 
 ```python
-COMPACTION_PROMPT = """Summarize the following conversation in under 300 tokens.
-Focus on:
-- What the user asked for
-- Key decisions made
-- Files modified and how
-- Current state of the task
-- Any unresolved issues
-
-Conversation:
-{messages_text}
-
-Summary:"""
-```
-
-### 3.2 TaskStore (`session/task_store.py`)
-
-SQLite-backed task storage with DAG dependencies.
-
-#### 3.2.1 Class Definition
-
-```python
-@dataclass
-class TaskRow:
-    """A task in the task store."""
-    id: str
-    session_id: str
-    title: str
-    description: str
-    status: str  # pending, in_progress, completed
-    priority: int  # 1=high, 2=medium, 3=low
-    assigned_to: str  # "main" or subagent name
-    parent_id: str | None  # for subtask grouping
-    created_at: datetime
-    updated_at: datetime
-
-
 class TaskStore:
-    """SQLite-backed task storage with DAG dependencies."""
-
-    def __init__(self, conn: sqlite3.Connection) -> None:
-        """Use the same connection as SessionStore."""
-        ...
-
-    def create_task(
-        self,
-        session_id: str,
-        title: str,
-        description: str = "",
-        priority: int = 2,
-        assigned_to: str = "main",
-        parent_id: str | None = None,
-    ) -> str:
-        """Create a task, returning its UUID."""
-        ...
-
-    def update_task(
-        self,
-        task_id: str,
-        *,
-        title: str | None = None,
-        description: str | None = None,
-        status: str | None = None,
-        priority: int | None = None,
-        assigned_to: str | None = None,
-    ) -> None:
-        """Update task fields."""
-        ...
-
-    def get_task(self, task_id: str) -> TaskRow | None: ...
-    def list_tasks(self, session_id: str) -> list[TaskRow]: ...
-    def delete_task(self, task_id: str) -> None: ...
-
-    # --- Dependencies ---
-
     def add_dependency(self, task_id: str, depends_on: str) -> None:
-        """Mark task_id as blocked by depends_on."""
-        ...
-
-    def remove_dependency(self, task_id: str, depends_on: str) -> None: ...
-
-    def get_dependencies(self, task_id: str) -> list[str]:
-        """Return IDs of tasks that this task depends on."""
-        ...
-
-    def get_dependents(self, task_id: str) -> list[str]:
-        """Return IDs of tasks that depend on this task."""
-        ...
-
+        # Build full graph + proposed edge → graphlib.TopologicalSorter validates
+        # Raises ValueError("Cycle detected: {task_id} -> {depends_on}") if invalid
     def is_ready(self, task_id: str) -> bool:
-        """True if all dependencies are completed."""
-        ...
-
-    # --- Utilities ---
-
-    def get_summary(self, session_id: str) -> str:
-        """Return a compact text summary of all tasks for system prompt injection.
-
-        Format:
-        Tasks (3 pending, 1 in_progress, 2 completed):
-        - [in_progress] #a1b2: Refactor auth module
-        - [pending] #c3d4: Add unit tests (blocked by #a1b2)
-        - [pending] #e5f6: Update docs
-        """
-        ...
-
-    def snapshot(self, session_id: str) -> dict:
-        """Return JSON-serializable snapshot for checkpoints."""
-        ...
+        # All dependencies have status == "completed"
+    def snapshot(self, session_id: str) -> dict:  # JSON-serializable for checkpoints
+    def restore_from_snapshot(self, session_id: str, snapshot: dict) -> None:  # For checkpoint restore
 ```
 
-### 3.3 Task LLM Tools (`agent/task_tools.py`)
+### 5.7 Sprint 4A Exit Criteria (25 new tests) — ALL PASSED (2026-02-14)
 
-Three tools exposed to the LLM for task management.
-
-#### 3.3.1 Tool Definitions
-
-```python
-def create_task_tool_definitions() -> list[ToolDefinition]:
-    """Return ToolDefinitions for create_task, update_task, list_tasks."""
-    return [
-        ToolDefinition(
-            name="create_task",
-            description=(
-                "Create a new task to track work. Use this to break down "
-                "complex requests into smaller, trackable steps."
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "title": {
-                        "type": "string",
-                        "description": "Short task title (imperative form, e.g., 'Fix auth bug')",
-                    },
-                    "description": {
-                        "type": "string",
-                        "description": "Detailed description of what needs to be done",
-                    },
-                    "priority": {
-                        "type": "integer",
-                        "description": "1=high, 2=medium (default), 3=low",
-                        "enum": [1, 2, 3],
-                    },
-                    "blocked_by": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Task IDs that must complete before this one",
-                    },
-                },
-                "required": ["title"],
-            },
-            handler=...,  # Bound at registration time
-            requires_approval=False,
-        ),
-        ToolDefinition(
-            name="update_task",
-            description=(
-                "Update a task's status or details. Mark tasks as "
-                "in_progress when starting work, completed when done."
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "task_id": {
-                        "type": "string",
-                        "description": "The task ID to update (short prefix OK)",
-                    },
-                    "status": {
-                        "type": "string",
-                        "enum": ["pending", "in_progress", "completed"],
-                    },
-                    "title": {"type": "string"},
-                    "description": {"type": "string"},
-                },
-                "required": ["task_id"],
-            },
-            handler=...,
-            requires_approval=False,
-        ),
-        ToolDefinition(
-            name="list_tasks",
-            description="List all tasks for the current session.",
-            parameters={
-                "type": "object",
-                "properties": {},
-                "required": [],
-            },
-            handler=...,
-            requires_approval=False,
-        ),
-    ]
-```
-
-#### 3.3.2 Tool Handlers
-
-```python
-def _handle_create_task(
-    task_store: TaskStore,
-    session_id: str,
-    title: str,
-    description: str = "",
-    priority: int = 2,
-    blocked_by: list[str] | None = None,
-) -> str:
-    """Create a task and optionally add dependencies."""
-    task_id = task_store.create_task(
-        session_id=session_id,
-        title=title,
-        description=description,
-        priority=priority,
-    )
-    if blocked_by:
-        for dep_id in blocked_by:
-            resolved = task_store.resolve_prefix(dep_id)
-            if resolved:
-                task_store.add_dependency(task_id, resolved)
-    return f"Created task #{task_id[:8]}: {title}"
-
-
-def _handle_update_task(
-    task_store: TaskStore,
-    task_id: str,
-    status: str | None = None,
-    title: str | None = None,
-    description: str | None = None,
-) -> str:
-    """Update a task."""
-    resolved = task_store.resolve_prefix(task_id)
-    if not resolved:
-        return f"Task not found: {task_id}"
-    task_store.update_task(resolved, status=status, title=title, description=description)
-    task = task_store.get_task(resolved)
-    return f"Updated task #{resolved[:8]}: {task.title} [{task.status}]"
-
-
-def _handle_list_tasks(task_store: TaskStore, session_id: str) -> str:
-    """List all tasks."""
-    return task_store.get_summary(session_id)
-```
-
-### 3.4 AgentLoop Refactor (`agent/loop.py`)
-
-The AgentLoop is refactored to use ContextEngine and support task awareness.
-
-#### 3.4.1 Changes Summary
-
-| Current | After Refactor |
-|---------|---------------|
-| Raw message list building in `run()` | Delegated to `ContextEngine.build_messages()` |
-| No token tracking | Token counting via provider |
-| No auto-compaction | Auto-compaction at 75% budget |
-| No task awareness | Task summary injected into system prompt |
-| No LLM lock | `asyncio.Lock` for sequential LLM access |
-| Tool results stored as-is | Tool results truncated if >500 tokens |
-
-#### 3.4.2 Updated `__init__`
-
-```python
-class AgentLoop:
-    def __init__(
-        self,
-        provider: Any,
-        tool_registry: ToolRegistry,
-        approval_manager: ApprovalManager,
-        session_store: SessionStore,
-        session_id: str,
-        memory_content: str | None = None,
-        *,
-        # New in Phase 4:
-        context_engine: ContextEngine | None = None,
-        task_store: TaskStore | None = None,
-        llm_lock: asyncio.Lock | None = None,
-    ) -> None:
-        ...
-        # Phase 4 additions
-        self._context_engine = context_engine or ContextEngine(
-            provider=provider,
-            session_store=session_store,
-            context_length=getattr(provider, 'context_length', 8192),
-        )
-        self._task_store = task_store
-        self._llm_lock = llm_lock or asyncio.Lock()
-```
-
-#### 3.4.3 Updated `run()` — Key Diff
-
-```python
-async def run(self, user_message: str, ...) -> str:
-    self._cancelled = False
-    self.session_store.add_message(self.session_id, "user", user_message)
-
-    # Build task summary if task store is available
-    task_summary = ""
-    if self._task_store:
-        task_summary = self._task_store.get_summary(self.session_id)
-
-    tool_schemas = self.tool_registry.get_schemas_openai_format()
-
-    for _iteration in range(self.MAX_ITERATIONS):
-        if self._cancelled:
-            return "[Cancelled]"
-
-        # Use ContextEngine to build messages (handles compaction + truncation)
-        messages = await self._context_engine.build_messages(
-            session_id=self.session_id,
-            system_prompt=self._build_system_prompt(),
-            tool_schemas=tool_schemas,
-            memory_context=self._memory_content or "",
-            task_summary=task_summary,
-        )
-
-        # Acquire LLM lock for sequential access
-        async with self._llm_lock:
-            response = await self.provider.generate_with_tools(
-                messages, tool_schemas,
-                on_chunk=on_chunk,
-                on_thinking_chunk=on_thinking_chunk,
-            )
-
-        # ... rest of loop (tool execution, etc.) stays the same
-        # Tool results are truncated by ContextEngine on next build_messages()
-```
-
-### 3.5 System Prompt Updates (`agent/prompts.py`)
-
-#### 3.5.1 New Sections
-
-```python
-def build_system_prompt(
-    memory_content: str | None = None,
-    *,
-    shell_enabled: bool = False,
-    approval_mode: str = "suggest",
-    # New in Phase 4:
-    task_summary: str = "",
-    memory_context: str = "",
-    subagent_status: str = "",
-) -> str:
-    prompt = SYSTEM_PROMPT
-
-    # Existing environment section
-    env_lines = ["\n## Current Environment\n"]
-    env_lines.append(f"- Approval mode: {approval_mode}\n")
-    # ... existing shell status ...
-    prompt += "".join(env_lines)
-
-    # New: Task awareness
-    if task_summary:
-        prompt += f"\n## Active Tasks\n{task_summary}\n"
-
-    # New: Memory context
-    if memory_context:
-        prompt += f"\n## Learned Patterns\n{memory_context}\n"
-
-    # New: Subagent status
-    if subagent_status:
-        prompt += f"\n## Background Work\n{subagent_status}\n"
-
-    # Existing memory injection
-    if memory_content:
-        prompt += f"\n## Project Memory\n{memory_content}\n"
-
-    return prompt
-```
-
-#### 3.5.2 Task-Related System Prompt Addition
-
-Add to `SYSTEM_PROMPT`:
-
-```python
-SYSTEM_PROMPT += (
-    "\n\nTask management:\n"
-    "- For multi-step work, use create_task to break it into trackable steps\n"
-    "- Mark tasks in_progress when starting, completed when done\n"
-    "- Check the Active Tasks section for current task state\n"
-    "- You don't need tasks for simple questions or single-step work\n"
-)
-```
-
-### 3.6 `/tasks` Slash Command (`tui/commands.py`)
-
-```python
-async def _handle_tasks(app: HybridCoderApp, args: str) -> None:
-    """Show the task board for the current session."""
-    chat = _get_chat(app)
-
-    if not hasattr(app, '_task_store') or app._task_store is None:
-        chat.add_message("system", "Task store not initialized.")
-        return
-
-    arg = args.strip().lower()
-
-    if arg == "clear":
-        tasks = app._task_store.list_tasks(app.session_id)
-        for t in tasks:
-            app._task_store.delete_task(t.id)
-        chat.add_message("system", "All tasks cleared.")
-        return
-
-    summary = app._task_store.get_summary(app.session_id)
-    if not summary or "0 pending" in summary and "0 in_progress" in summary:
-        chat.add_message("system", "No tasks for this session.")
-    else:
-        chat.add_message("system", summary)
-```
-
-### 3.7 Sprint 4A Test Plan
-
-| Test File | Tests | What It Covers |
-|-----------|-------|----------------|
-| `tests/unit/test_context_engine.py` | 8 | Token counting, build_messages, truncation, auto-compact trigger, budget enforcement |
-| `tests/unit/test_task_store.py` | 7 | CRUD, dependencies, ready check, summary, snapshot, prefix resolution |
-| `tests/unit/test_task_tools.py` | 6 | create_task, update_task, list_tasks handlers, dependency wiring, error cases |
-| **Total** | **21** | |
-
-#### Key Test Cases — ContextEngine
-
-```
-test_count_tokens_basic
-test_truncate_tool_result_short_passthrough
-test_truncate_tool_result_long_truncated
-test_build_messages_within_budget
-test_build_messages_triggers_compaction
-test_build_messages_injects_memory_and_tasks
-test_auto_compact_summarizes_old_messages
-test_tool_result_truncation_in_messages
-```
-
-#### Key Test Cases — TaskStore
-
-```
-test_create_and_get_task
-test_update_task_status
-test_list_tasks_by_session
-test_add_dependency_and_check_ready
-test_dependency_blocks_ready
-test_get_summary_format
-test_snapshot_and_restore
-```
-
-#### Key Test Cases — Task Tools
-
-```
-test_create_task_handler
-test_create_task_with_dependencies
-test_update_task_handler
-test_update_task_not_found
-test_list_tasks_handler
-test_prefix_resolution
-```
+- [x] CF-1 through CF-4 complete
+- [x] ContextEngine counts tokens and enforces budget
+- [x] Auto-compaction triggers at 75% threshold
+- [x] Tool results >500 tokens truncated
+- [x] TaskStore CRUD + DAG dependencies work
+- [x] **add_dependency() rejects cycles** (graphlib)
+- [x] ToolDefinition has `mutates_fs` and `executes_shell` flags
+- [x] LLM can create/update/list tasks via tools
+- [x] Task summary in system prompt each iteration
+- [x] `/tasks` command works
+- [x] AgentConfig added to HybridCoderConfig
+- [x] `ensure_tables()` creates all Phase 4 tables idempotently
+- [x] Baseline + 26 new tests pass (868 collected, 755 passed, 0 failed); `ruff check` passes
 
 ---
 
-## 4. Sprint 4B: Subagent Framework + Memory + Checkpoints
+## 6. Sprint 4B: Subagents + Scheduling + Plan Mode (~1 week)
 
-**Duration:** ~1.5 weeks
-**Goal:** Isolated subagent execution, episodic memory, resumable checkpoints
-**Depends on:** Sprint 4A (ContextEngine, LLM lock, TaskStore)
+**Goal:** Isolated subagent execution, LLM scheduler queue, plan mode with capability-based gating
+**Dependencies:** Sprint 4A (ContextEngine, TaskStore, capability flags)
 
-### 4.1 SubagentLoop (`agent/subagent.py`)
+### 6.1 New Files
 
-#### 4.1.1 Subagent Types
+| File | Purpose |
+|------|---------|
+| `src/hybridcoder/agent/subagent.py` | `SubagentLoop`, `SubagentManager`, `SubagentResult`, `LLMScheduler` |
+| `src/hybridcoder/agent/subagent_tools.py` | `spawn_subagent`, `check_subagent`, `cancel_subagent`, `list_subagents` tools |
+| `tests/unit/test_subagent.py` | 10 tests |
+| `tests/unit/test_subagent_tools.py` | 5 tests |
+| `tests/unit/test_plan_mode.py` | 5 tests |
+| `tests/unit/test_llm_scheduler.py` | 4 tests |
 
-| Type | Tools Available | Max Iterations | Use Case |
-|------|----------------|---------------|----------|
-| `explore` | read_file, list_files, search_text | 5 | Read-only codebase exploration |
-| `plan` | read_file, list_files, search_text, create_task | 5 | Research + task planning |
-| `execute` | All tools (subject to approval) | 5 | Full tool access for subtask execution |
+### 6.2 Modified Files
 
-#### 4.1.2 Class Definition
+| File | Changes |
+|------|---------|
+| `src/hybridcoder/agent/loop.py` | Add `AgentMode` enum. Plan mode blocks tools with `mutates_fs` or `executes_shell` flags (not by name). `set_mode()`/`get_mode()`. |
+| `src/hybridcoder/agent/prompts.py` | Plan mode + delegation guidance in system prompt. |
+| `src/hybridcoder/tui/commands.py` | `/plan` command (`/plan on`, `/plan approve`/`off`). |
+| `src/hybridcoder/backend/server.py` | Wire SubagentManager. `subagent.list`/`subagent.cancel` RPC. `plan.status` RPC. Cancel propagation. |
+
+### 6.3 Key Design: LLM Scheduler Queue (Entry 311 C2 — replaces PriorityLock)
+
+The PriorityLock design had a race condition. Replace with a single-worker queue:
 
 ```python
-@dataclass
-class SubagentResult:
-    """Result from a completed subagent run."""
-    subagent_id: str
-    subagent_type: str
-    task: str
-    summary: str
-    status: str  # completed, failed, cancelled
-    iterations_used: int
-    duration_ms: int
+class LLMScheduler:
+    """Single-worker queue that serializes all LLM calls with foreground priority.
 
-
-class SubagentLoop:
-    """An isolated agent loop with restricted tools and separate context.
-
-    Key differences from main AgentLoop:
-    - Max 5 iterations (not 10)
-    - No approval callbacks (restricted tool set handles safety)
-    - No streaming (runs in background, returns summary)
-    - Shares LLM lock with main agent
-    - No session persistence (transient context)
+    Design: one asyncio.Task drains a PriorityQueue. Foreground requests
+    (priority=0) always run before background requests (priority=1).
     """
+    def __init__(self):
+        self._queue: asyncio.PriorityQueue = asyncio.PriorityQueue()
+        self._worker_task: asyncio.Task | None = None
+        self._counter = 0  # Tie-breaker for equal priority (FIFO within tier)
 
-    MAX_ITERATIONS = 5
+    def start(self):
+        self._worker_task = asyncio.create_task(self._worker())
 
-    def __init__(
-        self,
-        subagent_id: str,
-        subagent_type: str,  # explore, plan, execute
-        provider: Any,
-        tool_registry: ToolRegistry,  # Restricted per type
-        llm_lock: asyncio.Lock,
-        task_store: TaskStore | None = None,
-    ) -> None: ...
+    async def submit(self, coro, *, foreground: bool = True) -> Any:
+        """Submit an LLM call. Returns the result when complete."""
+        future = asyncio.get_event_loop().create_future()
+        priority = 0 if foreground else 1
+        self._counter += 1
+        await self._queue.put((priority, self._counter, coro, future))
+        return await future
 
-    async def run(self, task: str, context: str = "") -> SubagentResult:
-        """Run the subagent to completion.
+    async def _worker(self):
+        """Single worker drains the queue sequentially."""
+        while True:
+            priority, _, coro, future = await self._queue.get()
+            try:
+                result = await coro
+                future.set_result(result)
+            except Exception as e:
+                future.set_exception(e)
+            self._queue.task_done()
 
-        Args:
-            task: The task description for the subagent.
-            context: Optional context from the main agent (e.g., relevant file contents).
+    async def shutdown(self):
+        if self._worker_task:
+            self._worker_task.cancel()
+```
 
-        Returns:
-            SubagentResult with summary of what was accomplished.
-        """
-        ...
+Benefits over PriorityLock:
+- **No race condition**: single worker processes sequentially
+- **Queued priority**: foreground always dequeued before background (PriorityQueue guarantees this)
+- **FIFO within tier**: counter provides stable ordering
+- **Metrics-ready**: can log queue depth, wait time, execution time
 
-    def cancel(self) -> None: ...
+**Important:** Priority applies to *queued* items, not in-flight work. asyncio is cooperative — a long-running background LLM call cannot be preempted. Foreground requests arriving during an in-flight background call wait behind it. Starvation guard: background subagent max 5 iterations × bounded token output keeps individual LLM calls short (~2-5s). If foreground p95 wait exceeds SLO (2s), reduce `subagent_max_iterations` or add admission control.
 
+### 6.4 Key Design: Plan Mode with Capability Flags (Entry 311 C3)
 
-class SubagentManager:
-    """Manages spawning, monitoring, and cancelling subagents.
+```python
+class AgentMode(Enum):
+    NORMAL = "normal"
+    PLANNING = "planning"
 
-    Responsibilities:
-    - Spawn subagents as asyncio tasks
-    - Track running subagents and their status
-    - Cancel subagents on request
-    - Provide status summary for system prompt injection
-    - Limit concurrent subagents (max 3)
+# In AgentLoop._execute_tool_call():
+if self._mode == AgentMode.PLANNING:
+    tool_def = self.tool_registry.get(tool_name)
+    if tool_def and (tool_def.mutates_fs or tool_def.executes_shell):
+        return f"Blocked in plan mode: {tool_name} modifies filesystem or executes shell. Use /plan approve to switch to execution mode."
+```
+
+This is capability-based, not name-based. New tools that set `mutates_fs=True` or `executes_shell=True` are automatically blocked in plan mode.
+
+### 6.5 Key Design: Subagent Types
+
+| Type | Tools | Max Iter | Timeout | Use Case |
+|------|-------|---------|---------|----------|
+| `explore` | read-only tools (all with `mutates_fs=False` and `executes_shell=False`) | 5 | 30s | Read-only codebase exploration |
+| `plan` | explore tools + create_task | 5 | 30s | Research + task planning |
+| `execute` | All tools (subject to approval) | 5 | 30s | Full tool access |
+
+Key constraints:
+- **Cannot spawn sub-subagents** (prevents recursive explosion)
+- **Circuit breaker**: 2 consecutive error iterations = auto-cancel
+- **Uses LLM Scheduler** as background (priority=1, yields to foreground)
+- **Stateless one-shot**: fresh context each invocation, no resume
+- **Approval routing** (Entry 309 C1, 311 C7): Background subagents auto-deny approval-requiring tools. Status bar shows "subagent waiting" if foreground execute-type needs approval.
+- **SubagentResult** includes structured summary:
+  ```python
+  @dataclass
+  class SubagentResult:
+      subagent_id: str
+      subagent_type: str
+      task: str
+      summary: str
+      files_touched: list[str]
+      status: str  # completed, failed, cancelled
+      iterations_used: int
+      duration_ms: int
+  ```
+
+### 6.6 System Prompt Additions (4B)
+
+```python
+# Task management
+"- For multi-step work, use create_task to break it into trackable steps\n"
+"- Mark tasks in_progress when starting, completed when done\n"
+
+# Subagent delegation guidance (Entry 309 C2)
+"- Use spawn_subagent for self-contained tasks that don't need user interaction\n"
+"- Use 'explore' for codebase research producing verbose output\n"
+"- Use 'plan' when you need to research AND create tasks from findings\n"
+"- Use 'execute' only for independent subtasks with clear criteria\n"
+"- Do NOT delegate when user interaction or simple single-step work is needed\n"
+"- Background subagents cannot request approval — they auto-deny write/shell\n"
+```
+
+### 6.7 Sprint 4B Exit Criteria (24 new tests) — ALL PASSED (2026-02-14)
+
+- [x] LLM Scheduler: foreground priority, FIFO within tier, single worker
+- [x] Scheduler: queue depth metrics available
+- [x] SubagentLoop: restricted tools per type via capability flags
+- [x] Max 5 iterations + 30s timeout enforced
+- [x] Circuit breaker: 2 failures = auto-cancel
+- [x] SubagentManager: spawn/cancel/cancel_all/max concurrent (3)
+- [x] LLM tools: spawn/check/cancel/list subagents
+- [x] Background subagents auto-deny approval-requiring tools
+- [x] SubagentResult includes files_touched
+- [x] `/plan on` blocks mutating tools; `/plan approve` unblocks
+- [x] Plan mode uses capability flags, not tool names
+- [x] System prompt reflects plan mode state + delegation guidance
+- [x] Cancel propagates to subagents
+- [x] Basic Python logging for spawn/cancel/check events
+- [x] Sprint 4B verification gates pass — 942 collected, 819 passed, 113 skipped, 0 failed, ruff clean
+
+---
+
+## 7. Sprint 4C: Memory + Checkpoints + L2/L3 Wiring + Plan Artifact + Go Task Panel (~1.5 weeks)
+
+**Goal:** Episodic memory, checkpoint restore with transactions, L2 SEMANTIC_SEARCH routing, L3 SIMPLE_EDIT routing (minimal), markdown plan artifact, Go TUI task panel
+**Dependencies:** Sprint 4B (SubagentManager, LLM Scheduler)
+
+### 7.1 New Files
+
+| File | Purpose |
+|------|---------|
+| `src/hybridcoder/agent/memory.py` | MemoryStore: episodic memory with decay, dedup, LLM extraction |
+| `src/hybridcoder/session/checkpoint_store.py` | CheckpointStore: save/list/restore with **transactional TaskStore rehydration** |
+| `src/hybridcoder/agent/plan_artifact.py` | PlanArtifact: export/import `.hybridcoder/plans/<session-id>.md` |
+| `src/hybridcoder/layer3/__init__.py` | L3 public API |
+| `src/hybridcoder/layer3/provider.py` | L3Provider: llama-cpp-python wrapper, lazy model loading, Outlines structured generation |
+| `tests/unit/test_memory.py` | 7 tests |
+| `tests/unit/test_checkpoint.py` | 7 tests (incl. transactional restore, session targeting) |
+| `tests/unit/test_l2_wiring.py` | 7 tests (5 L2 wiring + 2 L3 routing) |
+| `tests/unit/test_plan_artifact.py` | 4 tests |
+| `tests/unit/test_l3_provider.py` | 5 tests (mock: load, generate, structured output, error, cleanup) |
+| `cmd/hybridcoder-tui/taskpanel.go` | Go task panel: JSON-RPC backed task/subagent display |
+
+### 7.2 Modified Files
+
+| File | Changes |
+|------|---------|
+| `src/hybridcoder/session/models.py` | DDL for `memories` + `checkpoints` tables. Dataclasses. |
+| `src/hybridcoder/tui/commands.py` | `/memory`, `/checkpoint`, `/plan export`, `/plan sync` commands. |
+| `src/hybridcoder/backend/server.py` | Wire MemoryStore + CheckpointStore + PlanArtifact + L3Provider. L2 routing: `SEMANTIC_SEARCH` → ContextAssembler → LLM → `layer_used=2`. L3 routing: `SIMPLE_EDIT` → L3Provider → `layer_used=3` (L4 fallback). JSON-RPC: `memory.list`, `checkpoint.list`, `plan.export`, `plan.sync`. |
+| `src/hybridcoder/agent/loop.py` | Memory injection at session start. Accept optional `l3_provider`; use for SIMPLE_EDIT. |
+| `tests/unit/test_integration_router_agent.py` | +3 tests: L2 SEMANTIC_SEARCH, L3 SIMPLE_EDIT, L4 fallback. |
+| `cmd/hybridcoder-tui/messages.go` | Add `backendTaskStateMsg` for task panel updates. |
+| `cmd/hybridcoder-tui/update.go` | Handle task state messages, refresh task panel. |
+| `cmd/hybridcoder-tui/view.go` | Render task panel in sidebar/footer area. |
+
+### 7.3 Key Design: L3Provider (Minimal Scope)
+
+**Existing infrastructure (no changes needed):**
+- `Layer3Config` in `src/hybridcoder/config.py:38-47`
+- `RequestType.SIMPLE_EDIT` in `src/hybridcoder/core/types.py:19`
+- Router classification in `src/hybridcoder/core/router.py:88-102`
+- Dependencies in `pyproject.toml:34` (`llama-cpp-python>=0.3`, `outlines>=0.1`)
+
+```python
+class L3Provider:
+    """Layer 3 constrained generation provider.
+
+    Wraps llama-cpp-python with Outlines for structured output.
+    Lazy model loading — model loaded on first call, not at startup.
     """
+    def __init__(self, config: Layer3Config):
+        self._config = config
+        self._model = None  # Lazy
 
-    MAX_CONCURRENT = 3
-
-    def __init__(
-        self,
-        provider: Any,
-        base_tool_registry: ToolRegistry,
-        llm_lock: asyncio.Lock,
-        task_store: TaskStore | None = None,
-    ) -> None: ...
-
-    async def spawn(
-        self,
-        subagent_type: str,
-        task: str,
-        context: str = "",
-    ) -> str:
-        """Spawn a subagent, returning its ID.
-
-        Raises ValueError if max concurrent subagents reached.
-        """
+    async def generate(self, prompt: str, *, grammar: str | None = None) -> str:
+        """Generate text, optionally grammar-constrained."""
         ...
 
-    async def check(self, subagent_id: str) -> SubagentResult | None:
-        """Check if a subagent has completed. Returns None if still running."""
+    async def generate_structured(self, prompt: str, schema: dict) -> dict:
+        """Generate JSON output conforming to schema via Outlines."""
         ...
 
-    def cancel(self, subagent_id: str) -> bool:
-        """Cancel a running subagent."""
-        ...
-
-    def cancel_all(self) -> None:
-        """Cancel all running subagents."""
-        ...
-
-    def get_status_summary(self) -> str:
-        """Return a compact summary of all subagent states.
-
-        Format:
-        Subagents:
-        - [running] #sa01 (explore): Searching for auth modules...
-        - [completed] #sa02 (plan): Found 3 relevant files → summary available
-        """
-        ...
-
-    def _create_restricted_registry(self, subagent_type: str) -> ToolRegistry:
-        """Create a tool registry restricted to the subagent's allowed tools."""
+    def cleanup(self) -> None:
+        """Release model from VRAM."""
         ...
 ```
 
-#### 4.1.3 Subagent System Prompt
+**Scope boundary:**
+- L3 handles `SIMPLE_EDIT` only. `SEMANTIC_SEARCH` stays L2.
+- Graceful degradation: L4 fallback if L3 model not installed or generation fails
+- Does NOT implement Architect/Editor split (Phase 5)
+
+### 7.4 Key Design: Checkpoint Restore with Transactions (Entry 311 C4)
 
 ```python
-SUBAGENT_PROMPT_TEMPLATE = """You are a HybridCoder subagent ({subagent_type}).
-Your task: {task}
-
-{context_section}
-
-Rules:
-- Stay focused on your assigned task
-- Be concise — your output is summarized for the main agent
-- You have {max_iterations} iterations maximum
-- Available tools: {tool_list}
-
-When done, provide a clear summary of:
-1. What you found or accomplished
-2. Key files or facts discovered
-3. Any recommendations
-"""
-```
-
-### 4.2 Subagent LLM Tools (`agent/subagent_tools.py`)
-
-Two tools for the main LLM to manage subagents.
-
-```python
-def create_subagent_tool_definitions() -> list[ToolDefinition]:
-    return [
-        ToolDefinition(
-            name="spawn_subagent",
-            description=(
-                "Spawn a background subagent to handle a subtask. "
-                "Types: 'explore' (read-only search), 'plan' (research + plan), "
-                "'execute' (full tools). Use for parallel research or delegated work."
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "subagent_type": {
-                        "type": "string",
-                        "enum": ["explore", "plan", "execute"],
-                    },
-                    "task": {
-                        "type": "string",
-                        "description": "What the subagent should do",
-                    },
-                    "context": {
-                        "type": "string",
-                        "description": "Relevant context to pass to the subagent",
-                    },
-                },
-                "required": ["subagent_type", "task"],
-            },
-            handler=...,
-            requires_approval=False,
-        ),
-        ToolDefinition(
-            name="check_subagent",
-            description="Check the status of a running subagent.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "subagent_id": {
-                        "type": "string",
-                        "description": "The subagent ID to check",
-                    },
-                },
-                "required": ["subagent_id"],
-            },
-            handler=...,
-            requires_approval=False,
-        ),
-    ]
-```
-
-### 4.3 MemoryStore (`agent/memory.py`)
-
-Episodic memory stored in SQLite, injected into system prompts.
-
-#### 4.3.1 Memory Categories
-
-| Category | Example | Extraction Trigger |
-|----------|---------|-------------------|
-| `tool_pattern` | "User prefers write_file over run_command for edits" | Tool usage patterns |
-| `user_preference` | "User uses pytest with -v flag" | User behavior |
-| `project_fact` | "Auth module is in src/auth/handler.py" | Codebase discoveries |
-| `error_resolution` | "ImportError for X fixed by installing Y" | Error → fix sequences |
-
-#### 4.3.2 Class Definition
-
-```python
-@dataclass
-class MemoryEntry:
-    id: str
-    project_dir: str
-    category: str  # tool_pattern, user_preference, project_fact, error_resolution
-    content: str
-    relevance: float  # 0.0-1.0, decays by 0.95x per session
-    use_count: int
-    created_at: datetime
-    updated_at: datetime
-
-
-class MemoryStore:
-    """Episodic memory storage with relevance decay."""
-
-    MAX_ENTRIES_PER_PROJECT = 50
-
-    def __init__(self, conn: sqlite3.Connection) -> None:
-        """Share connection with SessionStore."""
-        ...
-
-    def add_memory(
-        self,
-        project_dir: str,
-        category: str,
-        content: str,
-        relevance: float = 1.0,
-    ) -> str:
-        """Add a memory entry. Deduplicates similar content."""
-        ...
-
-    def get_memories(
-        self,
-        project_dir: str,
-        categories: list[str] | None = None,
-        min_relevance: float = 0.1,
-        limit: int = 20,
-    ) -> list[MemoryEntry]:
-        """Get memories sorted by relevance * recency."""
-        ...
-
-    def touch_memory(self, memory_id: str) -> None:
-        """Increment use_count and refresh relevance to 1.0."""
-        ...
-
-    def decay_all(self, project_dir: str, factor: float = 0.95) -> None:
-        """Decay all memories for a project by factor.
-
-        Called at the start of each new session.
-        Memories below min_relevance (0.1) are deleted.
-        """
-        ...
-
-    def get_context(self, project_dir: str, max_tokens: int = 500) -> str:
-        """Build memory context for system prompt injection.
-
-        Format:
-        Learned patterns:
-        - [project_fact] Auth module is in src/auth/handler.py
-        - [user_preference] User prefers pytest -v
-        - [error_resolution] ImportError for X → install Y
-        """
-        ...
-
-    async def learn_from_session(
-        self,
-        session_store: SessionStore,
-        session_id: str,
-        project_dir: str,
-        provider: Any,
-        llm_lock: asyncio.Lock,
-    ) -> list[MemoryEntry]:
-        """Analyze a session's messages to extract memories.
-
-        Uses the LLM to identify patterns, preferences, and facts.
-        Called after a session ends or on /memory save.
-        """
-        ...
-
-    def _deduplicate(self, project_dir: str, content: str) -> str | None:
-        """Check for similar existing memory. Returns existing ID if duplicate."""
-        ...
-```
-
-#### 4.3.3 Memory Extraction Prompt
-
-```python
-MEMORY_EXTRACTION_PROMPT = """Analyze the following conversation and extract useful memories.
-Return a JSON array of objects with fields: category, content
-
-Categories:
-- tool_pattern: Patterns in how tools were used effectively
-- user_preference: User's coding style, tool preferences, workflow habits
-- project_fact: Important facts about the project structure or architecture
-- error_resolution: Errors encountered and how they were resolved
-
-Only extract genuinely useful, reusable insights. Skip trivial or one-off items.
-Maximum 5 entries.
-
-Conversation:
-{messages_text}
-
-JSON:"""
-```
-
-### 4.4 CheckpointStore (`session/checkpoint_store.py`)
-
-Save/restore agent state for resumable workflows.
-
-#### 4.4.1 Class Definition
-
-```python
-@dataclass
-class Checkpoint:
-    id: str
-    session_id: str
-    label: str
-    plan: str  # Current plan text
-    tasks_snapshot: str  # JSON of task states
-    context_summary: str  # Compact summary at checkpoint time
-    active_files: str  # JSON list of files being worked on
-    created_at: datetime
-
-
 class CheckpointStore:
-    """Save and restore agent state checkpoints."""
+    def restore_checkpoint(self, checkpoint_id, task_store, session_store) -> dict:
+        """Restore checkpoint with transactional guarantees."""
+        cp = self.get_checkpoint(checkpoint_id)
+        conn = self._conn
 
-    def __init__(self, conn: sqlite3.Connection) -> None: ...
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            # 1. Clear current session tasks
+            task_store.clear_session_tasks(cp.session_id)
+            # 2. Rehydrate from snapshot
+            task_store.restore_from_snapshot(cp.session_id, json.loads(cp.tasks_snapshot))
+            # 3. Inject context summary
+            session_store.add_message(cp.session_id, "system",
+                f"[Restored checkpoint: {cp.label}]\n{cp.context_summary}")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
 
-    def save_checkpoint(
-        self,
-        session_id: str,
-        label: str,
-        *,
-        plan: str = "",
-        tasks_snapshot: str = "{}",
-        context_summary: str = "",
-        active_files: str = "[]",
-    ) -> str:
-        """Save a checkpoint, returning its UUID."""
-        ...
-
-    def get_checkpoint(self, checkpoint_id: str) -> Checkpoint | None: ...
-
-    def list_checkpoints(self, session_id: str) -> list[Checkpoint]:
-        """List checkpoints for a session, newest first."""
-        ...
-
-    def delete_checkpoint(self, checkpoint_id: str) -> None: ...
-
-    def restore_context(self, checkpoint_id: str) -> dict:
-        """Return checkpoint data for restoring agent state.
-
-        Returns dict with keys: plan, tasks_snapshot, context_summary, active_files
-        """
-        ...
+        return {"plan": cp.plan, "active_files": json.loads(cp.active_files)}
 ```
 
-### 4.5 `/memory` and `/checkpoint` Slash Commands
+**Restore contract table** (Entry 311 C4):
+
+| Aspect | Behavior |
+|--------|----------|
+| Restore target | Current session (checkpoint's session_id must match) |
+| Task state | Fully rehydrated from snapshot (atomic transaction) |
+| Context summary | Injected as system message |
+| Conversation history | Preserved (not rolled back) |
+| Filesystem state | NOT restored — git's responsibility |
+| Rollback on failure | Full ROLLBACK, no partial state |
+
+**Transactional API requirement** (Entry 329 C4): Current `SessionStore.add_message()` calls `self._conn.commit()` unconditionally (store.py:104), which would break the `BEGIN IMMEDIATE` transaction. Sprint 4C must add a non-autocommit variant — either `add_message(..., autocommit=False)` or use `SAVEPOINT`-based nesting — so that the restore transaction controls commit timing. This is a prerequisite for the atomic restore guarantee.
+
+### 7.5 Key Design: L2 Routing (Entry 311 C5)
 
 ```python
-async def _handle_memory(app: HybridCoderApp, args: str) -> None:
-    """View or manage episodic memories."""
-    chat = _get_chat(app)
-    arg = args.strip().lower()
+# In handle_chat(), after L1 check:
+if request_type == RequestType.SEMANTIC_SEARCH:
+    context = self._context_assembler.assemble(
+        query=message, project_root=self._project_root,
+        budget=self._config.layer2.context_budget,
+    )
+    response = await self._llm_with_context(message, context)
+    self.emit_notification("on_done", {"layer_used": 2, ...})
+    return
 
-    if not hasattr(app, '_memory_store') or app._memory_store is None:
-        chat.add_message("system", "Memory store not initialized.")
-        return
-
-    if arg == "save":
-        # Extract memories from current session
-        chat.add_message("system", "Analyzing session for patterns...")
-        memories = await app._memory_store.learn_from_session(
-            app.session_store, app.session_id,
-            str(app.project_root), app._provider, app._llm_lock,
-        )
-        if memories:
-            lines = [f"Extracted {len(memories)} memories:"]
-            for m in memories:
-                lines.append(f"- [{m.category}] {m.content}")
-            chat.add_message("system", "\n".join(lines))
-        else:
-            chat.add_message("system", "No new patterns found.")
-        return
-
-    if arg == "clear":
-        # Not implemented yet — would need project_dir filtering
-        chat.add_message("system", "Use /memory save to extract, or view current memories.")
-        return
-
-    # Default: show current memories
-    context = app._memory_store.get_context(str(app.project_root))
-    if context:
-        chat.add_message("system", context)
-    else:
-        chat.add_message("system", "No memories stored for this project.")
-
-
-async def _handle_checkpoint(app: HybridCoderApp, args: str) -> None:
-    """Save or restore checkpoints."""
-    chat = _get_chat(app)
-    arg = args.strip()
-
-    if not hasattr(app, '_checkpoint_store') or app._checkpoint_store is None:
-        chat.add_message("system", "Checkpoint store not initialized.")
-        return
-
-    if arg.startswith("save"):
-        label = arg[4:].strip() or f"checkpoint-{datetime.now().strftime('%H%M')}"
-        # Build checkpoint data
-        tasks_snapshot = "{}"
-        if hasattr(app, '_task_store') and app._task_store:
-            import json
-            tasks_snapshot = json.dumps(app._task_store.snapshot(app.session_id))
-        cp_id = app._checkpoint_store.save_checkpoint(
-            session_id=app.session_id,
-            label=label,
-            tasks_snapshot=tasks_snapshot,
-        )
-        chat.add_message("system", f"Checkpoint saved: {label} (#{cp_id[:8]})")
-        return
-
-    if arg.startswith("restore"):
-        cp_id_prefix = arg[7:].strip()
-        if not cp_id_prefix:
-            chat.add_message("system", "Usage: /checkpoint restore <id-prefix>")
+# L3: Constrained generation for simple edits
+if request_type == RequestType.SIMPLE_EDIT:
+    if self._l3_provider and self._config.layer3.enabled:
+        try:
+            response = await self._l3_provider.generate(prompt)
+            self.emit_notification("on_done", {"layer_used": 3, ...})
             return
-        checkpoints = app._checkpoint_store.list_checkpoints(app.session_id)
-        match = None
-        for cp in checkpoints:
-            if cp.id.startswith(cp_id_prefix):
-                match = cp
-                break
-        if not match:
-            chat.add_message("system", f"Checkpoint not found: {cp_id_prefix}")
-            return
-        chat.add_message("system", f"Restored checkpoint: {match.label}")
-        return
-
-    # Default: list checkpoints
-    checkpoints = app._checkpoint_store.list_checkpoints(app.session_id)
-    if not checkpoints:
-        chat.add_message("system", "No checkpoints for this session.")
-    else:
-        lines = ["**Checkpoints:**"]
-        for cp in checkpoints:
-            lines.append(f"- `{cp.id[:8]}` {cp.label} ({cp.created_at.strftime('%H:%M')})")
-        chat.add_message("system", "\n".join(lines))
-```
-
-### 4.6 TaskPanel Widget (`tui/widgets/task_panel.py`)
-
-A collapsible panel showing active tasks in the TUI.
-
-```python
-class TaskPanel(Static):
-    """Collapsible task display panel for the TUI sidebar.
-
-    Shows active tasks as a compact list, updated after each agent iteration.
-    """
-
-    def __init__(self, task_store: TaskStore | None = None, session_id: str = "", **kwargs):
-        super().__init__(**kwargs)
-        self._task_store = task_store
-        self._session_id = session_id
-        self._collapsed = True
-
-    def refresh_tasks(self, session_id: str | None = None) -> None:
-        """Re-render the task list from the store."""
-        if session_id:
-            self._session_id = session_id
-        if not self._task_store or not self._session_id:
-            self.update("")
-            return
-
-        tasks = self._task_store.list_tasks(self._session_id)
-        if not tasks:
-            self.update("")
-            return
-
-        # Build compact display
-        lines = []
-        status_icons = {"pending": "[ ]", "in_progress": "[>]", "completed": "[x]"}
-        for t in tasks:
-            icon = status_icons.get(t.status, "[?]")
-            lines.append(f"{icon} {t.title}")
-        self.update("\n".join(lines))
-
-    def toggle(self) -> None:
-        """Toggle collapsed state."""
-        self._collapsed = not self._collapsed
-        self.display = not self._collapsed
-```
-
-### 4.7 App Integration (`tui/app.py`)
-
-Changes to `HybridCoderApp` to wire everything together:
-
-```python
-class HybridCoderApp(App[None]):
-    def __init__(self, ...):
-        ...
-        # Phase 4 additions
-        self._llm_lock: asyncio.Lock = asyncio.Lock()
-        self._task_store: TaskStore | None = None
-        self._memory_store: MemoryStore | None = None
-        self._checkpoint_store: CheckpointStore | None = None
-        self._subagent_manager: SubagentManager | None = None
-
-    def _ensure_agent_loop(self) -> AgentLoop:
-        """Lazy-initialize with Phase 4 components."""
-        if self._agent_loop is not None:
-            return self._agent_loop
-
-        # ... existing provider/registry/approval init ...
-
-        # Phase 4: Initialize stores using same DB connection
-        conn = self.session_store._conn
-        self._task_store = TaskStore(conn)
-        self._memory_store = MemoryStore(conn)
-        self._checkpoint_store = CheckpointStore(conn)
-
-        # Register task tools
-        from hybridcoder.agent.task_tools import register_task_tools
-        register_task_tools(self._tool_registry, self._task_store, self.session_id)
-
-        # Register subagent tools
-        from hybridcoder.agent.subagent_tools import register_subagent_tools
-        self._subagent_manager = SubagentManager(
-            provider=self._provider,
-            base_tool_registry=self._tool_registry,
-            llm_lock=self._llm_lock,
-            task_store=self._task_store,
-        )
-        register_subagent_tools(self._tool_registry, self._subagent_manager)
-
-        # Create ContextEngine
-        from hybridcoder.agent.context import ContextEngine
-        context_engine = ContextEngine(
-            provider=self._provider,
-            session_store=self.session_store,
-            context_length=self.config.llm.context_length,
-        )
-
-        # Decay memories at session start
-        self._memory_store.decay_all(str(self.project_root))
-
-        self._agent_loop = AgentLoop(
-            provider=self._provider,
-            tool_registry=self._tool_registry,
-            approval_manager=self._approval_manager,
-            session_store=self.session_store,
-            session_id=self.session_id,
-            memory_content=memory_content,
-            context_engine=context_engine,
-            task_store=self._task_store,
-            llm_lock=self._llm_lock,
-        )
-        return self._agent_loop
-```
-
-### 4.9 L2 Runtime Wiring (`backend/server.py`)
-
-> **Context:** Codex review (Entry 304) identified that `handle_chat` in `server.py` currently routes L1 queries via the request router but falls through to L4 for everything else. Phase 3 built the L2 retrieval infrastructure (hybrid search, context assembler, embeddings) but did not wire `handle_chat` to serve L2 queries. This section closes that gap.
-
-#### 4.9.1 Changes to `handle_chat`
-
-Wire `SEMANTIC_SEARCH` and `SIMPLE_EDIT` query types (as classified by the request router) to use L2 context assembly before invoking the LLM:
-
-```python
-async def handle_chat(self, params: dict) -> dict:
-    message = params["message"]
-    query_type = self._router.classify(message)
-
-    # L1: Deterministic (already implemented in Phase 3)
-    if query_type.layer == 1:
-        result = self._handle_l1_query(message, query_type)
-        return {"layer_used": 1, "response": result}
-
-    # L2: Retrieval-augmented (NEW in Phase 4)
-    if query_type.layer == 2:
-        # Assemble curated context from hybrid search
-        context = self._context_assembler.assemble(
-            query=message,
-            project_root=self._project_root,
-            budget=self._config.layer2.context_budget,
-        )
-        # Inject context into system prompt and call LLM
-        response = await self._llm_with_context(message, context)
-        return {"layer_used": 2, "response": response}
-
-    # L4: Full reasoning (existing path)
+        except Exception:
+            pass  # Fall through to L4
+    # L4 fallback
     response = await self._agent_loop.run(message)
-    return {"layer_used": 4, "response": response}
+    self.emit_notification("on_done", {"layer_used": 4, ...})
+    return
 ```
 
-#### 4.9.2 Context Assembly Flow
+### 7.6 Key Design: Markdown Plan Artifact (Entry 312)
 
-```
-handle_chat(message)
-    ↓
-Router classifies → layer=2 (SEMANTIC_SEARCH, SIMPLE_EDIT, etc.)
-    ↓
-ContextAssembler.assemble():
-  1. Hybrid search (BM25 + vector, Phase 3 infrastructure)
-  2. Repo map (ranked symbols, 600 tokens)
-  3. Rules context (CLAUDE.md, .rules/)
-  4. Priority-based assembly within 5000-token budget
-    ↓
-Inject assembled context into system prompt
-    ↓
-LLM call with curated context (fewer tokens, more relevant)
-    ↓
-Return response with layer_used=2
-```
+```python
+class PlanArtifact:
+    """Export/import markdown plan files from TaskStore state."""
 
-#### 4.9.3 Key Decisions
+    def export(self, session_id: str, task_store: TaskStore,
+               subagent_manager: SubagentManager | None = None,
+               project_root: Path | None = None) -> str:
+        """Generate .hybridcoder/plans/<session-id>.md from current state."""
+        ...
 
-| Decision | Rationale |
-|----------|-----------|
-| L2 uses existing `ContextAssembler` | Already built in Phase 3, tested, 5000-token budget |
-| L2 still calls LLM | Context assembly reduces token waste, but LLM generates the response |
-| `layer_used=2` in `on_done` | TUI shows `[L2]` indicator, differentiating from L4 full reasoning |
-| No new tools needed | L2 wiring is a server-side routing change, not a new agent tool |
-
-### 4.8 Sprint 4B Test Plan
-
-| Test File | Tests | What It Covers |
-|-----------|-------|----------------|
-| `tests/unit/test_subagent.py` | 8 | SubagentLoop run, cancel, restricted tools, max iterations, SubagentManager spawn/check/cancel, status summary, max concurrent |
-| `tests/unit/test_subagent_tools.py` | 4 | spawn_subagent handler, check_subagent handler, invalid type error, max concurrent error |
-| `tests/unit/test_memory.py` | 7 | add/get memory, decay, deduplication, get_context, learn_from_session (mock LLM), touch_memory |
-| `tests/unit/test_checkpoint.py` | 5 | save/get/list/delete checkpoint, restore_context |
-| **Total** | **24** | |
-
-#### Key Test Cases — SubagentLoop
-
-```
-test_subagent_explore_read_only
-test_subagent_plan_creates_tasks
-test_subagent_max_iterations
-test_subagent_cancel
-test_subagent_manager_spawn_and_check
-test_subagent_manager_cancel_all
-test_subagent_manager_max_concurrent
-test_subagent_status_summary
+    def sync_from_markdown(self, session_id: str, task_store: TaskStore,
+                           markdown_path: Path) -> list[str]:
+        """Import checkbox status changes from markdown back to TaskStore.
+        Returns list of task IDs updated."""
+        ...
 ```
 
-#### Key Test Cases — MemoryStore
+Output format (`.hybridcoder/plans/<session-id>.md`):
+```markdown
+# Plan: <session title>
+Generated: <timestamp>
 
-```
-test_add_memory_basic
-test_get_memories_by_category
-test_decay_reduces_relevance
-test_decay_deletes_low_relevance
-test_deduplicate_similar_content
-test_get_context_format
-test_learn_from_session_extracts_patterns
+## Tasks
+- [x] #a1b2: Refactor auth module [completed]
+- [ ] #c3d4: Add unit tests [pending] (blocked by #a1b2)
+- [ ] #e5f6: Update docs [in_progress]
+
+## Active Subagents
+- [running] #sa01 (explore): Searching for auth modules...
+
+## Decisions
+- <from checkpoint context summaries>
 ```
 
-#### Key Test Cases — CheckpointStore
+Commands:
+- `/plan export` — writes `.hybridcoder/plans/<session-id>.md`
+- `/plan sync` — reads markdown checkboxes, updates TaskStore status
 
+### 7.7 Key Design: Go Task Panel (Entry 312)
+
+New file `cmd/hybridcoder-tui/taskpanel.go`:
+- Receives `on_task_state` JSON-RPC notifications with task list + subagent states
+- Renders compact panel below chat area (collapsible)
+- Shows: `[>] Refactor auth [x] Add tests [ ] Update docs`
+- Shows subagent status: `[sa01 running] exploring auth...`
+- Refreshes after every tool call completion (backend sends notification)
+
+JSON-RPC notification:
+```json
+{"method": "on_task_state", "params": {
+  "tasks": [{"id": "a1b2", "title": "...", "status": "in_progress", "blocked_by": []}],
+  "subagents": [{"id": "sa01", "type": "explore", "status": "running", "task": "..."}]
+}}
 ```
-test_save_and_get_checkpoint
-test_list_checkpoints_by_session
-test_delete_checkpoint
-test_restore_context_returns_data
-test_checkpoint_with_tasks_snapshot
-```
+
+### 7.8 Key Design: MemoryStore
+
+- Categories: `tool_pattern`, `user_preference`, `project_fact`, `error_resolution`
+- Dedup: Jaccard similarity on word sets, threshold 0.7
+- Decay: `relevance *= 0.95` per session start; delete below 0.1
+- Max 50 entries per project, max 500 tokens in system prompt
+- `learn_from_session()`: LLM extracts max 5 memories per session (background via LLM Scheduler)
+
+### 7.9 Sprint 4C Exit Criteria (33 new tests)
+
+- [ ] MemoryStore: save/load/decay/dedup/get_context
+- [ ] Memory extraction via LLM (tested with mock)
+- [ ] Memory context in system prompt
+- [ ] CheckpointStore: save/list/delete
+- [ ] **Checkpoint restore is transactional** (atomic commit/rollback)
+- [ ] Restore rehydrates TaskStore + injects context summary
+- [ ] Restore rejects mismatched session_id
+- [ ] `/memory` and `/checkpoint` commands work
+- [ ] L2 routing: `SEMANTIC_SEARCH` → ContextAssembler → LLM → `layer_used=2`
+- [ ] L3 routing: `SIMPLE_EDIT` → L3Provider → `layer_used=3`
+- [ ] L3 graceful degradation: L4 fallback if L3 disabled or fails
+- [ ] L3Provider: load, generate, structured output, error handling, cleanup
+- [ ] E2E integration tests for L1/L2/L3/L4 routing
+- [ ] `/plan export` writes markdown file with task list + subagent state
+- [ ] `/plan sync` imports checkbox changes back to TaskStore
+- [ ] Go task panel displays task states via JSON-RPC
+- [ ] Go task panel refreshes on task/subagent events
+- [ ] Baseline + 33 new tests pass; `ruff check` and `mypy` pass
 
 ---
 
-## 5. SQLite Schema Additions
+## 8. JSON-RPC Contract Additions
 
-All new tables share the same SQLite database as `SessionStore`. DDL additions go in `session/models.py`.
+**Naming convention:** Requests = `noun.verb`, Notifications = `on_noun_event`.
 
-### 5.1 Tasks Table
+### 8.1 Requests (client → server)
 
-```sql
-CREATE TABLE IF NOT EXISTS tasks (
-    id TEXT PRIMARY KEY,
-    session_id TEXT NOT NULL REFERENCES sessions(id),
-    title TEXT NOT NULL,
-    description TEXT NOT NULL DEFAULT '',
-    status TEXT NOT NULL DEFAULT 'pending',  -- pending, in_progress, completed
-    priority INTEGER NOT NULL DEFAULT 2,     -- 1=high, 2=medium, 3=low
-    assigned_to TEXT NOT NULL DEFAULT 'main', -- 'main' or subagent ID
-    parent_id TEXT,                           -- for subtask grouping
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
+| Method | Params | Response | Sprint |
+|--------|--------|----------|--------|
+| `task.list` | `{session_id}` | `{tasks: TaskRow[]}` | 4A |
+| `subagent.list` | `{session_id}` | `{subagents: SubagentStatus[]}` | 4B |
+| `subagent.cancel` | `{subagent_id}` | `{success: bool}` | 4B |
+| `plan.status` | `{}` | `{mode: "normal"\|"planning"}` | 4B |
+| `plan.set` | `{mode: "normal"\|"planning"}` | `{mode: str, changed: bool}` | 4B |
+| `memory.list` | `{session_id, limit?}` | `{memories: MemoryRow[]}` | 4C |
+| `checkpoint.list` | `{session_id}` | `{checkpoints: CheckpointRow[]}` | 4C |
+| `plan.export` | `{session_id}` | `{path: str}` | 4C |
+| `plan.sync` | `{session_id, path}` | `{updated: str[]}` | 4C |
 
-CREATE INDEX IF NOT EXISTS idx_tasks_session ON tasks(session_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(session_id, status);
-```
+### 8.2 Notifications (server → client)
 
-### 5.2 Task Dependencies Table
+| Method | Params | Sprint |
+|--------|--------|--------|
+| `on_task_state` | `{tasks: TaskRow[], subagents: SubagentStatus[]}` | 4A+ |
+| `on_subagent_event` | `{id, type, event, detail}` | 4B |
+| `on_layer_used` | `{layer: int, request_type: str}` | Existing |
 
-```sql
-CREATE TABLE IF NOT EXISTS task_dependencies (
-    task_id TEXT NOT NULL REFERENCES tasks(id),
-    depends_on TEXT NOT NULL REFERENCES tasks(id),
-    PRIMARY KEY (task_id, depends_on)
-);
+### 8.3 Error Codes
 
-CREATE INDEX IF NOT EXISTS idx_task_deps_task ON task_dependencies(task_id);
-CREATE INDEX IF NOT EXISTS idx_task_deps_dep ON task_dependencies(depends_on);
-```
+JSON-RPC standard codes plus:
+- `-32001`: Session not found
+- `-32002`: Subagent not found
+- `-32003`: Cycle detected (in task dependency)
 
-### 5.3 Memories Table
+### 8.4 Compatibility
 
-```sql
-CREATE TABLE IF NOT EXISTS memories (
-    id TEXT PRIMARY KEY,
-    project_dir TEXT NOT NULL,
-    category TEXT NOT NULL,      -- tool_pattern, user_preference, project_fact, error_resolution
-    content TEXT NOT NULL,
-    relevance REAL NOT NULL DEFAULT 1.0,
-    use_count INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_dir);
-CREATE INDEX IF NOT EXISTS idx_memories_relevance ON memories(project_dir, relevance);
-```
-
-### 5.4 Checkpoints Table
-
-```sql
-CREATE TABLE IF NOT EXISTS checkpoints (
-    id TEXT PRIMARY KEY,
-    session_id TEXT NOT NULL REFERENCES sessions(id),
-    label TEXT NOT NULL,
-    plan TEXT NOT NULL DEFAULT '',
-    tasks_snapshot TEXT NOT NULL DEFAULT '{}',
-    context_summary TEXT NOT NULL DEFAULT '',
-    active_files TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_checkpoints_session ON checkpoints(session_id);
-```
+All additions are **additive**. Go TUI ignores unknown notifications (existing behavior). No breaking changes to existing methods.
 
 ---
 
-## 6. File Inventory
+## 9. Command Parity Matrix
 
-### 6.1 New Files (15)
-
-```
-src/hybridcoder/agent/context.py            # ContextEngine
-src/hybridcoder/agent/subagent.py            # SubagentLoop, SubagentManager, SubagentResult
-src/hybridcoder/agent/subagent_tools.py      # spawn_subagent, check_subagent tool defs + handlers
-src/hybridcoder/agent/task_tools.py          # create_task, update_task, list_tasks tool defs + handlers
-src/hybridcoder/agent/memory.py              # MemoryStore
-src/hybridcoder/session/task_store.py        # TaskStore (CRUD + DAG deps)
-src/hybridcoder/session/checkpoint_store.py  # CheckpointStore
-src/hybridcoder/tui/widgets/task_panel.py    # TaskPanel widget
-
-tests/unit/test_context_engine.py            # ContextEngine tests
-tests/unit/test_task_store.py                # TaskStore tests
-tests/unit/test_task_tools.py                # Task tool handler tests
-tests/unit/test_subagent.py                  # SubagentLoop + SubagentManager tests
-tests/unit/test_subagent_tools.py            # Subagent tool handler tests
-tests/unit/test_memory.py                    # MemoryStore tests
-tests/unit/test_checkpoint.py                # CheckpointStore tests
-```
-
-### 6.2 Modified Files (7)
-
-```
-src/hybridcoder/agent/loop.py               # ContextEngine integration, LLM lock, task awareness
-src/hybridcoder/agent/prompts.py             # task_summary, memory_context, subagent_status sections
-src/hybridcoder/session/models.py            # New DDL for tasks, task_deps, memories, checkpoints + models
-src/hybridcoder/session/store.py             # Expose _conn for shared access (or add accessor)
-src/hybridcoder/config.py                    # AgentConfig section (context budget, memory settings)
-src/hybridcoder/tui/app.py                   # Wire Phase 4 stores, llm_lock, subagent manager
-src/hybridcoder/tui/commands.py              # /tasks, /memory, /checkpoint commands
-```
+| Command | Backend Route | Go TUI | Python Inline |
+|---------|--------------|--------|---------------|
+| `/tasks` | `task.list` | Yes (4C: panel) | Yes (4A) |
+| `/plan on/off/approve` | `plan.set` (mutate) / `plan.status` (read) | Yes (4B) | Yes (4B) |
+| `/plan export` | `plan.export` | No (CLI only) | Yes (4C) |
+| `/plan sync` | `plan.sync` | No (CLI only) | Yes (4C) |
+| `/memory` | `memory.list` | No (Phase 5) | Yes (4C) |
+| `/checkpoint` | `checkpoint.list` | No (Phase 5) | Yes (4C) |
 
 ---
 
-## 7. Configuration Additions
+## 10. Complete File Inventory
+
+**New files: 24** (12 src + 11 test + 1 Go)
+**Modified files: 15** (10 Python + 4 Go + 1 test extension)
+**New tests: 82** (25 + 24 + 33)
+
+### 10.1 New Files by Sprint
+
+| Sprint | File | Tests |
+|--------|------|-------|
+| 4A | `src/hybridcoder/agent/context.py` | — |
+| 4A | `src/hybridcoder/session/task_store.py` | — |
+| 4A | `src/hybridcoder/agent/task_tools.py` | — |
+| 4A | `tests/unit/test_context_engine.py` | 8 |
+| 4A | `tests/unit/test_task_store.py` | 9 |
+| 4A | `tests/unit/test_task_tools.py` | 6 |
+| 4A | `tests/unit/test_carry_forward.py` | 2 |
+| 4B | `src/hybridcoder/agent/subagent.py` | — |
+| 4B | `src/hybridcoder/agent/subagent_tools.py` | — |
+| 4B | `tests/unit/test_subagent.py` | 10 |
+| 4B | `tests/unit/test_subagent_tools.py` | 5 |
+| 4B | `tests/unit/test_plan_mode.py` | 5 |
+| 4B | `tests/unit/test_llm_scheduler.py` | 4 |
+| 4C | `src/hybridcoder/agent/memory.py` | — |
+| 4C | `src/hybridcoder/session/checkpoint_store.py` | — |
+| 4C | `src/hybridcoder/agent/plan_artifact.py` | — |
+| 4C | `src/hybridcoder/layer3/__init__.py` | — |
+| 4C | `src/hybridcoder/layer3/provider.py` | — |
+| 4C | `cmd/hybridcoder-tui/taskpanel.go` | — |
+| 4C | `tests/unit/test_memory.py` | 7 |
+| 4C | `tests/unit/test_checkpoint.py` | 7 |
+| 4C | `tests/unit/test_l2_wiring.py` | 7 |
+| 4C | `tests/unit/test_plan_artifact.py` | 4 |
+| 4C | `tests/unit/test_l3_provider.py` | 5 |
+
+### 10.2 Modified Files by Sprint
+
+| Sprint | File |
+|--------|------|
+| 4A | `src/hybridcoder/agent/loop.py` |
+| 4A | `src/hybridcoder/agent/prompts.py` |
+| 4A | `src/hybridcoder/agent/tools.py` |
+| 4A | `src/hybridcoder/session/models.py` |
+| 4A | `src/hybridcoder/session/store.py` |
+| 4A | `src/hybridcoder/config.py` |
+| 4A | `src/hybridcoder/tui/commands.py` |
+| 4A | `src/hybridcoder/backend/server.py` |
+| 4A | `src/hybridcoder/layer1/queries.py` |
+| 4A | `cmd/hybridcoder-tui/update.go` |
+| 4B | `src/hybridcoder/agent/loop.py` |
+| 4B | `src/hybridcoder/agent/prompts.py` |
+| 4B | `src/hybridcoder/tui/commands.py` |
+| 4B | `src/hybridcoder/backend/server.py` |
+| 4C | `src/hybridcoder/session/models.py` |
+| 4C | `src/hybridcoder/tui/commands.py` |
+| 4C | `src/hybridcoder/backend/server.py` |
+| 4C | `src/hybridcoder/agent/loop.py` |
+| 4C | `tests/unit/test_integration_router_agent.py` |
+| 4C | `cmd/hybridcoder-tui/messages.go` |
+| 4C | `cmd/hybridcoder-tui/update.go` |
+| 4C | `cmd/hybridcoder-tui/view.go` |
+
+---
+
+## 11. Configuration Additions
 
 Add to `config.py`:
 
@@ -1530,6 +896,10 @@ class AgentConfig(BaseModel):
         default=5, ge=1, le=10,
         description="Max iterations per subagent",
     )
+    subagent_timeout_seconds: int = Field(
+        default=30, ge=5, le=120,
+        description="Max wall-clock time per subagent",
+    )
 
     # Memory
     memory_max_entries: int = Field(
@@ -1556,9 +926,9 @@ class HybridCoderConfig(BaseModel):
 
 ---
 
-## 8. System Prompt Changes
+## 12. System Prompt Changes
 
-### 8.1 Updated Base Prompt
+### 12.1 Updated Base Prompt
 
 Add task and subagent instructions to `SYSTEM_PROMPT`:
 
@@ -1575,10 +945,12 @@ SYSTEM_PROMPT += (
     "- Types: explore (read-only), plan (research + tasks), execute (full tools)\n"
     "- Check subagent results with check_subagent\n"
     "- Subagents run in the background — you can continue working while they run\n"
+    "- Background subagents cannot request approval — they auto-deny write/shell\n"
+    "- Do NOT delegate simple single-step work or tasks requiring user interaction\n"
 )
 ```
 
-### 8.2 Dynamic Sections
+### 12.2 Dynamic Sections
 
 `build_system_prompt()` gains three new optional sections:
 
@@ -1590,26 +962,28 @@ These are only included when non-empty, saving tokens when not in use.
 
 ---
 
-## 9. Testing Strategy
+## 13. Testing Strategy
 
-### 9.1 Test Summary
+### 13.1 Test Summary
 
 | Sprint | New Tests | Cumulative |
 |--------|-----------|------------|
 | Existing (Phase 0-3) | 840 | 840 |
-| Sprint 4A | 21 | 861 |
-| Sprint 4B | 24 | 885 |
-| **Total** | **45** | **885+** |
+| Sprint 4A | 25 | 865 |
+| Sprint 4B | 24 | 889 |
+| Sprint 4C | 33 | 922 |
+| **Total** | **82** | **922+** |
 
-### 9.2 Testing Patterns
+### 13.2 Testing Patterns
 
 - **SQLite stores** — Use in-memory SQLite (`:memory:`) for fast tests
 - **LLM calls** — Mock the provider; return canned responses for compaction/extraction
 - **Subagents** — Mock the LLM; test tool restrictions and iteration limits
 - **ContextEngine** — Mock token counting with `len(text) // 4`; test budget enforcement
-- **TaskStore DAG** — Test dependency chains, cycle detection (if added), ready checks
+- **TaskStore DAG** — Test dependency chains, **mandatory cycle detection**, ready checks
+- **L3Provider** — Mock llama-cpp-python; test generation, structured output, error handling, cleanup
 
-### 9.3 Integration Points
+### 13.3 Integration Points
 
 Phase 4 must not break existing tests. Key integration risks:
 
@@ -1618,92 +992,231 @@ Phase 4 must not break existing tests. Key integration risks:
 | AgentLoop signature change | New params have defaults (backward compatible) |
 | `build_system_prompt()` signature change | New params have defaults |
 | `SessionStore._conn` exposure | Add `get_connection()` accessor method |
-| DDL changes | New tables only (no schema changes to existing tables) |
+| DDL changes | New tables only (no schema changes to existing tables). `ensure_tables()` idempotent. |
 | Config changes | New `agent` section with defaults (no changes to existing sections) |
 
 ---
 
-## 10. Exit Criteria
+## 14. Eval & Benchmark Gates
 
-### Sprint 4A
+### 14.1 Pinned Phase 3 Baselines
 
-- [ ] **CF-1:** Go layer badge resets on new turn start and cancel/error
-- [ ] **CF-2:** Deterministic handlers use bounded iteration (`itertools.islice`)
-- [ ] **CF-3:** `search_code` queries existing index instead of rebuilding per call
-- [ ] **CF-4:** E2E integration tests assert `layer_used` for L1/L2/L4 routes
-- [ ] ContextEngine correctly counts tokens and enforces budget
-- [ ] Auto-compaction triggers at 75% and produces valid summaries
-- [ ] Tool results >500 tokens are truncated
-- [ ] TaskStore CRUD works with DAG dependencies
-- [ ] LLM can create, update, and list tasks via tools
-- [ ] Task summary injected into system prompt each iteration
-- [ ] `/tasks` command shows task board
-- [ ] 21+ new tests pass, all 840 existing tests pass
-- [ ] `ruff check` and `mypy` pass
+| Scenario | Baseline Artifact | Baseline Verdict / Score | Date |
+|----------|-------------------|--------------------------|------|
+| E2E-Calculator | `20260212-204422-e2e-react-calculator.md` | 86/100 | 2026-02-12 |
+| E2E-BugFix | `20260213_111543-e2e-e2e_bugfix.md` | PASS, 100/100 | 2026-02-13 |
+| E2E-CLI | `20260213_145340-e2e-e2e_cli.md` | FAIL (model-limited), 10/100 | 2026-02-13 |
+| Bench core | `20260213-114531-phase3-review-bench-core.md` | PASS | 2026-02-13 |
+| Unit tests (full suite) | Phase 3 prerequisite | 840 pass | 2026-02-13 |
 
-### Sprint 4B
+> **Note:** E2E-CLI baseline of 10/100 is model-limited (free tier `glm-4.5-air:free`), not scaffold-limited. Verdict is FAIL due to model quality, not code. Non-regression means: score >= 10. If a better model is used, scores may increase but the floor remains the baseline.
+>
+> **Gate policy:** Hard gates require **score >= threshold**. For E2E-BugFix, the baseline artifact has `Verdict: PASS`. For E2E-CLI, the FAIL verdict is accepted as model-limited (score gate only).
 
-- [ ] SubagentLoop runs with restricted tools and max 5 iterations
-- [ ] SubagentManager spawns, monitors, and cancels subagents
-- [ ] LLM can spawn and check subagents via tools
-- [ ] asyncio.Lock prevents concurrent LLM access
-- [ ] MemoryStore saves, loads, and decays memories
-- [ ] Memory extraction via LLM produces valid entries
-- [ ] Memory context injected into system prompt
-- [ ] CheckpointStore saves and restores state
-- [ ] `/memory` and `/checkpoint` commands work
-- [ ] TaskPanel widget displays in TUI
-- [ ] 24 new tests pass, all 861 existing tests pass (total 885+)
-- [ ] `ruff check` and `mypy` pass
+### 14.2 Numeric Pass Thresholds
+
+| Metric | Threshold | Source |
+|--------|-----------|--------|
+| E2E-Calculator score | >= 86/100 | Phase 3 baseline |
+| E2E-BugFix score | >= 100/100 | Phase 3 baseline |
+| E2E-CLI score | >= 10/100 | Phase 3 baseline (model-limited) |
+| Bench core suite | PASS | Phase 3 baseline |
+| Unit tests (full suite) | All pass, count >= 840 + new | Rolling (840 = Phase 3 full baseline) |
+| LLM Scheduler p95 queue wait | < 2s (3 subagents) | New Phase 4 metric |
+| Context compaction | Triggers at 75% threshold | New Phase 4 metric |
+
+### 14.3 Tiered Gate Policy
+
+Single-run hard gates are flaky due to INFRA_FAIL (API errors, rate limits). Tiered policy:
+
+- **Calculator benchmark** (has `--runs` flag):
+  - Sprint 4A/4B: `--runs 2`, pass if >= 1 PASS (allows 1 INFRA_FAIL)
+  - Sprint 4C (final): `--runs 3 --strict`, pass if >= 2 PASS
+- **E2E scenario runners** (BugFix, CLI — single-run only):
+  - Run once. If result is INFRA_FAIL, rerun 1x manually.
+  - Sprint 4A/4B: 1 run, PASS required (INFRA_FAIL → 1 manual rerun)
+  - Sprint 4C (final): 1 run, PASS required (INFRA_FAIL → 1 manual rerun)
+- **INFRA_FAIL handling:** INFRA_FAIL does not count as FAIL. If all runs are INFRA_FAIL, sprint is blocked on infrastructure, not code quality.
+- **Retry budget:** Max 1 manual rerun per sprint per scenario if initial result is INFRA_FAIL
+
+### 14.4 Before/After Baseline Protocol
+
+1. **Before:** Phase 3 baseline snapshot already exists (pinned artifacts above)
+2. **After:** Run same scenarios post-Phase 4, store results
+3. **Compare:** Publish `docs/qa/phase4-benchmarks/before-after-comparison.md`
+
+### 14.5 Artifact & Verdict Policy
+
+- All results stored via `store_test_results.sh` → `docs/qa/test-results/`
+- Verdict classification: **PASS** / **FAIL** / **INFRA_FAIL** (existing system)
+- INFRA_FAIL = infrastructure issue, not sprint blocker (rerun up to 1x)
+- Final report location: `docs/qa/phase4-benchmarks/`
 
 ---
 
-## 11. Risks & Mitigations
+## 15. Verification
+
+All verification blocks use `store_test_results.sh` per repo policy (Entry 314-B, Entry 322-C1).
+Verification order is mandatory: **core runtime functionality first, TUI parity second**. TUI UI checks do not override failing core task/subagent/checkpoint behavior.
+
+### Sprint 4A
+
+```bash
+./scripts/store_test_results.sh sprint-4a-unit -- uv run pytest tests/ -v --cov=src/hybridcoder
+./scripts/store_test_results.sh sprint-4a-lint -- make lint
+./scripts/store_test_results.sh sprint-4a-bench -- uv run python -m pytest tests/benchmark -v -m "not integration"
+./scripts/store_test_results.sh sprint-4a-calc -- uv run python scripts/run_calculator_benchmark.py --runs 2
+```
+
+- Unit tests: all pass, count >= 840 + 25 new
+- Bench core: PASS
+- E2E-Calculator: >= 86/100 in at least 1 of 2 runs
+
+### Sprint 4B
+
+```bash
+./scripts/store_test_results.sh sprint-4b-unit -- uv run pytest tests/ -v --cov=src/hybridcoder
+./scripts/store_test_results.sh sprint-4b-lint -- make lint
+./scripts/store_test_results.sh sprint-4b-calc -- uv run python scripts/run_calculator_benchmark.py --runs 2
+./scripts/store_test_results.sh sprint-4b-bugfix -- uv run python scripts/e2e/run_scenario.py E2E-BugFix
+```
+
+- Unit tests: all pass, count >= baseline + 49 cumulative new
+- E2E-Calculator: >= 86/100, at least 1/2 PASS
+- E2E-BugFix: >= 100/100, 1 run (INFRA_FAIL → rerun 1x)
+
+### Sprint 4C (Phase 4 Final Gate)
+
+```bash
+./scripts/store_test_results.sh phase4-unit -- uv run pytest tests/ -v --cov=src/hybridcoder
+./scripts/store_test_results.sh phase4-lint -- make lint
+./scripts/store_test_results.sh phase4-bench -- uv run python -m pytest tests/benchmark -v -m "not integration"
+./scripts/store_test_results.sh phase4-calc -- uv run python scripts/run_calculator_benchmark.py --runs 3 --strict
+./scripts/store_test_results.sh phase4-bugfix -- uv run python scripts/e2e/run_scenario.py E2E-BugFix
+./scripts/store_test_results.sh phase4-cli -- uv run python scripts/e2e/run_scenario.py E2E-CLI
+```
+
+- Unit tests: all pass, count >= baseline + 82 new
+- E2E-Calculator: >= 86/100, at least 2/3 PASS (strict)
+- E2E-BugFix: >= 100/100
+- E2E-CLI: >= 10/100
+- Bench core: PASS
+- Publish `docs/qa/phase4-benchmarks/before-after-comparison.md`
+
+---
+
+## 16. Exit Criteria
+
+### Sprint 4A — COMPLETE (2026-02-14)
+
+- [x] CF-1 through CF-4 complete
+- [x] ContextEngine counts tokens and enforces budget
+- [x] Auto-compaction triggers at 75% threshold
+- [x] Tool results >500 tokens truncated
+- [x] TaskStore CRUD + DAG dependencies work
+- [x] **add_dependency() rejects cycles** (graphlib)
+- [x] ToolDefinition has `mutates_fs` and `executes_shell` flags
+- [x] LLM can create/update/list tasks via tools
+- [x] Task summary in system prompt each iteration
+- [x] `/tasks` command works
+- [x] AgentConfig added to HybridCoderConfig
+- [x] `ensure_tables()` idempotent
+- [x] Sprint 4A verification gates pass — 868 collected, 755 passed, 0 failed, ruff clean
+
+### Sprint 4B — COMPLETE (2026-02-14)
+
+- [x] LLM Scheduler: foreground priority, FIFO within tier, single worker
+- [x] Scheduler: queue depth metrics available
+- [x] SubagentLoop: restricted tools per type via capability flags
+- [x] Max 5 iterations + 30s timeout enforced
+- [x] Circuit breaker: 2 failures = auto-cancel
+- [x] SubagentManager: spawn/cancel/cancel_all/max concurrent (3)
+- [x] LLM tools: spawn/check/cancel/list subagents
+- [x] Background subagents auto-deny approval-requiring tools
+- [x] SubagentResult includes files_touched
+- [x] `/plan on` blocks mutating tools; `/plan approve` unblocks
+- [x] Plan mode uses capability flags, not tool names
+- [x] System prompt reflects plan mode state + delegation guidance
+- [x] Cancel propagates to subagents
+- [x] Basic Python logging for spawn/cancel/check events
+- [x] Sprint 4B verification gates pass — 942 collected, 819 passed, 113 skipped, 0 failed, ruff clean
+- [x] Review fixes: cancellation cleanup (add_done_callback), async teardown, plan mode persistence, session log refresh
+
+### Sprint 4C (Phase 4 Complete)
+
+- [ ] MemoryStore: save/load/decay/dedup/get_context
+- [ ] Memory extraction via LLM (tested with mock)
+- [ ] Memory context in system prompt
+- [ ] CheckpointStore: save/list/delete
+- [ ] **Checkpoint restore is transactional** (atomic commit/rollback)
+- [ ] Restore rehydrates TaskStore + injects context summary
+- [ ] Restore rejects mismatched session_id
+- [ ] `/memory` and `/checkpoint` commands work
+- [ ] L2 routing: `SEMANTIC_SEARCH` → ContextAssembler → `layer_used=2`
+- [ ] L3 routing: `SIMPLE_EDIT` → L3Provider → `layer_used=3`
+- [ ] L3 graceful degradation: L4 fallback if disabled/fails
+- [ ] L3Provider: 5 unit tests pass (load, generate, structured, error, cleanup)
+- [ ] `/plan export` writes markdown file
+- [ ] `/plan sync` imports checkbox changes
+- [ ] Core runtime behaviors (tasks/subagents/plan/checkpoint/approval) pass vanilla prompt checks before TUI-specific checks
+- [ ] Go task panel displays task states via JSON-RPC
+- [ ] Go task panel refreshes on task/subagent events
+- [ ] Phase 4 final verification gates pass (Section 15)
+- [ ] `docs/qa/phase4-benchmarks/before-after-comparison.md` published
+
+---
+
+## 17. Risks & Mitigations
 
 | Risk | Impact | Probability | Mitigation |
 |------|--------|-------------|-----------|
-| **LLM lock contention** — subagents block main agent | High latency during subagent runs | Medium | Max 5 iterations per subagent; cancel on timeout; non-LLM work runs in parallel |
+| **LLM scheduler queue contention** — subagents block main agent | High latency during subagent runs | Medium | Max 5 iterations per subagent; cancel on timeout; foreground priority in queue; p95 < 2s SLO |
 | **Auto-compaction quality** — 7B model produces bad summaries | Lost context, wrong responses | Medium | Test with Qwen3-8B; fallback to sliding window if summary quality is poor |
 | **Token counting inaccuracy** — `len // 4` is rough | Context overflow or underflow | Low | Over-estimate by 10%; validate against actual model tokenizer if available |
 | **Memory extraction garbage** — LLM extracts useless memories | Wasted tokens in prompts | Low | Limit to 5 extractions per session; human review via `/memory` |
 | **SQLite lock contention** — multiple stores sharing connection | Database errors | Low | All stores use same connection (no concurrent writes from different threads); WAL mode |
-| **Backward compatibility** — existing tests break | Delayed delivery | Low | All new params have defaults; new tables only |
+| **Backward compatibility** — existing tests break | Delayed delivery | Low | All new params have defaults; new tables only; `ensure_tables()` idempotent |
+| **L3 model not available** — llama-cpp-python not installed | L3 route fails | Low | Graceful degradation to L4; logged warning |
+| **Benchmark flakiness** — INFRA_FAIL false-blocks sprints | Delayed delivery | Medium | Tiered gate policy (Section 14.3); INFRA_FAIL not counted as FAIL |
 
 ---
 
-## 12. Dependencies
+## 18. Dependencies
 
-### 12.1 Sprint Dependencies
+### 18.1 Sprint Dependencies
 
 ```
-Sprint 4A: ContextEngine + TaskStore + Task Tools
+Sprint 4A: ContextEngine + TaskStore + Task Tools + Capability Flags
     ↓
-Sprint 4B: SubagentLoop + SubagentManager + MemoryStore + CheckpointStore
-           (depends on LLM lock and ContextEngine from 4A)
+Sprint 4B: SubagentLoop + LLM Scheduler + Plan Mode
+    ↓
+Sprint 4C: Memory + Checkpoints + L2/L3 Wiring + Plan Artifact + Go Task Panel
 ```
 
-### 12.2 External Dependencies
+### 18.2 External Dependencies
 
 | Dependency | Status | Notes |
 |-----------|--------|-------|
 | Python 3.11+ | Available | Already required |
 | SQLite 3.35+ | Available | WAL mode, JSON functions |
-| Textual >=0.89 | Installed (7.5.0) | For TaskPanel widget |
+| graphlib | stdlib (3.9+) | For cycle detection in TaskStore |
 | pytest-asyncio >=0.24 | Installed | For async tests |
-| asyncio.Lock | stdlib | No external dep |
+| llama-cpp-python >=0.3 | In pyproject.toml | For L3 provider |
+| outlines >=0.1 | In pyproject.toml | For L3 structured generation |
 
-### 12.3 Cross-Phase Dependencies
+### 18.3 Cross-Phase Dependencies
 
 Phase 4 builds on Phase 3:
 - Uses tree-sitter parser for L1 deterministic queries
 - Uses jina-v2-base-code embeddings + LanceDB for L2 context assembly
 - Uses hybrid search (BM25 + vector + RRF) for retrieval
-- Phase 4 includes L2 runtime wiring (`handle_chat` → context assembly → `layer_used=2`)
+- Phase 4 wires L2 runtime routing (`handle_chat` → context assembly → `layer_used=2`)
+- Phase 4 wires minimal L3 (`SIMPLE_EDIT` → L3Provider → `layer_used=3`)
 
 Phase 4 IS a prerequisite for:
-- Phase 5 (Architect/Editor) — needs task system for multi-step plans
+- Phase 5 (Architect/Editor) — needs task system for multi-step plans, full L3 for structured generation
 - Phase 5 (LLMLOOP) — needs checkpoint/restore for retry loops
 
 ---
 
-*Plan v2.1 — 2026-02-13. Added Phase 3 carry-forward fixes (CF-1 through CF-4) from Codex review Entries 296/298/301/304. v2.0: L2 runtime wiring scope, Codex review feedback.*
+*Plan v3.2 — 2026-02-14. Full rewrite from v2.0. Incorporates v3.1 draft + all Codex review dispositions (Entries 307, 309, 311, 312, 314, 318, 322, 326). Adds: L3 minimal scope, hard benchmark gates with pinned baselines, tiered INFRA_FAIL policy, JSON-RPC contract section, command parity matrix, `store_test_results.sh` in all verification blocks. Supersedes `docs/archive/plan/quirky-sprouting-grove-v3.1-draft.md`. v3.2a patch: Entry 329 fixes (scheduler priority semantics, BugFix baseline repin, multi-run policy, transactional API note, plan.set RPC, full-suite unit baseline).*

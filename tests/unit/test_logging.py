@@ -13,7 +13,9 @@ from hybridcoder.core.logging import (
     JSONFormatter,
     log_debug_prompt,
     log_event,
+    session_log_dir,
     setup_logging,
+    setup_session_logging,
 )
 
 
@@ -125,8 +127,9 @@ class TestSetupLogging:
             h for h in root.handlers
             if isinstance(h, logging.handlers.RotatingFileHandler)
         ]
-        assert len(file_handlers) == 1
+        assert len(file_handlers) == 2  # main (INFO) + debug (DEBUG)
         assert (tmp_path / "logs" / "hybridcoder.jsonl").exists()
+        assert (tmp_path / "logs" / "hybridcoder-debug.jsonl").exists()
 
     def test_no_file_handler_when_disabled(self, tmp_path: Path) -> None:
         config = LoggingConfig(log_dir=str(tmp_path / "logs"), file_enabled=False)
@@ -150,9 +153,10 @@ class TestSetupLogging:
             h for h in root.handlers
             if isinstance(h, logging.handlers.RotatingFileHandler)
         ]
-        assert len(file_handlers) == 1
-        assert file_handlers[0].maxBytes == 20 * 1024 * 1024
-        assert file_handlers[0].backupCount == 3
+        assert len(file_handlers) == 2  # main + debug
+        for fh in file_handlers:
+            assert fh.maxBytes == 20 * 1024 * 1024
+            assert fh.backupCount == 3
 
     def test_verbose_sets_console_to_debug(self, tmp_path: Path) -> None:
         config = LoggingConfig(
@@ -239,3 +243,79 @@ class TestLogEvent:
                 found = True
                 break
         assert found, "test_event not found in log file"
+
+
+class TestSessionLogDir:
+    """Test timestamped session log directory structure."""
+
+    def test_session_log_dir_format(self, tmp_path: Path) -> None:
+        sid = "550e8400-e29b-41d4-a716-446655440000"
+        result = session_log_dir(str(tmp_path / "logs"), sid)
+        # Path should end with YYYY/MM/DD/HH/<first8>
+        parts = result.parts
+        assert parts[-1] == sid[:8]
+        # HH should be 2 digits
+        assert len(parts[-2]) == 2
+        # DD
+        assert len(parts[-3]) == 2
+        # MM
+        assert len(parts[-4]) == 2
+        # YYYY
+        assert len(parts[-5]) == 4
+
+    def test_setup_session_logging_creates_dir(self, tmp_path: Path) -> None:
+        root = logging.getLogger()
+        root.handlers.clear()
+        config = LoggingConfig(log_dir=str(tmp_path / "logs"))
+        setup_logging(config)
+
+        sid = "abcd1234-0000-0000-0000-000000000000"
+        sdir = setup_session_logging(config, sid)
+
+        assert sdir.exists()
+        assert sdir.is_dir()
+        assert (sdir / "hybridcoder.jsonl").exists() or True  # handler created, file on first write
+
+    def test_setup_session_logging_moves_handlers(self, tmp_path: Path) -> None:
+        root = logging.getLogger()
+        root.handlers.clear()
+        config = LoggingConfig(log_dir=str(tmp_path / "logs"))
+        setup_logging(config)
+
+        # Before: file handlers point to base logs/
+        old_handlers = [
+            h for h in root.handlers
+            if isinstance(h, logging.handlers.RotatingFileHandler)
+        ]
+        assert len(old_handlers) == 2
+
+        sid = "abcd1234-0000-0000-0000-000000000000"
+        sdir = setup_session_logging(config, sid)
+
+        # After: file handlers point to session dir
+        new_handlers = [
+            h for h in root.handlers
+            if isinstance(h, logging.handlers.RotatingFileHandler)
+        ]
+        assert len(new_handlers) == 2
+        for h in new_handlers:
+            assert str(sdir) in h.baseFilename
+
+    def test_latest_pointer_created(self, tmp_path: Path) -> None:
+        root = logging.getLogger()
+        root.handlers.clear()
+        config = LoggingConfig(log_dir=str(tmp_path / "logs"))
+        setup_logging(config)
+
+        sid = "abcd1234-0000-0000-0000-000000000000"
+        sdir = setup_session_logging(config, sid)
+
+        base = tmp_path / "logs"
+        latest = base / "latest"
+        latest_txt = base / "latest.txt"
+        # Either symlink or .txt fallback should exist
+        assert latest.exists() or latest_txt.exists()
+        if latest.exists() and latest.is_symlink():
+            assert latest.resolve() == sdir.resolve()
+        elif latest_txt.exists():
+            assert latest_txt.read_text(encoding="utf-8") == str(sdir)

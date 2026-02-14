@@ -16,12 +16,20 @@ from pathlib import Path
 from typing import Any
 
 from hybridcoder.agent.approval import ApprovalManager, ApprovalMode
-from hybridcoder.agent.loop import AgentLoop
+from hybridcoder.agent.context import ContextEngine
+from hybridcoder.agent.event_recorder import EventRecorder
+from hybridcoder.agent.loop import AgentLoop, AgentMode
+from hybridcoder.agent.subagent import LLMScheduler, SubagentManager
+from hybridcoder.agent.subagent_tools import register_subagent_tools
+from hybridcoder.agent.task_tools import register_task_tools
 from hybridcoder.agent.tools import ToolRegistry, create_default_registry
 from hybridcoder.config import HybridCoderConfig, load_config
-from hybridcoder.core.logging import log_event
+from hybridcoder.core.blob_store import BlobStore
+from hybridcoder.core.logging import log_event, setup_session_logging
 from hybridcoder.layer4.llm import create_provider
+from hybridcoder.session.episode_store import EpisodeStore
 from hybridcoder.session.store import SessionStore
+from hybridcoder.session.task_store import TaskStore
 from hybridcoder.tui.commands import CommandRouter, create_default_router
 
 logger = logging.getLogger(__name__)
@@ -116,6 +124,13 @@ class _ServerAppContext:
 
         return _copy_to_clipboard(text)
 
+    def set_plan_mode(self, enabled: bool) -> None:
+        """Set plan mode. Persists across agent loop recreation."""
+        self._server._plan_mode_enabled = enabled
+        if self._server._agent_loop:
+            mode = AgentMode.PLANNING if enabled else AgentMode.NORMAL
+            self._server._agent_loop.set_mode(mode)
+
     def exit_app(self) -> None:
         self._server._running = False
 
@@ -142,6 +157,7 @@ class BackendServer:
             provider=self.config.llm.provider,
             project_dir=str(self.project_root),
         )
+        self._session_log_dir = setup_session_logging(self.config.logging, self.session_id)
 
         # Commands
         self.command_router: CommandRouter = create_default_router()
@@ -153,7 +169,13 @@ class BackendServer:
         self._approval_manager: ApprovalManager | None = None
         self._agent_loop: AgentLoop | None = None
         self._agent_task: asyncio.Task[None] | None = None
+        self._task_store: TaskStore | None = None
+        self._llm_scheduler: LLMScheduler | None = None
+        self._subagent_manager: SubagentManager | None = None
         self._session_titled: bool = False
+
+        # Plan mode (persisted across loop recreation)
+        self._plan_mode_enabled: bool = False
 
         # Thinking visibility
         self._show_thinking: bool = False
@@ -247,6 +269,46 @@ class BackendServer:
                 except OSError:
                     pass
 
+            # Create TaskStore and register task tools
+            self._task_store = TaskStore(
+                self.session_store.get_connection(), self.session_id,
+            )
+            register_task_tools(self._tool_registry, self._task_store)
+
+            # Create LLM Scheduler and SubagentManager
+            self._llm_scheduler = LLMScheduler()
+            self._llm_scheduler.start()
+            self._subagent_manager = SubagentManager(
+                provider=self._provider,
+                tool_registry=self._tool_registry,
+                scheduler=self._llm_scheduler,
+                max_concurrent=self.config.agent.max_subagents,
+                max_iterations=self.config.agent.subagent_max_iterations,
+                timeout_seconds=self.config.agent.subagent_timeout_seconds,
+            )
+            register_subagent_tools(self._tool_registry, self._subagent_manager)
+
+            # Create ContextEngine
+            context_engine = ContextEngine(
+                provider=self._provider,
+                session_store=self.session_store,
+                context_length=self.config.llm.context_length,
+                compaction_threshold=self.config.agent.compaction_threshold,
+            )
+
+            # Training-grade event recorder (opt-in)
+            event_recorder: EventRecorder | None = None
+            if self.config.logging.training.enabled:
+                blob_dir = self._session_log_dir / self.config.logging.training.blob_dir
+                blob_store = BlobStore(blob_dir)
+                episode_store = EpisodeStore(
+                    self.session_store.get_connection(),
+                    self.session_id,
+                    blob_store,
+                    max_episodes=self.config.logging.training.max_episodes_per_session,
+                )
+                event_recorder = EventRecorder(episode_store)
+
             self._agent_loop = AgentLoop(
                 provider=self._provider,
                 tool_registry=self._tool_registry,
@@ -254,7 +316,15 @@ class BackendServer:
                 session_store=self.session_store,
                 session_id=self.session_id,
                 memory_content=memory_content,
+                context_engine=context_engine,
+                task_store=self._task_store,
+                event_recorder=event_recorder,
+                subagent_manager=self._subagent_manager,
             )
+
+            # Apply persisted plan mode
+            if self._plan_mode_enabled:
+                self._agent_loop.set_mode(AgentMode.PLANNING)
 
         return self._agent_loop
 
@@ -326,12 +396,33 @@ class BackendServer:
 
         return result.get("answer", "")  # type: ignore[no-any-return]
 
+    # --- Lifecycle helpers ---
+
+    async def _teardown_agent_resources(self) -> None:
+        """Cleanly tear down subagent manager, scheduler, and agent loop.
+
+        Called on session transitions and shutdown to prevent orphan tasks.
+        """
+        if self._subagent_manager:
+            self._subagent_manager.cancel_all()
+            self._subagent_manager = None
+        if self._llm_scheduler:
+            await self._llm_scheduler.shutdown()
+            self._llm_scheduler = None
+        self._agent_loop = None
+        self._task_store = None
+
     # --- Request handlers ---
 
     async def handle_chat(self, message: str, session_id: str | None, request_id: int) -> None:
         """Handle a chat request from the Go frontend."""
         if session_id and session_id != self.session_id:
             self.session_id = session_id
+            self._session_log_dir = setup_session_logging(
+                self.config.logging, self.session_id,
+            )
+            await self._teardown_agent_resources()
+            self._session_approved_tools.clear()
 
         # Auto-title session from first user message
         if not self._session_titled:
@@ -405,9 +496,11 @@ class BackendServer:
         })
 
     async def handle_cancel(self, request_id: int) -> None:
-        """Cancel the active agent loop."""
+        """Cancel the active agent loop and propagate to subagents."""
         if self._agent_loop:
             self._agent_loop.cancel()
+        if self._subagent_manager:
+            self._subagent_manager.cancel_all()
         if self._agent_task and not self._agent_task.done():
             self._agent_task.cancel()
             try:
@@ -437,9 +530,10 @@ class BackendServer:
             provider=self.config.llm.provider,
             project_dir=str(self.project_root),
         )
+        self._session_log_dir = setup_session_logging(self.config.logging, self.session_id)
         self._session_titled = bool(title)
         self._session_approved_tools.clear()
-        self._agent_loop = None  # Reset agent loop for new session
+        await self._teardown_agent_resources()
         self._emit_status()
         self.emit_response(request_id, {"session_id": self.session_id})
 
@@ -482,11 +576,66 @@ class BackendServer:
 
         match = matches[0]
         self.session_id = match.id
+        self._session_log_dir = setup_session_logging(self.config.logging, self.session_id)
         self._session_titled = True
         self._session_approved_tools.clear()
-        self._agent_loop = None
+        await self._teardown_agent_resources()
         self._emit_status()
         self.emit_response(request_id, {"session_id": match.id, "title": match.title})
+
+    async def handle_task_list(self, request_id: int) -> None:
+        """List tasks for the current session."""
+        if self._task_store is None:
+            self._task_store = TaskStore(
+                self.session_store.get_connection(), self.session_id,
+            )
+        tasks = self._task_store.list_tasks()
+        self.emit_response(request_id, {
+            "tasks": [t.model_dump(mode="json") for t in tasks],
+        })
+
+    async def handle_subagent_list(self, request_id: int) -> None:
+        """List all subagents (active and completed)."""
+        if self._subagent_manager is None:
+            self.emit_response(request_id, {"subagents": []})
+            return
+        self.emit_response(request_id, {
+            "subagents": self._subagent_manager.list_all(),
+        })
+
+    async def handle_subagent_cancel(self, subagent_id: str, request_id: int) -> None:
+        """Cancel a running subagent."""
+        if self._subagent_manager is None:
+            self.emit_response(request_id, {"success": False})
+            return
+        success = self._subagent_manager.cancel(subagent_id)
+        self.emit_response(request_id, {"success": success})
+
+    async def handle_plan_status(self, request_id: int) -> None:
+        """Return current plan mode status (from persisted server state)."""
+        if self._agent_loop:
+            mode = self._agent_loop.get_mode().value
+        else:
+            mode = AgentMode.PLANNING.value if self._plan_mode_enabled else AgentMode.NORMAL.value
+        self.emit_response(request_id, {"mode": mode})
+
+    async def handle_plan_set(self, mode: str, request_id: int) -> None:
+        """Set plan mode (persisted on server, applied to loop if exists)."""
+        try:
+            agent_mode = AgentMode(mode)
+        except ValueError:
+            self.emit_response(request_id, {
+                "error": f"Invalid mode '{mode}'. Use 'normal' or 'planning'.",
+            })
+            return
+        old_enabled = self._plan_mode_enabled
+        self._plan_mode_enabled = agent_mode == AgentMode.PLANNING
+        if self._agent_loop:
+            self._agent_loop.set_mode(agent_mode)
+        self.emit_response(request_id, {
+            "mode": agent_mode.value,
+            "changed": old_enabled != self._plan_mode_enabled,
+        })
 
     async def handle_config_get(self, request_id: int) -> None:
         """Return current configuration."""
@@ -515,6 +664,7 @@ class BackendServer:
 
     async def handle_shutdown(self, request_id: int) -> None:
         """Gracefully shut down the server."""
+        await self._teardown_agent_resources()
         self.emit_response(request_id, {"ok": True})
         self._running = False
 
@@ -616,6 +766,18 @@ class BackendServer:
         elif method == "session.resume":
             sid = params.get("session_id", "")
             await self.handle_session_resume(sid, request_id)
+        elif method == "task.list":
+            await self.handle_task_list(request_id)
+        elif method == "subagent.list":
+            await self.handle_subagent_list(request_id)
+        elif method == "subagent.cancel":
+            sid = params.get("subagent_id", "")
+            await self.handle_subagent_cancel(sid, request_id)
+        elif method == "plan.status":
+            await self.handle_plan_status(request_id)
+        elif method == "plan.set":
+            mode = params.get("mode", "normal")
+            await self.handle_plan_set(mode, request_id)
         elif method == "config.get":
             await self.handle_config_get(request_id)
         elif method == "config.set":

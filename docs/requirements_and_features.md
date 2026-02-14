@@ -1,7 +1,7 @@
 # HybridCoder — Requirements & Feature Catalog
 
 > Comprehensive catalog of all features built, planned, current UX issues, and architecture decisions.
-> Last updated: 2026-02-13
+> Last updated: 2026-02-14
 
 ---
 
@@ -54,23 +54,31 @@
 | System prompt builder | DONE | `src/hybridcoder/agent/prompts.py` |
 | Project memory loading (`.hybridcoder/memory.md`) | DONE | `InlineApp._ensure_agent_loop()` |
 
-### 2.4 Tool Registry (11 Tools)
+### 2.4 Tool Registry (19 Tools)
 
 | Tool | Requires Approval | Description |
 |------|-------------------|-------------|
 | `read_file` | No | Read file contents with optional line range |
-| `write_file` | **Yes** | Write/create files |
+| `write_file` | **Yes** | Write/create files (`mutates_fs=True`) |
 | `list_files` | No | List files with glob patterns |
 | `search_text` | No | Regex search (ripgrep → grep → Python fallback) |
-| `run_command` | **Yes** | Execute shell commands (PowerShell on Windows) |
+| `run_command` | **Yes** | Execute shell commands (`executes_shell=True`) |
 | `ask_user` | No | Ask the user questions with options or free-text |
 | `find_references` | No | Find all usages of a symbol across files (Phase 3) |
 | `find_definition` | No | Go to definition of a symbol (Phase 3) |
 | `get_type_info` | No | Get type annotation for a symbol (Phase 3) |
 | `list_symbols` | No | List functions/classes/methods in a file (Phase 3) |
 | `search_code` | No | Hybrid BM25 + vector code search (Phase 3) |
+| `create_task` | No | Create a task with title and description (Phase 4) |
+| `update_task` | No | Update task status/metadata (Phase 4) |
+| `list_tasks` | No | List all tasks with status and dependencies (Phase 4) |
+| `add_task_dependency` | No | Add a dependency edge between tasks (Phase 4) |
+| `spawn_subagent` | No | Spawn a background subagent (explore/plan/execute) (Phase 4) |
+| `check_subagent` | No | Check subagent status and retrieve result (Phase 4) |
+| `cancel_subagent` | No | Cancel a running subagent (Phase 4) |
+| `list_subagents` | No | List all subagents with status (Phase 4) |
 
-All tools defined in `src/hybridcoder/agent/tools.py`.
+Base tools defined in `src/hybridcoder/agent/tools.py`. Task tools in `src/hybridcoder/agent/task_tools.py`. Subagent tools in `src/hybridcoder/agent/subagent_tools.py`.
 
 ### 2.5 Approval System
 
@@ -94,6 +102,21 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 | Tool call tracking with duration | DONE | `add_tool_call()`, `update_tool_call()` |
 | Session compaction (summarize old messages) | DONE | `compact_session()` |
 | Auto-titling from first message | DONE | `InlineApp._run_agent()` |
+
+### 2.6b Structured Logging & Training Data
+
+| Feature | Status | File |
+|---------|--------|------|
+| JSON Lines file logging (INFO + DEBUG) | DONE | `src/hybridcoder/core/logging.py` |
+| Timestamped session log directories (`YYYY/MM/DD/HH/<session[:8]>/`) | DONE | `session_log_dir()`, `setup_session_logging()` |
+| Two-phase logging setup (pre-session → session-specific) | DONE | `setup_logging()` then `setup_session_logging()` |
+| `latest` symlink (`.txt` fallback on Windows) | DONE | `_update_latest_pointer()` |
+| Training-grade event recorder (opt-in, fail-open) | DONE | `src/hybridcoder/agent/event_recorder.py` |
+| Episode/event store (SQLite, retention enforcement) | DONE | `src/hybridcoder/session/episode_store.py` |
+| Content-addressed blob store (SHA-256 dedup) | DONE | `src/hybridcoder/core/blob_store.py` |
+| TrainingLogConfig (default disabled, explicit opt-in) | DONE | `src/hybridcoder/config.py` |
+| SFT/DPO/Eval JSONL export stubs | DONE | `src/hybridcoder/training/exporter.py` |
+| DPO provenance events (`human_edit` with draft/edited text) | DONE | `EventRecorder.on_human_edit()` |
 
 ### 2.7 Inline REPL (Primary UI)
 
@@ -130,7 +153,8 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 |---------|--------|------|
 | Command history (FileHistory) | DONE | `~/.hybridcoder/history` |
 | Hybrid completer (commands + files) | DONE | `src/hybridcoder/inline/completer.py` |
-| Auto-suggest (command completion) | DONE | `HybridAutoSuggest` (Python), Go TUI: `textinput.SetSuggestions` |
+| Conditional completer (`/` and `@` only) | DONE | `ConditionalCompleter` in `app.py` (no dropdown for prose) |
+| Auto-suggest (commands + `@` file paths) | DONE | `HybridAutoSuggest` (Python), Go TUI: `textinput.SetSuggestions` |
 | Ghost text (grayed-out inline suggestion) | DONE | Go TUI: `textinput.ShowSuggestions` + `CompletionStyle` |
 | Tab to accept suggestion | DONE | Go TUI: built-in `textinput.KeyMap.AcceptSuggestion` |
 | Autocomplete dropdown (multiple matches) | DONE | Go TUI: `renderCompletionDropdown()` in `view.go` |
@@ -138,7 +162,7 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 | Session resume picker (arrow-key) | DONE | Go TUI: `session_picker.go`, reuses `stageAskUser` |
 | Slash commands disabled during streaming | DONE | Queued messages treated as plain chat text |
 
-### 2.10 Slash Commands (15 Commands)
+### 2.10 Slash Commands (17 Commands)
 
 | Command | Aliases | Description |
 |---------|---------|-------------|
@@ -157,6 +181,8 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 | `/thinking` | `/think` | Toggle thinking token visibility |
 | `/clear` | `/cls` | Clear terminal screen |
 | `/index` | — | Rebuild code search index (Phase 3) |
+| `/tasks` | `/t` | Show task board (Phase 4) |
+| `/plan` | — | Toggle plan mode: on/off/approve (Phase 4) |
 
 ### 2.11 Configuration
 
@@ -171,9 +197,10 @@ All tools defined in `src/hybridcoder/agent/tools.py`.
 
 ### 2.12 Tests
 
-- **275 Go + 840 Python = 1115+ unit tests passing**
+- **275 Go + 942 Python (collected) = 1217+ tests**
+- Python: 819 passed, 113 skipped (tree-sitter dependent), 0 failed
 - Go test files (16 files): update, protocol, session_picker, backend, completion, view, commands, askuser, history, approval, e2e, markdown, model, statusbar
-- Python test files cover: CLI, agent loop, tools, approval, session store, inline app, inline renderer, inline completer, TUI commands, file tools, config, type-ahead, parallel mode, backend server, parser, router, chunker, embeddings, index, search, repomap, context, new tools, integration router-agent
+- Python test files cover: CLI, agent loop, tools, approval, session store, inline app, inline renderer, inline completer, TUI commands, file tools, config, type-ahead, parallel mode, backend server, parser, router, chunker, embeddings, index, search, repomap, context, new tools, integration router-agent, task store, context engine, task tools, carry-forward fixes, logging, blob store, episode store, event recorder, LLM scheduler, subagent loop/manager, subagent tools, plan mode
 - Benchmark tests: deterministic routing (50 queries), L1 latency, search relevance (precision@3), context budget compliance
 - Sprint verification tests: `tests/test_sprint_verify.py`
 - Integration tests (skipped by default): `tests/integration/`
@@ -257,27 +284,49 @@ Phase 3 implemented 2026-02-13. All gates passed. 840 Python tests, all Go tests
 
 ---
 
-## 3. Features Planned (Phase 4-6)
+## 3. Features Built & Planned (Phase 4-6)
 
 ### 3.1 Phase 4 — Agent Orchestration & Context Intelligence
 
-> Plan: `docs/plan/phase4-agent-orchestration.md` (v2.0)
+> Plan: `docs/plan/phase4-agent-orchestration.md` (v3.2a)
+
+#### Sprint 4A: Core Primitives — DONE (2026-02-14)
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| ContextEngine (auto-compaction) | DONE | Token budget (`len//4`), auto-compaction at 75%, tool result truncation (200+100 head/tail) |
+| TaskStore (DAG dependencies) | DONE | SQLite-backed CRUD, DAG deps, cycle detection via `graphlib.TopologicalSorter`, snapshot/restore |
+| Task LLM tools (create/update/list/dep) | DONE | 4 tools registered via factory pattern with closures over TaskStore |
+| `/tasks` slash command | DONE | Shows task board |
+| ToolDefinition capability flags | DONE | `mutates_fs`, `executes_shell` on dataclass (ready for 4B plan mode) |
+| AgentConfig | DONE | Compaction/subagent/memory settings in `HybridCoderConfig` |
+| `ensure_tables()` | DONE | Idempotent Phase 4 table creation |
+| `task.list` JSON-RPC | DONE | Backend RPC handler for task listing |
+| Carry-forward fixes (CF-1 to CF-4) | DONE | Go badge reset, islice, CodeIndex cache, layer_used assertion |
+
+#### Sprint 4B: Subagents + Scheduling + Plan Mode — DONE (2026-02-14)
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| LLMScheduler | DONE | Single-worker asyncio PriorityQueue, foreground/background priority, FIFO within tier |
+| SubagentLoop (explore/plan/execute) | DONE | Isolated loops with capability-filtered tool registries, circuit breaker, max iterations |
+| SubagentManager | DONE | Spawn/monitor/cancel subagents, max 3 concurrent, status summary for prompt injection |
+| Subagent LLM tools (4 tools) | DONE | `spawn_subagent`, `check_subagent`, `cancel_subagent`, `list_subagents` via factory pattern |
+| Plan mode with capability gating | DONE | `AgentMode` enum, `/plan on/off/approve`, blocks `mutates_fs`/`executes_shell` tools |
+| Backend wiring | DONE | LLMScheduler + SubagentManager lifecycle, 4 RPC handlers, cancel propagation, session reset |
+| Prompt updates | DONE | Delegation guidance, subagent status injection, plan mode indicator |
+
+#### Sprint 4C: Memory + Checkpoints + L2/L3 + Go Panel — PLANNED
 
 | Feature | Priority | Sprint | Description |
 |---------|----------|--------|-------------|
-| ContextEngine (auto-compaction) | P0 | 4A | Token budget enforcement, auto-compaction at 75%, tool result truncation |
-| TaskStore (DAG dependencies) | P0 | 4A | SQLite-backed task storage, dependency tracking, compact summaries |
-| Task LLM tools (create/update/list) | P0 | 4A | LLM-driven task management via tool calls |
-| `/tasks` slash command | P1 | 4A | View/clear task board |
-| L2 runtime wiring | P0 | 4A | Wire handle_chat → context assembly → layer_used=2 |
-| SubagentLoop (explore/plan/execute) | P0 | 4B | Isolated agent loops with restricted tools, max 5 iterations |
-| SubagentManager | P0 | 4B | Spawn/monitor/cancel subagents, max 3 concurrent |
-| Subagent LLM tools (spawn/check) | P0 | 4B | LLM spawns and checks background subagents |
-| MemoryStore (episodic) | P1 | 4B | Relevance-decaying memories extracted from sessions |
-| CheckpointStore | P1 | 4B | Save/restore agent state for resumable workflows |
-| `/memory` and `/checkpoint` commands | P2 | 4B | View/save/restore memories and checkpoints |
-| TaskPanel TUI widget | P2 | 4B | Collapsible task display in fullscreen TUI |
-| AgentConfig | P1 | 4A | Config section for compaction, subagents, memory settings |
+| MemoryStore (episodic) | P1 | 4C | Relevance-decaying memories extracted from sessions |
+| CheckpointStore | P1 | 4C | Save/restore agent state with transactional guarantees |
+| L2 runtime wiring | P0 | 4C | SEMANTIC_SEARCH → ContextAssembler → layer_used=2 |
+| L3 minimal wiring | P1 | 4C | SIMPLE_EDIT → L3Provider → layer_used=3 (L4 fallback) |
+| Markdown plan artifact | P1 | 4C | Export/import `.hybridcoder/plans/<session-id>.md` |
+| Go TUI task panel | P2 | 4C | JSON-RPC backed task/subagent display |
+| `/memory` and `/checkpoint` commands | P2 | 4C | View/save/restore memories and checkpoints |
 
 ### 3.2 Phase 5 — Architect/Editor & Constrained Generation
 
@@ -403,7 +452,7 @@ See `docs/archive/plan/go-bubble-tea-migration.md` for the full migration plan.
 | Agentic task completion | >50% on custom test suite | E2E eval system built (3 scenarios: Calculator, BugFix, CLI) |
 | Memory usage (idle) | <2GB RAM (stretch: <500MB) | Not profiled |
 | Memory usage (inference) | <8GB VRAM | Not profiled |
-| Unit tests | 500+ passing | **275 Go + 840 Python = 1115+ passing** |
+| Unit tests | 500+ passing | **275 Go + 942 Python (collected) = 1217+** |
 
 ---
 

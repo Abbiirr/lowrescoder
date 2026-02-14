@@ -1,7 +1,7 @@
 # Testing & Evaluation Guide
 
 > How to test, evaluate, and interpret results for HybridCoder.
-> Last updated: 2026-02-13
+> Last updated: 2026-02-14
 
 ---
 
@@ -34,7 +34,7 @@ uv run pytest tests/ -v
 ```
 
 **What the results mean:**
-- **601+ passed** = everything works, safe to make changes
+- **755+ passed** = everything works, safe to make changes
 - **Any failures** = something is broken, fix before continuing
 - **10 deselected** = integration tests (skipped by default, need external services)
 - **1 skipped** = conditional test that doesn't apply to current environment
@@ -43,7 +43,7 @@ uv run pytest tests/ -v
 
 | Directory | What | Count |
 |-----------|------|-------|
-| `tests/unit/` | Core features (25 files) | ~580 tests |
+| `tests/unit/` | Core features (29 files) | ~600+ tests |
 | `tests/benchmark/` | Performance + quality rubrics (6 files) | ~20 tests |
 | `tests/integration/` | External services (3 files) | Skipped by default |
 | `tests/test_sprint_verify.py` | Sprint exit criteria | Phase-specific |
@@ -104,7 +104,7 @@ uv run pytest tests/test_sprint_verify.py -v
 **What the results mean:**
 - Each test maps to a specific sprint exit criterion
 - Passing = the sprint's deliverables are working
-- Currently covers Sprints 1-3 (Phase 3 active)
+- Currently covers Sprints 1-3 + Sprint 4A (Phase 4 active)
 
 ---
 

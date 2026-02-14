@@ -17,9 +17,9 @@ def _make_completer(tmp_path: Path) -> HybridCompleter:
     return HybridCompleter(router, tmp_path)
 
 
-def _make_auto_suggest() -> HybridAutoSuggest:
+def _make_auto_suggest(project_root: Path | None = None) -> HybridAutoSuggest:
     """Create an auto-suggest with default router."""
-    return HybridAutoSuggest(create_default_router())
+    return HybridAutoSuggest(create_default_router(), project_root)
 
 
 class TestHybridCompleter:
@@ -183,10 +183,45 @@ class TestHybridAutoSuggest:
         result = suggest.get_suggestion(buf, doc)
         assert result is None
 
-    def test_at_reference_no_ghost(self) -> None:
-        """@src produces no ghost text (auto-suggest only handles /)."""
+    def test_at_prefix_match_ghost_text(self, tmp_path: Path) -> None:
+        """@src/hy produces ghost text completing hybridcoder/..."""
+        src = tmp_path / "src"
+        src.mkdir()
+        hc = src / "hybridcoder"
+        hc.mkdir()
+        (hc / "main.py").write_text("# main")
+        suggest = _make_auto_suggest(tmp_path)
+        doc = Document("@src/hy", cursor_position=7)
+        buf = MagicMock()
+        result = suggest.get_suggestion(buf, doc)
+        assert result is not None
+        assert result.text.startswith("bridcoder/")
+
+    def test_at_substring_only_no_ghost(self, tmp_path: Path) -> None:
+        """@hy matches src/hybridcoder but doesn't start with 'hy', so no ghost."""
+        src = tmp_path / "src"
+        src.mkdir()
+        hc = src / "hybridcoder"
+        hc.mkdir()
+        (hc / "main.py").write_text("# main")
+        suggest = _make_auto_suggest(tmp_path)
+        doc = Document("@hy", cursor_position=3)
+        buf = MagicMock()
+        result = suggest.get_suggestion(buf, doc)
+        assert result is None
+
+    def test_at_bare_no_ghost(self) -> None:
+        """Bare @ produces no ghost text."""
         suggest = _make_auto_suggest()
-        doc = Document("@src", cursor_position=4)
+        doc = Document("@", cursor_position=1)
+        buf = MagicMock()
+        result = suggest.get_suggestion(buf, doc)
+        assert result is None
+
+    def test_prose_no_ghost(self) -> None:
+        """Normal prose without / or @ produces no ghost text."""
+        suggest = _make_auto_suggest()
+        doc = Document("regular typing", cursor_position=14)
         buf = MagicMock()
         result = suggest.get_suggestion(buf, doc)
         assert result is None

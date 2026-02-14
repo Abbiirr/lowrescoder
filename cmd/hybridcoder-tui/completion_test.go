@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -121,6 +123,60 @@ func TestCompletionsNoMatch(t *testing.T) {
 	// Fuzzy might still match something, but it should be empty or very few
 	// The important thing is no panic
 	_ = results
+}
+
+func TestAtFileCompletions(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("failed to write README.md: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "src"), 0o755); err != nil {
+		t.Fatalf("failed to create src dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "src", "main.go"), []byte("package main"), 0o644); err != nil {
+		t.Fatalf("failed to write src/main.go: %v", err)
+	}
+
+	results := getCompletionsInDir("@rea", dir)
+	found := false
+	for _, r := range results {
+		if r == "@README.md" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected @README.md in results, got %v", results)
+	}
+}
+
+func TestAtFileCompletionsInSentence(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "src"), 0o755); err != nil {
+		t.Fatalf("failed to create src dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "src", "main.go"), []byte("package main"), 0o644); err != nil {
+		t.Fatalf("failed to write src/main.go: %v", err)
+	}
+
+	results := getCompletionsInDir("inspect @src/ma", dir)
+	found := false
+	for _, r := range results {
+		if r == "inspect @src/main.go" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected sentence-preserving completion, got %v", results)
+	}
+}
+
+func TestAtFileCompletionsBareAt(t *testing.T) {
+	results := getCompletionsInDir("@", t.TempDir())
+	if results != nil {
+		t.Errorf("expected nil for bare @, got %v", results)
+	}
 }
 
 // --- Autocomplete UX Tests ---

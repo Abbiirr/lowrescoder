@@ -390,11 +390,59 @@ async def _handle_clear(app: AppContext, args: str) -> None:
     app.add_system_message("Screen cleared.")
 
 
+async def _handle_plan(app: AppContext, args: str) -> None:
+    """Toggle or query plan mode."""
+    arg = args.strip().lower()
+
+    if not arg:
+        app.add_system_message(
+            "Usage: `/plan on` (enter plan mode), "
+            "`/plan approve` or `/plan off` (exit plan mode)"
+        )
+        return
+
+    if arg == "on":
+        if hasattr(app, "set_plan_mode"):
+            app.set_plan_mode(True)  # type: ignore[attr-defined]
+            app.add_system_message(
+                "**Plan mode ON** — tools that modify files or run commands are "
+                "blocked. Use `/plan approve` to switch to execution mode."
+            )
+        else:
+            app.add_system_message("Plan mode is not supported in this context.")
+    elif arg in ("off", "approve"):
+        if hasattr(app, "set_plan_mode"):
+            app.set_plan_mode(False)  # type: ignore[attr-defined]
+            app.add_system_message("**Plan mode OFF** — all tools are available.")
+        else:
+            app.add_system_message("Plan mode is not supported in this context.")
+    else:
+        app.add_system_message(
+            f"Unknown plan argument: {arg}. "
+            "Use: `/plan on`, `/plan off`, or `/plan approve`"
+        )
+
+
+async def _handle_tasks(app: AppContext, args: str) -> None:
+    """Show the task board for the current session."""
+    try:
+        from hybridcoder.session.task_store import TaskStore
+
+        conn = app.session_store.get_connection()
+        task_store = TaskStore(conn, app.session_id)
+        summary = task_store.summary()
+        app.add_system_message(f"**Tasks:**\n{summary}")
+    except Exception as e:
+        app.add_system_message(f"Error loading tasks: {e}")
+
+
 async def _handle_index(app: AppContext, args: str) -> None:
     """Build or rebuild the code index for the current project."""
     try:
+        from hybridcoder.agent.tools import clear_code_index_cache
         from hybridcoder.layer2.index import CodeIndex
 
+        clear_code_index_cache()
         app.add_system_message("Building code index...")
         index = CodeIndex()
         stats = index.build(app.project_root)
@@ -540,5 +588,15 @@ def create_default_router() -> CommandRouter:
         name="index", aliases=[],
         description="Build or rebuild the code search index",
         handler=_handle_index,
+    ))
+    router.register(SlashCommand(
+        name="tasks", aliases=["t"],
+        description="Show task board",
+        handler=_handle_tasks,
+    ))
+    router.register(SlashCommand(
+        name="plan", aliases=[],
+        description="Plan mode: /plan on, /plan approve, /plan off",
+        handler=_handle_plan,
     ))
     return router

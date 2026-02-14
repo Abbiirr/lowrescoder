@@ -24,6 +24,23 @@ SYSTEM_PROMPT = (
     "between approaches, or gathering requirements. Do NOT use ask_user to "
     "request permission to use a tool — the approval system handles "
     "permissions automatically. Just call the tool directly.\n"
+    "- When the user specifies a target directory for writing code (e.g., "
+    "'write all code inside sandboxes/test_123'), write files directly "
+    "inside that directory — the write_file tool automatically creates "
+    "parent directories. Do not ask the user whether to create the "
+    "directory. Do not list files first. Just proceed with writing.\n\n"
+    "When working on multi-step tasks, use create_task to break work into "
+    "trackable steps. Mark tasks in_progress when starting, completed when done.\n"
+    "If dependencies are required, use add_task_dependency explicitly. "
+    "After task changes, use list_tasks so the user sees the current to-do board.\n\n"
+    "Subagents:\n"
+    "- Use spawn_subagent for self-contained tasks that don't need user interaction\n"
+    "- Use 'explore' for codebase research producing verbose output\n"
+    "- Use 'plan' when you need to research AND create tasks from findings\n"
+    "- Use 'execute' only for independent subtasks with clear criteria\n"
+    "- Do NOT delegate when user interaction or simple single-step work is needed\n"
+    "- Background subagents cannot request approval — they auto-deny write/shell\n"
+    "- Check subagent results with check_subagent\n"
 )
 
 
@@ -33,6 +50,10 @@ def build_system_prompt(
     shell_enabled: bool = False,
     approval_mode: str = "suggest",
     context: str | None = None,
+    task_summary: str = "",
+    subagent_status: str = "",
+    plan_mode: bool = False,
+    # memory_context: str = "",  # Sprint 4C
 ) -> str:
     """Build the full system prompt, optionally including project memory and context.
 
@@ -41,6 +62,9 @@ def build_system_prompt(
         shell_enabled: Whether shell execution is enabled.
         approval_mode: Current approval mode (read-only, suggest, auto).
         context: Assembled context from Layer 2 (repo map, search results, rules).
+        task_summary: Task board state.
+        subagent_status: Running/completed subagent summaries.
+        plan_mode: Whether plan mode is active (blocks mutating tools).
     """
     prompt = SYSTEM_PROMPT
 
@@ -54,6 +78,12 @@ def build_system_prompt(
             "- Shell execution: DISABLED — but you can still call run_command. "
             "The user will be prompted to enable shell access.\n"
         )
+    if plan_mode:
+        env_lines.append(
+            "- Mode: PLANNING — tools that modify the filesystem or execute "
+            "shell commands are blocked. Use /plan approve to switch to "
+            "execution mode.\n"
+        )
     prompt += "".join(env_lines)
 
     if memory_content:
@@ -61,5 +91,11 @@ def build_system_prompt(
 
     if context:
         prompt += f"\n## Project Context\n{context}\n"
+
+    if task_summary:
+        prompt += f"\n## Active Tasks\n{task_summary}\n"
+
+    if subagent_status:
+        prompt += f"\n## Background Work\n{subagent_status}\n"
 
     return prompt

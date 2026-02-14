@@ -19,18 +19,24 @@ from pathlib import Path
 from typing import Any, Literal, Protocol, cast
 
 from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import ConditionalCompleter
+from prompt_toolkit.filters import Condition
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from rich.console import Console
 
 from hybridcoder.agent.approval import ApprovalManager, ApprovalMode
-from hybridcoder.agent.loop import AgentLoop
+from hybridcoder.agent.event_recorder import EventRecorder
+from hybridcoder.agent.loop import AgentLoop, AgentMode
 from hybridcoder.agent.tools import ToolRegistry, create_default_registry
 from hybridcoder.config import HybridCoderConfig, load_config
+from hybridcoder.core.blob_store import BlobStore
+from hybridcoder.core.logging import setup_session_logging
 from hybridcoder.inline.completer import HybridAutoSuggest, HybridCompleter
 from hybridcoder.inline.renderer import InlineRenderer
 from hybridcoder.layer4.llm import create_provider
+from hybridcoder.session.episode_store import EpisodeStore
 from hybridcoder.session.store import SessionStore
 from hybridcoder.tui.commands import CommandRouter, create_default_router
 from hybridcoder.tui.file_completer import expand_references
@@ -112,13 +118,14 @@ class InlineApp:
                 provider=self.config.llm.provider,
                 project_dir=str(self.project_root),
             )
+        self._session_log_dir = setup_session_logging(self.config.logging, self.session_id)
 
         # Commands
         self.command_router: CommandRouter = create_default_router()
 
         # Input (prompt_toolkit) — lazy init in run() to avoid terminal detection in tests
         self.completer = HybridCompleter(self.command_router, self.project_root)
-        self.auto_suggest = HybridAutoSuggest(self.command_router)
+        self.auto_suggest = HybridAutoSuggest(self.command_router, self.project_root)
         self.session: PromptSession[str] | None = None
 
         # Agent (lazy init)
@@ -133,6 +140,9 @@ class InlineApp:
         self._agent_cancel_message: str | None = None
         self._session_titled: bool = False
         self._interrupt_count: int = 0
+
+        # Plan mode (persisted across loop recreation)
+        self._plan_mode_enabled: bool = False
 
         # Thinking visibility (hidden by default, matching Claude Code)
         self._show_thinking: bool = False
@@ -187,6 +197,13 @@ class InlineApp:
         from hybridcoder.tui.commands import _copy_to_clipboard
 
         return _copy_to_clipboard(text)
+
+    def set_plan_mode(self, enabled: bool) -> None:
+        """Set plan mode. Persists across agent loop recreation."""
+        self._plan_mode_enabled = enabled
+        if self._agent_loop:
+            mode = AgentMode.PLANNING if enabled else AgentMode.NORMAL
+            self._agent_loop.set_mode(mode)
 
     def exit_app(self) -> None:
         """Exit the REPL by raising EOFError."""
@@ -332,12 +349,19 @@ class InlineApp:
         if self.session is None:
             history_path = Path("~/.hybridcoder/history").expanduser()
             history_path.parent.mkdir(parents=True, exist_ok=True)
+
+            @Condition
+            def _should_complete() -> bool:
+                from prompt_toolkit.application import get_app
+                text = get_app().current_buffer.text
+                return text.startswith("/") or "@" in text
+
             self.session = PromptSession(
                 history=FileHistory(str(history_path)),
-                completer=self.completer,
+                completer=ConditionalCompleter(self.completer, _should_complete),
                 auto_suggest=self.auto_suggest,
                 multiline=False,
-                complete_while_typing=False,
+                complete_while_typing=True,
                 bottom_toolbar=self._get_status_toolbar,
                 rprompt=self._get_status_rprompt,
                 key_bindings=self._create_key_bindings(),
@@ -956,6 +980,19 @@ class InlineApp:
                 except OSError:
                     pass
 
+            # Training-grade event recorder (opt-in)
+            event_recorder: EventRecorder | None = None
+            if self.config.logging.training.enabled:
+                blob_dir = self._session_log_dir / self.config.logging.training.blob_dir
+                blob_store = BlobStore(blob_dir)
+                episode_store = EpisodeStore(
+                    self.session_store.get_connection(),
+                    self.session_id,
+                    blob_store,
+                    max_episodes=self.config.logging.training.max_episodes_per_session,
+                )
+                event_recorder = EventRecorder(episode_store)
+
             self._agent_loop = AgentLoop(
                 provider=self._provider,
                 tool_registry=self._tool_registry,
@@ -963,7 +1000,12 @@ class InlineApp:
                 session_store=self.session_store,
                 session_id=self.session_id,
                 memory_content=memory_content,
+                event_recorder=event_recorder,
             )
+
+            # Apply persisted plan mode
+            if self._plan_mode_enabled:
+                self._agent_loop.set_mode(AgentMode.PLANNING)
 
         return self._agent_loop
 

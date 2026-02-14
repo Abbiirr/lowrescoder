@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import logging.handlers
+import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -61,21 +62,34 @@ def setup_logging(config: LoggingConfig, *, verbose: bool = False) -> None:
     )
     root.addHandler(console_handler)
 
-    # --- File handler (JSON Lines with rotation) ---
+    # --- File handlers (JSON Lines with rotation) ---
     if config.file_enabled:
         log_dir = Path(config.log_dir).expanduser()
         log_dir.mkdir(parents=True, exist_ok=True)
-        log_file = log_dir / "hybridcoder.jsonl"
 
+        # Main log: INFO+ (operational events, tool calls, agent lifecycle)
+        log_file = log_dir / "hybridcoder.jsonl"
         file_handler = logging.handlers.RotatingFileHandler(
             log_file,
             maxBytes=config.max_file_size_mb * 1024 * 1024,
             backupCount=config.max_files,
             encoding="utf-8",
         )
-        file_handler.setLevel(getattr(logging, config.file_level))
+        file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(JSONFormatter())
         root.addHandler(file_handler)
+
+        # Debug log: DEBUG+ (everything including verbose traces)
+        debug_file = log_dir / "hybridcoder-debug.jsonl"
+        debug_handler = logging.handlers.RotatingFileHandler(
+            debug_file,
+            maxBytes=config.max_file_size_mb * 1024 * 1024,
+            backupCount=config.max_files,
+            encoding="utf-8",
+        )
+        debug_handler.setLevel(logging.DEBUG)
+        debug_handler.setFormatter(JSONFormatter())
+        root.addHandler(debug_handler)
 
     # --- Debug prompts handler (isolated logger, opt-in) ---
     debug_logger = logging.getLogger(_DEBUG_PROMPTS_LOGGER_NAME)
@@ -97,6 +111,108 @@ def setup_logging(config: LoggingConfig, *, verbose: bool = False) -> None:
     # --- Silence noisy third-party loggers ---
     for name in ("httpx", "httpcore", "openai", "ollama", "urllib3", "asyncio"):
         logging.getLogger(name).setLevel(logging.WARNING)
+
+
+def session_log_dir(base_log_dir: str, session_id: str) -> Path:
+    """Compute timestamped session log directory.
+
+    Returns: <base>/<YYYY>/<MM>/<DD>/<HH>/<session_id[:8]>/
+    """
+    now = datetime.now(UTC)
+    return (
+        Path(base_log_dir).expanduser()
+        / now.strftime("%Y")
+        / now.strftime("%m")
+        / now.strftime("%d")
+        / now.strftime("%H")
+        / session_id[:8]
+    )
+
+
+def setup_session_logging(config: LoggingConfig, session_id: str) -> Path:
+    """Set up session-specific file logging. Call after session is created.
+
+    1. Compute timestamped session log dir
+    2. Remove existing RotatingFileHandlers from root logger
+    3. Add new file handlers at session-specific path
+    4. Reconfigure debug-prompts logger
+    5. Update ``latest`` pointer
+    6. Return the session log dir
+    """
+    sdir = session_log_dir(config.log_dir, session_id)
+
+    if not config.file_enabled:
+        return sdir
+
+    sdir.mkdir(parents=True, exist_ok=True)
+
+    root = logging.getLogger()
+
+    # Remove old file handlers
+    root.handlers = [
+        h for h in root.handlers
+        if not isinstance(h, logging.handlers.RotatingFileHandler)
+    ]
+
+    # Main log: INFO+
+    log_file = sdir / "hybridcoder.jsonl"
+    file_handler = logging.handlers.RotatingFileHandler(
+        log_file,
+        maxBytes=config.max_file_size_mb * 1024 * 1024,
+        backupCount=config.max_files,
+        encoding="utf-8",
+    )
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(JSONFormatter())
+    root.addHandler(file_handler)
+
+    # Debug log: DEBUG+
+    debug_file = sdir / "hybridcoder-debug.jsonl"
+    debug_handler = logging.handlers.RotatingFileHandler(
+        debug_file,
+        maxBytes=config.max_file_size_mb * 1024 * 1024,
+        backupCount=config.max_files,
+        encoding="utf-8",
+    )
+    debug_handler.setLevel(logging.DEBUG)
+    debug_handler.setFormatter(JSONFormatter())
+    root.addHandler(debug_handler)
+
+    # Reconfigure debug-prompts logger
+    debug_logger = logging.getLogger(_DEBUG_PROMPTS_LOGGER_NAME)
+    debug_logger.handlers.clear()
+    debug_logger.propagate = False
+    if config.debug_prompts:
+        prompts_file = sdir / "debug-prompts.jsonl"
+        prompts_handler = logging.handlers.RotatingFileHandler(
+            prompts_file,
+            maxBytes=config.max_file_size_mb * 1024 * 1024,
+            backupCount=config.max_files,
+            encoding="utf-8",
+        )
+        prompts_handler.setLevel(logging.DEBUG)
+        prompts_handler.setFormatter(JSONFormatter())
+        debug_logger.addHandler(prompts_handler)
+
+    # Update latest pointer
+    base = Path(config.log_dir).expanduser()
+    _update_latest_pointer(base, sdir)
+
+    return sdir
+
+
+def _update_latest_pointer(base_log_dir: Path, session_dir: Path) -> None:
+    """Create/update a 'latest' symlink (or .txt fallback) in the base log dir."""
+    base_log_dir.mkdir(parents=True, exist_ok=True)
+    latest = base_log_dir / "latest"
+    try:
+        if latest.is_symlink() or latest.exists():
+            latest.unlink()
+        os.symlink(session_dir, latest, target_is_directory=True)
+    except OSError:
+        # Fallback: write a text file with the path (e.g. Windows without symlink privs)
+        latest_txt = base_log_dir / "latest.txt"
+        latest_txt.write_text(str(session_dir), encoding="utf-8")
 
 
 def log_event(

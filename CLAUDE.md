@@ -78,7 +78,7 @@ These decisions are **locked** and do NOT change unless the user explicitly appr
 
 ## Current Phase
 
-Phases 0-3 complete. **Phase 4 (Agent Orchestration)** is next. See `docs/archive/plan/phase3-execution-brief.md` for Phase 3 completion summary. See `docs/plan/phase4-agent-orchestration.md` for the Phase 4 plan.
+Phases 0-3 complete. **Phase 4 (Agent Orchestration)** is in progress — **Sprint 4A (Core Primitives) complete**, **Sprint 4B (Subagents + Plan Mode) complete**, Sprint 4C next. See `docs/plan/phase4-agent-orchestration.md` for the Phase 4 plan.
 
 ---
 
