@@ -9,13 +9,6 @@ import pytest
 from hybridcoder.core.router import RequestRouter
 from hybridcoder.core.types import RequestType
 
-ts_available = True
-try:
-    import tree_sitter  # noqa: F401
-    import tree_sitter_python  # noqa: F401
-except ImportError:
-    ts_available = False
-
 
 class TestRouterL1Bypass:
     """Test that deterministic queries bypass the agent loop."""
@@ -40,7 +33,6 @@ class TestRouterL1Bypass:
         assert router.classify("/model") == RequestType.CONFIGURATION
 
 
-@pytest.mark.skipif(not ts_available, reason="tree-sitter not installed")
 class TestL1ResponseDirect:
     """Test that L1 queries return Response objects directly."""
 

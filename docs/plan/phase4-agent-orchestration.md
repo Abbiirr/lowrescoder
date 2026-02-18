@@ -3,7 +3,7 @@
 > **Version:** 3.2
 > **Created:** 2026-02-06
 > **Updated:** 2026-02-14
-> **Status:** APPROVED — Ready for Implementation
+> **Status:** COMPLETE — All 3 sprints delivered (2026-02-14)
 > **Research:** [`docs/research/phase4-agent-patterns.md`](../research/phase4-agent-patterns.md)
 > **Prerequisites:** Phase 3 complete (840 Python + 275 Go tests passing), all gates passed
 > **Phase 3 deliverables:** tree-sitter parser, request router, hybrid search, 5 code intelligence tools, L1 bypass in server
@@ -1187,7 +1187,9 @@ Verification order is mandatory: **core runtime functionality first, TUI parity 
 - [x] Core runtime behaviors (tasks/subagents/plan/checkpoint/approval) pass vanilla prompt checks before TUI-specific checks
 - [x] Go task panel displays task states via JSON-RPC
 - [x] Go task panel refreshes on task/subagent events
-- [x] Phase 4 final verification gates pass — 975 collected, 852 passed, 113 skipped, 0 failed, ruff clean
+- [x] Phase 4 final verification gates pass — 987 collected, 978 passed, 9 skipped, 0 failed, ruff clean
+- [x] Review remediation: all 9 Codex concerns fixed, session transition ordering bug fixed, backend-level tests added
+- [x] E2E-Calculator: PASS (86/100). Go build/test: PASS. Artifacts stored.
 - [ ] `docs/qa/phase4-benchmarks/before-after-comparison.md` published
 
 ---

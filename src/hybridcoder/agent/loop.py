@@ -102,6 +102,7 @@ class AgentLoop:
         on_tool_call: Callable[[str, str, str], None] | None = None,
         approval_callback: Callable[[str, dict[str, Any]], Awaitable[bool]] | None = None,
         ask_user_callback: Callable[[str, list[str], bool], Awaitable[str]] | None = None,
+        injected_context: str = "",
     ) -> str:
         """Run the agent loop for a user message.
 
@@ -146,6 +147,8 @@ class AgentLoop:
             for msg in self.session_store.get_messages(self.session_id):
                 if msg.role in ("user", "assistant", "system", "tool"):
                     messages.append({"role": msg.role, "content": msg.content})
+        if injected_context:
+            messages.insert(1, {"role": "system", "content": injected_context})
         logger.debug("Loaded %d tool schemas, %d messages", len(tool_schemas), len(messages))
         log_event(
             logger, logging.INFO, "agent_loop_start",

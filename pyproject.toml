@@ -14,6 +14,8 @@ dependencies = [
     "textual>=0.89",
     "ollama>=0.6.1",
     "prompt_toolkit>=3.0",
+    "tree-sitter>=0.25.2",
+    "tree-sitter-python>=0.25.0",
 ]
 
 [project.scripts]
@@ -28,6 +30,8 @@ dev = [
     "mypy>=1.10",
     "types-pyyaml>=6.0",
     "httpx>=0.27",
+    "tree-sitter>=0.25.2",
+    "tree-sitter-python>=0.25.0",
 ]
 layer1 = ["tree-sitter>=0.25.2", "tree-sitter-python>=0.25.0"]
 layer2 = ["lancedb>=0.29", "sentence-transformers>=5.0"]
@@ -61,7 +65,7 @@ markers = [
     "integration: marks tests requiring external services (deselected by default)",
     "benchmark: marks benchmark tests",
 ]
-addopts = "-m 'not integration'"
+addopts = ""
 
 [dependency-groups]
 dev = [

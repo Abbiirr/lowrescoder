@@ -1,6 +1,6 @@
 # Session Onramp (Current State)
 
-Last updated: 2026-02-14
+Last updated: 2026-02-17
 
 This is the fastest way to rebuild working context for HybridCoder in a new session.
 
@@ -10,12 +10,15 @@ This is the fastest way to rebuild working context for HybridCoder in a new sess
 2. `CLAUDE.md` — architecture principles, project invariants, session index.
 3. `TESTING.md` — how to test, evaluate, and interpret results.
 4. `docs/requirements_and_features.md` — what is done vs planned.
-5. `docs/plan/phase4-agent-orchestration.md` — Phase 4 plan (active phase).
-6. `docs/qa/phase3-before-after-benchmark-protocol.md` — required benchmark workflow.
+5. `docs/plan/phase5-agent-teams.md` — Phase 5 plan (next phase).
+6. `docs/plan/phase4-agent-orchestration.md` — Phase 4 plan (complete, reference).
+7. `docs/qa/phase3-before-after-benchmark-protocol.md` — required benchmark workflow.
 
 ## 2) Authoritative vs Historical Docs
 
-- Authoritative for Phase 4 implementation:
+- Authoritative for Phase 5 implementation:
+  - `docs/plan/phase5-agent-teams.md`
+- Phase 4 (complete, reference only):
   - `docs/plan/phase4-agent-orchestration.md`
 - Archived Phase 3 plans (do not treat as source of truth):
   - `docs/archive/plan/phase3-final-implementation.md`
@@ -138,8 +141,8 @@ Implemented 2026-02-14. All tests passing, ruff clean.
 - **Go TUI task panel:** `backendTaskStateMsg`, `TaskStateParams`, `dispatchNotification` handler, `taskpanel.go` renderer, task panel in view between thinking and tool calls. L3 layer indicator added.
 - **New commands:** `/memory` (alias: `mem`), `/checkpoint` (alias: `ckpt`). `/plan` extended with `export`/`sync` subcommands.
 - Slash commands: **19** (17 + `/memory` + `/checkpoint`).
-- Tests: 975 collected, 852 passed, 113 skipped, 0 failed. 33 new Sprint 4C tests across 6 files.
-- Test artifacts: `docs/qa/test-results/20260214-151816-phase4-unit.md`
+- Tests: 987 collected, 978 passed, 9 skipped (8 Ollama + 1 OpenRouter rate limit), 0 failed. tree-sitter mandatory in test env, integration tests included by default.
+- Test artifacts: `docs/qa/test-results/20260214-164900-phase4-refix-final-clean.md`
 
 ## 6) Commands You Actually Need
 
@@ -182,9 +185,9 @@ Implemented 2026-02-14. All tests passing, ruff clean.
 - Session logs: `logs/<YYYY>/<MM>/<DD>/<HH>/<session[:8]>/` (latest: `logs/latest`)
 - Training blobs: `<session-log-dir>/blobs/` (when training logging enabled)
 
-## 8) Known Baseline QA State (as of 2026-02-14, post-Sprint 4B)
+## 8) Known Baseline QA State (as of 2026-02-14, post-Sprint 4C re-review)
 
-- pytest suite: **942 collected**, 819 passed, 113 skipped (tree-sitter dependent), 0 failed, 10 deselected (integration)
+- pytest suite: **987 collected**, 978 passed, 9 skipped (8 Ollama + 1 OpenRouter rate limit), 0 failed
 - ruff: **0 errors**
 - Go tests: all passing
 - E2E scenarios: E2E-BugFix, E2E-CLI, E2E-Calculator defined and runnable
@@ -192,6 +195,9 @@ Implemented 2026-02-14. All tests passing, ruff clean.
 - Sprint 4A test artifacts: `docs/qa/test-results/sprint-4a-summary.md`
 - Bug fix batch artifact: `docs/qa/test-results/20260214-103203-bug-fixes.md` (Codex-approved, Entry 365)
 - Sprint 4B test artifact: `docs/qa/test-results/20260214-132120-sprint-4b-rereview-fixes.md`
+- Sprint 4C final artifact: `docs/qa/test-results/20260214-164900-phase4-refix-final-clean.md` (978 passed, 0 failed)
+- Go build artifact: `docs/qa/test-results/20260214-164329-phase4-go-build.md`
+- E2E-Calculator artifact: `docs/qa/test-results/20260214-220725-e2e-react-calculator.md` (86/100)
 
 ## 9) Session Start Checklist
 

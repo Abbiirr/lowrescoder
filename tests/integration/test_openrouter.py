@@ -47,7 +47,12 @@ def test_openrouter_streaming(openrouter_available: bool, config) -> None:  # ty
             chunks.append(chunk)
         return "".join(chunks)
 
-    result = asyncio.run(_run())
+    try:
+        result = asyncio.run(_run())
+    except Exception as e:
+        if "429" in str(e) or "rate" in str(e).lower():
+            pytest.skip(f"OpenRouter rate limited: {e}")
+        raise
     assert len(result) > 0
 
 
@@ -69,5 +74,10 @@ def test_openrouter_non_streaming(openrouter_available: bool, config) -> None:  
             chunks.append(chunk)
         return "".join(chunks)
 
-    result = asyncio.run(_run())
+    try:
+        result = asyncio.run(_run())
+    except Exception as e:
+        if "429" in str(e) or "rate" in str(e).lower():
+            pytest.skip(f"OpenRouter rate limited: {e}")
+        raise
     assert len(result) > 0

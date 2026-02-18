@@ -561,3 +561,61 @@ class TestShellEnableOnApprove:
 
         assert any(s == "denied" for _, s in tool_statuses)
         assert approval.is_shell_disabled() is True
+
+
+class TestInjectedContext:
+    """Tests for L2 context injection into agent loop."""
+
+    @pytest.mark.asyncio()
+    async def test_injected_context_appears_in_messages(
+        self, store: SessionStore, session_id: str,
+    ) -> None:
+        """injected_context is inserted as a system message after the main system prompt."""
+        captured_messages: list[list[dict[str, Any]]] = []
+
+        async def capturing_generate(
+            messages: Any, tools: Any, **kwargs: Any,
+        ) -> LLMResponse:
+            captured_messages.append(list(messages))
+            return LLMResponse(content="Got it.")
+
+        mock = AsyncMock()
+        mock.generate_with_tools = capturing_generate
+        registry = ToolRegistry()
+        approval = ApprovalManager(ApprovalMode.SUGGEST)
+
+        loop = AgentLoop(mock, registry, approval, store, session_id)
+        await loop.run("test query", injected_context="## Relevant Code\nfoo.py: def bar()")
+
+        assert len(captured_messages) == 1
+        msgs = captured_messages[0]
+        # First message is system prompt, second should be injected context
+        system_msgs = [m for m in msgs if m["role"] == "system"]
+        assert len(system_msgs) >= 2
+        assert "Relevant Code" in system_msgs[1]["content"]
+
+    @pytest.mark.asyncio()
+    async def test_no_injected_context_no_extra_message(
+        self, store: SessionStore, session_id: str,
+    ) -> None:
+        """Without injected_context, no extra system message is added."""
+        captured_messages: list[list[dict[str, Any]]] = []
+
+        async def capturing_generate(
+            messages: Any, tools: Any, **kwargs: Any,
+        ) -> LLMResponse:
+            captured_messages.append(list(messages))
+            return LLMResponse(content="OK.")
+
+        mock = AsyncMock()
+        mock.generate_with_tools = capturing_generate
+        registry = ToolRegistry()
+        approval = ApprovalManager(ApprovalMode.SUGGEST)
+
+        loop = AgentLoop(mock, registry, approval, store, session_id)
+        await loop.run("test query")
+
+        assert len(captured_messages) == 1
+        msgs = captured_messages[0]
+        system_msgs = [m for m in msgs if m["role"] == "system"]
+        assert len(system_msgs) == 1  # Only the main system prompt

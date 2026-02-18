@@ -3,11 +3,13 @@
 
 > Quick links for current implementation context:
 > - `docs/session-onramp.md` (fast session startup)
-> - `docs/plan/phase4-agent-orchestration.md` (Phase 4 plan — active phase)
+> - `docs/plan/phase5-agent-teams.md` (Phase 5 plan — current phase, PROVISIONAL_LOCKED)
+> - `docs/plan/phase5-roadmap-lock-checklist.md` (Phase 5 lock criteria)
+> - `docs/plan/phase4-agent-orchestration.md` (Phase 4 plan — COMPLETE)
 > - `docs/archive/plan/phase3-execution-brief.md` (Phase 3 completion summary)
 
-**Version:** 1.0
-**Last Updated:** February 13, 2026
+**Version:** 1.1
+**Last Updated:** February 17, 2026
 **Target:** Solo Developer MVP
 **Languages:** Python, Java
 **Platform:** Local CLI Tool (Windows, macOS, Linux)
@@ -115,8 +117,8 @@ The following 12 criteria must ALL pass for MVP release:
 - Embedding model: jina-v2-base-code (768-dim, local, proven quality)
 - L4 model: Qwen3-8B Q4_K_M (supersedes Qwen2.5-Coder-7B)
 - L3 model: Qwen2.5-Coder-1.5B Q4_K_M (constrained generation)
-- Two-tier LLM: Ollama (L4) + llama-cpp-python/Outlines (L3)
-- LSP client: multilspy (Microsoft)
+- Two-tier LLM: Ollama (L4) + llama-cpp-python with native grammar (L3)
+- Python semantic intelligence: Jedi (preferred over multilspy LSP)
 - Package manager: uv
 - TUI Frontend: Go + Bubble Tea (inline mode, JSON-RPC over stdin/stdout to Python backend). See `docs/archive/plan/go-bubble-tea-migration.md` for full plan.
 
@@ -187,201 +189,60 @@ See `docs/archive/plan/phase3-final-implementation.md` for the authoritative spe
 
 ---
 
-### Phase 4: Agentic Workflow - Layer 4 (Weeks 10-12)
+### Phase 4: Agent Orchestration — COMPLETE (2026-02-14)
 
-#### Objectives
-- Multi-step task execution
-- Tool use framework
-- Compiler feedback loops
-- Architect/Editor pattern
+> Authoritative plan: `docs/plan/phase4-agent-orchestration.md` (v3.2a)
+> Feature catalog: `docs/requirements_and_features.md` Section 3.1
 
-#### Deliverables
-| ID | Deliverable | Acceptance Criteria |
-|----|-------------|---------------------|
-| D5.1 | Tool framework | Extensible tool registration and execution |
-| D5.2 | Shell executor | Sandboxed command execution |
-| D5.3 | Test runner integration | Run pytest, junit, report results |
-| D5.4 | Compiler feedback loop | Fix errors iteratively |
-| D5.5 | Architect/Editor split | Planning vs execution separation |
-| D5.6 | Multi-file editing | Coordinate edits across files |
-| D5.7 | Task persistence | Resume interrupted tasks |
-| D5.8 | Progress reporting | Show what agent is doing |
+Phase 4 implemented the agentic workflow layer: agent loop with tool calling, 19-tool registry, approval system, task management, subagent orchestration, plan mode, memory/checkpoints, and E2E evaluation framework.
 
-#### Functional Requirements
+**Sprints completed:**
+- 4A: Core Primitives (ContextEngine, LLM scheduler, event recorder, blob store, episode store)
+- 4B: Subagents + Plan Mode (SubagentLoop, SubagentManager, plan mode, task tools, subagent tools)
+- 4C: Memory + Checkpoints + L2/L3 wiring + Plan Artifact + Go Task Panel
 
-**FR5.1: Tool Definitions**
-```yaml
-tools:
-  - name: read_file
-    description: Read contents of a file
-    parameters:
-      path: string (required)
-      start_line: int (optional)
-      end_line: int (optional)
-    
-  - name: write_file
-    description: Write content to a file
-    parameters:
-      path: string (required)
-      content: string (required)
-    
-  - name: search_code
-    description: Search codebase for relevant code
-    parameters:
-      query: string (required)
-      limit: int (default: 10)
-    
-  - name: run_command
-    description: Execute shell command
-    parameters:
-      command: string (required)
-      timeout: int (default: 30)
-    
-  - name: find_references
-    description: Find all usages of a symbol
-    parameters:
-      symbol: string (required)
-      file: string (optional)
-    
-  - name: get_diagnostics
-    description: Get errors/warnings for a file
-    parameters:
-      path: string (required)
-```
+**Gate results:** 987 collected, 978 passed, 9 skipped (8 Ollama + 1 OpenRouter rate limit), 0 failed, ruff clean.
 
-**FR5.2: Feedback Loop (LLMLOOP)**
-```
-1. Generate code
-2. Parse for syntax errors (tree-sitter)
-   → If errors: feed back to LLM, goto 1
-3. Run type checker (Pyright/JDT)
-   → If type errors: feed back to LLM, goto 1
-4. Run linter (flake8/checkstyle)
-   → If warnings: optionally fix, continue
-5. Run tests (if available)
-   → If failures: feed back to LLM, goto 1
-6. Success - commit changes
-```
-
-**FR5.3: Architect/Editor Pattern**
-```
-Phase 1 - Architect (planning):
-  Input: User request + context
-  Output: Plain-text plan with specific steps
-  Model: Can use larger/smarter model
-  
-Phase 2 - Editor (execution):
-  Input: Single step from plan
-  Output: Code changes (search/replace)
-  Model: Can use smaller/faster model
-```
-
-**FR5.4: Multi-file Edit Coordination**
-- Detect cross-file dependencies
-- Order edits to avoid breaking changes
-- Atomic commit for related changes
-- Rollback all if any edit fails
-
-#### Technical Requirements
-
-**TR5.1: Sandbox Requirements**
-- Shell commands run in subprocess
-- Timeout enforced (default 30s, max 300s)
-- Working directory restricted to project
-- No network access by default (configurable)
-- Resource limits: 1GB memory, 1 CPU
-
-**TR5.2: Retry Limits**
-| Operation | Max Retries | Backoff |
-|-----------|-------------|---------|
-| Syntax fix | 3 | None |
-| Type error fix | 2 | None |
-| Test failure fix | 3 | None |
-| Tool call parse | 2 | None |
-
-**TR5.3: State Management**
-- Save state after each successful step
-- State includes: plan, completed steps, file versions
-- Resume from last successful step on restart
-
-#### Verification Tests
-- [ ] VT5.1: "Add parameter to function" modifies function + callers
-- [ ] VT5.2: Syntax error auto-fixed without user intervention
-- [ ] VT5.3: Test failure triggers fix attempt
-- [ ] VT5.4: Complex refactor uses Architect/Editor pattern
-- [ ] VT5.5: Shell command timeout enforced
-- [ ] VT5.6: Interrupted task resumes correctly
-
-#### Exit Criteria
-- [ ] Can complete multi-file refactoring tasks
-- [ ] Feedback loop catches and fixes 70%+ of syntax errors
-- [ ] No sandbox escapes in security testing
+**Original Phase 4 objectives from this doc** (tool framework, feedback loops, Architect/Editor) are partially delivered and partially deferred to Phase 5:
+- [x] Tool framework (19 tools, extensible registry)
+- [x] Shell executor (sandboxed, timeout-enforced)
+- [x] Task persistence (SQLite task store + checkpoints)
+- [x] Progress reporting (Go TUI task panel, streaming indicators)
+- [ ] LLMLOOP feedback loop → Phase 5 Sprint 5B
+- [ ] Architect/Editor split → Phase 5 Sprint 5B
+- [ ] Multi-file editing coordination → Phase 5 Sprint 5B
 
 ---
 
-### Phase 5: Testing & Benchmarking (Weeks 13-14)
+### Phase 5: Universal Orchestrator — Agent Teams & Multi-Model — PROVISIONAL_LOCKED (2026-02-17)
 
-#### Objectives
-- Comprehensive testing (unit, integration, benchmark harness)
-- Benchmarking and performance profiling
-- Reliability validation and regression gating
-- Resource usage verification
+> Authoritative plan: `docs/plan/phase5-agent-teams.md`
+> Lock checklist: `docs/plan/phase5-roadmap-lock-checklist.md`
+> Strategy: **"Standalone first, then interact."**
 
-#### Deliverables
-| ID | Deliverable | Acceptance Criteria |
-|----|-------------|---------------------|
-| D6.1 | Benchmark suite | Automated tests against Aider benchmark |
-| D6.2 | Test suites | Unit + integration coverage for core modules |
-| D6.3 | Performance profiling | Identify and fix bottlenecks |
-| D6.4 | Reliability regression suite | Crash/rollback scenarios automated |
-| D6.5 | Benchmark baselines | Baseline metrics + regression thresholds recorded |
-| D6.6 | CI gates | Tests and benchmarks block regressions |
+Phase 5 transforms HybridCoder from a single-agent assistant into a feature-complete standalone AI coding tool, then adds external tool integration.
 
-#### Benchmark Requirements
+**Sprint order:**
+| Sprint | Focus | Gate |
+|--------|-------|------|
+| 5A0 | Quick Wins (diff preview, doctor, token counting) | User-visible improvements |
+| 5A | Agent Identity + Eval Skeleton | AgentCard, ProviderRegistry, eval harness |
+| 5B | LLMLOOP (Architect/Editor) | Edit→compile→fix cycle, tree-sitter+Jedi verification |
+| 5C | Evals + AgentBus + Cost Dashboard | Context quality, reliability soak, cost tracking |
+| 5D | MCP Server + External Integration | MCP server, config generator, adapter compat matrix |
 
-**BR6.1: Core Benchmarks**
-| Benchmark | Source | Target Score | Purpose |
-|-----------|--------|--------------|---------|
-| Aider Polyglot (subset) | aider.chat | >40% pass@1 | Edit quality |
-| SWE-bench Lite/Verified | swebench.com | TBD | Real-world issue resolution |
-| HumanEval (subset) | OpenAI | >80% pass@1 | Generation quality |
-| Custom retrieval test | Internal | >70% precision@3 | Search quality |
-| Custom Layer-1 test | Internal | 100% correct | Deterministic ops |
+> Sprint 5E (A2A) **dropped** from Phase 5 scope. Not a Phase 5 dependency; WATCHLIST for Phase 6+ re-evaluation.
 
-**BR6.2: Performance Benchmarks**
-| Metric | Target | Test Method |
-|--------|--------|-------------|
-| Startup time | <2s | Time to first prompt |
-| Layer 1 query | <50ms | 100 symbol lookups |
-| Layer 2 search | <200ms | 100 search queries |
-| Simple edit | <5s | Single function edit |
-| Complex edit | <30s | Multi-file refactor |
-| Memory (idle) | <2GB (stretch: <500MB) | After startup |
-| Memory (inference) | <8GB VRAM | During LLM inference |
+**Milestone gates (from Entry 448):**
+- M1+M2 (Standalone MVP): >= 75% task bank pass, p95 <= 180s, 0 hard-fail regressions
+- M3 (External Integration): health probes pass, idempotent setup/uninstall
 
-**BR6.3: Reliability Benchmarks**
-| Metric | Target | Test Method |
-|--------|--------|-------------|
-| Edit success (no retry) | >40% | 100 edit tasks |
-| Edit success (with retry) | >75% | 100 edit tasks |
-| No data loss | 100% | 1000 edit operations |
-| Crash recovery | 100% | Kill during edit, verify state |
-| Failure budget | <5% manual intervention | After all retries exhausted |
-| Rollback success | 100% | Failed edits restore original |
-
-#### Verification Tests
-- [ ] VT6.1: Benchmark suite runs in CI
-- [ ] VT6.2: Unit and integration tests run in CI
-- [ ] VT6.3: Performance regression detected automatically
-- [ ] VT6.4: Reliability regression suite passes
-- [ ] VT6.5: Benchmark baselines published and used for gating
-
-#### Exit Criteria
-- [ ] All benchmark targets met
-- [ ] Unit and integration tests pass
-- [ ] Performance regressions blocked by CI
-- [ ] Reliability regression suite passes
-- [ ] Demo video/walkthrough created
+**Original "Phase 5: Testing & Benchmarking" from this doc** was largely delivered in Phases 3-4:
+- [x] Benchmark suite (E2E-Calculator, E2E-BugFix, E2E-CLI)
+- [x] Unit + integration test coverage (989+ tests)
+- [x] Performance benchmarks (L1 latency, search relevance)
+- [x] Reliability regression suite (sprint verification tests)
+- [ ] External benchmark integration (SWE-bench, Terminal-Bench) → Phase 5 Sprint 5C
 
 ---
 
@@ -399,11 +260,11 @@ Phase 2 - Editor (execution):
 | LanceDB | Local/embedded vector database with vector search and optional full-text (BM25) search |
 | Embeddings | jina-embeddings-v2-base-code (768-dim, 8192 tokens, ~300MB model size) |
 | LLM Runtime (L4) | Ollama local server (HTTP API at http://localhost:11434/api by default) |
-| LLM Runtime (L3) | llama-cpp-python + Outlines (direct model access required for constrained decoding) |
+| LLM Runtime (L3) | llama-cpp-python + native grammar (direct model access for constrained decoding) |
 | LLM Model (L4) | Qwen3-8B Q4_K_M (~5 GB VRAM, thinking mode) |
 | LLM Model (L3) | Qwen2.5-Coder-1.5B Q4_K_M (~1 GB VRAM, 72% HumanEval) |
-| Constrained Decoding | Outlines for JSON/Pydantic/grammar outputs (via llama-cpp-python, NOT Ollama) |
-| LSP Client | multilspy (Microsoft) — manages Pyright/JDT-LS lifecycle |
+| Constrained Decoding | llama-cpp-python native grammar (Outlines replaced — segfaults, perf penalty) |
+| Python Semantics | Jedi library (cross-file goto, refs, types — preferred over multilspy LSP) |
 | CLI UX | Typer (Click-based, type-hint driven CLI) with Rich for formatting |
 
 ### 4.1 Technology Stack
@@ -421,9 +282,9 @@ Phase 2 - Editor (execution):
 | Embeddings | jina-v2-base-code | Local, good quality |
 | L4 LLM Runtime | Ollama | Easy setup, streaming |
 | L4 Model | Qwen3-8B Q4_K_M | Best 8B, thinking mode, ~5 GB VRAM |
-| L3 LLM Runtime | llama-cpp-python + Outlines | Outlines needs direct access |
+| L3 LLM Runtime | llama-cpp-python + native grammar | Outlines replaced — segfaults, 2-5x perf penalty |
 | L3 Model | Qwen2.5-Coder-1.5B Q4_K_M | 72% HumanEval, 1GB VRAM |
-| LSP Client | multilspy (Microsoft) | Multi-language, battle-tested |
+| Python Semantics | Jedi | Cross-file goto/refs/types, pure Python, <100ms |
 | Package Manager | uv | 10-100x faster than pip |
 | Git | GitPython | Pure Python |
 | Testing | pytest | Standard |
@@ -713,12 +574,12 @@ Create a numbered plan with specific, actionable steps:
 
 Each phase must pass before proceeding:
 
-**Phase 1 Gate**: Manual testing of 10 conversations
-**Phase 2 Gate**: 50 edit operations with <5 failures
-**Phase 3 Gate**: 100 deterministic queries, 100% correct
-**Phase 4 Gate**: Search relevance >60% precision@3
-**Phase 5 Gate**: 20 multi-step tasks, >50% success
-**Phase 6 Gate**: All benchmarks meet targets
+**Phase 1 Gate**: Manual testing of 10 conversations — PASSED
+**Phase 2 Gate**: 50 edit operations with <5 failures — PASSED
+**Phase 3 Gate**: 100 deterministic queries, 100% correct; search precision@3 >60% — PASSED
+**Phase 4 Gate**: 987 collected, 978 passed, 0 failed, ruff clean — PASSED
+**Phase 5 Gate**: >= 75% task bank pass, p95 <= 180s, 0 hard-fail regressions (see `docs/plan/phase5-agent-teams.md`)
+**Phase 6 Gate**: TBD
 
 ---
 
@@ -749,7 +610,7 @@ Each phase must pass before proceeding:
 8. Ollama API: https://docs.ollama.com/api/introduction
 9. Qwen3-8B model card: https://huggingface.co/Qwen/Qwen3-8B
 9a. Qwen2.5-Coder-1.5B model card: https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct
-10. Outlines structured generation: https://dottxt-ai.github.io/outlines/reference/generation/json/
+10. llama-cpp-python native grammar (replaced Outlines): https://llama-cpp-python.readthedocs.io/
 11. Typer docs: https://typer.tiangolo.com/
 12. Rich: https://github.com/Textualize/rich
 13. Aider polyglot benchmark: https://github.com/Aider-AI/polyglot-benchmark

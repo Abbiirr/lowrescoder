@@ -9,17 +9,7 @@ import textwrap
 
 import pytest
 
-ts_available = True
-try:
-    import tree_sitter  # noqa: F401
-    import tree_sitter_python  # noqa: F401
-except ImportError:
-    ts_available = False
-
-pytestmark = [
-    pytest.mark.benchmark,
-    pytest.mark.skipif(not ts_available, reason="tree-sitter not installed"),
-]
+pytestmark = pytest.mark.benchmark
 
 
 # --- Sample project files ---

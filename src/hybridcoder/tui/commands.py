@@ -495,6 +495,20 @@ async def _handle_checkpoint(app: AppContext, args: str) -> None:
             cp_store = CheckpointStore(conn, app.session_id)
             cp_id = cp_store.save_checkpoint(task_store, label)
             app.add_system_message(f"Checkpoint saved: `{cp_id}` ({label})")
+        elif arg.startswith("restore"):
+            cp_id = args.strip()[7:].strip()
+            if not cp_id:
+                app.add_system_message(
+                    "Usage: `/checkpoint restore <id>` — use `/checkpoint` to list IDs."
+                )
+                return
+            task_store = TaskStore(conn, app.session_id)
+            cp_store = CheckpointStore(conn, app.session_id)
+            result = cp_store.restore_checkpoint(cp_id, task_store, app.session_store)
+            app.add_system_message(
+                f"Restored checkpoint: **{result['label']}**\n"
+                f"Active files: {', '.join(result.get('active_files', []))}"
+            )
         else:
             cp_store = CheckpointStore(conn, app.session_id)
             checkpoints = cp_store.list_checkpoints()
@@ -505,7 +519,7 @@ async def _handle_checkpoint(app: AppContext, args: str) -> None:
                 return
             lines = ["**Checkpoints:**"]
             for cp in checkpoints:
-                lines.append(f"- `{cp.id[:8]}` {cp.label} ({cp.created_at})")
+                lines.append(f"- `{cp.id}` {cp.label} ({cp.created_at})")
             app.add_system_message("\n".join(lines))
     except Exception as e:
         app.add_system_message(f"Error: {e}")
@@ -527,13 +541,14 @@ async def _handle_tasks(app: AppContext, args: str) -> None:
 async def _handle_index(app: AppContext, args: str) -> None:
     """Build or rebuild the code index for the current project."""
     try:
-        from hybridcoder.agent.tools import clear_code_index_cache
+        from hybridcoder.agent.tools import clear_code_index_cache, set_code_index_cache
         from hybridcoder.layer2.index import CodeIndex
 
         clear_code_index_cache()
         app.add_system_message("Building code index...")
         index = CodeIndex()
         stats = index.build(app.project_root)
+        set_code_index_cache(index)
         app.add_system_message(
             f"Index built: {stats['files_scanned']} files scanned, "
             f"{stats['files_indexed']} indexed, "

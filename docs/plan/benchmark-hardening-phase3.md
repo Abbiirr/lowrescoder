@@ -1,6 +1,6 @@
 # Benchmark Hardening — Phase 3: Larger Items
 
-> Version: 1.1 | Date: 2026-02-12 | Status: PLANNED
+> Version: 1.1 | Date: 2026-02-12 | Status: HISTORICAL REFERENCE (superseded by Phase 4 E2E eval system and Phase 5 plan)
 > Estimated effort: ~21-26 hours
 > Prerequisite: [Phase 1](benchmark-hardening-phase1.md), [Phase 2](benchmark-hardening-phase2.md)
 > Blocks: N/A (terminal phase)

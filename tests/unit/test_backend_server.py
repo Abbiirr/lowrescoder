@@ -887,3 +887,184 @@ class TestSessionState:
         await server._teardown_agent_resources()
         assert server._plan_mode_enabled is True
         assert server._agent_loop is None
+
+    @pytest.mark.asyncio
+    async def test_session_new_teardown_before_id_switch(
+        self, server: BackendServer,
+    ) -> None:
+        """Teardown must run while self.session_id still points to the OLD session.
+
+        Regression test for Codex Entry 420 HIGH concern: learn_from_session()
+        was running against the new session_id because session_id was mutated
+        before _teardown_agent_resources().
+        """
+        old_session_id = server.session_id
+        teardown_session_id = None
+
+        original_teardown = server._teardown_agent_resources
+
+        async def capturing_teardown() -> None:
+            nonlocal teardown_session_id
+            teardown_session_id = server.session_id
+            await original_teardown()
+
+        server._teardown_agent_resources = capturing_teardown  # type: ignore[assignment]
+        await server.handle_session_new("New Session", 70)
+
+        assert teardown_session_id == old_session_id
+        assert server.session_id != old_session_id
+
+    @pytest.mark.asyncio
+    async def test_session_resume_teardown_before_id_switch(
+        self, server: BackendServer,
+    ) -> None:
+        """Same lifecycle ordering check for handle_session_resume."""
+        old_session_id = server.session_id
+        teardown_session_id = None
+
+        original_teardown = server._teardown_agent_resources
+
+        async def capturing_teardown() -> None:
+            nonlocal teardown_session_id
+            teardown_session_id = server.session_id
+            await original_teardown()
+
+        server._teardown_agent_resources = capturing_teardown  # type: ignore[assignment]
+        prefix = server.session_id[:8]
+        await server.handle_session_resume(prefix, 71)
+
+        assert teardown_session_id == old_session_id
+
+    @pytest.mark.asyncio
+    async def test_chat_session_switch_teardown_before_id_switch(
+        self, server: BackendServer,
+    ) -> None:
+        """Same lifecycle ordering check for handle_chat session switch."""
+        old_session_id = server.session_id
+        teardown_session_id = None
+
+        original_teardown = server._teardown_agent_resources
+
+        async def capturing_teardown() -> None:
+            nonlocal teardown_session_id
+            teardown_session_id = server.session_id
+            await original_teardown()
+
+        server._teardown_agent_resources = capturing_teardown  # type: ignore[assignment]
+
+        with patch.object(server, "_ensure_agent_loop") as mock_ensure:
+            mock_loop = AsyncMock()
+            mock_loop.run = AsyncMock(return_value="ok")
+            mock_loop.session_id = server.session_id
+            mock_ensure.return_value = mock_loop
+
+            await server.handle_chat("test", "new-session-id", 72)
+
+        assert teardown_session_id == old_session_id
+        assert server.session_id == "new-session-id"
+
+
+class TestTaskStateNotification:
+    """Test on_task_state notification payload shape."""
+
+    def test_emit_task_state_empty(
+        self, server: BackendServer, capsys: CaptureFixture,
+    ) -> None:
+        """on_task_state emits correct shape with empty stores."""
+        server._emit_task_state()
+        captured = capsys.readouterr()
+        msg = json.loads(captured.out.strip())
+        assert msg["method"] == "on_task_state"
+        assert msg["params"]["tasks"] == []
+        assert msg["params"]["subagents"] == []
+
+    def test_emit_task_state_with_task_store(
+        self, server: BackendServer, capsys: CaptureFixture,
+    ) -> None:
+        """on_task_state includes tasks from TaskStore."""
+        from hybridcoder.session.task_store import TaskStore
+
+        conn = server.session_store.get_connection()
+        task_store = TaskStore(conn, server.session_id)
+        server._task_store = task_store
+        task_store.create_task("Test task", "A test task description")
+
+        server._emit_task_state()
+        captured = capsys.readouterr()
+        msg = json.loads(captured.out.strip())
+        assert msg["method"] == "on_task_state"
+        assert len(msg["params"]["tasks"]) == 1
+        assert msg["params"]["tasks"][0]["title"] == "Test task"
+        assert "status" in msg["params"]["tasks"][0]
+        assert "id" in msg["params"]["tasks"][0]
+
+    def test_on_tool_call_emits_task_state_on_task_tool(
+        self, server: BackendServer, capsys: CaptureFixture,
+    ) -> None:
+        """BUG-20: Task tool completions trigger on_task_state notification."""
+        server._on_tool_call("create_task", "completed", "Created task #1")
+        captured = capsys.readouterr()
+        lines = captured.out.strip().split("\n")
+        methods = [json.loads(line)["method"] for line in lines]
+        # Should include both on_tool_call and on_task_state
+        assert "on_tool_call" in methods
+        assert "on_task_state" in methods
+
+
+class TestL2ContextInjectionServer:
+    """Backend-level test for L2 assembled context injection into AgentLoop.run()."""
+
+    @pytest.mark.asyncio
+    async def test_l2_route_passes_assembled_context_to_agent_loop(
+        self, server: BackendServer, capsys: CaptureFixture,
+    ) -> None:
+        """When L2 routing activates, assembled context must be passed as injected_context."""
+        # Set up the server with L2 prerequisites
+        expected_ctx = "## Assembled L2 Context\nSearch results"
+        mock_assembler = MagicMock()
+        mock_assembler.assemble = MagicMock(return_value=expected_ctx)
+        server._context_assembler = mock_assembler
+        server.config.layer2 = MagicMock()
+        server.config.layer2.enabled = True
+        server.config.layer2.search_top_k = 5
+
+        # Mock the agent loop to capture the injected_context arg
+        mock_loop = AsyncMock()
+        mock_loop.run = AsyncMock(return_value="L2 response")
+        mock_loop.session_id = server.session_id
+
+        with (
+            patch.object(server, "_ensure_agent_loop", return_value=mock_loop),
+            patch("hybridcoder.core.router.RequestRouter") as mock_router,
+            patch("hybridcoder.agent.tools._code_index_cache", new=MagicMock()),
+            patch("hybridcoder.layer2.search.HybridSearch") as mock_search,
+            patch("hybridcoder.layer2.rules.RulesLoader") as mock_rules,
+        ):
+            from hybridcoder.core.types import RequestType
+
+            mock_router.return_value.classify.return_value = (
+                RequestType.SEMANTIC_SEARCH
+            )
+            mock_search.return_value.search.return_value = [{"text": "c1"}]
+            mock_rules.return_value.load.return_value = "- rule1"
+
+            await server.handle_chat(
+                "how does the parser work", None, 80,
+            )
+
+            # Verify agent_loop.run was called with injected_context
+            mock_loop.run.assert_called_once()
+            call_kwargs = mock_loop.run.call_args
+            assert call_kwargs.kwargs.get("injected_context") == expected_ctx
+
+            # Verify on_done emitted with layer_used=2
+            captured = capsys.readouterr()
+            lines = captured.out.strip().split("\n")
+            done_msg = None
+            for line in lines:
+                msg = json.loads(line)
+                if msg.get("method") == "on_done":
+                    done_msg = msg
+                    break
+            assert done_msg is not None
+            assert done_msg["params"]["layer_used"] == 2

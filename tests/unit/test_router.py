@@ -10,15 +10,6 @@ from hybridcoder.config import Layer1Config
 from hybridcoder.core.router import RequestRouter
 from hybridcoder.core.types import RequestType
 
-# Guard imports for query handler tests
-ts_available = True
-try:
-    import tree_sitter  # noqa: F401
-    import tree_sitter_python  # noqa: F401
-except ImportError:
-    ts_available = False
-
-
 # ==================== RequestRouter Tests ====================
 
 
@@ -143,7 +134,6 @@ class TestRequestRouter:
 # ==================== DeterministicQueryHandler Tests ====================
 
 
-@pytest.mark.skipif(not ts_available, reason="tree-sitter not installed")
 class TestDeterministicQueryHandler:
     """Test deterministic query handling with tree-sitter."""
 

@@ -4,23 +4,12 @@ from __future__ import annotations
 
 import textwrap
 
-import pytest
-
-ts_available = True
-try:
-    import tree_sitter  # noqa: F401
-    import tree_sitter_python  # noqa: F401
-
-    from hybridcoder.config import Layer2Config
-    from hybridcoder.layer2.index import (
-        CodeIndex,
-        _load_gitignore_patterns,
-        _should_ignore,
-    )
-except ImportError:
-    ts_available = False
-
-pytestmark = pytest.mark.skipif(not ts_available, reason="tree-sitter not installed")
+from hybridcoder.config import Layer2Config
+from hybridcoder.layer2.index import (
+    CodeIndex,
+    _load_gitignore_patterns,
+    _should_ignore,
+)
 
 SAMPLE_PY = textwrap.dedent("""\
     import os

@@ -380,3 +380,48 @@ async def test_manager_cancel_stores_cancelled_result():
     assert result.status == "cancelled"
 
     await scheduler.shutdown()
+
+
+@pytest.mark.asyncio()
+async def test_active_subagent_metadata_in_list_all():
+    """list_all() includes type and task summary for running subagents."""
+    # Create a slow provider that keeps subagent active long enough for assertions
+    slow_mock = AsyncMock()
+
+    async def _slow_generate(*args, **kwargs):
+        await asyncio.sleep(5.0)
+        return LLMResponse(content="Done", tool_calls=[])
+
+    slow_mock.generate_with_tools = _slow_generate
+    provider = slow_mock
+    registry = _make_registry()
+    scheduler = LLMScheduler()
+    scheduler.start()
+
+    manager = SubagentManager(
+        provider=provider,
+        tool_registry=registry,
+        scheduler=scheduler,
+        max_concurrent=3,
+    )
+
+    sid = manager.spawn("explore", "Find auth modules in the codebase")
+    assert manager.active_count == 1
+
+    # Check list_all includes metadata for active entries
+    items = manager.list_all()
+    active_items = [i for i in items if i["status"] == "running"]
+    assert len(active_items) == 1
+    assert active_items[0]["id"] == sid
+    assert active_items[0]["type"] == "explore"
+    assert "auth modules" in active_items[0]["summary"]
+
+    # Check get_status also includes metadata
+    status = manager.get_status(sid)
+    assert status["type"] == "explore"
+    assert "auth modules" in status["summary"]
+
+    # Cleanup
+    manager.cancel_all()
+    await asyncio.sleep(0.1)
+    await scheduler.shutdown()

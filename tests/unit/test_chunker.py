@@ -4,19 +4,8 @@ from __future__ import annotations
 
 import textwrap
 
-import pytest
-
-ts_available = True
-try:
-    import tree_sitter  # noqa: F401
-    import tree_sitter_python  # noqa: F401
-
-    from hybridcoder.core.types import CodeChunk
-    from hybridcoder.layer2.chunker import ASTChunker
-except ImportError:
-    ts_available = False
-
-pytestmark = pytest.mark.skipif(not ts_available, reason="tree-sitter not installed")
+from hybridcoder.core.types import CodeChunk
+from hybridcoder.layer2.chunker import ASTChunker
 
 SIMPLE_MODULE = textwrap.dedent("""\
     import os

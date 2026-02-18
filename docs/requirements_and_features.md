@@ -1,7 +1,7 @@
 # HybridCoder — Requirements & Feature Catalog
 
 > Comprehensive catalog of all features built, planned, current UX issues, and architecture decisions.
-> Last updated: 2026-02-14
+> Last updated: 2026-02-17
 
 ---
 
@@ -162,7 +162,7 @@ Base tools defined in `src/hybridcoder/agent/tools.py`. Task tools in `src/hybri
 | Session resume picker (arrow-key) | DONE | Go TUI: `session_picker.go`, reuses `stageAskUser` |
 | Slash commands disabled during streaming | DONE | Queued messages treated as plain chat text |
 
-### 2.10 Slash Commands (17 Commands)
+### 2.10 Slash Commands (19 Commands)
 
 | Command | Aliases | Description |
 |---------|---------|-------------|
@@ -183,6 +183,8 @@ Base tools defined in `src/hybridcoder/agent/tools.py`. Task tools in `src/hybri
 | `/index` | — | Rebuild code search index (Phase 3) |
 | `/tasks` | `/t` | Show task board (Phase 4) |
 | `/plan` | — | Toggle plan mode: on/off/approve (Phase 4) |
+| `/memory` | `/mem` | Show learned patterns (Phase 4) |
+| `/checkpoint` | `/ckpt` | List/save/restore checkpoints (Phase 4) |
 
 ### 2.11 Configuration
 
@@ -197,13 +199,13 @@ Base tools defined in `src/hybridcoder/agent/tools.py`. Task tools in `src/hybri
 
 ### 2.12 Tests
 
-- **275 Go + 942 Python (collected) = 1217+ tests**
-- Python: 819 passed, 113 skipped (tree-sitter dependent), 0 failed
+- **275 Go + 1022 Python (collected) = 1297+ tests**
+- Python: 1015 passed, 7 skipped (integration self-skip), 0 failed
 - Go test files (16 files): update, protocol, session_picker, backend, completion, view, commands, askuser, history, approval, e2e, markdown, model, statusbar
 - Python test files cover: CLI, agent loop, tools, approval, session store, inline app, inline renderer, inline completer, TUI commands, file tools, config, type-ahead, parallel mode, backend server, parser, router, chunker, embeddings, index, search, repomap, context, new tools, integration router-agent, task store, context engine, task tools, carry-forward fixes, logging, blob store, episode store, event recorder, LLM scheduler, subagent loop/manager, subagent tools, plan mode
 - Benchmark tests: deterministic routing (50 queries), L1 latency, search relevance (precision@3), context budget compliance
 - Sprint verification tests: `tests/test_sprint_verify.py`
-- Integration tests (skipped by default): `tests/integration/`
+- Integration tests (included by default, self-skip when requirements not met): `tests/integration/`
 - Full test catalog: `docs/tests/test_suite.md`
 - **Full testing & evaluation guide: `TESTING.md`**
 
@@ -328,22 +330,21 @@ Phase 3 implemented 2026-02-13. All gates passed. 840 Python tests, all Go tests
 | Go TUI task panel | P2 | 4C | JSON-RPC backed task/subagent display |
 | `/memory` and `/checkpoint` commands | P2 | 4C | View/save/restore memories and checkpoints |
 
-### 3.2 Phase 5 — Architect/Editor & Constrained Generation
+### 3.2 Phase 5 — Universal Orchestrator: Agent Teams & Multi-Model — PROVISIONAL_LOCKED
 
-| Feature | Priority | Description |
-|---------|----------|-------------|
-| Architect/Editor split | P0 | Separate planning and execution agents |
-| LLMLOOP (edit → compile → fix) | P0 | Compiler feedback loops using tree-sitter (built in Phase 3) |
-| Layer 3 constrained generation | P1 | llama-cpp-python + Outlines, Qwen2.5-Coder-1.5B |
-| MCP server | P2 | External tool integration protocol |
+> Plan: `docs/plan/phase5-agent-teams.md` (authoritative)
+> Lock checklist: `docs/plan/phase5-roadmap-lock-checklist.md`
+> Strategy: **"Standalone first, then interact."**
 
-### 3.3 Constrained Generation (Layer 3) — Cross-Phase
+| Sprint | Feature | Priority | Description |
+|--------|---------|----------|-------------|
+| 5A0 | Quick Wins (diff preview, doctor, token counting, shell hardening) | P0 | Immediate user-facing value before architecture work |
+| 5A | Agent Identity + Eval Skeleton (AgentCard, ProviderRegistry) | P0 | First-class agent identity, multi-model routing, eval harness |
+| 5B | LLMLOOP — Architect/Editor Pattern | P0 | Edit → compile → fix cycle, tree-sitter + Jedi verification |
+| 5C | Evals + AgentBus + Policy Router + Cost Dashboard | P0 | Context quality metrics, reliability soak gates, cost tracking |
+| 5D | MCP Server + External Integration (after MVP gate) | P1 | MCP server, config generator, adapter compat matrix |
 
-| Feature | Priority | Description |
-|---------|----------|-------------|
-| llama-cpp-python + Outlines integration | P1 | Grammar-constrained decoding |
-| Qwen2.5-Coder-1.5B model | P1 | 72% HumanEval at 1GB VRAM |
-| Structured output (JSON, tool calls) | P1 | Valid syntax guaranteed |
+> Sprint 5E (A2A) has been **dropped** from Phase 5 scope. A2A is not a Phase 5 dependency; reclassified as WATCHLIST for Phase 6+ re-evaluation. See Entry 465-Claude for evidence.
 
 ---
 
@@ -465,10 +466,11 @@ See `docs/archive/plan/go-bubble-tea-migration.md` for the full migration plan.
 | CLI Framework | Typer + Rich | Active |
 | TUI Frontend | **Go + Bubble Tea** | Active |
 | Parsing | tree-sitter 0.25.2 | Active |
-| LSP Client | multilspy (Microsoft) | Planned |
+| Python Semantics | Jedi (cross-file goto, refs, types) | Planned (Phase 5) |
+| LSP Client | Deferred (Jedi preferred over multilspy) | Evaluating |
 | Vector DB | LanceDB | Active |
 | Embeddings | jina-v2-base-code | Active |
 | L4 LLM Runtime | Ollama | Active |
 | L4 Model | Qwen3-8B Q4_K_M | Active |
-| L3 LLM Runtime | llama-cpp-python + Outlines | Planned |
+| L3 LLM Runtime | llama-cpp-python + native grammar | Planned (Phase 5) |
 | L3 Model | Qwen2.5-Coder-1.5B Q4_K_M | Planned |

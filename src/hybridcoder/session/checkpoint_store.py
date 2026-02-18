@@ -66,15 +66,23 @@ class CheckpointStore:
         return [CheckpointRow(**dict(row)) for row in cursor.fetchall()]
 
     def get_checkpoint(self, checkpoint_id: str) -> CheckpointRow | None:
-        """Get a single checkpoint by ID."""
+        """Get a single checkpoint by exact ID or unique prefix."""
         cursor = self._conn.execute(
             "SELECT * FROM checkpoints WHERE id = ? AND session_id = ?",
             (checkpoint_id, self._session_id),
         )
         row = cursor.fetchone()
-        if row is None:
-            return None
-        return CheckpointRow(**dict(row))
+        if row is not None:
+            return CheckpointRow(**dict(row))
+        # Prefix match fallback
+        cursor = self._conn.execute(
+            "SELECT * FROM checkpoints WHERE id LIKE ? AND session_id = ?",
+            (checkpoint_id + "%", self._session_id),
+        )
+        rows = cursor.fetchall()
+        if len(rows) == 1:
+            return CheckpointRow(**dict(rows[0]))
+        return None
 
     def delete_checkpoint(self, checkpoint_id: str) -> bool:
         """Delete a checkpoint. Returns True if deleted."""

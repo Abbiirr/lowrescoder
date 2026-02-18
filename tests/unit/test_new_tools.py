@@ -10,13 +10,6 @@ from hybridcoder.agent.tools import (
     create_default_registry,
 )
 
-ts_available = True
-try:
-    import tree_sitter  # noqa: F401
-    import tree_sitter_python  # noqa: F401
-except ImportError:
-    ts_available = False
-
 
 class TestToolRegistration:
     """Verify all 11 tools are registered."""
@@ -59,7 +52,6 @@ class TestToolRegistration:
             assert not tool.requires_approval
 
 
-@pytest.mark.skipif(not ts_available, reason="tree-sitter not installed")
 class TestNewToolHandlers:
     """Test the new tool handlers with real tree-sitter parsing."""
 

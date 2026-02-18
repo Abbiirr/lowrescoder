@@ -27,7 +27,7 @@ These decisions are **locked** and do NOT change unless the user explicitly appr
 3. **Edge-native** — ALL intelligence runs on the user's machine. No cloud dependency by default
 4. **Consumer hardware target** — 8GB VRAM, 16GB RAM, no 70B+ models required
 5. **Go TUI + Python backend** — Frontend in Go (Bubble Tea), backend in Python, JSON-RPC over stdin/stdout
-6. **Tech stack** — tree-sitter, Ollama (L4), llama-cpp-python + Outlines (L3), LanceDB, jina-v2-base-code embeddings
+6. **Tech stack** — tree-sitter, Ollama (L4), llama-cpp-python + native grammar (L3), LanceDB, jina-v2-base-code embeddings
 7. **Docs are the single source of truth** — If docs say X and code does Y, the docs are wrong and must be fixed before continuing
 
 ---
@@ -45,23 +45,24 @@ These decisions are **locked** and do NOT change unless the user explicitly appr
 
 ## Technology Stack
 
-| Component | Choice |
-|-----------|--------|
-| Backend Language | Python 3.11+ |
-| TUI Frontend | Go + Bubble Tea (inline mode) |
-| Frontend↔Backend | JSON-RPC over stdin/stdout |
-| Package Manager | uv |
-| CLI Framework | Typer + Rich |
-| Parsing | tree-sitter 0.25.2 |
-| LSP Client | multilspy (Microsoft) |
-| Vector DB | LanceDB |
-| Embeddings | jina-v2-base-code (768-dim, local) |
-| L4 LLM Runtime | Ollama |
-| L4 Model | Qwen3-8B Q4_K_M (~5 GB VRAM) |
-| L3 LLM Runtime | llama-cpp-python + Outlines |
-| L3 Model | Qwen2.5-Coder-1.5B Q4_K_M (~1 GB VRAM) |
+| Component | Choice | Status |
+|-----------|--------|--------|
+| Backend Language | Python 3.11+ | DONE |
+| TUI Frontend | Go + Bubble Tea (inline mode) | DONE |
+| Frontend↔Backend | JSON-RPC over stdin/stdout | DONE |
+| Package Manager | uv | DONE |
+| CLI Framework | Typer + Rich | DONE |
+| Parsing | tree-sitter 0.25.2 | DONE |
+| Python Semantics | Jedi (cross-file goto, refs, types) | PLANNED (Phase 5) |
+| LSP Client | Deferred (Jedi preferred over multilspy) | EVALUATING |
+| Vector DB | LanceDB | DONE |
+| Embeddings | jina-v2-base-code (768-dim, local) | DONE |
+| L4 LLM Runtime | Ollama | DONE |
+| L4 Model | Qwen3-8B Q4_K_M (~5 GB VRAM) | DONE |
+| L3 LLM Runtime | llama-cpp-python + native grammar | PLANNED (Phase 5) |
+| L3 Model | Qwen2.5-Coder-1.5B Q4_K_M (~1 GB VRAM) | PLANNED |
 
-> Outlines does NOT integrate with Ollama. L3 uses llama-cpp-python directly. L4 uses Ollama.
+> L3 uses llama-cpp-python with native grammar constraints (Outlines replaced per Phase 5 plan). L4 uses Ollama. Sequential model loading only on 8GB VRAM — dual-model not feasible.
 
 ---
 
@@ -78,7 +79,9 @@ These decisions are **locked** and do NOT change unless the user explicitly appr
 
 ## Current Phase
 
-Phases 0-4 complete. **Phase 4 (Agent Orchestration)** finished 2026-02-14 — Sprint 4A (Core Primitives), Sprint 4B (Subagents + Plan Mode), Sprint 4C (Memory + Checkpoints + L2/L3 + Plan Artifact + Go Task Panel) all complete. Final gate: 975 collected, 852 passed, 113 skipped, 0 failed, ruff clean. See `docs/plan/phase4-agent-orchestration.md` for details.
+Phases 0-4 complete. **Phase 5 (Universal Orchestrator)** — roadmap `PROVISIONAL_LOCKED` 2026-02-17. Strategy: **"Standalone first, then interact."** Sprint order: 5A0 (Quick Wins) → 5A (Identity + Eval) → 5B (LLMLOOP) → 5C (Evals + Cost) → 5D (MCP + External). A2A (5E) dropped from Phase 5 scope (WATCHLIST for Phase 6+). See `docs/plan/phase5-agent-teams.md` for the full plan and `docs/plan/phase5-roadmap-lock-checklist.md` for lock criteria. Current QA: 1015 passed, 0 failed, 7 skipped, ruff clean, mypy 52 known baseline errors. Artifacts: `docs/qa/test-results/20260217-lock-pack-*.md`.
+
+**Read `current_directives.md` for the active sprint and what to work on next.**
 
 ---
 
@@ -103,10 +106,11 @@ uv run pytest -m integration tests/integration/
 ```
 
 **Rules:**
+- **TDD is mandatory.** Every sub-sprint begins by writing all tests first. Tests are expected to fail until implementation catches up — this is the workflow, not a problem.
 - All unit tests must pass before requesting review or moving to the next sprint
 - New code must include tests — no exceptions
 - Sprint verification tests must pass at each sprint boundary
-- Integration tests are skipped by default (require running servers / API keys)
+- Integration tests are included by default but self-skip when requirements are not met (API keys, running servers)
 
 ---
 
@@ -114,12 +118,15 @@ uv run pytest -m integration tests/integration/
 
 | What you need | Where to find it |
 |---|---|
+| **Active sprint / what to do next** | **`current_directives.md`** |
+| Sprint tracking (all sub-sprints) | `docs/plan/sprints/_index.md` |
 | Fast session startup | `docs/session-onramp.md` |
 | Testing & evaluation guide | `TESTING.md` |
 | Full product roadmap | `docs/plan.md` |
 | MVP acceptance checklist | `docs/plan.md` Section 1.6 |
 | Feature catalog (built vs planned) | `docs/requirements_and_features.md` |
-| Phase 4 plan (active) | `docs/plan/phase4-agent-orchestration.md` |
+| Phase 5 plan (next) | `docs/plan/phase5-agent-teams.md` |
+| Phase 4 plan (complete) | `docs/plan/phase4-agent-orchestration.md` |
 | Phase 3 plan (archived) | `docs/archive/plan/phase3-final-implementation.md` |
 | Phase 3 execution brief (archived) | `docs/archive/plan/phase3-execution-brief.md` |
 | Benchmark protocol | `docs/qa/phase3-before-after-benchmark-protocol.md` |

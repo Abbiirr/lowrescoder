@@ -158,3 +158,16 @@ class TestCheckpointStore:
         cp_store.restore_checkpoint(cp_id, task_store, recorder)
         assert len(recorder.messages) == 1
         assert "We were working on feature X" in recorder.messages[0][2]
+
+    def test_get_checkpoint_by_prefix(self, setup) -> None:
+        """get_checkpoint accepts a unique ID prefix."""
+        conn, task_store, cp_store = setup
+        cp_id = cp_store.save_checkpoint(task_store, "prefixed")
+        # Full ID works
+        assert cp_store.get_checkpoint(cp_id) is not None
+        # First 8 chars should be a unique prefix
+        short = cp_id[:8]
+        result = cp_store.get_checkpoint(short)
+        assert result is not None
+        assert result.id == cp_id
+        assert result.label == "prefixed"

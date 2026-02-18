@@ -1,6 +1,6 @@
 # Benchmark Hardening — Phase 1: Quick Wins
 
-> Version: 1.1 | Date: 2026-02-12 | Status: PLANNED
+> Version: 1.1 | Date: 2026-02-12 | Status: HISTORICAL REFERENCE (superseded by Phase 4 E2E eval system and Phase 5 plan)
 > Estimated effort: ~2 hours
 > Prerequisite: None
 > Depends on: N/A

@@ -16,8 +16,9 @@ Current layout has two UI frontends:
 
 ## Session Context (Read First)
 For fast session startup and current-state context, read in this order:
+- `current_directives.md` — **active sprint, what to work on next, pending decisions**
 - `docs/session-onramp.md` — compact codebase + plan + command context
-- `docs/plan/phase4-agent-orchestration.md` — Phase 4 plan (active phase)
+- `docs/plan/phase5-agent-teams.md` — Phase 5 plan (active phase)
 - `docs/archive/plan/phase3-execution-brief.md` — Phase 3 completion summary (archived)
 
 ## Build, Test, and Development Commands

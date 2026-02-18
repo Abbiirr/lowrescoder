@@ -35,7 +35,7 @@ class TestL3Provider:
         with patch.dict(sys.modules, {"llama_cpp": MagicMock()}):
             provider._model = mock_model
             provider._loaded = True
-            result = asyncio.get_event_loop().run_until_complete(provider.generate("test prompt"))
+            result = asyncio.run(provider.generate("test prompt"))
             assert result == "hello world"
             mock_model.assert_called_once()
 
@@ -61,9 +61,7 @@ class TestL3Provider:
             provider._model = mock_model
             provider._loaded = True
             schema = {"type": "object", "properties": {"result": {"type": "integer"}}}
-            result = asyncio.get_event_loop().run_until_complete(
-                provider.generate_structured("test", schema)
-            )
+            result = asyncio.run(provider.generate_structured("test", schema))
             assert result == {"result": 42}
 
     def test_error_propagation(self) -> None:
@@ -75,7 +73,7 @@ class TestL3Provider:
         provider._model = MagicMock(side_effect=RuntimeError("VRAM OOM"))
 
         with pytest.raises(RuntimeError, match="VRAM OOM"):
-            asyncio.get_event_loop().run_until_complete(provider.generate("test"))
+            asyncio.run(provider.generate("test"))
 
     def test_cleanup(self) -> None:
         """cleanup() releases model and resets state."""

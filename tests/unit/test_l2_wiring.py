@@ -52,6 +52,20 @@ class TestL2Wiring:
         finally:
             tools._code_index_cache = original
 
+    def test_set_code_index_cache_primes_cache(self) -> None:
+        """set_code_index_cache() populates the global cache for L2 routing."""
+        from hybridcoder.agent import tools
+
+        original = tools._code_index_cache
+        try:
+            mock_index = MagicMock()
+            tools.set_code_index_cache(mock_index)
+            assert tools._code_index_cache is mock_index
+            tools.clear_code_index_cache()
+            assert tools._code_index_cache is None
+        finally:
+            tools._code_index_cache = original
+
     def test_rules_loader(self) -> None:
         """RulesLoader loads rules from project root."""
         from hybridcoder.layer2.rules import RulesLoader

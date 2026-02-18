@@ -318,6 +318,12 @@ def clear_code_index_cache() -> None:
     _code_index_cache = None
 
 
+def set_code_index_cache(index: Any) -> None:
+    """Set the cached CodeIndex instance (e.g. after /index rebuild)."""
+    global _code_index_cache  # noqa: PLW0603
+    _code_index_cache = index
+
+
 def _handle_search_code(query: str, top_k: int = 5, project_root: str = "") -> str:
     """Search code using hybrid BM25 + vector search."""
     try:

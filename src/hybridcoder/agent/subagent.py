@@ -428,6 +428,7 @@ class SubagentManager:
         self._on_state_change = on_state_change
 
         self._active: dict[str, asyncio.Task[SubagentResult]] = {}
+        self._active_meta: dict[str, dict[str, str]] = {}
         self._loops: dict[str, SubagentLoop] = {}
         self._results: dict[str, SubagentResult] = {}
 
@@ -481,6 +482,7 @@ class SubagentManager:
 
         def _on_done(t: asyncio.Task[SubagentResult]) -> None:
             self._active.pop(subagent_id, None)
+            self._active_meta.pop(subagent_id, None)
             self._loops.pop(subagent_id, None)
             if t.cancelled() and subagent_id not in self._results:
                 self._results[subagent_id] = SubagentResult(
@@ -497,6 +499,7 @@ class SubagentManager:
         atask = asyncio.create_task(_run_and_store())
         atask.add_done_callback(_on_done)
         self._active[subagent_id] = atask
+        self._active_meta[subagent_id] = {"type": subagent_type, "task": task[:100]}
         logger.info(
             "Spawned subagent %s (type=%s, task=%s)",
             subagent_id, subagent_type, task[:60],
@@ -531,7 +534,12 @@ class SubagentManager:
     def get_status(self, subagent_id: str) -> dict[str, Any]:
         """Get current status of a subagent."""
         if subagent_id in self._active:
-            return {"id": subagent_id, "status": "running"}
+            meta = self._active_meta.get(subagent_id, {})
+            return {
+                "id": subagent_id, "status": "running",
+                "type": meta.get("type", "unknown"),
+                "summary": meta.get("task", ""),
+            }
         result = self._results.get(subagent_id)
         if result:
             return {
@@ -547,7 +555,12 @@ class SubagentManager:
         """List all subagents (active and completed)."""
         items: list[dict[str, Any]] = []
         for sid in self._active:
-            items.append({"id": sid, "status": "running"})
+            meta = self._active_meta.get(sid, {})
+            items.append({
+                "id": sid, "status": "running",
+                "type": meta.get("type", "unknown"),
+                "summary": meta.get("task", ""),
+            })
         for sid, result in self._results.items():
             if sid not in self._active:
                 items.append({

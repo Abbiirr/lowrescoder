@@ -284,7 +284,11 @@ class BackendServer:
             # Sprint 4C: MemoryStore + CheckpointStore
             project_id = str(self.project_root)
             conn = self.session_store.get_connection()
-            self._memory_store = MemoryStore(conn, project_id)
+            self._memory_store = MemoryStore(
+                conn, project_id,
+                max_entries=self.config.agent.memory_max_entries,
+                max_context_tokens=self.config.agent.memory_context_max_tokens,
+            )
             self._memory_store.apply_decay()  # decay at session start
             self._checkpoint_store = CheckpointStore(conn, self.session_id)
 
@@ -462,6 +466,16 @@ class BackendServer:
 
         Called on session transitions and shutdown to prevent orphan tasks.
         """
+        # Learn from session before teardown
+        if self._memory_store and self.session_store and self.session_id:
+            try:
+                await self._memory_store.learn_from_session(
+                    self.session_id, self.session_store,
+                    self._provider, self._llm_scheduler,
+                )
+            except Exception:
+                logger.warning("Failed to learn from session", exc_info=True)
+
         if self._subagent_manager:
             self._subagent_manager.cancel_all()
             self._subagent_manager = None
@@ -482,11 +496,11 @@ class BackendServer:
     async def handle_chat(self, message: str, session_id: str | None, request_id: int) -> None:
         """Handle a chat request from the Go frontend."""
         if session_id and session_id != self.session_id:
+            await self._teardown_agent_resources()
             self.session_id = session_id
             self._session_log_dir = setup_session_logging(
                 self.config.logging, self.session_id,
             )
-            await self._teardown_agent_resources()
             self._session_approved_tools.clear()
 
         # Auto-title session from first user message
@@ -528,6 +542,18 @@ class BackendServer:
         except ImportError:
             pass  # Router not available, use L4
 
+        # Ensure agent loop for L2/L3/L4 routing (must be before L2/L3 checks)
+        try:
+            agent_loop = self._ensure_agent_loop()
+            agent_loop.session_id = self.session_id
+        except Exception as e:
+            logger.exception("Error initializing agent loop: %s", e)
+            self.emit_notification("on_error", {"message": str(e)})
+            self.emit_notification("on_done", {
+                "tokens_in": 0, "tokens_out": 0, "layer_used": layer_used,
+            })
+            return
+
         # --- L2 routing: semantic search + context assembly ---
         if layer_used == 4:
             try:
@@ -549,13 +575,11 @@ class BackendServer:
                                 results = search.search(message, top_k=top_k)
                                 rules_loader = RulesLoader()
                                 rules_text = rules_loader.load(self.project_root)
-                                self._context_assembler.assemble(
+                                assembled = self._context_assembler.assemble(
                                     message, rules=rules_text,
                                     search_results=results,
                                 )
-                                # Run agent loop with injected context
-                                agent_loop = self._ensure_agent_loop()
-                                agent_loop.session_id = self.session_id
+                                # Run agent loop with injected L2 context
                                 await agent_loop.run(
                                     message,
                                     on_chunk=self._on_chunk,
@@ -563,6 +587,7 @@ class BackendServer:
                                     on_tool_call=self._on_tool_call,
                                     approval_callback=self._approval_callback,
                                     ask_user_callback=self._ask_user_callback,
+                                    injected_context=assembled,
                                 )
                                 self.emit_notification("on_done", {
                                     "tokens_in": 0, "tokens_out": 0, "layer_used": 2,
@@ -600,9 +625,6 @@ class BackendServer:
                 pass
 
         try:
-            agent_loop = self._ensure_agent_loop()
-            agent_loop.session_id = self.session_id
-
             # Always stream thinking tokens to the frontend — the Go TUI
             # decides whether to display them based on its own showThinking flag.
             await agent_loop.run(
@@ -660,6 +682,7 @@ class BackendServer:
 
     async def handle_session_new(self, title: str, request_id: int) -> None:
         """Create a new session."""
+        await self._teardown_agent_resources()
         self.session_id = self.session_store.create_session(
             title=title or "New session",
             model=self.config.llm.model,
@@ -669,7 +692,6 @@ class BackendServer:
         self._session_log_dir = setup_session_logging(self.config.logging, self.session_id)
         self._session_titled = bool(title)
         self._session_approved_tools.clear()
-        await self._teardown_agent_resources()
         self._emit_status()
         self.emit_response(request_id, {"session_id": self.session_id})
 
@@ -711,11 +733,11 @@ class BackendServer:
             return
 
         match = matches[0]
+        await self._teardown_agent_resources()
         self.session_id = match.id
         self._session_log_dir = setup_session_logging(self.config.logging, self.session_id)
         self._session_titled = True
         self._session_approved_tools.clear()
-        await self._teardown_agent_resources()
         self._emit_status()
         self.emit_response(request_id, {"session_id": match.id, "title": match.title})
 
@@ -815,6 +837,19 @@ class BackendServer:
         self.emit_response(request_id, {
             "checkpoints": [cp.model_dump(mode="json") for cp in checkpoints],
         })
+
+    async def handle_checkpoint_restore(self, checkpoint_id: str, request_id: int) -> None:
+        """Restore a checkpoint for the current session."""
+        if self._checkpoint_store is None or self._task_store is None:
+            self.emit_response(request_id, {"error": "No checkpoint or task store"})
+            return
+        try:
+            result = self._checkpoint_store.restore_checkpoint(
+                checkpoint_id, self._task_store, self.session_store,
+            )
+            self.emit_response(request_id, {"ok": True, **result})
+        except Exception as e:
+            self.emit_response(request_id, {"error": str(e)})
 
     async def handle_plan_export(self, request_id: int) -> None:
         """Export task state as a markdown plan artifact."""
@@ -969,6 +1004,9 @@ class BackendServer:
             await self.handle_memory_list(request_id)
         elif method == "checkpoint.list":
             await self.handle_checkpoint_list(request_id)
+        elif method == "checkpoint.restore":
+            cp_id = params.get("checkpoint_id", "")
+            await self.handle_checkpoint_restore(cp_id, request_id)
         elif method == "plan.export":
             await self.handle_plan_export(request_id)
         elif method == "plan.sync":

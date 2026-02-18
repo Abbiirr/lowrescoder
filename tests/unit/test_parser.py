@@ -8,19 +8,9 @@ import time
 
 import pytest
 
-# Guard imports — tests are skipped if tree-sitter is not installed
-ts_available = True
-try:
-    import tree_sitter  # noqa: F401
-    import tree_sitter_python  # noqa: F401
-
-    from hybridcoder.core.types import ParseResult, Symbol
-    from hybridcoder.layer1.parser import TreeSitterParser
-    from hybridcoder.layer1.symbols import SymbolExtractor
-except ImportError:
-    ts_available = False
-
-pytestmark = pytest.mark.skipif(not ts_available, reason="tree-sitter not installed")
+from hybridcoder.core.types import ParseResult, Symbol
+from hybridcoder.layer1.parser import TreeSitterParser
+from hybridcoder.layer1.symbols import SymbolExtractor
 
 # --- Fixtures ---
 

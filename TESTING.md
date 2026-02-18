@@ -34,10 +34,25 @@ uv run pytest tests/ -v
 ```
 
 **What the results mean:**
-- **755+ passed** = everything works, safe to make changes
+- **1015+ passed** = everything works, safe to make changes
 - **Any failures** = something is broken, fix before continuing
-- **10 deselected** = integration tests (skipped by default, need external services)
-- **1 skipped** = conditional test that doesn't apply to current environment
+- **~7 skipped** = integration tests that self-skip when external services/models are unavailable
+
+**Important: Environment Setup**
+
+All dependencies (including tree-sitter) MUST be installed for a valid test run. tree-sitter is a core dependency, not optional:
+
+```bash
+# Full dev setup (required for valid test results):
+uv pip install -e ".[dev]"
+
+# Verify tree-sitter is importable:
+uv run python -c "import tree_sitter; import tree_sitter_python; print('OK')"
+```
+
+If tree-sitter tests fail with `ImportError`, your environment is broken — do NOT count those as "expected failures." Fix the env first.
+
+Integration tests require `.env` with `OPENROUTER_API_KEY` and Ollama running locally. They self-skip when requirements are not met.
 
 **Where tests live:**
 
@@ -45,7 +60,7 @@ uv run pytest tests/ -v
 |-----------|------|-------|
 | `tests/unit/` | Core features (29 files) | ~600+ tests |
 | `tests/benchmark/` | Performance + quality rubrics (6 files) | ~20 tests |
-| `tests/integration/` | External services (3 files) | Skipped by default |
+| `tests/integration/` | External services (3 files) | Self-skip when unavailable |
 | `tests/test_sprint_verify.py` | Sprint exit criteria | Phase-specific |
 
 **When to run:** After every code change. Non-negotiable.

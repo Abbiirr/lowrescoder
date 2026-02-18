@@ -6,19 +6,10 @@ import textwrap
 
 import pytest
 
-ts_available = True
-try:
-    import tree_sitter  # noqa: F401
-    import tree_sitter_python  # noqa: F401
-
-    from hybridcoder.core.types import SearchResult
-    from hybridcoder.layer2.embeddings import EmbeddingEngine
-    from hybridcoder.layer2.index import CodeIndex
-    from hybridcoder.layer2.search import HybridSearch
-except ImportError:
-    ts_available = False
-
-pytestmark = pytest.mark.skipif(not ts_available, reason="tree-sitter not installed")
+from hybridcoder.core.types import SearchResult
+from hybridcoder.layer2.embeddings import EmbeddingEngine
+from hybridcoder.layer2.index import CodeIndex
+from hybridcoder.layer2.search import HybridSearch
 
 SAMPLE_FILES = {
     "parser.py": textwrap.dedent("""\
