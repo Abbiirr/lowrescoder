@@ -6,12 +6,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from hybridcoder.agent.approval import ApprovalManager, ApprovalMode
-from hybridcoder.agent.loop import AgentLoop, AgentMode
-from hybridcoder.agent.prompts import build_system_prompt
-from hybridcoder.agent.tools import ToolDefinition, ToolRegistry
-from hybridcoder.config import ShellConfig
-from hybridcoder.layer4.llm import ToolCall
+from autocode.agent.approval import ApprovalManager, ApprovalMode
+from autocode.agent.loop import AgentLoop, AgentMode
+from autocode.agent.prompts import build_system_prompt
+from autocode.agent.tools import ToolDefinition, ToolRegistry
+from autocode.config import ShellConfig
+from autocode.layer4.llm import ToolCall
 
 
 def _make_registry() -> ToolRegistry:

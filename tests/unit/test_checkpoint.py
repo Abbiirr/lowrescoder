@@ -6,9 +6,9 @@ import sqlite3
 
 import pytest
 
-from hybridcoder.session.checkpoint_store import CheckpointStore
-from hybridcoder.session.models import ensure_tables
-from hybridcoder.session.task_store import TaskStore
+from autocode.session.checkpoint_store import CheckpointStore
+from autocode.session.models import ensure_tables
+from autocode.session.task_store import TaskStore
 
 
 @pytest.fixture()

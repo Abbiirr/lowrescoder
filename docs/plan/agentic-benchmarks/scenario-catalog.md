@@ -129,7 +129,7 @@ Each scenario tests specific agent capabilities. Scenarios are tagged by which d
 
 ### D3: Layer Fallback Chain
 **Lane:** stress | **Dimensions:** 5
-**Language:** Python (HybridCoder-specific)
+**Language:** Python (AutoCode-specific)
 
 **Setup:** Disable L1 (tree-sitter) → does the system fall back to L2?
 Disable L2 (LanceDB) → does the system fall back to L3?
@@ -273,10 +273,10 @@ Disable L3 (Outlines) → does the system fall back to L4?
 
 **Setup:** 10 tasks of varying difficulty.
 **Protocol:** Run with token tracking enabled.
-**Metric:** Total tokens consumed. Compare HybridCoder vs naive single-prompt.
+**Metric:** Total tokens consumed. Compare AutoCode vs naive single-prompt.
 
 ### I3: Zero-Token Resolution Count
-**Lane:** stress | **Dimensions:** 12 (HybridCoder-specific)
+**Lane:** stress | **Dimensions:** 12 (AutoCode-specific)
 **Language:** Python
 
 **Setup:** 20 tasks, graded from trivial (find a syntax error) to complex (design a feature).

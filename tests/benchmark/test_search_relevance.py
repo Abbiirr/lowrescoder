@@ -136,7 +136,7 @@ def indexed_project(tmp_path):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content)
 
-    from hybridcoder.layer2.index import CodeIndex
+    from autocode.layer2.index import CodeIndex
 
     index = CodeIndex()
     index.build(tmp_path)
@@ -167,8 +167,8 @@ class TestSearchRelevance:
 
     def test_precision_at_3_overall(self, indexed_project):
         """Overall precision@3 should be > 60%."""
-        from hybridcoder.layer2.embeddings import EmbeddingEngine
-        from hybridcoder.layer2.search import HybridSearch
+        from autocode.layer2.embeddings import EmbeddingEngine
+        from autocode.layer2.search import HybridSearch
 
         index, _ = indexed_project
         engine = EmbeddingEngine(model_name="nonexistent/model")  # BM25-only
@@ -191,8 +191,8 @@ class TestSearchRelevance:
         )
 
     def test_parse_file_query(self, indexed_project):
-        from hybridcoder.layer2.embeddings import EmbeddingEngine
-        from hybridcoder.layer2.search import HybridSearch
+        from autocode.layer2.embeddings import EmbeddingEngine
+        from autocode.layer2.search import HybridSearch
 
         index, _ = indexed_project
         search = HybridSearch(index, embeddings=EmbeddingEngine(model_name="none"))
@@ -200,8 +200,8 @@ class TestSearchRelevance:
         assert len(results) > 0
 
     def test_config_query(self, indexed_project):
-        from hybridcoder.layer2.embeddings import EmbeddingEngine
-        from hybridcoder.layer2.search import HybridSearch
+        from autocode.layer2.embeddings import EmbeddingEngine
+        from autocode.layer2.search import HybridSearch
 
         index, _ = indexed_project
         search = HybridSearch(index, embeddings=EmbeddingEngine(model_name="none"))
@@ -209,8 +209,8 @@ class TestSearchRelevance:
         assert len(results) > 0
 
     def test_tool_registry_query(self, indexed_project):
-        from hybridcoder.layer2.embeddings import EmbeddingEngine
-        from hybridcoder.layer2.search import HybridSearch
+        from autocode.layer2.embeddings import EmbeddingEngine
+        from autocode.layer2.search import HybridSearch
 
         index, _ = indexed_project
         search = HybridSearch(index, embeddings=EmbeddingEngine(model_name="none"))
@@ -218,8 +218,8 @@ class TestSearchRelevance:
         assert len(results) > 0
 
     def test_router_query(self, indexed_project):
-        from hybridcoder.layer2.embeddings import EmbeddingEngine
-        from hybridcoder.layer2.search import HybridSearch
+        from autocode.layer2.embeddings import EmbeddingEngine
+        from autocode.layer2.search import HybridSearch
 
         index, _ = indexed_project
         search = HybridSearch(index, embeddings=EmbeddingEngine(model_name="none"))
@@ -227,8 +227,8 @@ class TestSearchRelevance:
         assert len(results) > 0
 
     def test_search_query(self, indexed_project):
-        from hybridcoder.layer2.embeddings import EmbeddingEngine
-        from hybridcoder.layer2.search import HybridSearch
+        from autocode.layer2.embeddings import EmbeddingEngine
+        from autocode.layer2.search import HybridSearch
 
         index, _ = indexed_project
         search = HybridSearch(index, embeddings=EmbeddingEngine(model_name="none"))
@@ -237,8 +237,8 @@ class TestSearchRelevance:
 
     def test_bm25_fallback_works(self, indexed_project):
         """Search should work when embedding model is unavailable."""
-        from hybridcoder.layer2.embeddings import EmbeddingEngine
-        from hybridcoder.layer2.search import HybridSearch
+        from autocode.layer2.embeddings import EmbeddingEngine
+        from autocode.layer2.search import HybridSearch
 
         index, _ = indexed_project
         engine = EmbeddingEngine(model_name="nonexistent/model")
@@ -250,8 +250,8 @@ class TestSearchRelevance:
         assert all(r.match_type == "bm25" for r in results)
 
     def test_cache_clear_query(self, indexed_project):
-        from hybridcoder.layer2.embeddings import EmbeddingEngine
-        from hybridcoder.layer2.search import HybridSearch
+        from autocode.layer2.embeddings import EmbeddingEngine
+        from autocode.layer2.search import HybridSearch
 
         index, _ = indexed_project
         search = HybridSearch(index, embeddings=EmbeddingEngine(model_name="none"))
@@ -259,8 +259,8 @@ class TestSearchRelevance:
         assert len(results) > 0
 
     def test_test_parser_query(self, indexed_project):
-        from hybridcoder.layer2.embeddings import EmbeddingEngine
-        from hybridcoder.layer2.search import HybridSearch
+        from autocode.layer2.embeddings import EmbeddingEngine
+        from autocode.layer2.search import HybridSearch
 
         index, _ = indexed_project
         search = HybridSearch(index, embeddings=EmbeddingEngine(model_name="none"))
@@ -268,8 +268,8 @@ class TestSearchRelevance:
         assert len(results) > 0
 
     def test_list_tools_query(self, indexed_project):
-        from hybridcoder.layer2.embeddings import EmbeddingEngine
-        from hybridcoder.layer2.search import HybridSearch
+        from autocode.layer2.embeddings import EmbeddingEngine
+        from autocode.layer2.search import HybridSearch
 
         index, _ = indexed_project
         search = HybridSearch(index, embeddings=EmbeddingEngine(model_name="none"))

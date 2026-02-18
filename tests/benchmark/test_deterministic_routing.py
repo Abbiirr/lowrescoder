@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from hybridcoder.core.router import RequestRouter
-from hybridcoder.core.types import RequestType
+from autocode.core.router import RequestRouter
+from autocode.core.types import RequestType
 
 pytestmark = pytest.mark.benchmark
 

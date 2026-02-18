@@ -4,7 +4,7 @@ Last verified: 2026-02-13
 
 ## Overview
 
-The **External-Pilot** lane evaluates HybridCoder's agent quality against published, third-party benchmark suites using an external harness (Harbor). This complements the internal PR Core lane (E2E-Calc, E2E-BugFix, E2E-CLI) by measuring performance on tasks the agent has never seen during development.
+The **External-Pilot** lane evaluates AutoCode's agent quality against published, third-party benchmark suites using an external harness (Harbor). This complements the internal PR Core lane (E2E-Calc, E2E-BugFix, E2E-CLI) by measuring performance on tasks the agent has never seen during development.
 
 ---
 

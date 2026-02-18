@@ -6,7 +6,7 @@ import hashlib
 
 import pytest
 
-from hybridcoder.core.blob_store import BlobStore
+from autocode.core.blob_store import BlobStore
 
 
 @pytest.fixture()

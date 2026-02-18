@@ -8,9 +8,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from hybridcoder.agent.approval import ApprovalManager, ApprovalMode
-from hybridcoder.agent.tools import ToolDefinition, create_default_registry
-from hybridcoder.config import ShellConfig
+from autocode.agent.approval import ApprovalManager, ApprovalMode
+from autocode.agent.tools import ToolDefinition, create_default_registry
+from autocode.config import ShellConfig
 
 
 def _make_tool(name: str, requires_approval: bool = False) -> ToolDefinition:
@@ -123,7 +123,7 @@ class TestAsyncApprovalCallback:
 
     @pytest.fixture()
     def store(self, tmp_path: Path) -> Any:
-        from hybridcoder.session.store import SessionStore
+        from autocode.session.store import SessionStore
 
         s = SessionStore(tmp_path / "test.db")
         yield s
@@ -138,8 +138,8 @@ class TestAsyncApprovalCallback:
         self, store: Any, session_id: str, tmp_path: Path,
     ) -> None:
         """Agent loop correctly awaits an async approval callback."""
-        from hybridcoder.agent.loop import AgentLoop
-        from hybridcoder.layer4.llm import LLMResponse, ToolCall
+        from autocode.agent.loop import AgentLoop
+        from autocode.layer4.llm import LLMResponse, ToolCall
 
         tool_response = LLMResponse(
             content="",
@@ -178,8 +178,8 @@ class TestAsyncApprovalCallback:
         self, store: Any, session_id: str, tmp_path: Path,
     ) -> None:
         """Agent loop correctly handles async deny."""
-        from hybridcoder.agent.loop import AgentLoop
-        from hybridcoder.layer4.llm import LLMResponse, ToolCall
+        from autocode.agent.loop import AgentLoop
+        from autocode.layer4.llm import LLMResponse, ToolCall
 
         tool_response = LLMResponse(
             content="",

@@ -17,7 +17,7 @@ class TestL3Provider:
 
     def test_lazy_load(self) -> None:
         """Model is not loaded until first generate call."""
-        from hybridcoder.layer3.provider import L3Provider
+        from autocode.layer3.provider import L3Provider
 
         provider = L3Provider("/fake/model.gguf")
         assert provider._loaded is False
@@ -25,7 +25,7 @@ class TestL3Provider:
 
     def test_generate(self) -> None:
         """generate() calls llama model and returns text."""
-        from hybridcoder.layer3.provider import L3Provider
+        from autocode.layer3.provider import L3Provider
 
         provider = L3Provider("/fake/model.gguf")
 
@@ -41,7 +41,7 @@ class TestL3Provider:
 
     def test_structured_output(self) -> None:
         """generate_structured() returns parsed JSON."""
-        from hybridcoder.layer3.provider import L3Provider
+        from autocode.layer3.provider import L3Provider
 
         provider = L3Provider("/fake/model.gguf")
 
@@ -66,7 +66,7 @@ class TestL3Provider:
 
     def test_error_propagation(self) -> None:
         """Errors from llama model propagate correctly."""
-        from hybridcoder.layer3.provider import L3Provider
+        from autocode.layer3.provider import L3Provider
 
         provider = L3Provider("/fake/model.gguf")
         provider._loaded = True
@@ -77,7 +77,7 @@ class TestL3Provider:
 
     def test_cleanup(self) -> None:
         """cleanup() releases model and resets state."""
-        from hybridcoder.layer3.provider import L3Provider
+        from autocode.layer3.provider import L3Provider
 
         provider = L3Provider("/fake/model.gguf")
         provider._model = MagicMock()

@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from hybridcoder.agent.tools import _handle_search_text, _search_with_python
+from autocode.agent.tools import _handle_search_text, _search_with_python
 
 
 @pytest.fixture()

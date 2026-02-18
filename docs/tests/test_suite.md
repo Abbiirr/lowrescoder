@@ -1,4 +1,4 @@
-# HybridCoder Test Suite — Master Catalog
+# AutoCode Test Suite — Master Catalog
 
 > Last verified: 2026-02-08 — **275 Go tests, 0 failures** (`go test ./... -count=1`, 0.24s)
 
@@ -8,7 +8,7 @@
 
 - **Go 1.21+** installed (for Go TUI tests)
 - **Python 3.11+** with `uv` package manager (for Python backend tests)
-- All dependencies installed: `go mod tidy` in `cmd/hybridcoder-tui/` and `uv sync` at project root
+- All dependencies installed: `go mod tidy` in `cmd/autocode-tui/` and `uv sync` at project root
 
 ### Running All Tests
 
@@ -19,10 +19,10 @@ make test-all
 # Or step by step:
 
 # 1. Go TUI tests (fast, ~2s)
-cd cmd/hybridcoder-tui && go test ./... -v -count=1
+cd cmd/autocode-tui && go test ./... -v -count=1
 
 # 2. Python backend + unit tests
-uv run pytest tests/ -v --cov=src/hybridcoder
+uv run pytest tests/ -v --cov=src/autocode
 
 # 3. Lint
 uv run ruff check src/ tests/
@@ -32,34 +32,34 @@ uv run ruff check src/ tests/
 
 ```bash
 # Go: Only view tests
-cd cmd/hybridcoder-tui && go test -run "TestView" -v
+cd cmd/autocode-tui && go test -run "TestView" -v
 
 # Go: Only display pipeline tests
-cd cmd/hybridcoder-tui && go test -run "TestTokens|TestStreamBuf|TestDone" -v
+cd cmd/autocode-tui && go test -run "TestTokens|TestStreamBuf|TestDone" -v
 
 # Go: Only backend IPC tests
-cd cmd/hybridcoder-tui && go test -run "TestDispatch|TestRoute|TestSend|TestMalformed" -v
+cd cmd/autocode-tui && go test -run "TestDispatch|TestRoute|TestSend|TestMalformed" -v
 
 # Go: Only command parsing tests
-cd cmd/hybridcoder-tui && go test -run "TestParseCommand|TestKnownCommands|TestSlashCommand" -v
+cd cmd/autocode-tui && go test -run "TestParseCommand|TestKnownCommands|TestSlashCommand" -v
 
 # Go: Only ask-user tests
-cd cmd/hybridcoder-tui && go test -run "TestAskUser|TestEnterAskUser|TestRenderAskUser" -v
+cd cmd/autocode-tui && go test -run "TestAskUser|TestEnterAskUser|TestRenderAskUser" -v
 
 # Go: Only e2e flow tests
-cd cmd/hybridcoder-tui && go test -run "TestFull" -v
+cd cmd/autocode-tui && go test -run "TestFull" -v
 
 # Go: Only approval tests
-cd cmd/hybridcoder-tui && go test -run "TestApproval|TestEnterApproval" -v
+cd cmd/autocode-tui && go test -run "TestApproval|TestEnterApproval" -v
 
 # Go: Only completion/autocomplete tests
-cd cmd/hybridcoder-tui && go test -run "TestCompletions" -v
+cd cmd/autocode-tui && go test -run "TestCompletions" -v
 
 # Go: Only history tests
-cd cmd/hybridcoder-tui && go test -run "TestHistory" -v
+cd cmd/autocode-tui && go test -run "TestHistory" -v
 
 # Go: Only markdown tests
-cd cmd/hybridcoder-tui && go test -run "TestRenderMarkdown" -v
+cd cmd/autocode-tui && go test -run "TestRenderMarkdown" -v
 
 # Python: Only backend server tests
 uv run pytest tests/unit/test_backend_server.py -v
@@ -72,10 +72,10 @@ uv run pytest tests/unit/test_backend_server.py::TestCallbacks -v
 
 ```bash
 # Go coverage
-cd cmd/hybridcoder-tui && go test ./... -coverprofile=coverage.out && go tool cover -html=coverage.out
+cd cmd/autocode-tui && go test ./... -coverprofile=coverage.out && go tool cover -html=coverage.out
 
 # Python coverage
-uv run pytest tests/ -v --cov=src/hybridcoder --cov-report=html
+uv run pytest tests/ -v --cov=src/autocode --cov-report=html
 ```
 
 ### Build & Run (Development)
@@ -90,10 +90,10 @@ chmod +x build.sh && ./build.sh
 
 ### CI / Pre-commit Checklist
 
-1. `cd cmd/hybridcoder-tui && go test ./... -count=1` — all Go tests pass
+1. `cd cmd/autocode-tui && go test ./... -count=1` — all Go tests pass
 2. `uv run pytest tests/ -v` — all Python tests pass
 3. `uv run ruff check src/ tests/` — no lint errors
-4. `go vet ./...` in `cmd/hybridcoder-tui/` — no vet warnings
+4. `go vet ./...` in `cmd/autocode-tui/` — no vet warnings
 
 ---
 
@@ -101,19 +101,19 @@ chmod +x build.sh && ./build.sh
 
 | File | Category | Tests | Description |
 |------|----------|-------|-------------|
-| `cmd/hybridcoder-tui/update_test.go` | Core | 71 | Update loop, display pipeline, parallel input, thinking, slash commands, /resume |
-| `cmd/hybridcoder-tui/protocol_test.go` | Protocol | 29 | JSON-RPC wire format marshal/unmarshal including session types |
-| `cmd/hybridcoder-tui/session_picker_test.go` | Session Picker | 24 | Session picker transitions, labels, navigation, selection, cancel |
-| `cmd/hybridcoder-tui/backend_test.go` | IPC | 22 | Backend dispatch, routing, marshal, robustness, SendRequestCmd |
-| `cmd/hybridcoder-tui/completion_test.go` | Autocomplete | 21 | Prefix, fuzzy, Tab, ghost text, dropdown, cap, columns |
-| `cmd/hybridcoder-tui/view_test.go` | Display | 18 | View() rendering for all stages, status bar |
-| `cmd/hybridcoder-tui/commands_test.go` | Commands | 18 | Slash command parsing and handling |
-| `cmd/hybridcoder-tui/askuser_test.go` | Dialog | 18 | Ask-user stage transitions, navigation, rendering |
-| `cmd/hybridcoder-tui/history_test.go` | History | 14 | Persistence, navigation, dedup |
-| `cmd/hybridcoder-tui/approval_test.go` | Dialog | 12 | Approval stage transitions, navigation, rendering |
-| `cmd/hybridcoder-tui/e2e_test.go` | E2E | 12 | Full message flows: chat, tools, approval, cancel, queue, resume, thinking tokens |
-| `cmd/hybridcoder-tui/markdown_test.go` | Rendering | 10 | Glamour markdown rendering |
-| `cmd/hybridcoder-tui/model_test.go` | Model | 6 | Initial state, defaults |
+| `cmd/autocode-tui/update_test.go` | Core | 71 | Update loop, display pipeline, parallel input, thinking, slash commands, /resume |
+| `cmd/autocode-tui/protocol_test.go` | Protocol | 29 | JSON-RPC wire format marshal/unmarshal including session types |
+| `cmd/autocode-tui/session_picker_test.go` | Session Picker | 24 | Session picker transitions, labels, navigation, selection, cancel |
+| `cmd/autocode-tui/backend_test.go` | IPC | 22 | Backend dispatch, routing, marshal, robustness, SendRequestCmd |
+| `cmd/autocode-tui/completion_test.go` | Autocomplete | 21 | Prefix, fuzzy, Tab, ghost text, dropdown, cap, columns |
+| `cmd/autocode-tui/view_test.go` | Display | 18 | View() rendering for all stages, status bar |
+| `cmd/autocode-tui/commands_test.go` | Commands | 18 | Slash command parsing and handling |
+| `cmd/autocode-tui/askuser_test.go` | Dialog | 18 | Ask-user stage transitions, navigation, rendering |
+| `cmd/autocode-tui/history_test.go` | History | 14 | Persistence, navigation, dedup |
+| `cmd/autocode-tui/approval_test.go` | Dialog | 12 | Approval stage transitions, navigation, rendering |
+| `cmd/autocode-tui/e2e_test.go` | E2E | 12 | Full message flows: chat, tools, approval, cancel, queue, resume, thinking tokens |
+| `cmd/autocode-tui/markdown_test.go` | Rendering | 10 | Glamour markdown rendering |
+| `cmd/autocode-tui/model_test.go` | Model | 6 | Initial state, defaults |
 | | | **275** | **Go total** |
 | `tests/unit/test_backend_server.py` | Python | 76 | Backend server, callbacks, protocol, dispatch |
 

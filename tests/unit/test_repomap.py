@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import textwrap
 
-from hybridcoder.layer2.repomap import RepoMapGenerator
+from autocode.layer2.repomap import RepoMapGenerator
 
 
 class TestRepoMapGenerator:

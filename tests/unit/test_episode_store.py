@@ -7,9 +7,9 @@ import sqlite3
 
 import pytest
 
-from hybridcoder.core.blob_store import BlobStore
-from hybridcoder.session.episode_store import EpisodeStore
-from hybridcoder.session.models import ensure_tables
+from autocode.core.blob_store import BlobStore
+from autocode.session.episode_store import EpisodeStore
+from autocode.session.models import ensure_tables
 
 
 @pytest.fixture()

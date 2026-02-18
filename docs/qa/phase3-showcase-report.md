@@ -8,9 +8,9 @@
 
 ## 1. Executive Summary
 
-Phase 3 adds the **Code Intelligence** layer to HybridCoder — a deterministic-first system that answers structural coding queries in <50ms with zero LLM tokens. The implementation adds tree-sitter parsing, pattern-based request routing, AST-aware chunking, hybrid search (BM25 + vector), repo map generation, and context assembly. Five new agent tools and one new slash command were added. All Phase 3 gate benchmarks pass, with 254 new tests (840 total) and zero regressions.
+Phase 3 adds the **Code Intelligence** layer to AutoCode — a deterministic-first system that answers structural coding queries in <50ms with zero LLM tokens. The implementation adds tree-sitter parsing, pattern-based request routing, AST-aware chunking, hybrid search (BM25 + vector), repo map generation, and context assembly. Five new agent tools and one new slash command were added. All Phase 3 gate benchmarks pass, with 254 new tests (840 total) and zero regressions.
 
-The result: **60-80% of typical coding queries can be answered without invoking an LLM**, making HybridCoder the only coding assistant that benchmarks and optimizes for zero-token query resolution.
+The result: **60-80% of typical coding queries can be answered without invoking an LLM**, making AutoCode the only coding assistant that benchmarks and optimizes for zero-token query resolution.
 
 > **Note:** Phase 3 validates L1/L2 components at the benchmark level. Runtime L2 serving integration (context assembly wired into `handle_chat`, `layer_used=2` emission) is pending Phase 4 wiring. The efficiency claim is component-validated; end-to-end runtime proof will follow.
 
@@ -49,11 +49,11 @@ Full comparison: [`docs/qa/phase3-benchmarks/phase3-before-after-comparison.md`]
 
 ## 3. Competitive Positioning
 
-HybridCoder's 4-layer architecture creates a fundamentally different value proposition from cloud-based coding assistants.
+AutoCode's 4-layer architecture creates a fundamentally different value proposition from cloud-based coding assistants.
 
 ### Feature Summary
 
-| Dimension | HybridCoder | Claude Code / Codex CLI / OpenCode |
+| Dimension | AutoCode | Claude Code / Codex CLI / OpenCode |
 |-----------|-------------|-------------------------------------|
 | Execution | 100% local | Cloud API |
 | Cost per query | $0 | $0.01-$0.50+ |
@@ -65,9 +65,9 @@ HybridCoder's 4-layer architecture creates a fundamentally different value propo
 
 ### The Honest Tradeoff
 
-HybridCoder does not claim to match frontier models on complex reasoning. Instead, it argues that **60-80% of coding queries don't need complex reasoning at all** — they need fast, deterministic, correct answers. For those queries, HybridCoder is faster, cheaper, more accurate, and more private.
+AutoCode does not claim to match frontier models on complex reasoning. Instead, it argues that **60-80% of coding queries don't need complex reasoning at all** — they need fast, deterministic, correct answers. For those queries, AutoCode is faster, cheaper, more accurate, and more private.
 
-For the remaining 15-20% that need full LLM reasoning, HybridCoder uses Qwen3-8B locally. It's capable but not frontier-class. This is the explicit tradeoff: **$0/month with good quality** vs **$60-$120/month with frontier quality**.
+For the remaining 15-20% that need full LLM reasoning, AutoCode uses Qwen3-8B locally. It's capable but not frontier-class. This is the explicit tradeoff: **$0/month with good quality** vs **$60-$120/month with frontier quality**.
 
 Full comparison: [`docs/qa/competitive-comparison.md`](competitive-comparison.md)
 
@@ -77,7 +77,7 @@ Full comparison: [`docs/qa/competitive-comparison.md`](competitive-comparison.md
 
 ### Estimated Daily Token Savings (100 queries/day)
 
-| Query Category | Count | HybridCoder | Cloud Tools | Savings |
+| Query Category | Count | AutoCode | Cloud Tools | Savings |
 |----------------|-------|-------------|-------------|---------|
 | Structural (L1) | ~60 | 0 tokens | ~60,000 tokens | 100% |
 | Search/Context (L2) | ~25 | ~5,000 tokens | ~200,000 tokens | 97.5% |
@@ -86,7 +86,7 @@ Full comparison: [`docs/qa/competitive-comparison.md`](competitive-comparison.md
 
 ### Monthly Cost Comparison
 
-| | HybridCoder | Cloud Tool |
+| | AutoCode | Cloud Tool |
 |---|-------------|------------|
 | Token cost | $0 | ~$60-$120 |
 | Hardware cost | $0 (uses existing GPU) | $0 |
@@ -125,12 +125,12 @@ The Phase 3 gate benchmarks (which test the deterministic and retrieval layers w
 
 | Tool | ZTQR | How |
 |------|------|-----|
-| **HybridCoder** | **60-80%** | L1 deterministic bypass + L2 retrieval |
+| **AutoCode** | **60-80%** | L1 deterministic bypass + L2 retrieval |
 | Claude Code | 0% | LLM for every query |
 | Codex CLI | 0% | LLM for every query |
 | OpenCode | 0% | LLM for every query |
 
-No other coding assistant benchmarks this metric because they all use LLMs for everything. HybridCoder's 4-layer architecture makes this possible and measurable.
+No other coding assistant benchmarks this metric because they all use LLMs for everything. AutoCode's 4-layer architecture makes this possible and measurable.
 
 ### Why ZTQR Matters
 
@@ -149,7 +149,7 @@ Cloud tool flow:
   User -> API call -> LLM inference -> Response
   Time: 2-5 seconds | Tokens: 500-2000 | Cost: $0.01-$0.04
 
-HybridCoder flow:
+AutoCode flow:
   User -> Router (regex) -> tree-sitter parse -> Symbol extraction -> Response
   Time: <50ms | Tokens: 0 | Cost: $0
 ```
@@ -180,8 +180,8 @@ Both snapshots use the same script (`scripts/run_phase3_benchmark_snapshot.sh`) 
 
 Token savings are estimated based on:
 - Query type distribution from typical development workflows (60% structural, 25% search, 15% reasoning)
-- Measured token counts for structural queries (HybridCoder: 0, Cloud: 500-2000 per query)
-- Measured context budget for search queries (HybridCoder: capped at 5000, Cloud: raw prompts 8000+)
+- Measured token counts for structural queries (AutoCode: 0, Cloud: 500-2000 per query)
+- Measured context budget for search queries (AutoCode: capped at 5000, Cloud: raw prompts 8000+)
 - Equal comparison for reasoning queries (both use full LLM)
 
 ### Competitive Comparison

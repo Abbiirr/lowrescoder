@@ -16,11 +16,11 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from hybridcoder.agent.approval import ApprovalManager, ApprovalMode
-from hybridcoder.agent.loop import AgentLoop
-from hybridcoder.agent.tools import create_default_registry
-from hybridcoder.layer4.llm import LLMResponse, ToolCall
-from hybridcoder.session.store import SessionStore
+from autocode.agent.approval import ApprovalManager, ApprovalMode
+from autocode.agent.loop import AgentLoop
+from autocode.agent.tools import create_default_registry
+from autocode.layer4.llm import LLMResponse, ToolCall
+from autocode.session.store import SessionStore
 
 
 @pytest.fixture()

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from hybridcoder.agent.task_tools import register_task_tools
-from hybridcoder.agent.tools import ToolRegistry
-from hybridcoder.session.store import SessionStore
-from hybridcoder.session.task_store import TaskStore
+from autocode.agent.task_tools import register_task_tools
+from autocode.agent.tools import ToolRegistry
+from autocode.session.store import SessionStore
+from autocode.session.task_store import TaskStore
 
 
 @pytest.fixture
@@ -92,14 +92,14 @@ class TestTaskToolLogging:
     """Test that task tools emit structured log events (BUG-19)."""
 
     def test_create_task_logs_event(self, registry, caplog):
-        with caplog.at_level("INFO", logger="hybridcoder.agent.task_tools"):
+        with caplog.at_level("INFO", logger="autocode.agent.task_tools"):
             tool = registry.get("create_task")
             tool.handler(title="Log test")
         assert any("task_created" in r.message for r in caplog.records)
 
     def test_update_task_logs_event(self, registry, task_store, caplog):
         task_id = task_store.create_task("Log update")
-        with caplog.at_level("INFO", logger="hybridcoder.agent.task_tools"):
+        with caplog.at_level("INFO", logger="autocode.agent.task_tools"):
             tool = registry.get("update_task")
             tool.handler(task_id=task_id, status="in_progress")
         assert any("task_updated" in r.message for r in caplog.records)
@@ -107,7 +107,7 @@ class TestTaskToolLogging:
     def test_add_dependency_logs_event(self, registry, task_store, caplog):
         first = task_store.create_task("First")
         second = task_store.create_task("Second")
-        with caplog.at_level("INFO", logger="hybridcoder.agent.task_tools"):
+        with caplog.at_level("INFO", logger="autocode.agent.task_tools"):
             tool = registry.get("add_task_dependency")
             tool.handler(task_id=second, depends_on=first)
         assert any("task_dependency_added" in r.message for r in caplog.records)

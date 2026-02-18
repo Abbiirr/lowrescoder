@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from hybridcoder.backend.server import BackendServer, _ServerAppContext
+from autocode.backend.server import BackendServer, _ServerAppContext
 
 CaptureFixture = pytest.CaptureFixture[str]
 
@@ -24,7 +24,7 @@ def temp_db(tmp_path: Path) -> str:
 @pytest.fixture
 def server(tmp_path: Path, temp_db: str) -> BackendServer:
     """Create a BackendServer with mocked config pointing to temp db."""
-    with patch("hybridcoder.backend.server.load_config") as mock_config:
+    with patch("autocode.backend.server.load_config") as mock_config:
         config = MagicMock()
         config.llm.model = "qwen3:8b"
         config.llm.provider = "ollama"
@@ -982,7 +982,7 @@ class TestTaskStateNotification:
         self, server: BackendServer, capsys: CaptureFixture,
     ) -> None:
         """on_task_state includes tasks from TaskStore."""
-        from hybridcoder.session.task_store import TaskStore
+        from autocode.session.task_store import TaskStore
 
         conn = server.session_store.get_connection()
         task_store = TaskStore(conn, server.session_id)
@@ -1035,12 +1035,12 @@ class TestL2ContextInjectionServer:
 
         with (
             patch.object(server, "_ensure_agent_loop", return_value=mock_loop),
-            patch("hybridcoder.core.router.RequestRouter") as mock_router,
-            patch("hybridcoder.agent.tools._code_index_cache", new=MagicMock()),
-            patch("hybridcoder.layer2.search.HybridSearch") as mock_search,
-            patch("hybridcoder.layer2.rules.RulesLoader") as mock_rules,
+            patch("autocode.core.router.RequestRouter") as mock_router,
+            patch("autocode.agent.tools._code_index_cache", new=MagicMock()),
+            patch("autocode.layer2.search.HybridSearch") as mock_search,
+            patch("autocode.layer2.rules.RulesLoader") as mock_rules,
         ):
-            from hybridcoder.core.types import RequestType
+            from autocode.core.types import RequestType
 
             mock_router.return_value.classify.return_value = (
                 RequestType.SEMANTIC_SEARCH

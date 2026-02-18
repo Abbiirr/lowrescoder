@@ -17,8 +17,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from hybridcoder.config import HybridCoderConfig, LLMConfig
-from hybridcoder.layer4.llm import LLMResponse, ToolCall, _parse_think_tags
+from autocode.config import AutoCodeConfig, LLMConfig
+from autocode.layer4.llm import LLMResponse, ToolCall, _parse_think_tags
 
 
 class TestParseThinkTags:
@@ -117,8 +117,8 @@ class TestConfigReasoningEnabled:
         assert config.reasoning_enabled is False
 
     def test_full_config_has_reasoning(self) -> None:
-        """HybridCoderConfig includes reasoning_enabled."""
-        config = HybridCoderConfig()
+        """AutoCodeConfig includes reasoning_enabled."""
+        config = AutoCodeConfig()
         assert config.llm.reasoning_enabled is True
 
 
@@ -127,7 +127,7 @@ class TestAgentLoopThinkingCallback:
 
     @pytest.fixture()
     def store(self, tmp_path: Path) -> Any:
-        from hybridcoder.session.store import SessionStore
+        from autocode.session.store import SessionStore
         s = SessionStore(tmp_path / "test.db")
         yield s
         s.close()
@@ -141,9 +141,9 @@ class TestAgentLoopThinkingCallback:
         self, store: Any, session_id: str,
     ) -> None:
         """on_thinking_chunk is called when provider returns reasoning."""
-        from hybridcoder.agent.approval import ApprovalManager, ApprovalMode
-        from hybridcoder.agent.loop import AgentLoop
-        from hybridcoder.agent.tools import ToolRegistry
+        from autocode.agent.approval import ApprovalManager, ApprovalMode
+        from autocode.agent.loop import AgentLoop
+        from autocode.agent.tools import ToolRegistry
 
         mock = AsyncMock()
         thinking_chunks: list[str] = []
@@ -177,9 +177,9 @@ class TestAgentLoopThinkingCallback:
         self, store: Any, session_id: str,
     ) -> None:
         """Agent loop works fine without on_thinking_chunk."""
-        from hybridcoder.agent.approval import ApprovalManager, ApprovalMode
-        from hybridcoder.agent.loop import AgentLoop
-        from hybridcoder.agent.tools import ToolRegistry
+        from autocode.agent.approval import ApprovalManager, ApprovalMode
+        from autocode.agent.loop import AgentLoop
+        from autocode.agent.tools import ToolRegistry
 
         mock = AsyncMock()
 
@@ -203,14 +203,14 @@ class TestChatViewThinkingStream:
 
     def test_add_thinking_chunk_creates_widget(self) -> None:
         """add_thinking_chunk creates a thinking widget."""
-        from hybridcoder.tui.widgets.chat_view import ChatView
+        from autocode.tui.widgets.chat_view import ChatView
         view = ChatView()
         assert view._thinking_stream_widget is None
         assert view._thinking_stream_content == ""
 
     def test_finish_thinking_stream_returns_content(self) -> None:
         """finish_thinking_stream returns accumulated content."""
-        from hybridcoder.tui.widgets.chat_view import ChatView
+        from autocode.tui.widgets.chat_view import ChatView
         view = ChatView()
         view._thinking_stream_content = "some thinking"
         content = view.finish_thinking_stream()
@@ -224,11 +224,11 @@ class TestThinkingToggle:
     @pytest.mark.asyncio()
     async def test_toggle_flips_show_thinking(self) -> None:
         """action_toggle_thinking flips _show_thinking."""
-        from hybridcoder.tui.app import HybridCoderApp
+        from autocode.tui.app import AutoCodeApp
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.tui.session_db_path = ":memory:"
-        app = HybridCoderApp(config=config)
+        app = AutoCodeApp(config=config)
         async with app.run_test():
             assert app._show_thinking is True
             app.action_toggle_thinking()
@@ -239,12 +239,12 @@ class TestThinkingToggle:
     @pytest.mark.asyncio()
     async def test_toggle_posts_message(self) -> None:
         """Toggling thinking posts a system message."""
-        from hybridcoder.tui.app import HybridCoderApp
-        from hybridcoder.tui.widgets.chat_view import ChatView
+        from autocode.tui.app import AutoCodeApp
+        from autocode.tui.widgets.chat_view import ChatView
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.tui.session_db_path = ":memory:"
-        app = HybridCoderApp(config=config)
+        app = AutoCodeApp(config=config)
         async with app.run_test() as pilot:
             app.action_toggle_thinking()
             await pilot.pause()
@@ -256,9 +256,9 @@ class TestThinkingToggle:
     @pytest.mark.asyncio()
     async def test_bindings_for_thinking_toggle(self) -> None:
         """Ctrl+T and Alt+T are bound to toggle_thinking."""
-        from hybridcoder.tui.app import HybridCoderApp
-        config = HybridCoderConfig()
-        app = HybridCoderApp(config=config)
+        from autocode.tui.app import AutoCodeApp
+        config = AutoCodeConfig()
+        app = AutoCodeApp(config=config)
         binding_keys = [b.key for b in app.BINDINGS]
         assert "ctrl+t" in binding_keys
         assert "alt+t" in binding_keys

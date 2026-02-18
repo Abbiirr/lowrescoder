@@ -27,7 +27,7 @@ Each dimension is independent. A good agent excels across all 12; a bad one may 
 | Rename variable in 3 files | 3 targeted edits | Read entire codebase, edit all files |
 | Check if function exists | 1 grep or AST query | Read file, parse mentally, answer |
 
-**HybridCoder relevance:** L1/L2 should handle simple tasks without invoking L3/L4. Measure the layer that resolves each task.
+**AutoCode relevance:** L1/L2 should handle simple tasks without invoking L3/L4. Measure the layer that resolves each task.
 
 ---
 
@@ -55,7 +55,7 @@ Each dimension is independent. A good agent excels across all 12; a bad one may 
 | Add field to data model | Model file + 3 consumers + migration | Did agent find all 5 files? |
 | Resolve import error | The importing file + the missing module | Did agent read the error trace first? |
 
-**HybridCoder relevance:** L2 (retrieval layer) is designed for this. Measure BM25 + vector search recall vs naive sequential reading.
+**AutoCode relevance:** L2 (retrieval layer) is designed for this. Measure BM25 + vector search recall vs naive sequential reading.
 
 ---
 
@@ -84,7 +84,7 @@ Each dimension is independent. A good agent excels across all 12; a bad one may 
 - Modify a deeply nested JSON config — verify structure preserved
 - Apply edit after file has been modified by another tool — state drift handling
 
-**HybridCoder relevance:** L3 constrained generation with Outlines grammar should produce structurally valid edits. Measure grammar-constrained vs unconstrained edit quality.
+**AutoCode relevance:** L3 constrained generation with Outlines grammar should produce structurally valid edits. Measure grammar-constrained vs unconstrained edit quality.
 
 ---
 
@@ -113,7 +113,7 @@ Each dimension is independent. A good agent excels across all 12; a bad one may 
 - First attempt produces syntax error → does agent fix the syntax without losing logic?
 - Three consecutive failures → does agent try a fundamentally different approach?
 
-**HybridCoder relevance:** L1 can diagnose syntax errors deterministically (tree-sitter). L2 can find the missing import via AST analysis. Test whether the agent routes recovery through L1-L2 before burning L4 tokens.
+**AutoCode relevance:** L1 can diagnose syntax errors deterministically (tree-sitter). L2 can find the missing import via AST analysis. Test whether the agent routes recovery through L1-L2 before burning L4 tokens.
 
 ---
 
@@ -139,7 +139,7 @@ Each dimension is independent. A good agent excels across all 12; a bad one may 
 - Graceful degradation: Does performance drop linearly or cliff-edge?
 - Timeout handling: Does the agent respect timeouts or hang?
 
-**HybridCoder relevance:** Test each layer boundary:
+**AutoCode relevance:** Test each layer boundary:
 - What happens when tree-sitter fails to parse? (L1 → L2 fallback)
 - What happens when LanceDB returns no results? (L2 → L3 fallback)
 - What happens when Ollama returns malformed JSON? (L4 retry/degrade)
@@ -186,7 +186,7 @@ Each dimension is independent. A good agent excels across all 12; a bad one may 
 - Tool calls per task at each scale (should stay roughly constant)
 - Tokens consumed per task at each scale
 
-**HybridCoder relevance:** L2's BM25 + vector search should maintain performance at scale. L1's tree-sitter/LSP doesn't care about codebase size — it indexes. Test that HybridCoder's retrieval doesn't degrade.
+**AutoCode relevance:** L2's BM25 + vector search should maintain performance at scale. L1's tree-sitter/LSP doesn't care about codebase size — it indexes. Test that AutoCode's retrieval doesn't degrade.
 
 ---
 
@@ -224,7 +224,7 @@ Each dimension is independent. A good agent excels across all 12; a bad one may 
 - Context pollution resistance (does providing error history help or hurt?)
 - Diagnostic accuracy (does the agent correctly identify what went wrong?)
 
-**HybridCoder relevance:** L1 can detect syntax errors in the corrupted state. L2 can identify broken imports. The deterministic layers should provide a major advantage over pure-LLM recovery.
+**AutoCode relevance:** L1 can detect syntax errors in the corrupted state. L2 can identify broken imports. The deterministic layers should provide a major advantage over pure-LLM recovery.
 
 ---
 
@@ -264,7 +264,7 @@ Each dimension is independent. A good agent excels across all 12; a bad one may 
 - Decay rate: pass^5 / pass^1 (1.0 = perfectly consistent)
 - Deterministic layer contribution: What % of agent actions are deterministic?
 
-**HybridCoder relevance:** If L1-L2 resolve a task deterministically, pass^k = pass^1 for that task. The more work done in deterministic layers, the higher pass^k.
+**AutoCode relevance:** If L1-L2 resolve a task deterministically, pass^k = pass^1 for that task. The more work done in deterministic layers, the higher pass^k.
 
 ---
 
@@ -285,4 +285,4 @@ Each dimension is independent. A good agent excels across all 12; a bad one may 
 - Zero-token resolution rate (% of tasks resolved by L1-L2 without LLM)
 - Cost at equivalent resolve rate ($/task)
 
-**HybridCoder relevance:** This is THE metric for the "LLM as last resort" philosophy. If 30% of tasks resolve at zero LLM tokens via tree-sitter/LSP, that's a 30% cost reduction vs any LLM-first agent.
+**AutoCode relevance:** This is THE metric for the "LLM as last resort" philosophy. If 30% of tasks resolve at zero LLM tokens via tree-sitter/LSP, that's a 30% cost reduction vs any LLM-first agent.

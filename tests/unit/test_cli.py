@@ -1,10 +1,10 @@
-"""Tests for HybridCoder CLI commands."""
+"""Tests for AutoCode CLI commands."""
 
 from __future__ import annotations
 
 from typer.testing import CliRunner
 
-from hybridcoder.cli import app
+from autocode.cli import app
 
 runner = CliRunner()
 
@@ -15,7 +15,7 @@ class TestCLIVersion:
     def test_version_output(self) -> None:
         result = runner.invoke(app, ["version"])
         assert result.exit_code == 0
-        assert "hybridcoder 0.1.0" in result.output
+        assert "autocode 0.1.0" in result.output
 
 
 class TestCLIConfig:
@@ -33,7 +33,7 @@ class TestCLIConfig:
     def test_config_path(self) -> None:
         result = runner.invoke(app, ["config", "path"])
         assert result.exit_code == 0
-        assert ".hybridcoder" in result.output
+        assert ".autocode" in result.output
 
     def test_config_invalid_action(self) -> None:
         result = runner.invoke(app, ["config", "invalid"])

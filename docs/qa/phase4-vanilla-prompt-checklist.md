@@ -5,13 +5,13 @@
 
 ## Priority Order (Required)
 
-1. **Functionality first (primary gate):** run this checklist in inline mode first (`uv run hybridcoder chat`).
+1. **Functionality first (primary gate):** run this checklist in inline mode first (`uv run autocode chat`).
 2. **TUI second (secondary gate):** only run full TUI verification after this checklist passes.
 3. If inline passes but TUI fails, treat it as a TUI/parity defect (not core functionality failure).
 
 ## Ground Rules
 
-1. Start with inline mode (`uv run hybridcoder chat`), then repeat selected cases in TUI if needed.
+1. Start with inline mode (`uv run autocode chat`), then repeat selected cases in TUI if needed.
 2. Use one model/provider for the full run.
 3. Do not reference internal classes, methods, or test helpers.
 4. For each case, copy the prompt exactly and check only visible behavior.
@@ -22,7 +22,7 @@
 
 ## Preconditions
 
-- [ ] HybridCoder starts successfully.
+- [ ] AutoCode starts successfully.
 - [ ] You can send/receive normal chat messages.
 - [ ] Slash commands are available (`/help` works).
 
@@ -30,7 +30,7 @@
 
 1. Automated baseline:
 ```bash
-./scripts/store_test_results.sh phase4-vanilla-pytest -- uv run pytest tests/ -v --cov=src/hybridcoder
+./scripts/store_test_results.sh phase4-vanilla-pytest -- uv run pytest tests/ -v --cov=src/autocode
 ```
 2. Manual checklist evidence:
 - [ ] Save a markdown run note in `docs/qa/test-results/` with date/time, model/provider, and PASS/FAIL per case.

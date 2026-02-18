@@ -199,7 +199,7 @@ Instrument AgentLoop to count:
 **File:** `scripts/e2e/scaffold_delta.py` (new)
 
 Run the same scenario with:
-1. Full HybridCoder scaffold (4-layer)
+1. Full AutoCode scaffold (4-layer)
 2. Naive single-prompt scaffold (model only)
 Compute and report the delta.
 

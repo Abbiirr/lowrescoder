@@ -1,5 +1,5 @@
 [project]
-name = "hybridcoder"
+name = "autocode"
 version = "0.1.0"
 description = "Edge-native AI coding assistant — local-first, deterministic-first"
 requires-python = ">=3.11"
@@ -19,7 +19,8 @@ dependencies = [
 ]
 
 [project.scripts]
-hybridcoder = "hybridcoder.cli:app"
+autocode = "autocode.cli:app"
+hybridcoder = "autocode.cli:app"
 
 [project.optional-dependencies]
 dev = [
@@ -37,14 +38,14 @@ layer1 = ["tree-sitter>=0.25.2", "tree-sitter-python>=0.25.0"]
 layer2 = ["lancedb>=0.29", "sentence-transformers>=5.0"]
 layer3 = ["llama-cpp-python>=0.3", "outlines>=0.1"]
 layer4 = ["ollama>=0.4"]
-all = ["hybridcoder[layer1,layer2,layer3,layer4]"]
+all = ["autocode[layer1,layer2,layer3,layer4]"]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/hybridcoder"]
+packages = ["src/autocode"]
 
 [tool.ruff]
 line-length = 100
@@ -56,7 +57,7 @@ select = ["E", "F", "I", "N", "W", "UP"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
-packages = ["hybridcoder"]
+packages = ["autocode"]
 mypy_path = "src"
 
 [tool.pytest.ini_options]

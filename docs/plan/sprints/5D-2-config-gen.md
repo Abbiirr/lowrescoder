@@ -10,7 +10,7 @@
 
 ## Goal
 
-`hybridcoder setup` and `hybridcoder uninstall` commands for safe config generation.
+`autocode setup` and `autocode uninstall` commands for safe config generation.
 
 ---
 
@@ -22,17 +22,17 @@
 
 ## Implementation
 
-- [ ] Implement `hybridcoder setup` (detect tools -> generate configs -> register MCP)
-- [ ] Implement `hybridcoder uninstall` (clean removal of managed sections)
+- [ ] Implement `autocode setup` (detect tools -> generate configs -> register MCP)
+- [ ] Implement `autocode uninstall` (clean removal of managed sections)
 - [ ] Safe config merge: read -> parse -> merge HC section -> write-temp-rename
-- [ ] `# managed-by: hybridcoder` markers on all injected content
-- [ ] Backup original to `.hybridcoder/backups/<tool>-<timestamp>.json`
+- [ ] `# managed-by: autocode` markers on all injected content
+- [ ] Backup original to `.autocode/backups/<tool>-<timestamp>.json`
 - [ ] Support: Claude Code, Codex, OpenCode config surfaces
 
 ## Acceptance Criteria
 
-- [ ] `hybridcoder setup` detects and configures all installed tools
-- [ ] `hybridcoder uninstall` cleanly removes all HC config
+- [ ] `autocode setup` detects and configures all installed tools
+- [ ] `autocode uninstall` cleanly removes all HC config
 - [ ] Config merge never overwrites user content
 - [ ] Backups created before every config modification
 - [ ] Atomic writes (write-temp-rename)

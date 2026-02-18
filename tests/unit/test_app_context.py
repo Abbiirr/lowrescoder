@@ -5,34 +5,34 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
-from hybridcoder.config import HybridCoderConfig
-from hybridcoder.tui.commands import AppContext
+from autocode.config import AutoCodeConfig
+from autocode.tui.commands import AppContext
 
 
 class TestAppContextProtocol:
     def test_inline_app_satisfies_protocol(self, tmp_path: Path) -> None:
         """InlineApp satisfies the AppContext protocol."""
-        from hybridcoder.inline.app import InlineApp
+        from autocode.inline.app import InlineApp
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.tui.session_db_path = str(tmp_path / "test.db")
         app = InlineApp(config=config, project_root=tmp_path)
         assert isinstance(app, AppContext)
 
     def test_tui_app_satisfies_protocol(self, tmp_path: Path) -> None:
-        """HybridCoderApp satisfies the AppContext protocol."""
-        from hybridcoder.tui.app import HybridCoderApp
+        """AutoCodeApp satisfies the AppContext protocol."""
+        from autocode.tui.app import AutoCodeApp
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.tui.session_db_path = str(tmp_path / "test.db")
-        app = HybridCoderApp(config=config, project_root=tmp_path)
+        app = AutoCodeApp(config=config, project_root=tmp_path)
         assert isinstance(app, AppContext)
 
     def test_add_system_message_inline(self, tmp_path: Path) -> None:
         """InlineApp.add_system_message() calls renderer."""
-        from hybridcoder.inline.app import InlineApp
+        from autocode.inline.app import InlineApp
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.tui.session_db_path = str(tmp_path / "test.db")
         app = InlineApp(config=config, project_root=tmp_path)
         with patch.object(app.renderer, "print_system") as mock:
@@ -41,9 +41,9 @@ class TestAppContextProtocol:
 
     def test_get_assistant_messages(self, tmp_path: Path) -> None:
         """get_assistant_messages() returns messages with role='assistant'."""
-        from hybridcoder.inline.app import InlineApp
+        from autocode.inline.app import InlineApp
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.tui.session_db_path = str(tmp_path / "test.db")
         app = InlineApp(config=config, project_root=tmp_path)
         # Add messages to session

@@ -6,9 +6,9 @@ import textwrap
 
 import pytest
 
-from hybridcoder.config import Layer1Config
-from hybridcoder.core.router import RequestRouter
-from hybridcoder.core.types import RequestType
+from autocode.config import Layer1Config
+from autocode.core.router import RequestRouter
+from autocode.core.types import RequestType
 
 # ==================== RequestRouter Tests ====================
 
@@ -171,7 +171,7 @@ class TestDeterministicQueryHandler:
         return tmp_path
 
     def test_list_functions(self, sample_project):
-        from hybridcoder.layer1.queries import DeterministicQueryHandler
+        from autocode.layer1.queries import DeterministicQueryHandler
 
         handler = DeterministicQueryHandler(project_root=sample_project)
         response = handler.handle("list functions in src/module.py")
@@ -181,7 +181,7 @@ class TestDeterministicQueryHandler:
         assert response.success
 
     def test_list_classes(self, sample_project):
-        from hybridcoder.layer1.queries import DeterministicQueryHandler
+        from autocode.layer1.queries import DeterministicQueryHandler
 
         handler = DeterministicQueryHandler(project_root=sample_project)
         response = handler.handle("list classes in src/module.py")
@@ -189,7 +189,7 @@ class TestDeterministicQueryHandler:
         assert response.tokens_used == 0
 
     def test_get_imports(self, sample_project):
-        from hybridcoder.layer1.queries import DeterministicQueryHandler
+        from autocode.layer1.queries import DeterministicQueryHandler
 
         handler = DeterministicQueryHandler(project_root=sample_project)
         response = handler.handle("get imports in src/module.py")
@@ -197,7 +197,7 @@ class TestDeterministicQueryHandler:
         assert response.tokens_used == 0
 
     def test_find_definition(self, sample_project):
-        from hybridcoder.layer1.queries import DeterministicQueryHandler
+        from autocode.layer1.queries import DeterministicQueryHandler
 
         handler = DeterministicQueryHandler(project_root=sample_project)
         response = handler.handle("find definition of helper")
@@ -205,7 +205,7 @@ class TestDeterministicQueryHandler:
         assert response.tokens_used == 0
 
     def test_show_signature(self, sample_project):
-        from hybridcoder.layer1.queries import DeterministicQueryHandler
+        from autocode.layer1.queries import DeterministicQueryHandler
 
         handler = DeterministicQueryHandler(project_root=sample_project)
         response = handler.handle("show signature of helper in src/module.py")
@@ -213,28 +213,28 @@ class TestDeterministicQueryHandler:
         assert response.tokens_used == 0
 
     def test_no_file_specified(self, sample_project):
-        from hybridcoder.layer1.queries import DeterministicQueryHandler
+        from autocode.layer1.queries import DeterministicQueryHandler
 
         handler = DeterministicQueryHandler(project_root=sample_project)
         response = handler.handle("list functions")
         assert not response.success
 
     def test_unrecognized_query(self, sample_project):
-        from hybridcoder.layer1.queries import DeterministicQueryHandler
+        from autocode.layer1.queries import DeterministicQueryHandler
 
         handler = DeterministicQueryHandler(project_root=sample_project)
         response = handler.handle("do something weird")
         assert not response.success
 
     def test_nonexistent_file(self, sample_project):
-        from hybridcoder.layer1.queries import DeterministicQueryHandler
+        from autocode.layer1.queries import DeterministicQueryHandler
 
         handler = DeterministicQueryHandler(project_root=sample_project)
         response = handler.handle("list functions in nonexistent.py")
         assert not response.success
 
     def test_find_references_text_search(self, sample_project):
-        from hybridcoder.layer1.queries import DeterministicQueryHandler
+        from autocode.layer1.queries import DeterministicQueryHandler
 
         handler = DeterministicQueryHandler(project_root=sample_project)
         response = handler.handle("find references of MyClass")
@@ -242,7 +242,7 @@ class TestDeterministicQueryHandler:
         assert response.tokens_used == 0
 
     def test_list_methods(self, sample_project):
-        from hybridcoder.layer1.queries import DeterministicQueryHandler
+        from autocode.layer1.queries import DeterministicQueryHandler
 
         handler = DeterministicQueryHandler(project_root=sample_project)
         response = handler.handle("list methods in src/module.py")

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from hybridcoder.tui.file_completer import (
+from autocode.tui.file_completer import (
     detect_at_references,
     expand_references,
     fuzzy_complete,

@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 from rich.console import Console
 
-from hybridcoder.inline.renderer import InlineRenderer, _truncate_arg
+from autocode.inline.renderer import InlineRenderer, _truncate_arg
 
 
 def _make_renderer() -> tuple[InlineRenderer, StringIO]:
@@ -24,7 +24,7 @@ class TestInlineRenderer:
         renderer, buf = _make_renderer()
         renderer.print_welcome(model="qwen3-8b", provider="ollama", mode="suggest")
         output = buf.getvalue()
-        assert "HybridCoder" in output
+        assert "AutoCode" in output
         assert "qwen3-8b" in output
         assert "ollama" in output
         assert "suggest" in output

@@ -38,6 +38,102 @@ wheels = [
 ]
 
 [[package]]
+name = "autocode"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "ollama" },
+    { name = "openai" },
+    { name = "prompt-toolkit" },
+    { name = "pydantic" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
+    { name = "rich" },
+    { name = "textual" },
+    { name = "tree-sitter" },
+    { name = "tree-sitter-python" },
+    { name = "typer" },
+]
+
+[package.optional-dependencies]
+all = [
+    { name = "lancedb" },
+    { name = "llama-cpp-python" },
+    { name = "ollama" },
+    { name = "outlines" },
+    { name = "sentence-transformers" },
+    { name = "tree-sitter" },
+    { name = "tree-sitter-python" },
+]
+dev = [
+    { name = "httpx" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "tree-sitter" },
+    { name = "tree-sitter-python" },
+    { name = "types-pyyaml" },
+]
+layer1 = [
+    { name = "tree-sitter" },
+    { name = "tree-sitter-python" },
+]
+layer2 = [
+    { name = "lancedb" },
+    { name = "sentence-transformers" },
+]
+layer3 = [
+    { name = "llama-cpp-python" },
+    { name = "outlines" },
+]
+layer4 = [
+    { name = "ollama" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "types-pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "autocode", extras = ["layer1", "layer2", "layer3", "layer4"], marker = "extra == 'all'" },
+    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
+    { name = "lancedb", marker = "extra == 'layer2'", specifier = ">=0.29" },
+    { name = "llama-cpp-python", marker = "extra == 'layer3'", specifier = ">=0.3" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
+    { name = "ollama", specifier = ">=0.6.1" },
+    { name = "ollama", marker = "extra == 'layer4'", specifier = ">=0.4" },
+    { name = "openai", specifier = ">=1.0" },
+    { name = "outlines", marker = "extra == 'layer3'", specifier = ">=0.1" },
+    { name = "prompt-toolkit", specifier = ">=3.0" },
+    { name = "pydantic", specifier = ">=2.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
+    { name = "python-dotenv", specifier = ">=1.0" },
+    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "rich", specifier = ">=13.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5" },
+    { name = "sentence-transformers", marker = "extra == 'layer2'", specifier = ">=5.0" },
+    { name = "textual", specifier = ">=0.89" },
+    { name = "tree-sitter", specifier = ">=0.25.2" },
+    { name = "tree-sitter", marker = "extra == 'dev'", specifier = ">=0.25.2" },
+    { name = "tree-sitter", marker = "extra == 'layer1'", specifier = ">=0.25.2" },
+    { name = "tree-sitter-python", specifier = ">=0.25.0" },
+    { name = "tree-sitter-python", marker = "extra == 'dev'", specifier = ">=0.25.0" },
+    { name = "tree-sitter-python", marker = "extra == 'layer1'", specifier = ">=0.25.0" },
+    { name = "typer", specifier = ">=0.12" },
+    { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
+]
+provides-extras = ["dev", "layer1", "layer2", "layer3", "layer4", "all"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "types-pyyaml", specifier = ">=6.0" }]
+
+[[package]]
 name = "certifi"
 version = "2026.1.4"
 source = { registry = "https://pypi.org/simple" }
@@ -335,102 +431,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/d9/0e/e73927175162b8a47
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3f/74/f0fb3a54fbca7c0aeff85f41d93b90ca3f6a36d918459401a3890763c54b/huggingface_hub-1.4.0-py3-none-any.whl", hash = "sha256:49d380ffddb31d9d4b6acc0792691f8fa077e1ed51980ed42c7abca62ec1b3b6", size = 553202, upload-time = "2026-02-04T13:48:53.545Z" },
 ]
-
-[[package]]
-name = "hybridcoder"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "ollama" },
-    { name = "openai" },
-    { name = "prompt-toolkit" },
-    { name = "pydantic" },
-    { name = "python-dotenv" },
-    { name = "pyyaml" },
-    { name = "rich" },
-    { name = "textual" },
-    { name = "tree-sitter" },
-    { name = "tree-sitter-python" },
-    { name = "typer" },
-]
-
-[package.optional-dependencies]
-all = [
-    { name = "lancedb" },
-    { name = "llama-cpp-python" },
-    { name = "ollama" },
-    { name = "outlines" },
-    { name = "sentence-transformers" },
-    { name = "tree-sitter" },
-    { name = "tree-sitter-python" },
-]
-dev = [
-    { name = "httpx" },
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "tree-sitter" },
-    { name = "tree-sitter-python" },
-    { name = "types-pyyaml" },
-]
-layer1 = [
-    { name = "tree-sitter" },
-    { name = "tree-sitter-python" },
-]
-layer2 = [
-    { name = "lancedb" },
-    { name = "sentence-transformers" },
-]
-layer3 = [
-    { name = "llama-cpp-python" },
-    { name = "outlines" },
-]
-layer4 = [
-    { name = "ollama" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "types-pyyaml" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
-    { name = "hybridcoder", extras = ["layer1", "layer2", "layer3", "layer4"], marker = "extra == 'all'" },
-    { name = "lancedb", marker = "extra == 'layer2'", specifier = ">=0.29" },
-    { name = "llama-cpp-python", marker = "extra == 'layer3'", specifier = ">=0.3" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
-    { name = "ollama", specifier = ">=0.6.1" },
-    { name = "ollama", marker = "extra == 'layer4'", specifier = ">=0.4" },
-    { name = "openai", specifier = ">=1.0" },
-    { name = "outlines", marker = "extra == 'layer3'", specifier = ">=0.1" },
-    { name = "prompt-toolkit", specifier = ">=3.0" },
-    { name = "pydantic", specifier = ">=2.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
-    { name = "python-dotenv", specifier = ">=1.0" },
-    { name = "pyyaml", specifier = ">=6.0" },
-    { name = "rich", specifier = ">=13.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5" },
-    { name = "sentence-transformers", marker = "extra == 'layer2'", specifier = ">=5.0" },
-    { name = "textual", specifier = ">=0.89" },
-    { name = "tree-sitter", specifier = ">=0.25.2" },
-    { name = "tree-sitter", marker = "extra == 'dev'", specifier = ">=0.25.2" },
-    { name = "tree-sitter", marker = "extra == 'layer1'", specifier = ">=0.25.2" },
-    { name = "tree-sitter-python", specifier = ">=0.25.0" },
-    { name = "tree-sitter-python", marker = "extra == 'dev'", specifier = ">=0.25.0" },
-    { name = "tree-sitter-python", marker = "extra == 'layer1'", specifier = ">=0.25.0" },
-    { name = "typer", specifier = ">=0.12" },
-    { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
-]
-provides-extras = ["dev", "layer1", "layer2", "layer3", "layer4", "all"]
-
-[package.metadata.requires-dev]
-dev = [{ name = "types-pyyaml", specifier = ">=6.0" }]
 
 [[package]]
 name = "idna"

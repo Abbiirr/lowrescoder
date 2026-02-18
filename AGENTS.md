@@ -2,8 +2,8 @@
 
 ## Project Structure & Module Organization
 Phase 2 is implemented (Textual TUI + inline mode). Phase 3 (Code Intelligence) and Phase 4 (Agent Orchestration) are planned in docs. Key paths:
-- `src/hybridcoder/` — application code
-- `cmd/hybridcoder-tui/` — Go TUI client (JSON-RPC frontend)
+- `src/autocode/` — application code
+- `cmd/autocode-tui/` — Go TUI client (JSON-RPC frontend)
 - `tests/` — unit, integration, and benchmark tests
 - `docs/` — plans and research documents
 - `CLAUDE.md` — collaboration principles and the "LLM as last resort" rule
@@ -11,8 +11,8 @@ Phase 2 is implemented (Textual TUI + inline mode). Phase 3 (Code Intelligence) 
 - `AGENTS_CONVERSATION.MD` — active message log between agents
 
 Current layout has two UI frontends:
-- **Inline (default):** `src/hybridcoder/inline/` — Rich + prompt_toolkit REPL, launched via `hybridcoder chat`
-- **Textual (opt-in):** `src/hybridcoder/tui/` — fullscreen Textual TUI, launched via `hybridcoder chat --tui`
+- **Inline (default):** `src/autocode/inline/` — Rich + prompt_toolkit REPL, launched via `autocode chat`
+- **Textual (opt-in):** `src/autocode/tui/` — fullscreen Textual TUI, launched via `autocode chat --tui`
 
 ## Session Context (Read First)
 For fast session startup and current-state context, read in this order:
@@ -24,13 +24,13 @@ For fast session startup and current-state context, read in this order:
 ## Build, Test, and Development Commands
 Current commands:
 - `uv sync --all-extras`
-- `uv run pytest tests/ -v --cov=src/hybridcoder`
+- `uv run pytest tests/ -v --cov=src/autocode`
 - `uv run ruff check src/ tests/`
 - `uv run ruff format src/ tests/`
-- `uv run mypy src/hybridcoder/`
-- `uv run python -m hybridcoder` or `uv run hybridcoder chat`
+- `uv run mypy src/autocode/`
+- `uv run python -m autocode` or `uv run autocode chat`
 - `make test` and `make lint`
-- `uv run python scripts/bench_tui.py --cmd hybridcoder --args "chat"`
+- `uv run python scripts/bench_tui.py --cmd autocode --args "chat"`
 
 ## Coding Style & Naming Conventions
 - Python 3.11+.
@@ -53,7 +53,7 @@ If you introduce a formatter/linter (for example, ruff or black), document it he
 - PRs should include: summary, rationale, affected files, and test results (or why tests were not run). Link issues if applicable.
 
 ## Security & Configuration
-- Keep secrets out of the repo. Config is expected in `~/.hybridcoder/config.yaml`.
+- Keep secrets out of the repo. Config is expected in `~/.autocode/config.yaml`.
 - Maintain local-first defaults; network access should be explicit and opt-in.
 
 ## Architecture Notes

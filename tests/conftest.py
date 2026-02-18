@@ -1,3 +1,3 @@
-"""Shared pytest fixtures for HybridCoder tests."""
+"""Shared pytest fixtures for AutoCode tests."""
 
 from __future__ import annotations

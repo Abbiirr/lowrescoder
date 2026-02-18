@@ -6,8 +6,8 @@ import textwrap
 
 import pytest
 
-from hybridcoder.core.router import RequestRouter
-from hybridcoder.core.types import RequestType
+from autocode.core.router import RequestRouter
+from autocode.core.types import RequestType
 
 
 class TestRouterL1Bypass:
@@ -49,8 +49,8 @@ class TestL1ResponseDirect:
         return tmp_path
 
     def test_l1_returns_response(self, project):
-        from hybridcoder.core.types import Response
-        from hybridcoder.layer1.queries import DeterministicQueryHandler
+        from autocode.core.types import Response
+        from autocode.layer1.queries import DeterministicQueryHandler
 
         handler = DeterministicQueryHandler(project_root=project)
         response = handler.handle("list functions in app.py")
@@ -61,7 +61,7 @@ class TestL1ResponseDirect:
         assert response.content
 
     def test_l1_zero_tokens(self, project):
-        from hybridcoder.layer1.queries import DeterministicQueryHandler
+        from autocode.layer1.queries import DeterministicQueryHandler
 
         handler = DeterministicQueryHandler(project_root=project)
         response = handler.handle("list classes in app.py")
@@ -69,7 +69,7 @@ class TestL1ResponseDirect:
         assert response.tokens_used == 0
 
     def test_l1_response_has_content(self, project):
-        from hybridcoder.layer1.queries import DeterministicQueryHandler
+        from autocode.layer1.queries import DeterministicQueryHandler
 
         handler = DeterministicQueryHandler(project_root=project)
         response = handler.handle("list functions in app.py")
@@ -77,7 +77,7 @@ class TestL1ResponseDirect:
         assert "main" in response.content
 
     def test_l1_find_definition_response(self, project):
-        from hybridcoder.layer1.queries import DeterministicQueryHandler
+        from autocode.layer1.queries import DeterministicQueryHandler
 
         handler = DeterministicQueryHandler(project_root=project)
         response = handler.handle("find definition of App")

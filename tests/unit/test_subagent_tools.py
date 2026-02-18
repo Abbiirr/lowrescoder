@@ -7,13 +7,13 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from hybridcoder.agent.subagent import (
+from autocode.agent.subagent import (
     LLMScheduler,
     SubagentManager,
 )
-from hybridcoder.agent.subagent_tools import register_subagent_tools
-from hybridcoder.agent.tools import ToolDefinition, ToolRegistry
-from hybridcoder.layer4.llm import LLMResponse
+from autocode.agent.subagent_tools import register_subagent_tools
+from autocode.agent.tools import ToolDefinition, ToolRegistry
+from autocode.layer4.llm import LLMResponse
 
 
 def _make_registry() -> ToolRegistry:

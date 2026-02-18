@@ -6,14 +6,14 @@ TARGET="${1:-run}"
 case "$TARGET" in
   run)
     echo "Building Go TUI..."
-    (cd cmd/hybridcoder-tui && go build -o ../../build/hybridcoder-tui .)
+    (cd cmd/autocode-tui && go build -o ../../build/autocode-tui .)
     echo "Build OK. Running..."
-    exec ./build/hybridcoder-tui
+    exec ./build/autocode-tui
     ;;
   tui)
     echo "Building Go TUI..."
-    (cd cmd/hybridcoder-tui && go build -o ../../build/hybridcoder-tui .)
-    echo "Done: build/hybridcoder-tui"
+    (cd cmd/autocode-tui && go build -o ../../build/autocode-tui .)
+    echo "Done: build/autocode-tui"
     ;;
   setup)
     echo "Installing Python dependencies..."
@@ -21,17 +21,17 @@ case "$TARGET" in
     ;;
   test)
     echo "Running Python tests..."
-    uv run pytest tests/ -v --cov=src/hybridcoder
+    uv run pytest tests/ -v --cov=src/autocode
     ;;
   test-all)
     echo "Running Go tests..."
-    (cd cmd/hybridcoder-tui && go test ./... -v -count=1)
+    (cd cmd/autocode-tui && go test ./... -v -count=1)
     echo "Running Python tests..."
-    uv run pytest tests/ -v --cov=src/hybridcoder
+    uv run pytest tests/ -v --cov=src/autocode
     ;;
   go-test)
     echo "Running Go tests..."
-    (cd cmd/hybridcoder-tui && go test ./... -v -count=1)
+    (cd cmd/autocode-tui && go test ./... -v -count=1)
     ;;
   lint)
     echo "Running linters..."

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from hybridcoder.utils.file_tools import list_files, read_file, write_file
+from autocode.utils.file_tools import list_files, read_file, write_file
 
 
 class TestReadFile:

@@ -4,7 +4,7 @@ Last updated: 2026-02-13
 
 ## What Is This?
 
-An end-to-end benchmark that tests whether HybridCoder's AI agent can **autonomously create a complete, working React application from scratch** with zero human intervention. It measures real-world capability: multi-file coordination, architecture decisions, dependency management, code correctness, and UI quality.
+An end-to-end benchmark that tests whether AutoCode's AI agent can **autonomously create a complete, working React application from scratch** with zero human intervention. It measures real-world capability: multi-file coordination, architecture decisions, dependency management, code correctness, and UI quality.
 
 ## Quick Start
 
@@ -89,7 +89,7 @@ Each run produces:
 
 ```
 sandboxes/bench_<timestamp>/                              # Generated React project
-sandboxes/bench_<timestamp>/.hybridcoder-benchmark.json   # Machine-readable results
+sandboxes/bench_<timestamp>/.autocode-benchmark.json   # Machine-readable results
 sandboxes/bench_<timestamp>/.benchmark-sessions.db        # Session data
 sandboxes/bench_<timestamp>/.benchmark-events.jsonl       # Event log
 docs/qa/test-results/<timestamp>-e2e-react-calculator.md  # Human-readable report

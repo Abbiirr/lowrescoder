@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import pytest
 
-from hybridcoder.core.context import ContextAssembler
-from hybridcoder.core.types import CodeChunk, SearchResult
+from autocode.core.context import ContextAssembler
+from autocode.core.types import CodeChunk, SearchResult
 
 pytestmark = pytest.mark.benchmark
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from hybridcoder.core.types import (
+from autocode.core.types import (
     CodeChunk,
     FileRange,
     LayerResult,

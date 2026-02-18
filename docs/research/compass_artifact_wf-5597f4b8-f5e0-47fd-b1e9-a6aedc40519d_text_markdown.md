@@ -1,4 +1,4 @@
-# Migrating HybridCoder to Go Bubble Tea
+﻿# Migrating AutoCode to Go Bubble Tea
 
 **Bubble Tea is the right framework for this migration, and the ecosystem has matured enough to build a production-quality Claude Code competitor.** Go's goroutine-based concurrency eliminates the Python GIL and blocking issues that motivated this move, while the Charm ecosystem (Bubble Tea + Bubbles + Lip Gloss + Glamour + Huh) provides every component needed. Charm's own **Crush** — a 19.5k-star agentic coding TUI — validates the framework for this exact use case. This document covers all 16 research areas with implementation-grade patterns, production code examples, and concrete architectural decisions for a senior Go developer.
 
@@ -31,7 +31,7 @@ type Model interface {
 
 ### v2 is the target for new projects
 
-Bubble Tea v2 reached RC stage in early 2026 with the import path `charm.land/bubbletea/v2`. For HybridCoder, **target v2** — the benefits are substantial:
+Bubble Tea v2 reached RC stage in early 2026 with the import path `charm.land/bubbletea/v2`. For AutoCode, **target v2** — the benefits are substantial:
 
 | Feature | v1 | v2 |
 |---|---|---|
@@ -56,7 +56,7 @@ Bubble Tea's v1 standard renderer uses **line-by-line diffing** rather than full
 
 **Comparison with alternatives**: Ratatui (Rust) uses cell-level immediate-mode diffing — more granular but you own the event loop. Ink (JS) uses React's virtual DOM reconciliation. Bubble Tea's retained-mode approach (framework diffs your `View()` string) is the simplest developer experience, trading some rendering granularity for dramatically simpler code.
 
-For HybridCoder's **<16ms frame budget**, keep `View()` fast by using `strings.Builder`, caching rendered components that haven't changed, and avoiding re-rendering markdown on every frame. The 60fps renderer naturally coalesces updates.
+For AutoCode's **<16ms frame budget**, keep `View()` fast by using `strings.Builder`, caching rendered components that haven't changed, and avoiding re-rendering markdown on every frame. The 60fps renderer naturally coalesces updates.
 
 ---
 
@@ -83,7 +83,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-    header   := headerStyle.Width(m.width).Render("⌬ HybridCoder")
+    header   := headerStyle.Width(m.width).Render("⌬ AutoCode")
     chat     := m.viewport.View()
     status   := statusStyle.Width(m.width).Render(fmt.Sprintf("%d msgs", len(m.messages)))
     inputBar := inputBorderStyle.Width(m.width).Render(m.textInput.View())
@@ -102,7 +102,7 @@ func (m model) View() string {
 
 ## 4. Multi-pane layout with responsive panels
 
-HybridCoder requires: header | [chat pane | context panel] | status bar | input. Each pane is its own struct implementing a mini tea.Model pattern:
+AutoCode requires: header | [chat pane | context panel] | status bar | input. Each pane is its own struct implementing a mini tea.Model pattern:
 
 ```go
 type pane int
@@ -260,7 +260,7 @@ func sanitizePartialMarkdown(content string) string {
 
 The `textinput` bubble supports ghost-text autocompletion via `SetSuggestions()` — prefix-matched suggestions appear after the cursor in a faded style. Users cycle with Ctrl+N/Ctrl+P and accept with the right arrow key. **Limitations**: prefix-only matching (no fuzzy), no dropdown, single suggestion visible at a time.
 
-**For HybridCoder, build a custom dropdown overlay** that renders above the input:
+**For AutoCode, build a custom dropdown overlay** that renders above the input:
 
 ```go
 // Command registry with fuzzy matching
@@ -316,7 +316,7 @@ Three pure-Go SQLite options exist. After analyzing benchmarks from `cvilsmeier/
 | Real QUERY | **120** | 130 | 127 |
 | Complex INSERT | **843** | 2909 | 1834 |
 
-**`ncruces/go-sqlite3`** is the best choice: pure Go (no CGo), runs official SQLite WASM via wazero, competitive performance, encryption support, and trivial cross-compilation. For HybridCoder's data volumes (KB-MB of chat sessions), the performance difference is negligible.
+**`ncruces/go-sqlite3`** is the best choice: pure Go (no CGo), runs official SQLite WASM via wazero, competitive performance, encryption support, and trivial cross-compilation. For AutoCode's data volumes (KB-MB of chat sessions), the performance difference is negligible.
 
 ### Schema design
 
@@ -572,8 +572,8 @@ rapid.Check(t, func(t *rapid.T) {
 ### Recommended layout
 
 ```
-hybridcoder/
-├── cmd/hybridcoder/main.go          # Entry point
+autocode/
+├── cmd/autocode/main.go          # Entry point
 ├── internal/
 │   ├── tui/                          # Bubble Tea models and components
 │   │   ├── app.go                    # Root model
@@ -611,7 +611,7 @@ builds:
   - env: [CGO_ENABLED=0]
     goos: [linux, windows, darwin]
     goarch: [amd64, arm64]
-    main: ./cmd/hybridcoder/
+    main: ./cmd/autocode/
     ldflags: [-s -w -X main.version={{.Version}}]
 ```
 
@@ -662,7 +662,7 @@ L2 embeddings via Ollama API (or hugot library), GoReleaser releases, TUI themes
 
 ### Framework: Bubble Tea wins for Go-native TUI
 
-Bubble Tea provides **Elm Architecture consistency**, the richest ecosystem (Bubbles, Lip Gloss, Glamour, Huh), production maturity (lazygit, Glow, Soft Serve), and explicit inline/fullscreen/hybrid mode support. It's the only Go-native option, and Charm's own Crush validates it for agentic coding. Ratatui (Rust) offers 30-40% better memory/CPU but requires Rust. Textual (Python) has better CSS-like layouts but brings the GIL problem HybridCoder is escaping.
+Bubble Tea provides **Elm Architecture consistency**, the richest ecosystem (Bubbles, Lip Gloss, Glamour, Huh), production maturity (lazygit, Glow, Soft Serve), and explicit inline/fullscreen/hybrid mode support. It's the only Go-native option, and Charm's own Crush validates it for agentic coding. Ratatui (Rust) offers 30-40% better memory/CPU but requires Rust. Textual (Python) has better CSS-like layouts but brings the GIL problem AutoCode is escaping.
 
 ### Rendering mode: inline default, alt screen for specific views
 
@@ -670,7 +670,7 @@ Bubble Tea provides **Elm Architecture consistency**, the richest ecosystem (Bub
 
 ### Architecture: single binary with MCP extensibility
 
-**Single binary** for simplicity — one `go build`, one artifact, no dependency management for users. Use **MCP (Model Context Protocol)** for tool extensibility (industry standard used by Claude Code and Codex). Add markdown-based custom commands (flat files in `.hybridcoder/commands/`, no compilation needed). Avoid Go's `plugin` package entirely (Linux/macOS only, same Go version required, no Windows).
+**Single binary** for simplicity — one `go build`, one artifact, no dependency management for users. Use **MCP (Model Context Protocol)** for tool extensibility (industry standard used by Claude Code and Codex). Add markdown-based custom commands (flat files in `.autocode/commands/`, no compilation needed). Avoid Go's `plugin` package entirely (Linux/macOS only, same Go version required, no Windows).
 
 ### Session storage: SQLite via ncruces/go-sqlite3
 
@@ -700,7 +700,7 @@ TOML is human-readable, supports comments, is type-safe, and is increasingly the
 
 ## Conclusion
 
-This migration is well-timed. **Bubble Tea v2's synchronized output, Cursed Renderer, and declarative View struct eliminate the rendering limitations that would have been painful in v1.** The framework's Elm Architecture naturally enforces the separation of concerns that HybridCoder's 4-layer LLM architecture requires — each layer communicates through typed messages, goroutines handle parallel inference without GIL constraints, and the 60fps renderer coalesces updates during high-throughput streaming.
+This migration is well-timed. **Bubble Tea v2's synchronized output, Cursed Renderer, and declarative View struct eliminate the rendering limitations that would have been painful in v1.** The framework's Elm Architecture naturally enforces the separation of concerns that AutoCode's 4-layer LLM architecture requires — each layer communicates through typed messages, goroutines handle parallel inference without GIL constraints, and the 60fps renderer coalesces updates during high-throughput streaming.
 
 The critical path is **Phase 2 (LLM streaming)** — get token-by-token display working with auto-scroll, batched markdown rendering, and cancellation before investing in the tool system. The channel-relay pattern for streaming and the batch-tick approach for rendering are the two patterns that make or break the UX.
 

@@ -38,7 +38,7 @@ Sprint 4A must be built bottom-up: data layer → engine → tools → wiring. E
 
 ### 2.1 New Files (4 source + 4 test)
 
-#### `src/hybridcoder/session/task_store.py` — TaskStore with DAG
+#### `src/autocode/session/task_store.py` — TaskStore with DAG
 
 ```
 class TaskStore:
@@ -64,7 +64,7 @@ Key implementation notes:
 - `is_ready()`: all deps have status == "completed"
 - `snapshot()`/`restore_from_snapshot()`: for checkpoint store (Sprint 4C)
 
-#### `src/hybridcoder/agent/context.py` — ContextEngine
+#### `src/autocode/agent/context.py` — ContextEngine
 
 ```
 class ContextEngine:
@@ -83,7 +83,7 @@ Key implementation notes:
 - `auto_compact()` uses the LLM provider to summarize older messages (or falls back to simple truncation if no provider)
 - Compaction trigger: `total > threshold * context_length`
 
-#### `src/hybridcoder/agent/task_tools.py` — Task tool definitions
+#### `src/autocode/agent/task_tools.py` — Task tool definitions
 
 Three tools registered via ToolRegistry:
 
@@ -104,7 +104,7 @@ Each tool handler takes `task_store: TaskStore` as a closure parameter (injected
 
 ### 2.2 Modified Files (10)
 
-#### `src/hybridcoder/config.py`
+#### `src/autocode/config.py`
 - **Add** `AgentConfig` dataclass (Pydantic model):
   ```python
   class AgentConfig(BaseModel):
@@ -118,49 +118,49 @@ Each tool handler takes `task_store: TaskStore` as a closure parameter (injected
       memory_decay_factor: float = 0.95  # used in 4C
       memory_context_max_tokens: int = 500  # used in 4C
   ```
-- **Add** `agent: AgentConfig = Field(default_factory=AgentConfig)` to `HybridCoderConfig`
+- **Add** `agent: AgentConfig = Field(default_factory=AgentConfig)` to `AutoCodeConfig`
 - All fields have defaults → fully backward compatible
 
-#### `src/hybridcoder/session/models.py`
+#### `src/autocode/session/models.py`
 - **Add** DDL for `tasks` table (id, session_id, title, description, status, created_at, updated_at)
 - **Add** DDL for `task_dependencies` table (id, session_id, task_id, depends_on, UNIQUE, CHECK)
 - **Add** `TaskRow` dataclass
 - **Add** `ensure_tables(conn)` function — idempotent `CREATE TABLE IF NOT EXISTS` for all Phase 4 tables
 
-#### `src/hybridcoder/session/store.py`
+#### `src/autocode/session/store.py`
 - **Add** `get_connection()` method (returns `self._conn`)
 - **Call** `ensure_tables(self._conn)` in `__init__` after existing DDL
 
-#### `src/hybridcoder/agent/tools.py`
+#### `src/autocode/agent/tools.py`
 - **Add** `mutates_fs: bool = False` and `executes_shell: bool = False` to `ToolDefinition`
 - **Mark** `write_file` tool: `mutates_fs=True`
 - **Mark** `run_command` tool: `executes_shell=True`
 - **CF-3:** Cache `CodeIndex` instance in `_handle_search_code()` (module-level or class attribute)
 
-#### `src/hybridcoder/agent/loop.py`
+#### `src/autocode/agent/loop.py`
 - **Add** constructor params: `context_engine=None`, `task_store=None`, `llm_scheduler=None`
 - **If** `context_engine` is set: use `context_engine.build_messages()` instead of raw message building
 - **If** `task_store` is set: inject `task_store.summary()` into system prompt
 - **If** `llm_scheduler` is set: wrap LLM calls with `llm_scheduler.submit()`
 - All new params default to `None` — existing behavior unchanged when not provided
 
-#### `src/hybridcoder/agent/prompts.py`
+#### `src/autocode/agent/prompts.py`
 - **Add** optional kwargs: `task_summary=""`, `memory_context=""`, `subagent_status=""`
 - **If** `task_summary` is non-empty, append "Active Tasks" section to system prompt
 - **Add** task management instructions to SYSTEM_PROMPT constant
 
-#### `src/hybridcoder/tui/commands.py`
+#### `src/autocode/tui/commands.py`
 - **Add** `/tasks` command handler that calls `TaskStore.list_tasks()` and formats output
 
-#### `src/hybridcoder/backend/server.py`
+#### `src/autocode/backend/server.py`
 - **Create** `TaskStore` instance alongside `SessionStore`
 - **Pass** `task_store` to `AgentLoop` constructor
 - **Add** `task.list` JSON-RPC method handler
 
-#### `src/hybridcoder/layer1/queries.py`
+#### `src/autocode/layer1/queries.py`
 - **CF-2:** Replace `list(path.rglob(...))[:N]` with `itertools.islice(path.rglob(...), N)`
 
-#### `cmd/hybridcoder-tui/update.go`
+#### `cmd/autocode-tui/update.go`
 - **CF-1:** Add `m.statusBar.Layer = ""` in `sendChat()` at new-turn reset
 
 ---
@@ -185,9 +185,9 @@ Before writing any code:
 - [ ] Confirm `uv run pytest tests/ -v` passes (840+ tests, baseline)
 - [ ] Confirm `make lint` passes
 - [ ] Verify `graphlib` is available: `python -c "import graphlib; print('ok')"`
-- [ ] Verify `src/hybridcoder/session/task_store.py` does NOT exist yet
-- [ ] Verify `src/hybridcoder/agent/context.py` does NOT exist yet
-- [ ] Verify `src/hybridcoder/agent/task_tools.py` does NOT exist yet
+- [ ] Verify `src/autocode/session/task_store.py` does NOT exist yet
+- [ ] Verify `src/autocode/agent/context.py` does NOT exist yet
+- [ ] Verify `src/autocode/agent/task_tools.py` does NOT exist yet
 
 ---
 
@@ -197,7 +197,7 @@ After implementation, run:
 
 ```bash
 # Unit tests (must show 865+ pass)
-./scripts/store_test_results.sh sprint-4a-unit -- uv run pytest tests/ -v --cov=src/hybridcoder
+./scripts/store_test_results.sh sprint-4a-unit -- uv run pytest tests/ -v --cov=src/autocode
 
 # Lint + type check
 ./scripts/store_test_results.sh sprint-4a-lint -- make lint
@@ -229,7 +229,7 @@ Sprint 4A is done when:
 6. [x] Task summary appears in system prompt each iteration
 7. [x] `/tasks` command shows task board
 8. [x] `task.list` JSON-RPC method responds
-9. [x] `AgentConfig` is in `HybridCoderConfig` with all defaults
+9. [x] `AgentConfig` is in `AutoCodeConfig` with all defaults
 10. [x] `ensure_tables()` creates Phase 4 tables idempotently
 11. [x] 26 new tests + baseline pass (868 collected, 755 passed, 0 failed)
 12. [x] `ruff check` passes

@@ -379,16 +379,16 @@ def test_project_creation_rubric_scores_realistic_fixture(sample_calculator_proj
 @pytest.mark.benchmark()
 def test_project_creation_real_life_task_external_project() -> None:
     """Score a generated real project from env-provided path."""
-    project_dir = os.environ.get("HYBRIDCODER_BENCH_TARGET_DIR")
+    project_dir = os.environ.get("AUTOCODE_BENCH_TARGET_DIR")
     if not project_dir:
-        pytest.skip("Set HYBRIDCODER_BENCH_TARGET_DIR to run real-life project benchmark.")
+        pytest.skip("Set AUTOCODE_BENCH_TARGET_DIR to run real-life project benchmark.")
 
     root = Path(project_dir).expanduser().resolve()
     if not root.exists():
         pytest.skip(f"Project path does not exist: {root}")
 
-    run_build = os.environ.get("HYBRIDCODER_BENCH_RUN_NODE", "0") == "1"
-    min_score = int(os.environ.get("HYBRIDCODER_BENCH_MIN_SCORE", "60"))
+    run_build = os.environ.get("AUTOCODE_BENCH_RUN_NODE", "0") == "1"
+    min_score = int(os.environ.get("AUTOCODE_BENCH_MIN_SCORE", "60"))
     scores = score_react_calculator_project(root, run_build=run_build)
 
     assert scores["total"] >= min_score, (

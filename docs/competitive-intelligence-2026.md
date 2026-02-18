@@ -1,11 +1,11 @@
-# Competitive Intelligence Report: AI Coding Agents 2026
-## Challenging HybridCoder's Core Assumptions
+﻿# Competitive Intelligence Report: AI Coding Agents 2026
+## Challenging AutoCode's Core Assumptions
 
 ---
 
 ## Executive Summary
 
-The AI coding assistant landscape has shifted dramatically. Every major player has converged on **multi-agent orchestration** as the primary strategy, and "LLM as last resort" approaches are being abandoned in favor of **agent-first architectures**. HybridCoder's layered deterministic-first approach is now swimming against the current.
+The AI coding assistant landscape has shifted dramatically. Every major player has converged on **multi-agent orchestration** as the primary strategy, and "LLM as last resort" approaches are being abandoned in favor of **agent-first architectures**. AutoCode's layered deterministic-first approach is now swimming against the current.
 
 **Critical Finding**: "Orchestrating other agents" is NOT a viable differentiator—it's table stakes.
 
@@ -140,7 +140,7 @@ The AI coding assistant landscape has shifted dramatically. Every major player h
 
 ---
 
-## Challenges to HybridCoder's Assumptions
+## Challenges to AutoCode's Assumptions
 
 ### ❌ Assumption: "LLM as Last Resort"
 **Reality**: Every major tool now leads with LLM-first agent architectures
@@ -177,28 +177,28 @@ The AI coding assistant landscape has shifted dramatically. Every major player h
 
 ---
 
-## Gaps HybridCoder Could Exploit
+## Gaps AutoCode Could Exploit
 
 ### 1. **Deterministic Quality Gates** (Actual Gap)
 - Everyone rushes to agentic coding → quality suffers
-- HybridCoder could provide **automated verification** before LLM outputs merge
+- AutoCode could provide **automated verification** before LLM outputs merge
 - **Git-based verification hooks** (pre-commit quality gates)
 
 ### 2. **Cost-Aware Orchestration** (Growing Pain)
 - Current multi-agent = cost explosion
-- HybridCoder could provide **cost-optimized routing**:
+- AutoCode could provide **cost-optimized routing**:
   - Cheap models for simple tasks
   - Expensive models only when needed
   - Budget caps and warnings
 
 ### 3. **Aider-Style Split with Multi-Agent Scale** (Unexplored)
 - Aider's Architect/Editor split is powerful but limited to 2 agents
-- HybridCoder could generalize: **Reasoning agents + Execution agents**
+- AutoCode could generalize: **Reasoning agents + Execution agents**
 - Combine with Aider's model mixing
 
 ### 4. **Hybrid Deterministic/LLM Verification** (Unique Position)
 - Current tools trust LLM output (sometimes with review)
-- HybridCoder could add **deterministic post-execution verification**:
+- AutoCode could add **deterministic post-execution verification**:
   - AST validation
   - Type checking
   - Test generation and execution
@@ -206,7 +206,7 @@ The AI coding assistant landscape has shifted dramatically. Every major player h
 
 ### 5. **Context-Aware Routing** (Not Solved)
 - Current agents don't intelligently route between deterministic and LLM
-- HybridCoder could provide **smart task classification**:
+- AutoCode could provide **smart task classification**:
   - "This is a regex task → deterministic solution"
   - "This requires design decision → LLM reasoning"
 
@@ -214,7 +214,7 @@ The AI coding assistant landscape has shifted dramatically. Every major player h
 
 ## Strategic Recommendations
 
-### What HybridCoder Should Do Differently
+### What AutoCode Should Do Differently
 
 1. **Pivot from "Layers" to "Quality Gates"**
    - Don't add deterministic layers upfront (adds latency)
@@ -247,7 +247,7 @@ The AI coding assistant landscape has shifted dramatically. Every major player h
 
 **The "orchestrate other agents" strategy is not viable as a core differentiator**—it's become standard across all major tools. 
 
-However, the rush to agentic coding has created a **quality crisis** (per DORA). HybridCoder's opportunity lies not in being deterministic-first, but in being **verification-first**—the safety net that agentic coding desperately needs.
+However, the rush to agentic coding has created a **quality crisis** (per DORA). AutoCode's opportunity lies not in being deterministic-first, but in being **verification-first**—the safety net that agentic coding desperately needs.
 
 **Revised positioning**: "Agentic coding with guardrails" beats "deterministic coding with LLM fallback."
 

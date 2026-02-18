@@ -34,7 +34,7 @@ Current state: `PROVISIONAL_LOCKED`.
 Stored via `./scripts/store_test_results.sh`:
 - `uv run pytest tests/ -v`
 - `uv run ruff check src/ tests/`
-- `uv run mypy src/hybridcoder/`
+- `uv run mypy src/autocode/`
 - Go test run for TUI/backend packages
 
 If blocked (network/deps/runtime), artifact must include:
@@ -72,10 +72,10 @@ Every disputed roadmap item must be converted to pass/fail criteria with artifac
 
 ## 4.1 5A0 (Quick Wins First)
 
-- `hybridcoder edit` is not a stub.
+- `autocode edit` is not a stub.
 - Diff preview + apply/reject + rollback checkpoint are test-covered.
 - Non-interactive shell safeguards active (`GIT_EDITOR`, prompt blocking protection, timeout policy).
-- `hybridcoder doctor` readiness checks exist and are documented.
+- `autocode doctor` readiness checks exist and are documented.
 
 ## 4.2 5A
 

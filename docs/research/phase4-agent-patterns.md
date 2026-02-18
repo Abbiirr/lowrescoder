@@ -1,4 +1,4 @@
-# Phase 4 Agent Orchestration Research
+﻿# Phase 4 Agent Orchestration Research
 
 > **Created:** 2026-02-14
 > **Purpose:** Compiled research for Phase 4 decisions (Entry 314 CE)
@@ -110,7 +110,7 @@
 **Finding:** Both Claude Code (`.claude/agents/*.md`) and OpenCode (`.opencode/agents/`) use markdown-based artifacts for agent configuration. GitHub task lists provide a robust format for human-readable progress tracking.
 
 **Direct implications for Phase 4:**
-- `.hybridcoder/plans/<session-id>.md` as canonical plan file
+- `.autocode/plans/<session-id>.md` as canonical plan file
 - GitHub-style task list format (checkboxes)
 - Bidirectional sync: `/plan export` (TaskStore → markdown), `/plan sync` (markdown → TaskStore)
 

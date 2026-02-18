@@ -40,7 +40,7 @@ def replay_benchmark(sandbox: Path) -> int:
     Phases run: D (npm validation), E (scoring), F (report)
     """
     # Load original metadata
-    json_path = sandbox / ".hybridcoder-benchmark.json"
+    json_path = sandbox / ".autocode-benchmark.json"
     if not json_path.exists():
         print(f"ERROR: No benchmark results found in {sandbox}")
         return 1
@@ -77,7 +77,7 @@ import argparse
 def build_arg_parser() -> argparse.ArgumentParser:
     """Shared argument parser for all benchmark modes."""
     parser = argparse.ArgumentParser(
-        description="HybridCoder E2E Benchmark Runner"
+        description="AutoCode E2E Benchmark Runner"
     )
 
     # Mode selection (mutually exclusive)

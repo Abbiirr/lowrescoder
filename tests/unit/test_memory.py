@@ -6,8 +6,8 @@ import sqlite3
 
 import pytest
 
-from hybridcoder.agent.memory import MemoryStore
-from hybridcoder.session.models import ensure_tables
+from autocode.agent.memory import MemoryStore
+from autocode.session.models import ensure_tables
 
 
 @pytest.fixture()

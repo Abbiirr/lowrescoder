@@ -13,7 +13,7 @@ The Go Bubble Tea TUI frontend is fully implemented and stable (275 Go tests, 50
 
 **Goal**: Implement 5 phases of non-breaking UI/UX improvements incrementally.
 
-**Implementation target**: Only Go TUI files in `cmd/hybridcoder-tui/`. No Python backend changes required. All changes backward-compatible.
+**Implementation target**: Only Go TUI files in `cmd/autocode-tui/`. No Python backend changes required. All changes backward-compatible.
 
 ---
 
@@ -26,8 +26,8 @@ The Go Bubble Tea TUI frontend is fully implemented and stable (275 Go tests, 50
 **Solution**: Add viewport pagination — show max 10 sessions at a time with scroll indicators.
 
 **Files to modify**:
-- `cmd/hybridcoder-tui/model.go` — Add new state field: `sessionPickerOffset int`
-- `cmd/hybridcoder-tui/askuser.go` — Paginated rendering in `renderAskUserView()`, PgUp/PgDn in `handleAskUserKey()`
+- `cmd/autocode-tui/model.go` — Add new state field: `sessionPickerOffset int`
+- `cmd/autocode-tui/askuser.go` — Paginated rendering in `renderAskUserView()`, PgUp/PgDn in `handleAskUserKey()`
 
 **State changes in `model.go`** — Add after `sessionPickerEntries` (line 84):
 ```go
@@ -175,9 +175,9 @@ TestSessionPickerPagination_SmallListNoPagination (< sessionPageSize items rende
 **Solution**: When session picker is open, typing characters filters the session list using fuzzy matching. The `sahilm/fuzzy` library is already imported (`completion.go:6`) and used for command completions.
 
 **Files to modify**:
-- `cmd/hybridcoder-tui/model.go` — Add filter state fields
-- `cmd/hybridcoder-tui/session_picker.go` — Add `filterSessions()` function
-- `cmd/hybridcoder-tui/askuser.go` — Render filter input + filtered results
+- `cmd/autocode-tui/model.go` — Add filter state fields
+- `cmd/autocode-tui/session_picker.go` — Add `filterSessions()` function
+- `cmd/autocode-tui/askuser.go` — Render filter input + filtered results
 
 **New state fields in `model.go`**:
 ```go
@@ -319,7 +319,7 @@ TestSessionPickerFilter_FilterResetsCursor
 
 **Solution**: Smarter label formatting with numbered entries, truncated model names.
 
-**File to modify**: `cmd/hybridcoder-tui/session_picker.go` — `enterSessionPicker()` lines 21-42
+**File to modify**: `cmd/autocode-tui/session_picker.go` — `enterSessionPicker()` lines 21-42
 
 **Current code** (lines 37-41):
 ```go
@@ -404,8 +404,8 @@ TestSessionLabels_UntitledFallback
 **Solution**: Drop labels, use compact format with "via" connector and `·` separators. Add subtle color differentiation.
 
 **Files to modify**:
-- `cmd/hybridcoder-tui/statusbar.go` — Rewrite `View()` method
-- `cmd/hybridcoder-tui/styles.go` — Add 2 new styles
+- `cmd/autocode-tui/statusbar.go` — Rewrite `View()` method
+- `cmd/autocode-tui/styles.go` — Add 2 new styles
 
 **New styles in `styles.go`** (add after line 53):
 ```go
@@ -485,7 +485,7 @@ TestStatusBar_InitialDots (model == "..." -> shows "...")
 
 **Solution**: Context-aware result display with `->` arrow, smarter truncation, and multi-line result summarization.
 
-**File to modify**: `cmd/hybridcoder-tui/view.go` — lines 29-45
+**File to modify**: `cmd/autocode-tui/view.go` — lines 29-45
 
 **Current code**:
 ```go
@@ -584,7 +584,7 @@ TestToolCallView_CompletedShowsResult
 
 **Problem**: In `styles.go:64-78`, `toolIcon()` maps both "denied" and "waiting" to `toolWaitIcon` (yellow `...`). Users can't visually distinguish a denied tool from a pending one.
 
-**File to modify**: `cmd/hybridcoder-tui/styles.go`
+**File to modify**: `cmd/autocode-tui/styles.go`
 
 **Add new icon** (after line 32):
 ```go
@@ -618,7 +618,7 @@ TestToolIcon_DeniedNotSameAsWaiting
 
 **Problem**: `approval.go:22-59` `renderApprovalView()` shows a plain text prompt. No visual emphasis for dangerous operations (shell/bash, file writes) vs safe ones (read_file).
 
-**File to modify**: `cmd/hybridcoder-tui/approval.go`
+**File to modify**: `cmd/autocode-tui/approval.go`
 
 **Add severity detection**:
 ```go
@@ -667,9 +667,9 @@ TestApprovalView_NormalSeverityShowsDefault
 **Problem**: `view.go:50-52` shows `m.spin.View() + " Thinking...\n"` with no progress info. Users have no idea how long the model has been thinking or how many tokens have been generated.
 
 **Files to modify**:
-- `cmd/hybridcoder-tui/model.go` — Add `streamStartTime time.Time`, `streamTokenCount int`
-- `cmd/hybridcoder-tui/update.go` — Track start time and count tokens
-- `cmd/hybridcoder-tui/view.go` — Display progress info
+- `cmd/autocode-tui/model.go` — Add `streamStartTime time.Time`, `streamTokenCount int`
+- `cmd/autocode-tui/update.go` — Track start time and count tokens
+- `cmd/autocode-tui/view.go` — Display progress info
 
 **New fields in `model.go`**:
 ```go
@@ -715,7 +715,7 @@ TestStreamingProgress_ResetOnSendChat
 
 **Problem**: `view.go:61` shows `[42 lines above]` as plain dimStyle text. Easy to miss.
 
-**File to modify**: `cmd/hybridcoder-tui/view.go` — line 61
+**File to modify**: `cmd/autocode-tui/view.go` — line 61
 
 **Change**:
 ```go
@@ -798,14 +798,14 @@ Planning and implementing a UI/UX improvement sprint for the Go Bubble Tea TUI. 
 
 | File | Path | All Changes |
 |------|------|-------------|
-| model.go | `cmd/hybridcoder-tui/model.go` | +`sessionPickerOffset`, +`sessionPickerFilter`, +`sessionPickerFiltered`, +`streamStartTime`, +`streamTokenCount` |
-| askuser.go | `cmd/hybridcoder-tui/askuser.go` | Paginated rendering, filter input, PgUp/PgDn, viewport-follow-cursor |
-| session_picker.go | `cmd/hybridcoder-tui/session_picker.go` | `truncateModelName()`, `filterSessions()`, numbered labels |
-| view.go | `cmd/hybridcoder-tui/view.go` | `formatToolResult()`, running args display, overflow indicator, progress info |
-| styles.go | `cmd/hybridcoder-tui/styles.go` | +`toolDeniedIcon`, +`statusValueStyle`, +`statusModeStyle`, updated `toolIcon()` |
-| statusbar.go | `cmd/hybridcoder-tui/statusbar.go` | Compact format, color-coded sections, `·` separators |
-| approval.go | `cmd/hybridcoder-tui/approval.go` | `toolSeverity()`, severity-aware header |
-| update.go | `cmd/hybridcoder-tui/update.go` | Token count tracking, stream start time |
+| model.go | `cmd/autocode-tui/model.go` | +`sessionPickerOffset`, +`sessionPickerFilter`, +`sessionPickerFiltered`, +`streamStartTime`, +`streamTokenCount` |
+| askuser.go | `cmd/autocode-tui/askuser.go` | Paginated rendering, filter input, PgUp/PgDn, viewport-follow-cursor |
+| session_picker.go | `cmd/autocode-tui/session_picker.go` | `truncateModelName()`, `filterSessions()`, numbered labels |
+| view.go | `cmd/autocode-tui/view.go` | `formatToolResult()`, running args display, overflow indicator, progress info |
+| styles.go | `cmd/autocode-tui/styles.go` | +`toolDeniedIcon`, +`statusValueStyle`, +`statusModeStyle`, updated `toolIcon()` |
+| statusbar.go | `cmd/autocode-tui/statusbar.go` | Compact format, color-coded sections, `·` separators |
+| approval.go | `cmd/autocode-tui/approval.go` | `toolSeverity()`, severity-aware header |
+| update.go | `cmd/autocode-tui/update.go` | Token count tracking, stream start time |
 
 ---
 
@@ -815,13 +815,13 @@ Planning and implementing a UI/UX improvement sprint for the Go Bubble Tea TUI. 
 
 ```bash
 # Go tests (must all pass)
-cd cmd/hybridcoder-tui && go test ./... -v
+cd cmd/autocode-tui && go test ./... -v
 
 # Python tests (must all pass — no Python changes but verify no regression)
 uv run pytest tests/ -v
 
 # Build binary
-cd cmd/hybridcoder-tui && go build -o ../../build/hybridcoder-tui.exe .
+cd cmd/autocode-tui && go build -o ../../build/autocode-tui.exe .
 ```
 
 ### Manual testing checklist:

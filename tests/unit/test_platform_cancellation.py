@@ -8,14 +8,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from hybridcoder.config import HybridCoderConfig
-from hybridcoder.inline.app import InlineApp
+from autocode.config import AutoCodeConfig
+from autocode.inline.app import InlineApp
 
 
 @pytest.fixture()
 def app(tmp_path: Path) -> InlineApp:
     """Create an InlineApp for testing."""
-    config = HybridCoderConfig()
+    config = AutoCodeConfig()
     config.tui.session_db_path = str(tmp_path / "test.db")
     return InlineApp(config=config, project_root=tmp_path)
 

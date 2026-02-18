@@ -1,4 +1,4 @@
-# OpenCode & Competitor Coding Assistants — Research Notes
+﻿# OpenCode & Competitor Coding Assistants — Research Notes
 
 > Researched: 2026-02-17
 > Sources: opencode.ai, aider.chat, docs.continue.dev, cline.bot, cursor.com
@@ -7,7 +7,7 @@
 
 ## 1. OpenCode (opencode.ai / sst/opencode)
 
-**Overview**: Go TUI + JS HTTP server coding assistant (95K+ GitHub stars). Client/server architecture similar to HybridCoder.
+**Overview**: Go TUI + JS HTTP server coding assistant (95K+ GitHub stars). Client/server architecture similar to AutoCode.
 
 ### Agent Hierarchy
 
@@ -95,7 +95,7 @@ Most sophisticated built-in multi-agent among VS Code extensions.
 
 ---
 
-## 5. Key Patterns for HybridCoder
+## 5. Key Patterns for AutoCode
 
 1. **OpenCode is architecturally closest** — Go TUI + backend, per-agent tool config, separate sessions for subagents
 2. **Aider's Architect/Editor maps to L3/L4** — reasoning model proposes, constrained model edits

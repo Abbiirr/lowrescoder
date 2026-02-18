@@ -23,9 +23,9 @@ def openrouter_available() -> bool:
 @pytest.fixture()
 def config():  # type: ignore[no-untyped-def]
     """Create config with OpenRouter provider."""
-    from hybridcoder.config import load_config
+    from autocode.config import load_config
 
-    os.environ["HYBRIDCODER_LLM_PROVIDER"] = "openrouter"
+    os.environ["AUTOCODE_LLM_PROVIDER"] = "openrouter"
     return load_config()
 
 
@@ -34,7 +34,7 @@ def test_openrouter_streaming(openrouter_available: bool, config) -> None:  # ty
     if not openrouter_available:
         pytest.skip("OPENROUTER_API_KEY not set")
 
-    from hybridcoder.layer4.llm import OpenRouterProvider
+    from autocode.layer4.llm import OpenRouterProvider
 
     provider = OpenRouterProvider(config)
 
@@ -61,7 +61,7 @@ def test_openrouter_non_streaming(openrouter_available: bool, config) -> None:  
     if not openrouter_available:
         pytest.skip("OPENROUTER_API_KEY not set")
 
-    from hybridcoder.layer4.llm import OpenRouterProvider
+    from autocode.layer4.llm import OpenRouterProvider
 
     provider = OpenRouterProvider(config)
 

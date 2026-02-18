@@ -16,25 +16,25 @@ goto help
 
 :run
 echo Building Go TUI...
-cd cmd\hybridcoder-tui && go build -o ..\..\build\hybridcoder-tui.exe . && cd ..\..
+cd cmd\autocode-tui && go build -o ..\..\build\autocode-tui.exe . && cd ..\..
 if errorlevel 1 (
     echo Build failed!
     goto end
 )
 echo Build OK. Running...
-build\hybridcoder-tui.exe
+build\autocode-tui.exe
 goto end
 
 :tui
 echo Building Go TUI...
-cd cmd\hybridcoder-tui && go build -o ..\..\build\hybridcoder-tui.exe .
+cd cmd\autocode-tui && go build -o ..\..\build\autocode-tui.exe .
 goto end
 
 :testall
 echo Running Go tests...
-cd cmd\hybridcoder-tui && go test ./... -v -count=1 && cd ..\..
+cd cmd\autocode-tui && go test ./... -v -count=1 && cd ..\..
 echo Running Python tests...
-uv run pytest tests/ -v --cov=src/hybridcoder
+uv run pytest tests/ -v --cov=src/autocode
 goto end
 
 :setup
@@ -44,18 +44,18 @@ goto end
 
 :test
 echo Running Python tests...
-uv run pytest tests/ -v --cov=src/hybridcoder
+uv run pytest tests/ -v --cov=src/autocode
 goto end
 
 :gotest
 echo Running Go tests...
-cd cmd\hybridcoder-tui && go test ./... -v
+cd cmd\autocode-tui && go test ./... -v
 goto end
 
 :lint
 echo Running linters...
 uv run ruff check src/ tests/
-uv run mypy src/hybridcoder/
+uv run mypy src/autocode/
 goto end
 
 :format

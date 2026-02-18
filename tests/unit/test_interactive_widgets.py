@@ -20,13 +20,13 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from hybridcoder.config import HybridCoderConfig
-from hybridcoder.layer4.llm import LLMResponse, ToolCall
+from autocode.config import AutoCodeConfig
+from autocode.layer4.llm import LLMResponse, ToolCall
 
 
 @pytest.fixture()
-def tui_config() -> HybridCoderConfig:
-    config = HybridCoderConfig()
+def tui_config() -> AutoCodeConfig:
+    config = AutoCodeConfig()
     config.tui.session_db_path = ":memory:"
     return config
 
@@ -35,7 +35,7 @@ def tui_config() -> HybridCoderConfig:
 # 1. OptionSelector widget (standalone, mounted in a bare App)
 # ---------------------------------------------------------------------------
 class TestOptionSelectorStandalone:
-    """Test OptionSelector outside the HybridCoderApp."""
+    """Test OptionSelector outside the AutoCodeApp."""
 
     @pytest.mark.asyncio()
     async def test_single_select_enter_resolves_first(self) -> None:
@@ -43,7 +43,7 @@ class TestOptionSelectorStandalone:
         from textual.app import App, ComposeResult
         from textual.containers import Vertical
 
-        from hybridcoder.tui.widgets.approval_prompt import OptionSelector
+        from autocode.tui.widgets.approval_prompt import OptionSelector
 
         loop = asyncio.get_running_loop()
         future: asyncio.Future[list[str]] = loop.create_future()
@@ -77,7 +77,7 @@ class TestOptionSelectorStandalone:
         from textual.app import App, ComposeResult
         from textual.containers import Vertical
 
-        from hybridcoder.tui.widgets.approval_prompt import OptionSelector
+        from autocode.tui.widgets.approval_prompt import OptionSelector
 
         loop = asyncio.get_running_loop()
         future: asyncio.Future[list[str]] = loop.create_future()
@@ -112,7 +112,7 @@ class TestOptionSelectorStandalone:
         from textual.app import App, ComposeResult
         from textual.containers import Vertical
 
-        from hybridcoder.tui.widgets.approval_prompt import OptionSelector
+        from autocode.tui.widgets.approval_prompt import OptionSelector
 
         loop = asyncio.get_running_loop()
         future: asyncio.Future[list[str]] = loop.create_future()
@@ -148,7 +148,7 @@ class TestOptionSelectorStandalone:
         from textual.app import App, ComposeResult
         from textual.containers import Vertical
 
-        from hybridcoder.tui.widgets.approval_prompt import OptionSelector
+        from autocode.tui.widgets.approval_prompt import OptionSelector
 
         loop = asyncio.get_running_loop()
         future: asyncio.Future[list[str]] = loop.create_future()
@@ -182,7 +182,7 @@ class TestOptionSelectorStandalone:
         from textual.containers import Vertical
         from textual.widgets import OptionList
 
-        from hybridcoder.tui.widgets.approval_prompt import OptionSelector
+        from autocode.tui.widgets.approval_prompt import OptionSelector
 
         loop = asyncio.get_running_loop()
         future: asyncio.Future[list[str]] = loop.create_future()
@@ -214,7 +214,7 @@ class TestOptionSelectorStandalone:
         from textual.app import App, ComposeResult
         from textual.containers import Vertical
 
-        from hybridcoder.tui.widgets.approval_prompt import OptionSelector
+        from autocode.tui.widgets.approval_prompt import OptionSelector
 
         loop = asyncio.get_running_loop()
         future: asyncio.Future[list[str]] = loop.create_future()
@@ -256,7 +256,7 @@ class TestOptionSelectorStandalone:
 # 2. ApprovalPrompt widget (standalone)
 # ---------------------------------------------------------------------------
 class TestApprovalPromptStandalone:
-    """Test ApprovalPrompt outside the HybridCoderApp."""
+    """Test ApprovalPrompt outside the AutoCodeApp."""
 
     @pytest.mark.asyncio()
     async def test_enter_yes_resolves(self) -> None:
@@ -264,7 +264,7 @@ class TestApprovalPromptStandalone:
         from textual.app import App, ComposeResult
         from textual.containers import Vertical
 
-        from hybridcoder.tui.widgets.approval_prompt import ApprovalPrompt
+        from autocode.tui.widgets.approval_prompt import ApprovalPrompt
 
         loop = asyncio.get_running_loop()
         future: asyncio.Future[tuple[str, bool]] = loop.create_future()
@@ -295,7 +295,7 @@ class TestApprovalPromptStandalone:
         from textual.app import App, ComposeResult
         from textual.containers import Vertical
 
-        from hybridcoder.tui.widgets.approval_prompt import ApprovalPrompt
+        from autocode.tui.widgets.approval_prompt import ApprovalPrompt
 
         loop = asyncio.get_running_loop()
         future: asyncio.Future[tuple[str, bool]] = loop.create_future()
@@ -328,7 +328,7 @@ class TestApprovalPromptStandalone:
         from textual.app import App, ComposeResult
         from textual.containers import Vertical
 
-        from hybridcoder.tui.widgets.approval_prompt import ApprovalPrompt
+        from autocode.tui.widgets.approval_prompt import ApprovalPrompt
 
         loop = asyncio.get_running_loop()
         future: asyncio.Future[tuple[str, bool]] = loop.create_future()
@@ -362,7 +362,7 @@ class TestApprovalPromptStandalone:
         from textual.app import App, ComposeResult
         from textual.containers import Vertical
 
-        from hybridcoder.tui.widgets.approval_prompt import ApprovalPrompt
+        from autocode.tui.widgets.approval_prompt import ApprovalPrompt
 
         loop = asyncio.get_running_loop()
         future: asyncio.Future[tuple[str, bool]] = loop.create_future()
@@ -394,7 +394,7 @@ class TestApprovalPromptStandalone:
         from textual.containers import Vertical
         from textual.widgets import OptionList
 
-        from hybridcoder.tui.widgets.approval_prompt import ApprovalPrompt
+        from autocode.tui.widgets.approval_prompt import ApprovalPrompt
 
         loop = asyncio.get_running_loop()
         future: asyncio.Future[tuple[str, bool]] = loop.create_future()
@@ -420,10 +420,10 @@ class TestApprovalPromptStandalone:
 
 
 # ---------------------------------------------------------------------------
-# 3. _interactive_ask_user inside HybridCoderApp (non-blocking flow)
+# 3. _interactive_ask_user inside AutoCodeApp (non-blocking flow)
 # ---------------------------------------------------------------------------
 class TestInteractiveAskUserInApp:
-    """Test _interactive_ask_user with the real HybridCoderApp.
+    """Test _interactive_ask_user with the real AutoCodeApp.
 
     These tests verify the widget mounts inside ChatView, receives focus,
     and resolves the future when the user interacts with it.
@@ -431,13 +431,13 @@ class TestInteractiveAskUserInApp:
 
     @pytest.mark.asyncio()
     async def test_ask_user_with_options_does_not_deadlock(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Calling _interactive_ask_user as a background task does not freeze."""
-        from hybridcoder.tui.app import HybridCoderApp
-        from hybridcoder.tui.widgets.approval_prompt import OptionSelector
+        from autocode.tui.app import AutoCodeApp
+        from autocode.tui.widgets.approval_prompt import OptionSelector
 
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test(size=(80, 30)) as pilot:
             result_holder: list[str] = []
 
@@ -466,12 +466,12 @@ class TestInteractiveAskUserInApp:
 
     @pytest.mark.asyncio()
     async def test_ask_user_arrow_down_selects_second(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Arrow down then Enter selects the second option in the app."""
-        from hybridcoder.tui.app import HybridCoderApp
+        from autocode.tui.app import AutoCodeApp
 
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test(size=(80, 30)) as pilot:
             task = asyncio.create_task(
                 app._interactive_ask_user("Pick:", ["X", "Y", "Z"], False),
@@ -490,12 +490,12 @@ class TestInteractiveAskUserInApp:
 
     @pytest.mark.asyncio()
     async def test_ask_user_escape_returns_skipped(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Escape on OptionSelector returns '(user skipped)' in the app."""
-        from hybridcoder.tui.app import HybridCoderApp
+        from autocode.tui.app import AutoCodeApp
 
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test(size=(80, 30)) as pilot:
             task = asyncio.create_task(
                 app._interactive_ask_user("Pick:", ["A", "B"], False),
@@ -512,13 +512,13 @@ class TestInteractiveAskUserInApp:
 
     @pytest.mark.asyncio()
     async def test_ask_user_free_text_mode(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Free-text ask_user (no options) resolves from InputBar submit."""
-        from hybridcoder.tui.app import HybridCoderApp
-        from hybridcoder.tui.widgets.input_bar import InputBar
+        from autocode.tui.app import AutoCodeApp
+        from autocode.tui.widgets.input_bar import InputBar
 
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test(size=(80, 30)) as pilot:
             task = asyncio.create_task(
                 app._interactive_ask_user("What color?", [], False),
@@ -545,13 +545,13 @@ class TestInteractiveAskUserInApp:
 
     @pytest.mark.asyncio()
     async def test_selector_removed_after_selection(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """OptionSelector is removed from DOM after user selects."""
-        from hybridcoder.tui.app import HybridCoderApp
-        from hybridcoder.tui.widgets.approval_prompt import OptionSelector
+        from autocode.tui.app import AutoCodeApp
+        from autocode.tui.widgets.approval_prompt import OptionSelector
 
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test(size=(80, 30)) as pilot:
             task = asyncio.create_task(
                 app._interactive_ask_user("Pick:", ["A", "B"], False),
@@ -570,13 +570,13 @@ class TestInteractiveAskUserInApp:
 
     @pytest.mark.asyncio()
     async def test_input_bar_refocused_after_selection(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """InputBar has focus after OptionSelector is dismissed."""
-        from hybridcoder.tui.app import HybridCoderApp
-        from hybridcoder.tui.widgets.input_bar import InputBar
+        from autocode.tui.app import AutoCodeApp
+        from autocode.tui.widgets.input_bar import InputBar
 
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test(size=(80, 30)) as pilot:
             task = asyncio.create_task(
                 app._interactive_ask_user("Pick:", ["A"], False),
@@ -609,7 +609,7 @@ class TestAskUserEndToEnd:
 
     @pytest.fixture()
     def store(self, tmp_path: Path) -> Any:
-        from hybridcoder.session.store import SessionStore
+        from autocode.session.store import SessionStore
         s = SessionStore(tmp_path / "test.db")
         yield s
         s.close()
@@ -623,9 +623,9 @@ class TestAskUserEndToEnd:
         self, store: Any, session_id: str,
     ) -> None:
         """AgentLoop ask_user with a sync callback works."""
-        from hybridcoder.agent.approval import ApprovalManager, ApprovalMode
-        from hybridcoder.agent.loop import AgentLoop
-        from hybridcoder.agent.tools import ToolRegistry
+        from autocode.agent.approval import ApprovalManager, ApprovalMode
+        from autocode.agent.loop import AgentLoop
+        from autocode.agent.tools import ToolRegistry
 
         mock = AsyncMock()
         call_count = 0
@@ -662,9 +662,9 @@ class TestAskUserEndToEnd:
         self, store: Any, session_id: str,
     ) -> None:
         """AgentLoop ask_user with an async callback works."""
-        from hybridcoder.agent.approval import ApprovalManager, ApprovalMode
-        from hybridcoder.agent.loop import AgentLoop
-        from hybridcoder.agent.tools import ToolRegistry
+        from autocode.agent.approval import ApprovalManager, ApprovalMode
+        from autocode.agent.loop import AgentLoop
+        from autocode.agent.tools import ToolRegistry
 
         mock = AsyncMock()
         call_count = 0
@@ -701,9 +701,9 @@ class TestAskUserEndToEnd:
         self, store: Any, session_id: str,
     ) -> None:
         """AgentLoop ask_user without callback returns an error message."""
-        from hybridcoder.agent.approval import ApprovalManager, ApprovalMode
-        from hybridcoder.agent.loop import AgentLoop
-        from hybridcoder.agent.tools import ToolRegistry
+        from autocode.agent.approval import ApprovalManager, ApprovalMode
+        from autocode.agent.loop import AgentLoop
+        from autocode.agent.tools import ToolRegistry
 
         mock = AsyncMock()
         call_count = 0
@@ -734,7 +734,7 @@ class TestAskUserEndToEnd:
 
     @pytest.mark.asyncio()
     async def test_full_e2e_in_app_no_deadlock(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Full E2E: app._run_agent triggers ask_user, user selects, loop finishes.
 
@@ -745,10 +745,10 @@ class TestAskUserEndToEnd:
         4. Selects an option
         5. Verifies the agent loop completes with the user's choice
         """
-        from hybridcoder.tui.app import HybridCoderApp
-        from hybridcoder.tui.widgets.approval_prompt import OptionSelector
+        from autocode.tui.app import AutoCodeApp
+        from autocode.tui.widgets.approval_prompt import OptionSelector
 
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
 
         async with app.run_test(size=(80, 30)) as pilot:
             # Inject mock provider
@@ -805,13 +805,13 @@ class TestAskUserEndToEnd:
 
     @pytest.mark.asyncio()
     async def test_e2e_escape_during_ask_user(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """E2E: user presses escape during ask_user, loop continues with skip."""
-        from hybridcoder.tui.app import HybridCoderApp
-        from hybridcoder.tui.widgets.approval_prompt import OptionSelector
+        from autocode.tui.app import AutoCodeApp
+        from autocode.tui.widgets.approval_prompt import OptionSelector
 
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
 
         async with app.run_test(size=(80, 30)) as pilot:
             call_count = 0
@@ -862,13 +862,13 @@ class TestActionCancelWithWidgets:
 
     @pytest.mark.asyncio()
     async def test_cancel_dismisses_option_selector(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """action_cancel resolves OptionSelector future and removes widget."""
-        from hybridcoder.tui.app import HybridCoderApp
-        from hybridcoder.tui.widgets.approval_prompt import OptionSelector
+        from autocode.tui.app import AutoCodeApp
+        from autocode.tui.widgets.approval_prompt import OptionSelector
 
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test(size=(80, 30)) as pilot:
             task = asyncio.create_task(
                 app._interactive_ask_user("Pick:", ["A", "B"], False),
@@ -889,13 +889,13 @@ class TestActionCancelWithWidgets:
 
     @pytest.mark.asyncio()
     async def test_cancel_dismisses_approval_prompt(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """action_cancel resolves ApprovalPrompt future with deny."""
-        from hybridcoder.tui.app import HybridCoderApp
-        from hybridcoder.tui.widgets.approval_prompt import ApprovalPrompt
+        from autocode.tui.app import AutoCodeApp
+        from autocode.tui.widgets.approval_prompt import ApprovalPrompt
 
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         # Force suggest mode so the approval prompt is shown
         app.config.tui.approval_mode = "suggest"
         async with app.run_test(size=(80, 30)) as pilot:
@@ -924,12 +924,12 @@ class TestNonBlockingRunAgent:
 
     @pytest.mark.asyncio()
     async def test_run_agent_as_task_allows_key_events(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """When _run_agent runs as a task, other key events are processed."""
-        from hybridcoder.tui.app import HybridCoderApp
+        from autocode.tui.app import AutoCodeApp
 
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test(size=(80, 30)) as pilot:
             # Inject a slow mock provider
             async def slow_generate(
@@ -961,17 +961,17 @@ class TestNonBlockingRunAgent:
 
     @pytest.mark.asyncio()
     async def test_on_input_bar_submitted_does_not_block(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Submitting a message via InputBar should return control quickly.
 
         After the fix, on_input_bar_submitted launches _run_agent as a
         background task and returns immediately.
         """
-        from hybridcoder.tui.app import HybridCoderApp
-        from hybridcoder.tui.widgets.input_bar import InputBar
+        from autocode.tui.app import AutoCodeApp
+        from autocode.tui.widgets.input_bar import InputBar
 
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test(size=(80, 30)) as pilot:
             # Inject a provider that triggers ask_user
             call_count = 0
@@ -1008,7 +1008,7 @@ class TestNonBlockingRunAgent:
             for _ in range(20):
                 await pilot.pause()
 
-            from hybridcoder.tui.widgets.approval_prompt import OptionSelector
+            from autocode.tui.widgets.approval_prompt import OptionSelector
 
             # The selector should be mounted (proves we didn't deadlock)
             selectors = app.query(OptionSelector)

@@ -1,7 +1,7 @@
 # Testing & Evaluation Guide
 
-> How to test, evaluate, and interpret results for HybridCoder.
-> Last updated: 2026-02-14
+> How to test, evaluate, and interpret results for AutoCode.
+> Last updated: 2026-02-18
 
 ---
 
@@ -9,12 +9,14 @@
 
 | What | Command | Time |
 |------|---------|------|
-| Unit tests | `uv run pytest tests/ -v` | ~50s |
-| Unit tests + coverage | `uv run pytest tests/ -v --cov=src/hybridcoder` | ~60s |
+| Unit tests | `uv run pytest tests/ -v` | ~180s |
+| Unit tests + coverage | `uv run pytest tests/ -v --cov=src/autocode` | ~200s |
 | Lint | `uv run ruff check src/ tests/` | ~5s |
-| Type check | `uv run mypy src/hybridcoder/` | ~15s |
+| Type check | `uv run mypy src/autocode/` | ~15s |
 | Sprint verification | `uv run pytest tests/test_sprint_verify.py -v` | ~10s |
+| Go TUI tests | `cd cmd/autocode-tui && go test ./... -v` | ~1s |
 | Integration tests | `uv run pytest -m integration tests/integration/` | Varies |
+| External project benchmark | `uv run pytest tests/benchmark/test_project_creation.py::test_project_creation_real_life_task_external_project -v` | ~5s |
 | E2E Calculator benchmark | `uv run python scripts/run_calculator_benchmark.py` | 10-30 min |
 | E2E BugFix scenario | `uv run python scripts/e2e/run_scenario.py E2E-BugFix` | 5-15 min |
 | E2E CLI scenario | `uv run python scripts/e2e/run_scenario.py E2E-CLI` | 5-20 min |
@@ -34,9 +36,10 @@ uv run pytest tests/ -v
 ```
 
 **What the results mean:**
-- **1015+ passed** = everything works, safe to make changes
+- **1010+ passed** = everything works, safe to make changes
 - **Any failures** = something is broken, fix before continuing
-- **~7 skipped** = integration tests that self-skip when external services/models are unavailable
+- **1 skip** = `test_non_tty_returns_false` (Unix-only, skips on Windows) is normal
+- **Integration tests** self-skip when external services are unavailable
 
 **Important: Environment Setup**
 
@@ -52,16 +55,39 @@ uv run python -c "import tree_sitter; import tree_sitter_python; print('OK')"
 
 If tree-sitter tests fail with `ImportError`, your environment is broken — do NOT count those as "expected failures." Fix the env first.
 
-Integration tests require `.env` with `OPENROUTER_API_KEY` and Ollama running locally. They self-skip when requirements are not met.
+**Environment variables for full test runs:**
+
+| Variable | Purpose | Required? |
+|----------|---------|-----------|
+| `OPENROUTER_API_KEY` | OpenRouter integration tests | Optional (tests skip without it) |
+| `OLLAMA_HOST` | Ollama server URL (default: `http://localhost:11434`) | Optional (tests skip without Ollama running) |
+| `OLLAMA_MODEL` | Ollama model (default: `qwen3:8b`) | Optional |
+| `AUTOCODE_BENCH_TARGET_DIR` | Path to completed React calculator project for external benchmark | Optional (test skips without it) |
+| `AUTOCODE_BENCH_MIN_SCORE` | Minimum benchmark score (default: 60) | Optional |
+| `AUTOCODE_BENCH_RUN_NODE` | Set to `1` to run npm build in benchmark | Optional |
+
+**Note on legacy env vars:** If your `.env` has `HYBRIDCODER_*` variables, they still work (backward compat) but emit deprecation warnings. Prefer `AUTOCODE_*` names. Update your `.env`:
+- `HYBRIDCODER_LLM_PROVIDER` → `AUTOCODE_LLM_PROVIDER`
+- `HYBRIDCODER_PYTHON_CMD` → `AUTOCODE_PYTHON_CMD`
+
+**Known skips and their reasons:**
+
+| Test | Skip Condition | Reason |
+|------|---------------|--------|
+| `test_non_tty_returns_false` | `sys.platform == "win32"` | Unix-only TTY test; cannot test non-TTY on Windows terminal |
+| `test_openrouter_*` | `OPENROUTER_API_KEY` not set | Needs API key for real API calls |
+| `test_ollama_tool_calling` | Ollama server not reachable | Needs Ollama running with `qwen3:8b` |
+| `test_project_creation_real_life_task_external_project` | `AUTOCODE_BENCH_TARGET_DIR` not set | Needs a completed React calculator project |
 
 **Where tests live:**
 
 | Directory | What | Count |
 |-----------|------|-------|
-| `tests/unit/` | Core features (29 files) | ~600+ tests |
-| `tests/benchmark/` | Performance + quality rubrics (6 files) | ~20 tests |
+| `tests/unit/` | Core features (30+ files) | ~950+ tests |
+| `tests/benchmark/` | Performance + quality rubrics (6 files) | ~60+ tests |
 | `tests/integration/` | External services (3 files) | Self-skip when unavailable |
 | `tests/test_sprint_verify.py` | Sprint exit criteria | Phase-specific |
+| `cmd/autocode-tui/*_test.go` | Go TUI tests | 184 tests |
 
 **When to run:** After every code change. Non-negotiable.
 
@@ -77,14 +103,47 @@ uv run ruff format src/ tests/      # Auto-format
 
 **Mypy (type checker):**
 ```bash
-uv run mypy src/hybridcoder/
+uv run mypy src/autocode/
 ```
 
 **What the results mean:**
 - **0 errors** = clean
-- **Known baseline issues:** ~30 ruff warnings, 2 mypy errors in `src/hybridcoder/backend/server.py` — these are pre-existing and tracked
+- **Known baseline issues:** Ruff: clean (0 errors). Mypy: ~47 known baseline errors (down from 52) — these are pre-existing and tracked
 
 **When to run:** Before any review request or PR. Use `make lint` as a shortcut.
+
+---
+
+## 2b. Go TUI Tests
+
+**What they test:** Go TUI frontend — Bubble Tea model updates, key handling, approval/ask-user flows, JSON-RPC protocol, session picker, completions, backend detection fallback chain.
+
+**How to run:**
+```bash
+cd cmd/autocode-tui && go test ./... -v
+```
+
+**What the results mean:**
+- **184 passed** = Go TUI works correctly
+- Includes 4 tests for `findPythonBackend()` fallback chain (env vars → uv dev mode → PATH → uv fallback)
+
+**Building and running the TUI:**
+```bash
+# Windows
+build.bat          # Build + run
+build.bat tui      # Build only
+build.bat go-test  # Run Go tests only
+
+# Unix
+make tui           # Build Go TUI
+make go-test       # Run Go tests
+```
+
+**Backend detection:** The Go TUI auto-discovers the Python backend:
+1. `AUTOCODE_PYTHON_CMD` env var (highest priority)
+2. `uv run autocode serve` if `pyproject.toml` found nearby (dev mode)
+3. `autocode` or `hybridcoder` binary on PATH
+4. `uv run autocode serve` (final fallback)
 
 ---
 
@@ -125,7 +184,7 @@ uv run pytest tests/test_sprint_verify.py -v
 
 ## 5. E2E Benchmarks (Evaluations)
 
-E2E benchmarks drive the HybridCoder agent to complete real tasks autonomously, then score the output. These are **evaluations**, not unit tests — they measure agent capability, not code correctness.
+E2E benchmarks drive the AutoCode agent to complete real tasks autonomously, then score the output. These are **evaluations**, not unit tests — they measure agent capability, not code correctness.
 
 ### How It Works
 

@@ -6,10 +6,10 @@ import textwrap
 
 import pytest
 
-from hybridcoder.core.types import SearchResult
-from hybridcoder.layer2.embeddings import EmbeddingEngine
-from hybridcoder.layer2.index import CodeIndex
-from hybridcoder.layer2.search import HybridSearch
+from autocode.core.types import SearchResult
+from autocode.layer2.embeddings import EmbeddingEngine
+from autocode.layer2.index import CodeIndex
+from autocode.layer2.search import HybridSearch
 
 SAMPLE_FILES = {
     "parser.py": textwrap.dedent("""\

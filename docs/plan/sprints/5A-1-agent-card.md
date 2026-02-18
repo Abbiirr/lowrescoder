@@ -23,7 +23,7 @@ Implement AgentCard, AgentRole enum, and ModelSpec dataclass as the foundation f
 
 ## Implementation
 
-- [ ] Create `src/hybridcoder/agent/identity.py`
+- [ ] Create `src/autocode/agent/identity.py`
 - [ ] Implement `AgentRole` StrEnum with 6 roles
 - [ ] Implement `ModelSpec` dataclass with provider, model, layer, temperature, max_tokens
 - [ ] Implement `ModelSpec` factory methods: l1_only(), l3_default(), l4_default()
@@ -41,6 +41,6 @@ Implement AgentCard, AgentRole enum, and ModelSpec dataclass as the foundation f
 
 ## Artifacts
 
-- New file: `src/hybridcoder/agent/identity.py`
+- New file: `src/autocode/agent/identity.py`
 - Test file: `tests/unit/test_identity.py`
 - QA artifact: `docs/qa/test-results/sprint-5a-1-agent-card.md`

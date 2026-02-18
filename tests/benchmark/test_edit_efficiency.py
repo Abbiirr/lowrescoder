@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from hybridcoder.utils.file_tools import read_file, write_file
+from autocode.utils.file_tools import read_file, write_file
 
 
 @pytest.fixture()

@@ -47,7 +47,7 @@ Use all layers together. No single layer is sufficient.
 
 ### Commands (Current TUI Surface)
 
-From `cmd/hybridcoder-tui/commands.go`:
+From `cmd/autocode-tui/commands.go`:
 - `/exit`, `/quit`, `/q`
 - `/new`
 - `/sessions`, `/s`
@@ -104,7 +104,7 @@ Run the vanilla prompt checklist first (inline mode) and require pass on core fl
 ### Step A — Deterministic Test Lane (`L0`)
 
 ```bash
-./scripts/store_test_results.sh tui-go-tests -- bash -lc "cd cmd/hybridcoder-tui && go test ./... -v"
+./scripts/store_test_results.sh tui-go-tests -- bash -lc "cd cmd/autocode-tui && go test ./... -v"
 ```
 
 Pass gate:

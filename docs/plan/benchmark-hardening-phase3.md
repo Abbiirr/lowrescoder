@@ -192,14 +192,14 @@ Add a matrix runner that iterates over model configurations:
         {
             "name": "openrouter-glm4.5",
             "env_overrides": {
-                "HYBRIDCODER_LLM_PROVIDER": "openrouter",
+                "AUTOCODE_LLM_PROVIDER": "openrouter",
                 "OPENROUTER_MODEL": "zhipuai/glm-4.5-air:free"
             }
         },
         {
             "name": "ollama-qwen3-8b",
             "env_overrides": {
-                "HYBRIDCODER_LLM_PROVIDER": "ollama",
+                "AUTOCODE_LLM_PROVIDER": "ollama",
                 "OLLAMA_MODEL": "qwen3:8b-q4_K_M"
             }
         }

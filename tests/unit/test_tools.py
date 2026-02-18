@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from hybridcoder.agent.tools import (
+from autocode.agent.tools import (
     ToolDefinition,
     ToolRegistry,
     _handle_read_file,

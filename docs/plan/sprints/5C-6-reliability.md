@@ -50,7 +50,7 @@ Reliability smoke tests (30-min) and extended soak tests (4-hour) on 8GB VRAM ta
 - [ ] 1 stored soak artifact per milestone
 - [ ] Fixed workload fixture used for all runs
 - [ ] All metrics tracked and recorded
-- [ ] MVP GATE: HybridCoder solves real coding tasks standalone
+- [ ] MVP GATE: AutoCode solves real coding tasks standalone
 - [ ] All new tests pass
 - [ ] All existing tests pass (no regressions)
 - [ ] QA artifact saved with P3 metadata template

@@ -104,11 +104,11 @@ The PR Core lane is the strict subset that runs on every pull request. Designed 
 The most important single number:
 
 ```
-scaffold_delta = resolve_rate(model + HybridCoder) - resolve_rate(model + naive_prompt)
+scaffold_delta = resolve_rate(model + AutoCode) - resolve_rate(model + naive_prompt)
 ```
 
 **How to measure:**
-1. Run the scenario suite with HybridCoder's full 4-layer system → `rate_full`
+1. Run the scenario suite with AutoCode's full 4-layer system → `rate_full`
 2. Run the same suite with a naive scaffold (single prompt, no tools) → `rate_naive`
 3. `scaffold_delta = rate_full - rate_naive`
 
@@ -126,7 +126,7 @@ scaffold_delta = resolve_rate(model + HybridCoder) - resolve_rate(model + naive_
 
 ## Layer Attribution
 
-For HybridCoder specifically, track which layer resolved each task:
+For AutoCode specifically, track which layer resolved each task:
 
 ```json
 {

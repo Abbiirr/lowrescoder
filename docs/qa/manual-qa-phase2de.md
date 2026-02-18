@@ -1,6 +1,6 @@
 # Manual QA Checklist — Phase 2D-E UI Bug Fixes
 
-> Run `uv run hybridcoder chat` in Windows Terminal (or your platform's terminal).
+> Run `uv run autocode chat` in Windows Terminal (or your platform's terminal).
 > Ollama must be running with a model available.
 
 ## Prerequisites
@@ -68,7 +68,7 @@
 - [ ] `/sessions` — lists sessions
 - [ ] `/compact` — compacts session (needs 5+ messages)
 - [ ] `/freeze` — shows "not needed in inline mode"
-- [ ] `/init` — creates .hybridcoder/memory.md
+- [ ] `/init` — creates .autocode/memory.md
 - [ ] `/exit` — exits app
 
 ## Edge Cases

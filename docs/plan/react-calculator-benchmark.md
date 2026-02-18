@@ -1,6 +1,6 @@
 # React Calculator App Benchmark
 
-> HybridCoder — Edge-Native AI Coding Assistant
+> AutoCode — Edge-Native AI Coding Assistant
 > Version: 1.0 | Date: 2026-02-09
 > Purpose: Real-world benchmark for agentic task completion (Tier 4)
 > Phase: 4-5 (requires agentic workflow + edit system)
@@ -9,7 +9,7 @@
 
 ## 1. Purpose
 
-Test whether HybridCoder can autonomously scaffold and build a complete web application from a single natural language prompt. This is the most realistic test of an AI coding agent because it requires:
+Test whether AutoCode can autonomously scaffold and build a complete web application from a single natural language prompt. This is the most realistic test of an AI coding agent because it requires:
 
 - **Multi-file coordination** (25+ files created in a coherent project structure)
 - **Architecture decisions** (component hierarchy, state management, routing)
@@ -23,7 +23,7 @@ None of the major competitors (Aider, Continue.dev, Cursor, Claude Code) explici
 
 ## 2. The Task
 
-### Prompt (Single Message to HybridCoder)
+### Prompt (Single Message to AutoCode)
 
 > Create a React web app with a landing page and 4 calculator pages: regular calculator, scientific calculator, currency converter (using Frankfurter API), and unit converter (length, weight, temperature, volume, speed). Use Vite, React Router v6, Tailwind CSS, mathjs for scientific calculations, and big.js for decimal precision. Include proper error handling and a clean, modern UI.
 
@@ -273,11 +273,11 @@ mkdir test-calculator-app
 cd test-calculator-app
 ```
 
-### Step 2: Run HybridCoder
+### Step 2: Run AutoCode
 
-Launch HybridCoder and provide the single prompt from Section 2.
+Launch AutoCode and provide the single prompt from Section 2.
 
-**Time limit:** 30 minutes for complete project creation. HybridCoder should autonomously:
+**Time limit:** 30 minutes for complete project creation. AutoCode should autonomously:
 1. Initialize the Vite + React project
 2. Install dependencies (tailwindcss, react-router-dom, mathjs, big.js)
 3. Configure Tailwind CSS
@@ -335,7 +335,7 @@ Fill out the scoring sheet:
 ```
 ## Score Sheet — React Calculator Benchmark
 Date: ____
-HybridCoder Version: ____
+AutoCode Version: ____
 Model: ____
 
 ### Scaffold Quality (20)
@@ -442,7 +442,7 @@ Any AI coding agent can be evaluated against this same rubric, enabling fair com
 
 ## 9. Baseline Expectations
 
-### For Qwen3-8B via HybridCoder (Phase 4-5)
+### For Qwen3-8B via AutoCode (Phase 4-5)
 
 | Metric | Conservative | Optimistic |
 |--------|-------------|-----------|
@@ -463,5 +463,5 @@ Any AI coding agent can be evaluated against this same rubric, enabling fair com
 | Claude Code (Opus) | 80-95 | Large cloud model, excellent at multi-file |
 | Aider (GPT-4) | 65-80 | Good editing, weaker at project creation |
 | Cursor (GPT-4) | 70-85 | IDE context helps, but CLI benchmark |
-| HybridCoder (Qwen3-8B) | 40-75 | Depends heavily on context quality |
+| AutoCode (Qwen3-8B) | 40-75 | Depends heavily on context quality |
 | Raw Qwen3-8B (no context) | 20-40 | Would struggle with multi-file coordination |

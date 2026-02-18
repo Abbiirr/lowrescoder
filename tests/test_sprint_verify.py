@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from hybridcoder.cli import app
+from autocode.cli import app
 
 runner = CliRunner()
 
@@ -29,39 +29,39 @@ class TestSprint1Config:
     """S1.1: Config system works end-to-end."""
 
     def test_config_loads_with_defaults(self) -> None:
-        from hybridcoder.config import HybridCoderConfig, load_config
+        from autocode.config import AutoCodeConfig, load_config
 
         config = load_config(project_root=Path.cwd())
-        assert isinstance(config, HybridCoderConfig)
+        assert isinstance(config, AutoCodeConfig)
 
     def test_default_provider_is_ollama(self) -> None:
-        from hybridcoder.config import HybridCoderConfig
+        from autocode.config import AutoCodeConfig
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         assert config.llm.provider == "ollama"
 
     def test_config_yaml_roundtrip(self, tmp_path: Path) -> None:
-        from hybridcoder.config import HybridCoderConfig, save_config
+        from autocode.config import AutoCodeConfig, save_config
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.llm.model = "test-roundtrip"
         path = save_config(config, tmp_path / "config.yaml")
         assert path.exists()
         assert "test-roundtrip" in path.read_text()
 
     def test_env_var_precedence(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        from hybridcoder.config import load_config
+        from autocode.config import load_config
 
-        monkeypatch.setenv("HYBRIDCODER_LLM_PROVIDER", "openrouter")
+        monkeypatch.setenv("AUTOCODE_LLM_PROVIDER", "openrouter")
         monkeypatch.setenv("OPENROUTER_API_KEY", "fake-key")
         config = load_config(project_root=tmp_path)
         assert config.llm.provider == "openrouter"
         assert config.llm.api_base == "https://openrouter.ai/api/v1"
 
     def test_config_check_returns_list(self) -> None:
-        from hybridcoder.config import HybridCoderConfig, check_config
+        from autocode.config import AutoCodeConfig, check_config
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.layer3.enabled = False
         warnings = check_config(config)
         assert isinstance(warnings, list)
@@ -73,7 +73,7 @@ class TestSprint1CLI:
     def test_version_command(self) -> None:
         result = runner.invoke(app, ["version"])
         assert result.exit_code == 0
-        assert "hybridcoder" in result.output
+        assert "autocode" in result.output
 
     def test_config_show_command(self) -> None:
         result = runner.invoke(app, ["config", "show"])
@@ -86,7 +86,7 @@ class TestSprint1CLI:
     def test_config_path_command(self) -> None:
         result = runner.invoke(app, ["config", "path"])
         assert result.exit_code == 0
-        assert ".hybridcoder" in result.output
+        assert ".autocode" in result.output
 
     def test_config_set_validates_input(self) -> None:
         result = runner.invoke(app, ["config", "set", "bad"])
@@ -106,24 +106,24 @@ class TestSprint1LLMProvider:
     """S1.3: LLM provider abstraction works."""
 
     def test_create_provider_ollama(self) -> None:
-        from hybridcoder.config import HybridCoderConfig
-        from hybridcoder.layer4.llm import OllamaProvider, create_provider
+        from autocode.config import AutoCodeConfig
+        from autocode.layer4.llm import OllamaProvider, create_provider
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         provider = create_provider(config)
         assert isinstance(provider, OllamaProvider)
 
     def test_create_provider_openrouter(self) -> None:
-        from hybridcoder.config import HybridCoderConfig
-        from hybridcoder.layer4.llm import OpenRouterProvider, create_provider
+        from autocode.config import AutoCodeConfig
+        from autocode.layer4.llm import OpenRouterProvider, create_provider
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.llm.provider = "openrouter"
         provider = create_provider(config)
         assert isinstance(provider, OpenRouterProvider)
 
     def test_conversation_history(self) -> None:
-        from hybridcoder.layer4.llm import ConversationHistory
+        from autocode.layer4.llm import ConversationHistory
 
         h = ConversationHistory(system_prompt="test")
         h.add_user("hello")
@@ -135,7 +135,7 @@ class TestSprint1LLMProvider:
         assert msgs[2]["role"] == "assistant"
 
     def test_conversation_trim_preserves_pairs(self) -> None:
-        from hybridcoder.layer4.llm import ConversationHistory
+        from autocode.layer4.llm import ConversationHistory
 
         h = ConversationHistory(system_prompt="s")
         h.add_user("u" * 400)
@@ -152,7 +152,7 @@ class TestSprint1LLMProvider:
                 assert roles[i - 1] == "user"
 
     def test_token_estimate(self) -> None:
-        from hybridcoder.layer4.llm import ConversationHistory
+        from autocode.layer4.llm import ConversationHistory
 
         h = ConversationHistory()
         h.add_user("a" * 400)
@@ -163,14 +163,14 @@ class TestSprint1FileTools:
     """S1.4: File tools work with path safety."""
 
     def test_read_write_roundtrip(self, tmp_path: Path) -> None:
-        from hybridcoder.utils.file_tools import read_file, write_file
+        from autocode.utils.file_tools import read_file, write_file
 
         write_file(tmp_path / "test.txt", "hello world")
         content = read_file(str(tmp_path / "test.txt"))
         assert content == "hello world"
 
     def test_read_line_range(self, tmp_path: Path) -> None:
-        from hybridcoder.utils.file_tools import read_file, write_file
+        from autocode.utils.file_tools import read_file, write_file
 
         write_file(tmp_path / "lines.txt", "a\nb\nc\nd\n")
         content = read_file(str(tmp_path / "lines.txt"), start_line=2, end_line=3)
@@ -179,7 +179,7 @@ class TestSprint1FileTools:
         assert "a" not in content
 
     def test_path_traversal_blocked(self, tmp_path: Path) -> None:
-        from hybridcoder.utils.file_tools import read_file
+        from autocode.utils.file_tools import read_file
 
         (tmp_path / "sub").mkdir()
         (tmp_path / "secret.txt").write_text("secret")
@@ -187,7 +187,7 @@ class TestSprint1FileTools:
             read_file(str(tmp_path / "secret.txt"), project_root=str(tmp_path / "sub"))
 
     def test_prefix_bypass_blocked(self, tmp_path: Path) -> None:
-        from hybridcoder.utils.file_tools import read_file
+        from autocode.utils.file_tools import read_file
 
         repo = tmp_path / "repo"
         repo.mkdir()
@@ -198,7 +198,7 @@ class TestSprint1FileTools:
             read_file(str(evil / "steal.txt"), project_root=str(repo))
 
     def test_relative_path_resolves(self, tmp_path: Path) -> None:
-        from hybridcoder.utils.file_tools import read_file, write_file
+        from autocode.utils.file_tools import read_file, write_file
 
         (tmp_path / "src").mkdir()
         write_file("src/test.txt", "content", project_root=str(tmp_path))
@@ -206,7 +206,7 @@ class TestSprint1FileTools:
         assert result == "content"
 
     def test_list_files(self, tmp_path: Path) -> None:
-        from hybridcoder.utils.file_tools import list_files
+        from autocode.utils.file_tools import list_files
 
         (tmp_path / "a.py").write_text("a")
         (tmp_path / "b.txt").write_text("b")
@@ -220,26 +220,26 @@ class TestSprint1CoreTypes:
     """S1.5: Core types are defined correctly."""
 
     def test_request_type_enum(self) -> None:
-        from hybridcoder.core.types import RequestType
+        from autocode.core.types import RequestType
 
         assert len(RequestType) == 7
         assert RequestType.CHAT.value == "chat"
         assert RequestType.DETERMINISTIC_QUERY.value == "deterministic"
 
     def test_layer_result_enum(self) -> None:
-        from hybridcoder.core.types import LayerResult
+        from autocode.core.types import LayerResult
 
         assert LayerResult.ESCALATE.value == "escalate"
 
     def test_request_dataclass(self) -> None:
-        from hybridcoder.core.types import Request, RequestType
+        from autocode.core.types import Request, RequestType
 
         req = Request(raw_input="test", request_type=RequestType.CHAT)
         assert req.file_context is None
         assert req.conversation_history == []
 
     def test_response_dataclass(self) -> None:
-        from hybridcoder.core.types import Response
+        from autocode.core.types import Response
 
         resp = Response(content="hello", layer_used=4)
         assert resp.success is True
@@ -247,7 +247,7 @@ class TestSprint1CoreTypes:
         assert resp.files_modified == []
 
     def test_all_types_importable(self) -> None:
-        from hybridcoder.core.types import (
+        from autocode.core.types import (
             CodeChunk,
             EditResult,
             FileRange,
@@ -284,17 +284,17 @@ class TestSprint2TUI:
     """S2.1: TUI app imports and constructs."""
 
     def test_tui_app_constructs(self, tmp_path: Path) -> None:
-        from hybridcoder.config import HybridCoderConfig
-        from hybridcoder.tui.app import HybridCoderApp
+        from autocode.config import AutoCodeConfig
+        from autocode.tui.app import AutoCodeApp
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.tui.session_db_path = str(tmp_path / "test.db")
-        app = HybridCoderApp(config=config)
+        app = AutoCodeApp(config=config)
         assert app is not None
         assert app.config is config
 
     def test_tui_widgets_importable(self) -> None:
-        from hybridcoder.tui.widgets import ChatView, InputBar, StatusBar
+        from autocode.tui.widgets import ChatView, InputBar, StatusBar
 
         assert ChatView is not None
         assert InputBar is not None
@@ -305,7 +305,7 @@ class TestSprint2Session:
     """S2.2: SessionStore creates DB and tables."""
 
     def test_session_store_creates_tables(self, tmp_path: Path) -> None:
-        from hybridcoder.session.store import SessionStore
+        from autocode.session.store import SessionStore
 
         store = SessionStore(tmp_path / "test.db")
         # Tables should exist
@@ -321,7 +321,7 @@ class TestSprint2Tools:
     """S2.3: ToolRegistry registers 11 tools."""
 
     def test_eleven_tools_registered(self) -> None:
-        from hybridcoder.agent.tools import create_default_registry
+        from autocode.agent.tools import create_default_registry
 
         registry = create_default_registry()
         tools = registry.get_all()
@@ -347,10 +347,10 @@ class TestSprint2Agent:
     def test_agent_loop_constructs(self, tmp_path: Path) -> None:
         from unittest.mock import AsyncMock
 
-        from hybridcoder.agent.approval import ApprovalManager, ApprovalMode
-        from hybridcoder.agent.loop import AgentLoop
-        from hybridcoder.agent.tools import ToolRegistry
-        from hybridcoder.session.store import SessionStore
+        from autocode.agent.approval import ApprovalManager, ApprovalMode
+        from autocode.agent.loop import AgentLoop
+        from autocode.agent.tools import ToolRegistry
+        from autocode.session.store import SessionStore
 
         store = SessionStore(tmp_path / "test.db")
         sid = store.create_session(title="T", model="m", provider="p")
@@ -369,7 +369,7 @@ class TestSprint2Commands:
     """S2.5: All slash commands registered (16 with /tasks)."""
 
     def test_all_commands_registered(self) -> None:
-        from hybridcoder.tui.commands import create_default_router
+        from autocode.tui.commands import create_default_router
 
         router = create_default_router()
         commands = router.get_all()
@@ -408,25 +408,25 @@ class TestSprint2C:
 
     def test_inline_app_imports(self) -> None:
         """InlineApp is importable."""
-        from hybridcoder.inline.app import InlineApp
+        from autocode.inline.app import InlineApp
 
         assert InlineApp is not None
 
     def test_inline_renderer_imports(self) -> None:
         """InlineRenderer is importable."""
-        from hybridcoder.inline.renderer import InlineRenderer
+        from autocode.inline.renderer import InlineRenderer
 
         assert InlineRenderer is not None
 
     def test_hybrid_completer_imports(self) -> None:
         """HybridCompleter is importable."""
-        from hybridcoder.inline.completer import HybridCompleter
+        from autocode.inline.completer import HybridCompleter
 
         assert HybridCompleter is not None
 
     def test_app_context_protocol(self) -> None:
         """AppContext protocol has required methods."""
-        from hybridcoder.tui.commands import AppContext
+        from autocode.tui.commands import AppContext
 
         # Check required method signatures exist in the protocol
         assert hasattr(AppContext, "add_system_message")
@@ -461,7 +461,7 @@ class TestSprint2D:
 
     def test_thinking_toggle_exists(self) -> None:
         """/thinking command is registered."""
-        from hybridcoder.tui.commands import create_default_router
+        from autocode.tui.commands import create_default_router
 
         router = create_default_router()
         result = router.dispatch("/thinking")
@@ -470,7 +470,7 @@ class TestSprint2D:
 
     def test_clear_command_exists(self) -> None:
         """/clear command is registered."""
-        from hybridcoder.tui.commands import create_default_router
+        from autocode.tui.commands import create_default_router
 
         router = create_default_router()
         result = router.dispatch("/clear")
@@ -479,20 +479,20 @@ class TestSprint2D:
 
     def test_thinking_default_hidden(self) -> None:
         """InlineApp._show_thinking defaults to False."""
-        from hybridcoder.config import HybridCoderConfig
-        from hybridcoder.inline.app import InlineApp
+        from autocode.config import AutoCodeConfig
+        from autocode.inline.app import InlineApp
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.tui.session_db_path = ":memory:"
         app = InlineApp(config=config)
         assert app._show_thinking is False
 
     def test_show_thinking_property(self) -> None:
         """InlineApp has show_thinking property."""
-        from hybridcoder.config import HybridCoderConfig
-        from hybridcoder.inline.app import InlineApp
+        from autocode.config import AutoCodeConfig
+        from autocode.inline.app import InlineApp
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.tui.session_db_path = ":memory:"
         app = InlineApp(config=config)
         assert hasattr(app, "show_thinking")
@@ -501,10 +501,10 @@ class TestSprint2D:
 
     def test_key_bindings_exist(self) -> None:
         """InlineApp creates key bindings with shift+tab."""
-        from hybridcoder.config import HybridCoderConfig
-        from hybridcoder.inline.app import InlineApp
+        from autocode.config import AutoCodeConfig
+        from autocode.inline.app import InlineApp
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.tui.session_db_path = ":memory:"
         app = InlineApp(config=config)
         kb = app._create_key_bindings()
@@ -512,7 +512,7 @@ class TestSprint2D:
 
     def test_renderer_has_turn_separator(self) -> None:
         """InlineRenderer has print_turn_separator method."""
-        from hybridcoder.inline.renderer import InlineRenderer
+        from autocode.inline.renderer import InlineRenderer
 
         renderer = InlineRenderer()
         assert hasattr(renderer, "print_turn_separator")
@@ -523,7 +523,7 @@ class TestSprint2D:
 
         from rich.console import Console
 
-        from hybridcoder.inline.renderer import InlineRenderer
+        from autocode.inline.renderer import InlineRenderer
 
         buf = StringIO()
         console = Console(file=buf, force_terminal=True)
@@ -539,7 +539,7 @@ class TestSprint2D:
 
         from rich.console import Console
 
-        from hybridcoder.inline.renderer import InlineRenderer
+        from autocode.inline.renderer import InlineRenderer
 
         buf = StringIO()
         console = Console(file=buf, force_terminal=True)
@@ -556,7 +556,7 @@ class TestSprint2D:
 
         from rich.console import Console
 
-        from hybridcoder.inline.renderer import InlineRenderer
+        from autocode.inline.renderer import InlineRenderer
 
         buf = StringIO()
         console = Console(file=buf, force_terminal=True)
@@ -572,16 +572,16 @@ class TestSprint2D:
 
     def test_app_context_has_show_thinking(self) -> None:
         """AppContext protocol includes show_thinking."""
-        from hybridcoder.tui.commands import AppContext
+        from autocode.tui.commands import AppContext
 
         assert hasattr(AppContext, "show_thinking")
 
     def test_session_approved_tools_tracking(self) -> None:
         """InlineApp tracks session-approved tools."""
-        from hybridcoder.config import HybridCoderConfig
-        from hybridcoder.inline.app import InlineApp
+        from autocode.config import AutoCodeConfig
+        from autocode.inline.app import InlineApp
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.tui.session_db_path = ":memory:"
         app = InlineApp(config=config)
         assert hasattr(app, "_session_approved_tools")
@@ -589,7 +589,7 @@ class TestSprint2D:
 
     def test_fifteen_commands_registered(self) -> None:
         """19 slash commands registered (Sprint 4C: +/memory, +/checkpoint)."""
-        from hybridcoder.tui.commands import create_default_router
+        from autocode.tui.commands import create_default_router
 
         router = create_default_router()
         commands = router.get_all()
@@ -610,7 +610,7 @@ class TestSprint2E:
 
         from rich.console import Console
 
-        from hybridcoder.inline.renderer import InlineRenderer
+        from autocode.inline.renderer import InlineRenderer
 
         buf = StringIO()
         console = Console(file=buf, force_terminal=True, width=200)
@@ -623,7 +623,7 @@ class TestSprint2E:
         """BUG-2/7: _listen_for_escape is async method on InlineApp."""
         import inspect
 
-        from hybridcoder.inline.app import InlineApp
+        from autocode.inline.app import InlineApp
 
         assert hasattr(InlineApp, "_listen_for_escape")
         assert inspect.iscoroutinefunction(InlineApp._listen_for_escape)
@@ -632,7 +632,7 @@ class TestSprint2E:
         """BUG-2/7: _handle_input_with_cancel is async method."""
         import inspect
 
-        from hybridcoder.inline.app import InlineApp
+        from autocode.inline.app import InlineApp
 
         assert hasattr(InlineApp, "_handle_input_with_cancel")
         assert inspect.iscoroutinefunction(InlineApp._handle_input_with_cancel)
@@ -643,7 +643,7 @@ class TestSprint2E:
 
         from rich.console import Console
 
-        from hybridcoder.inline.renderer import InlineRenderer
+        from autocode.inline.renderer import InlineRenderer
 
         buf = StringIO()
         console = Console(file=buf, force_terminal=True)
@@ -663,7 +663,7 @@ class TestSprint2E:
         """BUG-5/6: run() source has no print_input_border call."""
         import inspect
 
-        from hybridcoder.inline.app import InlineApp
+        from autocode.inline.app import InlineApp
 
         source = inspect.getsource(InlineApp.run)
         assert "print_input_border" not in source
@@ -672,7 +672,7 @@ class TestSprint2E:
         """BUG-5/6: run() source contains ❯ prompt character."""
         import inspect
 
-        from hybridcoder.inline.app import InlineApp
+        from autocode.inline.app import InlineApp
 
         source = inspect.getsource(InlineApp.run)
         assert "❯" in source
@@ -683,7 +683,7 @@ class TestSprint2E:
 
         from rich.console import Console
 
-        from hybridcoder.inline.renderer import InlineRenderer
+        from autocode.inline.renderer import InlineRenderer
 
         buf = StringIO()
         console = Console(file=buf, force_terminal=True)
@@ -695,14 +695,14 @@ class TestSprint2E:
         """BUG-8: _run_agent source contains print_thinking_indicator."""
         import inspect
 
-        from hybridcoder.inline.app import InlineApp
+        from autocode.inline.app import InlineApp
 
         source = inspect.getsource(InlineApp._run_agent)
         assert "print_thinking_indicator" in source
 
     def test_renderer_goodbye_method(self) -> None:
         """InlineRenderer has print_goodbye method."""
-        from hybridcoder.inline.renderer import InlineRenderer
+        from autocode.inline.renderer import InlineRenderer
 
         renderer = InlineRenderer()
         assert hasattr(renderer, "print_goodbye")
@@ -710,7 +710,7 @@ class TestSprint2E:
 
     def test_all_fifteen_commands(self) -> None:
         """19 commands registered with correct names."""
-        from hybridcoder.tui.commands import create_default_router
+        from autocode.tui.commands import create_default_router
 
         router = create_default_router()
         commands = router.get_all()

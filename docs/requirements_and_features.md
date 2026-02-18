@@ -1,4 +1,4 @@
-# HybridCoder — Requirements & Feature Catalog
+# AutoCode — Requirements & Feature Catalog
 
 > Comprehensive catalog of all features built, planned, current UX issues, and architecture decisions.
 > Last updated: 2026-02-17
@@ -7,7 +7,7 @@
 
 ## 1. Project Overview
 
-**HybridCoder** — Edge-native AI coding assistant CLI. Local-first, deterministic-first, consumer hardware (8GB VRAM). See `CLAUDE.md` for architecture (4-layer model), design principles, and technology stack.
+**AutoCode** — Edge-native AI coding assistant CLI. Local-first, deterministic-first, consumer hardware (8GB VRAM). See `CLAUDE.md` for architecture (4-layer model), design principles, and technology stack.
 
 ---
 
@@ -17,11 +17,11 @@
 
 | Command | Description | File |
 |---------|-------------|------|
-| `hybridcoder chat` | Interactive chat REPL (default: inline parallel mode) | `src/hybridcoder/cli.py:142` |
-| `hybridcoder ask` | Single question, streamed response | `src/hybridcoder/cli.py:183` |
-| `hybridcoder edit` | AI-assisted file editing (stub) | `src/hybridcoder/cli.py:196` |
-| `hybridcoder config` | Show/set/check/path for configuration | `src/hybridcoder/cli.py:205` |
-| `hybridcoder version` | Show version | `src/hybridcoder/cli.py:255` |
+| `autocode chat` | Interactive chat REPL (default: inline parallel mode) | `src/autocode/cli.py:142` |
+| `autocode ask` | Single question, streamed response | `src/autocode/cli.py:183` |
+| `autocode edit` | AI-assisted file editing (stub) | `src/autocode/cli.py:196` |
+| `autocode config` | Show/set/check/path for configuration | `src/autocode/cli.py:205` |
+| `autocode version` | Show version | `src/autocode/cli.py:255` |
 
 **CLI flags for `chat`:**
 - `--verbose / -v` — Enable verbose output
@@ -35,8 +35,8 @@
 
 | Feature | Status | File |
 |---------|--------|------|
-| Ollama provider (local) | DONE | `src/hybridcoder/layer4/llm.py:103` |
-| OpenRouter provider (cloud dev) | DONE | `src/hybridcoder/layer4/llm.py:237` |
+| Ollama provider (local) | DONE | `src/autocode/layer4/llm.py:103` |
+| OpenRouter provider (cloud dev) | DONE | `src/autocode/layer4/llm.py:237` |
 | Streaming text generation | DONE | Both providers |
 | Tool calling (function calls) | DONE | `generate_with_tools()` on both |
 | Thinking/reasoning token parsing | DONE | `<think>` tag parsing + OpenRouter native reasoning |
@@ -48,11 +48,11 @@
 
 | Feature | Status | File |
 |---------|--------|------|
-| Agent loop (LLM ↔ tool cycle) | DONE | `src/hybridcoder/agent/loop.py` |
+| Agent loop (LLM ↔ tool cycle) | DONE | `src/autocode/agent/loop.py` |
 | Max 10 iterations per turn | DONE | `AgentLoop.MAX_ITERATIONS = 10` |
 | Cancellation support | DONE | `AgentLoop.cancel()` |
-| System prompt builder | DONE | `src/hybridcoder/agent/prompts.py` |
-| Project memory loading (`.hybridcoder/memory.md`) | DONE | `InlineApp._ensure_agent_loop()` |
+| System prompt builder | DONE | `src/autocode/agent/prompts.py` |
+| Project memory loading (`.autocode/memory.md`) | DONE | `InlineApp._ensure_agent_loop()` |
 
 ### 2.4 Tool Registry (19 Tools)
 
@@ -78,13 +78,13 @@
 | `cancel_subagent` | No | Cancel a running subagent (Phase 4) |
 | `list_subagents` | No | List all subagents with status (Phase 4) |
 
-Base tools defined in `src/hybridcoder/agent/tools.py`. Task tools in `src/hybridcoder/agent/task_tools.py`. Subagent tools in `src/hybridcoder/agent/subagent_tools.py`.
+Base tools defined in `src/autocode/agent/tools.py`. Task tools in `src/autocode/agent/task_tools.py`. Subagent tools in `src/autocode/agent/subagent_tools.py`.
 
 ### 2.5 Approval System
 
 | Feature | Status | File |
 |---------|--------|------|
-| Three modes: read-only, suggest, auto | DONE | `src/hybridcoder/agent/approval.py` |
+| Three modes: read-only, suggest, auto | DONE | `src/autocode/agent/approval.py` |
 | Tool-level approval checking | DONE | `ApprovalManager.needs_approval()` |
 | Blocked operation detection | DONE | `is_blocked()`, `is_write_blocked()` |
 | Shell enable/disable | DONE | `enable_shell()`, `is_shell_disabled()` |
@@ -96,7 +96,7 @@ Base tools defined in `src/hybridcoder/agent/tools.py`. Task tools in `src/hybri
 
 | Feature | Status | File |
 |---------|--------|------|
-| SQLite-backed store (WAL mode) | DONE | `src/hybridcoder/session/store.py` |
+| SQLite-backed store (WAL mode) | DONE | `src/autocode/session/store.py` |
 | Create/list/get/update sessions | DONE | `SessionStore` class |
 | Message persistence (user, assistant, tool, system) | DONE | `add_message()`, `get_messages()` |
 | Tool call tracking with duration | DONE | `add_tool_call()`, `update_tool_call()` |
@@ -107,15 +107,15 @@ Base tools defined in `src/hybridcoder/agent/tools.py`. Task tools in `src/hybri
 
 | Feature | Status | File |
 |---------|--------|------|
-| JSON Lines file logging (INFO + DEBUG) | DONE | `src/hybridcoder/core/logging.py` |
+| JSON Lines file logging (INFO + DEBUG) | DONE | `src/autocode/core/logging.py` |
 | Timestamped session log directories (`YYYY/MM/DD/HH/<session[:8]>/`) | DONE | `session_log_dir()`, `setup_session_logging()` |
 | Two-phase logging setup (pre-session → session-specific) | DONE | `setup_logging()` then `setup_session_logging()` |
 | `latest` symlink (`.txt` fallback on Windows) | DONE | `_update_latest_pointer()` |
-| Training-grade event recorder (opt-in, fail-open) | DONE | `src/hybridcoder/agent/event_recorder.py` |
-| Episode/event store (SQLite, retention enforcement) | DONE | `src/hybridcoder/session/episode_store.py` |
-| Content-addressed blob store (SHA-256 dedup) | DONE | `src/hybridcoder/core/blob_store.py` |
-| TrainingLogConfig (default disabled, explicit opt-in) | DONE | `src/hybridcoder/config.py` |
-| SFT/DPO/Eval JSONL export stubs | DONE | `src/hybridcoder/training/exporter.py` |
+| Training-grade event recorder (opt-in, fail-open) | DONE | `src/autocode/agent/event_recorder.py` |
+| Episode/event store (SQLite, retention enforcement) | DONE | `src/autocode/session/episode_store.py` |
+| Content-addressed blob store (SHA-256 dedup) | DONE | `src/autocode/core/blob_store.py` |
+| TrainingLogConfig (default disabled, explicit opt-in) | DONE | `src/autocode/config.py` |
+| SFT/DPO/Eval JSONL export stubs | DONE | `src/autocode/training/exporter.py` |
 | DPO provenance events (`human_edit` with draft/edited text) | DONE | `EventRecorder.on_human_edit()` |
 
 ### 2.7 Inline REPL (Primary UI)
@@ -133,7 +133,7 @@ Base tools defined in `src/hybridcoder/agent/tools.py`. Task tools in `src/hybri
 | Shift+Tab cycles approval modes | DONE | Key binding in `_create_key_bindings()` |
 | Draft stash/restore during approvals | DONE | `_stash_prompt_draft()`, `_restore_prompt_draft()` |
 | Pending prompt requests (parallel approvals/ask_user) | DONE | `_PendingPromptRequest` dataclass |
-| Rich-formatted streaming output | DONE | `src/hybridcoder/inline/renderer.py` |
+| Rich-formatted streaming output | DONE | `src/autocode/inline/renderer.py` |
 | Thinking indicator | DONE | `InlineRenderer.print_thinking_indicator()` |
 | Tool call display with diffs | DONE | `InlineRenderer.print_tool_call()` |
 
@@ -141,24 +141,24 @@ Base tools defined in `src/hybridcoder/agent/tools.py`. Task tools in `src/hybri
 
 | Feature | Status | File |
 |---------|--------|------|
-| Full-screen Textual app | DONE | `src/hybridcoder/tui/app.py` |
-| Chat view widget (scrollable) | DONE | `src/hybridcoder/tui/widgets/chat_view.py` |
-| Input bar widget | DONE | `src/hybridcoder/tui/widgets/input_bar.py` |
-| Status bar widget | DONE | `src/hybridcoder/tui/widgets/status_bar.py` |
-| Approval prompt widget | DONE | `src/hybridcoder/tui/widgets/approval_prompt.py` |
+| Full-screen Textual app | DONE | `src/autocode/tui/app.py` |
+| Chat view widget (scrollable) | DONE | `src/autocode/tui/widgets/chat_view.py` |
+| Input bar widget | DONE | `src/autocode/tui/widgets/input_bar.py` |
+| Status bar widget | DONE | `src/autocode/tui/widgets/status_bar.py` |
+| Approval prompt widget | DONE | `src/autocode/tui/widgets/approval_prompt.py` |
 
 ### 2.9 Input Features
 
 | Feature | Status | File |
 |---------|--------|------|
-| Command history (FileHistory) | DONE | `~/.hybridcoder/history` |
-| Hybrid completer (commands + files) | DONE | `src/hybridcoder/inline/completer.py` |
+| Command history (FileHistory) | DONE | `~/.autocode/history` |
+| Hybrid completer (commands + files) | DONE | `src/autocode/inline/completer.py` |
 | Conditional completer (`/` and `@` only) | DONE | `ConditionalCompleter` in `app.py` (no dropdown for prose) |
 | Auto-suggest (commands + `@` file paths) | DONE | `HybridAutoSuggest` (Python), Go TUI: `textinput.SetSuggestions` |
 | Ghost text (grayed-out inline suggestion) | DONE | Go TUI: `textinput.ShowSuggestions` + `CompletionStyle` |
 | Tab to accept suggestion | DONE | Go TUI: built-in `textinput.KeyMap.AcceptSuggestion` |
 | Autocomplete dropdown (multiple matches) | DONE | Go TUI: `renderCompletionDropdown()` in `view.go` |
-| @file reference expansion | DONE | `src/hybridcoder/tui/file_completer.py` |
+| @file reference expansion | DONE | `src/autocode/tui/file_completer.py` |
 | Session resume picker (arrow-key) | DONE | Go TUI: `session_picker.go`, reuses `stageAskUser` |
 | Slash commands disabled during streaming | DONE | Queued messages treated as plain chat text |
 
@@ -190,8 +190,8 @@ Base tools defined in `src/hybridcoder/agent/tools.py`. Task tools in `src/hybri
 
 | Feature | Status | File |
 |---------|--------|------|
-| YAML config (`~/.hybridcoder/config.yaml`) | DONE | `src/hybridcoder/config.py` |
-| Pydantic model validation | DONE | `HybridCoderConfig` |
+| YAML config (`~/.autocode/config.yaml`) | DONE | `src/autocode/config.py` |
+| Pydantic model validation | DONE | `AutoCodeConfig` |
 | LLM settings (model, provider, api_base, temperature, max_tokens) | DONE | `LLMConfig` |
 | UI settings (approval_mode, theme, session_db_path) | DONE | `UIConfig` |
 | Shell settings (enabled, allowed_commands, blocked_patterns) | DONE | `ShellConfig` |
@@ -211,7 +211,7 @@ Base tools defined in `src/hybridcoder/agent/tools.py`. Task tools in `src/hybri
 
 ### 2.13 E2E Evaluation System — DONE
 
-Multi-scenario benchmark framework that drives HybridCoder autonomously and produces verdicts.
+Multi-scenario benchmark framework that drives AutoCode autonomously and produces verdicts.
 
 | Component | Status | File |
 |-----------|--------|------|
@@ -238,35 +238,35 @@ Phase 3 implemented 2026-02-13. All gates passed. 840 Python tests, all Go tests
 
 | Feature | Status | Files |
 |---------|--------|-------|
-| Tree-sitter Python parser (mtime LRU cache, 500 entries) | DONE | `src/hybridcoder/layer1/parser.py` |
-| Symbol extraction (functions, classes, methods, imports, variables) | DONE | `src/hybridcoder/layer1/symbols.py` |
-| Request router (3-stage: regex → features → weighted scoring) | DONE | `src/hybridcoder/core/router.py` |
-| Deterministic query handlers (list_symbols, find_def, find_refs, get_imports, show_signature) | DONE | `src/hybridcoder/layer1/queries.py` |
-| Syntax/import validation via tree-sitter | DONE | `src/hybridcoder/layer1/validators.py` |
+| Tree-sitter Python parser (mtime LRU cache, 500 entries) | DONE | `src/autocode/layer1/parser.py` |
+| Symbol extraction (functions, classes, methods, imports, variables) | DONE | `src/autocode/layer1/symbols.py` |
+| Request router (3-stage: regex → features → weighted scoring) | DONE | `src/autocode/core/router.py` |
+| Deterministic query handlers (list_symbols, find_def, find_refs, get_imports, show_signature) | DONE | `src/autocode/layer1/queries.py` |
+| Syntax/import validation via tree-sitter | DONE | `src/autocode/layer1/validators.py` |
 
 #### Layer 2: Retrieval Intelligence
 
 | Feature | Status | Files |
 |---------|--------|-------|
-| AST-aware code chunker (function/class boundaries, 200-800 token chunks) | DONE | `src/hybridcoder/layer2/chunker.py` |
-| Embedding engine (jina-v2-base-code, 768-dim, lazy-loaded, CPU-only) | DONE | `src/hybridcoder/layer2/embeddings.py` |
-| BM25 keyword search with TF-IDF scoring | DONE | `src/hybridcoder/layer2/embeddings.py` |
-| LanceDB code index (file-hash invalidation, incremental, gitignore-aware) | DONE | `src/hybridcoder/layer2/index.py` |
-| Hybrid search (BM25 + vector + RRF fusion, k=60) | DONE | `src/hybridcoder/layer2/search.py` |
-| Repository map generator (ranked symbols, 600-token budget) | DONE | `src/hybridcoder/layer2/repomap.py` |
-| Rules loader (CLAUDE.md, .rules/, .cursorrules) | DONE | `src/hybridcoder/layer2/rules.py` |
-| Context assembler (5000-token budget, priority-based) | DONE | `src/hybridcoder/core/context.py` |
+| AST-aware code chunker (function/class boundaries, 200-800 token chunks) | DONE | `src/autocode/layer2/chunker.py` |
+| Embedding engine (jina-v2-base-code, 768-dim, lazy-loaded, CPU-only) | DONE | `src/autocode/layer2/embeddings.py` |
+| BM25 keyword search with TF-IDF scoring | DONE | `src/autocode/layer2/embeddings.py` |
+| LanceDB code index (file-hash invalidation, incremental, gitignore-aware) | DONE | `src/autocode/layer2/index.py` |
+| Hybrid search (BM25 + vector + RRF fusion, k=60) | DONE | `src/autocode/layer2/search.py` |
+| Repository map generator (ranked symbols, 600-token budget) | DONE | `src/autocode/layer2/repomap.py` |
+| Rules loader (CLAUDE.md, .rules/, .cursorrules) | DONE | `src/autocode/layer2/rules.py` |
+| Context assembler (5000-token budget, priority-based) | DONE | `src/autocode/core/context.py` |
 
 #### Integration
 
 | Feature | Status | Files |
 |---------|--------|-------|
-| 5 new agent tools (11 total) | DONE | `src/hybridcoder/agent/tools.py` |
-| `/index` slash command | DONE | `src/hybridcoder/tui/commands.py` |
-| L1 bypass in backend server (0 tokens, <50ms) | DONE | `src/hybridcoder/backend/server.py` |
-| Layer indicator in Go TUI (`[L1]`/`[L2]`/`[L4]`) | DONE | `cmd/hybridcoder-tui/statusbar.go` |
-| Context injection in system prompt | DONE | `src/hybridcoder/agent/prompts.py` |
-| `layer_used` in `on_done` notification | DONE | `cmd/hybridcoder-tui/protocol.go`, `messages.go`, `backend.go`, `update.go` |
+| 5 new agent tools (11 total) | DONE | `src/autocode/agent/tools.py` |
+| `/index` slash command | DONE | `src/autocode/tui/commands.py` |
+| L1 bypass in backend server (0 tokens, <50ms) | DONE | `src/autocode/backend/server.py` |
+| Layer indicator in Go TUI (`[L1]`/`[L2]`/`[L4]`) | DONE | `cmd/autocode-tui/statusbar.go` |
+| Context injection in system prompt | DONE | `src/autocode/agent/prompts.py` |
+| `layer_used` in `on_done` notification | DONE | `cmd/autocode-tui/protocol.go`, `messages.go`, `backend.go`, `update.go` |
 
 #### Gate Results
 
@@ -301,7 +301,7 @@ Phase 3 implemented 2026-02-13. All gates passed. 840 Python tests, all Go tests
 | Task LLM tools (create/update/list/dep) | DONE | 4 tools registered via factory pattern with closures over TaskStore |
 | `/tasks` slash command | DONE | Shows task board |
 | ToolDefinition capability flags | DONE | `mutates_fs`, `executes_shell` on dataclass (ready for 4B plan mode) |
-| AgentConfig | DONE | Compaction/subagent/memory settings in `HybridCoderConfig` |
+| AgentConfig | DONE | Compaction/subagent/memory settings in `AutoCodeConfig` |
 | `ensure_tables()` | DONE | Idempotent Phase 4 table creation |
 | `task.list` JSON-RPC | DONE | Backend RPC handler for task listing |
 | Carry-forward fixes (CF-1 to CF-4) | DONE | Go badge reset, islice, CodeIndex cache, layer_used assertion |
@@ -326,7 +326,7 @@ Phase 3 implemented 2026-02-13. All gates passed. 840 Python tests, all Go tests
 | CheckpointStore | P1 | 4C | Save/restore agent state with transactional guarantees |
 | L2 runtime wiring | P0 | 4C | SEMANTIC_SEARCH → ContextAssembler → layer_used=2 |
 | L3 minimal wiring | P1 | 4C | SIMPLE_EDIT → L3Provider → layer_used=3 (L4 fallback) |
-| Markdown plan artifact | P1 | 4C | Export/import `.hybridcoder/plans/<session-id>.md` |
+| Markdown plan artifact | P1 | 4C | Export/import `.autocode/plans/<session-id>.md` |
 | Go TUI task panel | P2 | 4C | JSON-RPC backed task/subagent display |
 | `/memory` and `/checkpoint` commands | P2 | 4C | View/save/restore memories and checkpoints |
 

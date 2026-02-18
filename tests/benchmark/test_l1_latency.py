@@ -57,7 +57,7 @@ class TestL1Latency:
     """All L1 operations should complete in <50ms."""
 
     def test_parse_latency(self, sample_project):
-        from hybridcoder.layer1.parser import TreeSitterParser
+        from autocode.layer1.parser import TreeSitterParser
 
         parser = TreeSitterParser()
         file_path = str(sample_project / "src" / "module0.py")
@@ -73,7 +73,7 @@ class TestL1Latency:
         assert elapsed_ms < 50, f"Parse took {elapsed_ms:.1f}ms (target <50ms)"
 
     def test_cached_parse_latency(self, sample_project):
-        from hybridcoder.layer1.parser import TreeSitterParser
+        from autocode.layer1.parser import TreeSitterParser
 
         parser = TreeSitterParser()
         file_path = str(sample_project / "src" / "module0.py")
@@ -89,8 +89,8 @@ class TestL1Latency:
         assert elapsed_ms < 5, f"Cached parse took {elapsed_ms:.1f}ms (target <5ms)"
 
     def test_symbol_extraction_latency(self, sample_project):
-        from hybridcoder.layer1.parser import TreeSitterParser
-        from hybridcoder.layer1.symbols import SymbolExtractor
+        from autocode.layer1.parser import TreeSitterParser
+        from autocode.layer1.symbols import SymbolExtractor
 
         parser = TreeSitterParser()
         extractor = SymbolExtractor()
@@ -106,7 +106,7 @@ class TestL1Latency:
         assert len(symbols) > 0
 
     def test_router_classification_latency(self):
-        from hybridcoder.core.router import RequestRouter
+        from autocode.core.router import RequestRouter
 
         router = RequestRouter()
 
@@ -119,7 +119,7 @@ class TestL1Latency:
         assert per_query < 5, f"Router classify took {per_query:.2f}ms/query (target <5ms)"
 
     def test_deterministic_query_latency(self, sample_project):
-        from hybridcoder.layer1.queries import DeterministicQueryHandler
+        from autocode.layer1.queries import DeterministicQueryHandler
 
         handler = DeterministicQueryHandler(project_root=sample_project)
 
@@ -131,7 +131,7 @@ class TestL1Latency:
         assert elapsed_ms < 50, f"L1 query took {elapsed_ms:.1f}ms (target <50ms)"
 
     def test_l1_zero_tokens(self, sample_project):
-        from hybridcoder.layer1.queries import DeterministicQueryHandler
+        from autocode.layer1.queries import DeterministicQueryHandler
 
         handler = DeterministicQueryHandler(project_root=sample_project)
 

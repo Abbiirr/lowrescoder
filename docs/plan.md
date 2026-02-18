@@ -1,4 +1,4 @@
-# HybridCoder: Low-Resource AI Coding Agent
+# AutoCode: Low-Resource AI Coding Agent
 ## Product Roadmap & Requirements Specification
 
 > Quick links for current implementation context:
@@ -24,7 +24,7 @@ A local-first AI coding assistant CLI that achieves Claude Code-level performanc
 **Performance Target Proxy**: Achieve >40% pass@1 on Aider polyglot benchmark subset (comparable to GPT-4 baseline on similar tasks) while using 60-80% fewer LLM tokens than a naive always-call-LLM approach. See Appendix D for full benchmark definition.
 
 ### 1.2 Core Differentiators
-| Aspect | Traditional AI Coders | HybridCoder |
+| Aspect | Traditional AI Coders | AutoCode |
 |--------|----------------------|-------------|
 | LLM Usage | First resort | Last resort |
 | Resource Requirement | Cloud API / 70B+ models | Local 7B model, 8GB VRAM |
@@ -41,7 +41,7 @@ A local-first AI coding assistant CLI that achieves Claude Code-level performanc
 | Copilot CLI | No | Yes | N/A | $10/mo | No |
 | Aider | Optional | Yes | 8GB+ | Free+API | No |
 | Cline | Optional | Yes | 8GB+ | Free+API | No |
-| **HybridCoder** | **Yes** | **No** | **8GB** | **$0** | **YES** |
+| **AutoCode** | **Yes** | **No** | **8GB** | **$0** | **YES** |
 
 Additional positioning points:
 - **Zero-Cost After Setup** — Once installed, every task is free. No API keys, no subscriptions, no metered billing.
@@ -73,7 +73,7 @@ The following 12 criteria must ALL pass for MVP release:
 
 | # | Criterion | Pass Condition |
 |---|-----------|----------------|
-| 1 | CLI operational | `hybridcoder chat`, `ask`, `edit`, `config`, `--help` commands work |
+| 1 | CLI operational | `autocode chat`, `ask`, `edit`, `config`, `--help` commands work |
 | 2 | Local LLM integration | Ollama provider streams responses with <2s to first token |
 | 3 | Edit success rate | >40% pass@1 on 50-task Aider benchmark subset |
 | 4 | Edit with retry | >75% success after up to 3 retries |
@@ -181,9 +181,9 @@ Phase 3 consolidated both deterministic analysis (L1) and retrieval/context (L2)
 - [x] **Gate 3 (Integration):** 11 tools registered. `on_done` includes `layer_used`. TUI shows layer indicator. `/index` command works. 840 tests pass. Ruff clean. Mypy clean.
 
 #### New Files (14 Python source + 15 test files)
-- `src/hybridcoder/layer1/`: `__init__.py`, `parser.py`, `symbols.py`, `queries.py`, `validators.py`
-- `src/hybridcoder/layer2/`: `__init__.py`, `chunker.py`, `embeddings.py`, `index.py`, `search.py`, `repomap.py`, `rules.py`
-- `src/hybridcoder/core/`: `router.py`, `context.py`
+- `src/autocode/layer1/`: `__init__.py`, `parser.py`, `symbols.py`, `queries.py`, `validators.py`
+- `src/autocode/layer2/`: `__init__.py`, `chunker.py`, `embeddings.py`, `index.py`, `search.py`, `repomap.py`, `rules.py`
+- `src/autocode/core/`: `router.py`, `context.py`
 
 See `docs/archive/plan/phase3-final-implementation.md` for the authoritative spec and `docs/archive/plan/phase3-execution-brief.md` for completion summary.
 
@@ -220,7 +220,7 @@ Phase 4 implemented the agentic workflow layer: agent loop with tool calling, 19
 > Lock checklist: `docs/plan/phase5-roadmap-lock-checklist.md`
 > Strategy: **"Standalone first, then interact."**
 
-Phase 5 transforms HybridCoder from a single-agent assistant into a feature-complete standalone AI coding tool, then adds external tool integration.
+Phase 5 transforms AutoCode from a single-agent assistant into a feature-complete standalone AI coding tool, then adds external tool integration.
 
 **Sprint order:**
 | Sprint | Focus | Gate |
@@ -294,9 +294,9 @@ Phase 5 transforms HybridCoder from a single-agent assistant into a feature-comp
 ### 4.2 File Structure
 
 ```
-hybridcoder/
+autocode/
 ├── cmd/
-│   └── hybridcoder-tui/       # Go TUI frontend
+│   └── autocode-tui/       # Go TUI frontend
 │       ├── main.go            # Entry point, launch Python backend
 │       ├── model.go           # Root Bubble Tea model
 │       ├── view.go            # View rendering
@@ -309,7 +309,7 @@ hybridcoder/
 ├── go.mod
 ├── go.sum
 ├── src/
-│   └── hybridcoder/
+│   └── autocode/
 │       ├── __init__.py
 │       ├── cli.py              # CLI entry point
 │       ├── config.py           # Configuration management
@@ -376,7 +376,7 @@ hybridcoder/
 ### 4.3 Configuration Schema
 
 ```yaml
-# ~/.hybridcoder/config.yaml
+# ~/.autocode/config.yaml
 
 # LLM Configuration
 llm:
@@ -445,7 +445,7 @@ ui:
 
 **System Prompt (Base)**
 ```
-You are HybridCoder, an expert AI coding assistant. You help developers write, edit, and understand code.
+You are AutoCode, an expert AI coding assistant. You help developers write, edit, and understand code.
 
 Current project: {project_name}
 Working directory: {working_dir}
@@ -518,7 +518,7 @@ Create a numbered plan with specific, actionable steps:
 - Default blocked: `rm -rf`, `sudo`, `curl`, `wget`, network commands
 - Working directory: restricted to project root
 - Timeout: 30s default, 300s max
-- **User override**: `~/.hybridcoder/config.yaml` allows custom `shell.allowed_commands` and `shell.blocked_commands` lists. Users can also set `shell.allow_network: true` to permit network access.
+- **User override**: `~/.autocode/config.yaml` allows custom `shell.allowed_commands` and `shell.blocked_commands` lists. Users can also set `shell.allow_network: true` to permit network access.
 
 ---
 
@@ -639,7 +639,7 @@ Each phase must pass before proceeding:
 
 **What "Claude Code-level performance" means (measurable proxy):**
 
-HybridCoder aims to match the utility of frontier AI coding assistants while running locally. Since direct comparison is impractical, we use the following proxy metrics:
+AutoCode aims to match the utility of frontier AI coding assistants while running locally. Since direct comparison is impractical, we use the following proxy metrics:
 
 | Proxy Metric | Target | Rationale |
 |--------------|--------|-----------|
@@ -657,8 +657,8 @@ HybridCoder aims to match the utility of frontier AI coding assistants while run
 
 2. **Token Efficiency Measurement**
    - Baseline: Send every user query directly to LLM (naive approach)
-   - HybridCoder: Route through Layer 1-4 system
-   - Measure: (baseline_tokens - hybridcoder_tokens) / baseline_tokens
+   - AutoCode: Route through Layer 1-4 system
+   - Measure: (baseline_tokens - autocode_tokens) / baseline_tokens
    - Run on 100 mixed queries (50 deterministic, 50 generative)
 
 3. **Retrieval Quality (precision@k)**
@@ -698,7 +698,7 @@ This appendix organizes the same work as Phases 0-6 but by engineering lifecycle
 7. Review HLD against "LLM as last resort" and low-resource edge requirement.
 
 #### Phase C: Low-Level Design (LLD)
-1. Specify module layout under `src/hybridcoder/` with public interfaces and dependencies.
+1. Specify module layout under `src/autocode/` with public interfaces and dependencies.
 2. Define data models for requests, tool calls, edit results, context bundles, and metrics.
 3. Detail algorithms: routing logic, chunking strategy, hybrid search scoring, fuzzy matching, retry rules.
 4. Define error handling and rollback behavior; state machine for multi-step tasks.

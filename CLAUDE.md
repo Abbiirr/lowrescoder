@@ -1,4 +1,4 @@
-# CLAUDE.md — AI Assistant Guidelines for HybridCoder
+# CLAUDE.md — AI Assistant Guidelines for AutoCode
 
 ## Core Philosophy
 
@@ -14,7 +14,7 @@ You are the developer. I am a tool to accelerate your work, not replace your jud
 
 ## Project Overview
 
-**HybridCoder** is an edge-native AI coding assistant CLI. Local-first, deterministic-first, consumer hardware (8GB VRAM, 16GB RAM). The system uses deterministic classical AI as the primary intelligence layer, invoking LLMs only when necessary. This is the opposite of how most AI coders work.
+**AutoCode** is an edge-native AI coding assistant CLI. Local-first, deterministic-first, consumer hardware (8GB VRAM, 16GB RAM). The system uses deterministic classical AI as the primary intelligence layer, invoking LLMs only when necessary. This is the opposite of how most AI coders work.
 
 ---
 
@@ -93,7 +93,7 @@ Phases 0-4 complete. **Phase 5 (Universal Orchestrator)** — roadmap `PROVISION
 # Unit tests (fast, run after every change)
 make test
 # Or directly:
-uv run pytest tests/ -v --cov=src/hybridcoder
+uv run pytest tests/ -v --cov=src/autocode
 
 # Sprint verification (run after completing a sprint)
 uv run pytest tests/test_sprint_verify.py -v

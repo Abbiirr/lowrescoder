@@ -24,7 +24,7 @@ Multi-model provider management with lazy loading and max 2 models loaded constr
 
 ## Implementation
 
-- [ ] Create `src/hybridcoder/agent/provider_registry.py`
+- [ ] Create `src/autocode/agent/provider_registry.py`
 - [ ] Implement `ProviderRegistry` class with lazy loading
 - [ ] Enforce max 2 models loaded constraint (L3 + L4)
 - [ ] Implement `get_provider(spec: ModelSpec)` method
@@ -48,6 +48,6 @@ Multi-model provider management with lazy loading and max 2 models loaded constr
 
 ## Artifacts
 
-- New file: `src/hybridcoder/agent/provider_registry.py`
+- New file: `src/autocode/agent/provider_registry.py`
 - Test file: `tests/unit/test_provider_registry.py`
 - QA artifact: `docs/qa/test-results/sprint-5a-2-provider-registry.md`

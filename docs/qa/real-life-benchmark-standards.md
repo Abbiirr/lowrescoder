@@ -34,5 +34,5 @@ Updated: 2026-02-12
   - `tests/benchmark/test_project_creation.py`
   - Task: score a generated React calculator app against a practical rubric.
   - External target projects can be scored via:
-    - `HYBRIDCODER_BENCH_TARGET_DIR=<path>`
-    - optional `HYBRIDCODER_BENCH_RUN_NODE=1`
+    - `AUTOCODE_BENCH_TARGET_DIR=<path>`
+    - optional `AUTOCODE_BENCH_RUN_NODE=1`

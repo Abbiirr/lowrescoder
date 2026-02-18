@@ -1,4 +1,4 @@
-# Phase 5 Agent Teams Research
+﻿# Phase 5 Agent Teams Research
 
 > Created: 2026-02-17
 > Scope: Validate current (2026) patterns for subagents, agent teams, model delegation, and A2A interoperability before Phase 5 implementation.
@@ -8,7 +8,7 @@
 
 ## 1. Executive Summary
 
-Yes, we can implement Claude/OpenCode-style delegation in HybridCoder, but with local-hardware constraints:
+Yes, we can implement Claude/OpenCode-style delegation in AutoCode, but with local-hardware constraints:
 
 1. Keep a single lead agent and a small teammate pool (2-4 active teammates), not large swarms.
 2. Use per-agent model selection (for quality/cost control), with strict scheduler and budget gates.
@@ -56,7 +56,7 @@ Observed in docs:
 3. Docs explicitly position subagents for context isolation and repeated workflows.
 4. Cost guidance explicitly suggests cheaper models for subagent tasks when appropriate.
 
-Implication for HybridCoder:
+Implication for AutoCode:
 
 - Our current `SubagentType` model should evolve to card-based identity (`AgentCard`) with explicit model/tool policy.
 - We should support model inheritance plus explicit per-agent overrides.
@@ -71,7 +71,7 @@ Observed in docs:
 4. Teammates can run in parallel.
 5. Guardrails/limits: no nested teammate delegation, partial context sharing, one task at a time per teammate, and operational limitations around approvals/permissions and review UX.
 
-Implication for HybridCoder:
+Implication for AutoCode:
 
 - Teams are not just "spawn background subagent"; they require persistent team state and inter-agent communication.
 - We should start with an intentionally narrower v1: no nested delegation, no cross-session teammate memory, deterministic coordinator.
@@ -83,7 +83,7 @@ Observed in docs:
 1. Team runs increase token usage materially versus single-agent runs.
 2. Published examples show substantial multiplier effects, especially in plan mode.
 
-Implication for HybridCoder:
+Implication for AutoCode:
 
 - Phase 5 must include cost governance as a core feature, not an optimization backlog item.
 - We need hard budget controls (max teammates, max delegation depth, max delegation per turn, token caps by role).
@@ -97,7 +97,7 @@ Observed in docs:
 3. Permission policy is configurable (including task/subagent permissions).
 4. Agent definitions can be customized locally.
 
-Implication for HybridCoder:
+Implication for AutoCode:
 
 - Good reference for permission gating and configurable delegation policy.
 - We should preserve our existing approval model while adding team-level policy controls.
@@ -111,14 +111,14 @@ Observed in spec/roadmap:
 3. JSON-RPC method family includes `message/send`, `message/stream`, `tasks/get`, `tasks/cancel`.
 4. Roadmap explicitly calls out ongoing evolution to v1.0 with no planned breaking changes before v1.
 
-Implication for HybridCoder:
+Implication for AutoCode:
 
 - Existing Phase 5 draft references to `agent.json` and older task assumptions should be corrected.
 - Build an internal protocol first, then map to A2A via an adapter boundary.
 
 ---
 
-## 4. Gap Assessment Against Current HybridCoder
+## 4. Gap Assessment Against Current AutoCode
 
 Current strengths (already in code):
 

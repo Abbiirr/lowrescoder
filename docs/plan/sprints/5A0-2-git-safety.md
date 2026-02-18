@@ -26,7 +26,7 @@ Auto-commit before edits for safety, block GIT_EDITOR hijacking, enforce shell t
 - [ ] Set `GIT_EDITOR=true` to prevent interactive editor prompts
 - [ ] Block interactive prompt patterns in shell execution
 - [ ] Add 30s default timeout to all shell commands
-- [ ] Make timeout configurable via `hybridcoder.toml`
+- [ ] Make timeout configurable via `autocode.toml`
 
 ## Acceptance Criteria
 

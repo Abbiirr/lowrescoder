@@ -81,7 +81,7 @@ def verify_artifacts(sandbox: Path, results_dir: Path, ts: str) -> list[str]:
     """Verify all expected benchmark artifacts exist and are non-empty."""
     errors = []
     expected = [
-        sandbox / ".hybridcoder-benchmark.json",
+        sandbox / ".autocode-benchmark.json",
         sandbox / ".benchmark-events.jsonl",
         results_dir / f"{ts}-e2e-react-calculator.md",
         results_dir / f"{ts}-e2e-react-calculator.log",
@@ -111,7 +111,7 @@ def verify_artifacts(
     """
     errors = []
     expected = [
-        sandbox / ".hybridcoder-benchmark.json",
+        sandbox / ".autocode-benchmark.json",
         sandbox / ".benchmark-events.jsonl",
         results_dir / f"{ts}-e2e-react-calculator.md",
         results_dir / f"{ts}-e2e-react-calculator.log",

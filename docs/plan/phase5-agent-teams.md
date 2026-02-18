@@ -14,9 +14,9 @@
 
 ## 1. Vision
 
-Phase 5 transforms HybridCoder from a single-agent coding assistant into a **feature-complete standalone AI coding tool** first, then a **universal orchestrator** that connects to Claude Code, Codex, OpenCode, and any future AI coding tool.
+Phase 5 transforms AutoCode from a single-agent coding assistant into a **feature-complete standalone AI coding tool** first, then a **universal orchestrator** that connects to Claude Code, Codex, OpenCode, and any future AI coding tool.
 
-**Core strategy: "Standalone first, then interact."** HybridCoder must have all the bells and whistles to stand on its own ground before building bridges. The standalone product (M1+M2) must be a fully functional, competitive AI coding assistant — with working LLMLOOP, proven context quality, agent orchestration, and cost intelligence. Only after the standalone MVP gate passes do we build external tool bridges (M3).
+**Core strategy: "Standalone first, then interact."** AutoCode must have all the bells and whistles to stand on its own ground before building bridges. The standalone product (M1+M2) must be a fully functional, competitive AI coding assistant — with working LLMLOOP, proven context quality, agent orchestration, and cost intelligence. Only after the standalone MVP gate passes do we build external tool bridges (M3).
 
 ### 1.1 Design Principles (13 Locked)
 
@@ -34,13 +34,13 @@ Phase 5 transforms HybridCoder from a single-agent coding assistant into a **fea
 12. **LLM as last resort** — Deterministic tools first (tree-sitter, LSP, static analysis)
 13. **Consumer hardware** — 8GB VRAM, 16GB RAM, max 2 models loaded
 
-### 1.2 What HybridCoder Becomes
+### 1.2 What AutoCode Becomes
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                     User / Go TUI                        │
 ├─────────────────────────────────────────────────────────┤
-│                  HybridCoder Core                        │
+│                  AutoCode Core                        │
 │   L1 (tree-sitter/LSP) → L2 (search) → L3 → L4         │
 ├──────────┬──────────┬──────────┬────────────────────────┤
 │ LLMLOOP  │ AgentBus │ SOPRunner│  Policy Router         │
@@ -89,7 +89,7 @@ OpenCode has the most mature LSP integration of all three tools:
 - **Only diagnostics exposed to the AI agent** — go-to-definition, find-references consumed internally but NOT passed to the LLM
 - Community plugin `oh-my-opencode` adds `lsp_goto_definition`, `lsp_find_references`, `lsp_symbols`, `lsp_rename`
 
-**Key architectural difference**: OpenCode uses LSP to make LLM better. HybridCoder uses LSP to **avoid LLM entirely** (L1 deterministic). This is our competitive advantage.
+**Key architectural difference**: OpenCode uses LSP to make LLM better. AutoCode uses LSP to **avoid LLM entirely** (L1 deterministic). This is our competitive advantage.
 
 ### 2.3 Key Patterns from Aider
 
@@ -183,7 +183,7 @@ Three macro milestones, six sprints. **M1 + M2 = Standalone MVP Gate.** External
 
 ### 3.05 Sprint 5A0 — Quick Wins (User-Facing Value First)
 
-> Added in Rev 2 (2026-02-17). Rationale: Sprint 5A has no immediate user-visible output. 5A0 delivers quick wins that make HybridCoder more useful TODAY before architecture work begins.
+> Added in Rev 2 (2026-02-17). Rationale: Sprint 5A has no immediate user-visible output. 5A0 delivers quick wins that make AutoCode more useful TODAY before architecture work begins.
 
 **Goal:** Immediate user-facing improvements. No architecture changes — focused on polishing what exists.
 
@@ -196,7 +196,7 @@ Three macro milestones, six sprints. **M1 + M2 = Standalone MVP Gate.** External
 | 1 | Write_file diff preview | Show diff after write_file (before/after comparison) | 2h |
 | 2 | Git auto-commit + shell hardening | Auto-commit before edits, GIT_EDITOR blocking, timeout policy | 3h |
 | 3 | Token counting | Ollama native token counts + session accumulation display | 2.5h |
-| 4 | `hybridcoder doctor` MVP | 8 readiness checks with remediation messages | 3.5h |
+| 4 | `autocode doctor` MVP | 8 readiness checks with remediation messages | 3.5h |
 | 5 | Completion notifications | Enrich on_done with summary stats | 1h |
 
 #### P1 (Can Defer)
@@ -211,7 +211,7 @@ Three macro milestones, six sprints. **M1 + M2 = Standalone MVP Gate.** External
 
 #### Exit Criteria
 
-- [ ] `hybridcoder doctor` runs 8 checks and reports actionable fixes
+- [ ] `autocode doctor` runs 8 checks and reports actionable fixes
 - [ ] Diff preview displayed after every write_file call
 - [ ] Token count visible in status bar and on_done summary
 - [ ] Git auto-commit before edits (configurable)
@@ -251,10 +251,10 @@ Three macro milestones, six sprints. **M1 + M2 = Standalone MVP Gate.** External
 
 | File | Purpose |
 |------|---------|
-| `src/hybridcoder/agent/identity.py` | AgentCard, AgentRole, ModelSpec |
-| `src/hybridcoder/agent/provider_registry.py` | Multi-model provider management |
-| `src/hybridcoder/eval/harness.py` | Eval scenario format, grader, reporter |
-| `src/hybridcoder/eval/context_packer.py` | Context strategy interfaces |
+| `src/autocode/agent/identity.py` | AgentCard, AgentRole, ModelSpec |
+| `src/autocode/agent/provider_registry.py` | Multi-model provider management |
+| `src/autocode/eval/harness.py` | Eval scenario format, grader, reporter |
+| `src/autocode/eval/context_packer.py` | Context strategy interfaces |
 
 #### Key Schemas
 
@@ -310,7 +310,7 @@ class AgentCard:
 class ProviderRegistry:
     """Manages LLM providers. Constraint: max 2 models loaded (L3 + L4)."""
 
-    def __init__(self, config: HybridCoderConfig):
+    def __init__(self, config: AutoCodeConfig):
         self._l4_provider: LLMProvider | None = None
         self._l3_provider: L3Provider | None = None
         self._config = config
@@ -571,7 +571,7 @@ class SOPRunner:
 - [ ] Policy router escalates L1 → L2 → L3 → L4 correctly
 - [ ] Cost dashboard shows per-agent, per-task token breakdown
 - [ ] Delegation caps enforced (2 agents, 3 messages default)
-- [ ] **MVP GATE: HybridCoder solves real coding tasks standalone** (no external tools needed)
+- [ ] **MVP GATE: AutoCode solves real coding tasks standalone** (no external tools needed)
 - [ ] **Reliability smoke test** (30-minute, per sprint): memory growth < 200 MB, VRAM ± 500 MB, p95 ≤ 60s single-file / ≤ 300s multi-file (see Section 15.22), zero crashes, Ollama recovery within 60s, SQLite WAL < 50 MB, stable open FDs
 - [ ] **3 consecutive smoke passes required** before advancing to next sprint (Rev 3, per Codex Entry 471 B4 amendment)
 - [ ] **Extended soak test** (4-hour, per milestone at M2 boundary): memory < 100 MB/hour, VRAM ± 200 MB, no latency degradation > 20% hour 1→4, zero unrecoverable hangs, Ollama recovery within 30s, SQLite WAL < 100 MB, stable open FDs
@@ -584,7 +584,7 @@ class SOPRunner:
 
 ### 3.4 Sprint 5D — External Tool Interaction v1
 
-**Goal:** HybridCoder bridges to Claude Code, Codex, and OpenCode through MCP and configuration surfaces.
+**Goal:** AutoCode bridges to Claude Code, Codex, and OpenCode through MCP and configuration surfaces.
 
 #### P0 (Must Ship)
 
@@ -592,9 +592,9 @@ class SOPRunner:
 |---|------|-------------|
 | 1 | Read-only MCP server | `search_code`, `find_definition`, `find_references`, `list_symbols`, `read_file`, `get_diagnostics` |
 | 2 | ExternalToolTracker | Runtime discovery — detect Claude Code, Codex, OpenCode on PATH |
-| 3 | Safe config merge generator | Generate tool-specific configs with `# managed-by: hybridcoder` markers |
-| 4 | `hybridcoder setup` command | One-shot: detect installed tools → generate configs → register MCP |
-| 5 | `hybridcoder uninstall` command | Clean removal of all managed config sections |
+| 3 | Safe config merge generator | Generate tool-specific configs with `# managed-by: autocode` markers |
+| 4 | `autocode setup` command | One-shot: detect installed tools → generate configs → register MCP |
+| 5 | `autocode uninstall` command | Clean removal of all managed config sections |
 | 6 | Minimal CLIBroker | Opt-in, bounded, structured output parsing (Codex `--json`) |
 
 #### P1 (Can Defer)
@@ -619,7 +619,7 @@ MCP_TOOLS = {
 }
 ```
 
-These tools expose HybridCoder's L1/L2 intelligence to external tools. Claude Code and OpenCode get `find_definition`, `find_references`, `list_symbols` for free — tools that OpenCode's base product doesn't even expose to its own agent.
+These tools expose AutoCode's L1/L2 intelligence to external tools. Claude Code and OpenCode get `find_definition`, `find_references`, `list_symbols` for free — tools that OpenCode's base product doesn't even expose to its own agent.
 
 #### Config Generation
 
@@ -628,13 +628,13 @@ def setup_claude_code(project_dir: Path) -> None:
     """Register HC as MCP server + add integration rules."""
     # 1. Merge MCP server into .claude/settings.json
     # 2. Append integration rules to CLAUDE.md (with markers)
-    # 3. Place custom subagent in .claude/agents/hybridcoder.md
+    # 3. Place custom subagent in .claude/agents/autocode.md
 
 def setup_opencode(project_dir: Path) -> None:
     """Register HC as MCP server + add agents/commands."""
     # 1. Merge MCP server into opencode.json
     # 2. Add instructions reference
-    # 3. Place custom agent in .opencode/agents/hybridcoder.md
+    # 3. Place custom agent in .opencode/agents/autocode.md
     # 4. Place custom commands in .opencode/commands/
 
 def setup_codex(project_dir: Path) -> None:
@@ -648,9 +648,9 @@ def setup_codex(project_dir: Path) -> None:
 **NEVER overwrite user config.** Always:
 1. Read existing config file
 2. Parse and merge HC section only
-3. Add `# managed-by: hybridcoder` markers to all injected content
-4. Backup original to `.hybridcoder/backups/<tool>-<timestamp>.json`
-5. `hybridcoder uninstall` removes ONLY sections with HC markers
+3. Add `# managed-by: autocode` markers to all injected content
+4. Backup original to `.autocode/backups/<tool>-<timestamp>.json`
+5. `autocode uninstall` removes ONLY sections with HC markers
 6. If config file doesn't exist, create it (no merge needed)
 
 #### ExternalToolTracker
@@ -704,8 +704,8 @@ KNOWN_TOOLS = {
 - [ ] MCP server exposes 6 read-only tools
 - [ ] Claude Code can use HC tools via MCP (verified with contract test)
 - [ ] OpenCode can use HC tools via MCP (verified with contract test)
-- [ ] `hybridcoder setup` detects and configures all installed tools
-- [ ] `hybridcoder uninstall` cleanly removes all HC config
+- [ ] `autocode setup` detects and configures all installed tools
+- [ ] `autocode uninstall` cleanly removes all HC config
 - [ ] Config merge never overwrites user content (deep merge, atomic writes)
 - [ ] Backups created before every config modification
 - [ ] CLIBroker can invoke Codex `--json` and parse output (**JSON/schema parsing ONLY — no regex free-text parsing**, Rev 3 B5 amendment)
@@ -752,7 +752,7 @@ KNOWN_TOOLS = {
 
 ## 5. Integration Opportunities
 
-### 5.1 HybridCoder as MCP Server (they use us)
+### 5.1 AutoCode as MCP Server (they use us)
 
 External tools get free access to our L1/L2 intelligence:
 - `find_definition` — better than OpenCode's base (which doesn't expose this to its agent)
@@ -760,7 +760,7 @@ External tools get free access to our L1/L2 intelligence:
 - `list_symbols` — AST-aware symbol enumeration
 - `search_code` — BM25 + vector hybrid search
 
-### 5.2 HybridCoder as Orchestrator (we use them)
+### 5.2 AutoCode as Orchestrator (we use them)
 
 For tasks beyond local model capability:
 - Delegate complex reasoning to Claude Code via config surface
@@ -778,7 +778,7 @@ For tasks beyond local model capability:
 ## 6. Configuration
 
 ```yaml
-# .hybridcoder.yaml additions
+# .autocode.yaml additions
 agents:
   provider_registry:
     max_loaded_models: 2
@@ -804,7 +804,7 @@ agents:
     strict_mode: false         # --strict: 1 agent, 2 messages
 
   mcp_server:
-    enabled: false             # `hybridcoder setup` enables this
+    enabled: false             # `autocode setup` enables this
     tools: [search_code, find_definition, find_references, list_symbols, read_file, get_diagnostics]
 
   # a2a: DROPPED in Rev 2 / WATCHLIST in Rev 3 — not a Phase 5 dependency
@@ -830,7 +830,7 @@ agents:
 - **Integration:** Multi-agent LLMLOOP execution, MCP server tool calls, config merge/uninstall
 - **Eval/Benchmark:** Context quality suite (precision/recall/cost/latency), LLMLOOP regression
 - **Contract:** MCP protocol compliance, AgentBus message format validation
-- **E2E:** LLMLOOP bug fix scenario, `hybridcoder setup` with mock tools
+- **E2E:** LLMLOOP bug fix scenario, `autocode setup` with mock tools
 
 ---
 
@@ -856,7 +856,7 @@ agents:
 
 1. **Jedi vs LSP**: Jedi chosen as primary Python semantic backend (Rev 2). LSP server reuse from OpenCode/VS Code is a future optimization, not required for standalone MVP.
 2. **MCP tool naming**: Use our own names (`find_definition`) since MCP tools are namespaced per server anyway. Compatibility with `oh-my-opencode` via documentation, not naming.
-3. **Team persistence**: Session-scoped for v1; project-scoped in `.hybridcoder/teams/` as P1.
+3. **Team persistence**: Session-scoped for v1; project-scoped in `.autocode/teams/` as P1.
 4. **Agent memory isolation**: Shared project memory with agent-tagged entries.
 5. **Qwen3-Coder-Next tracking** (Rev 2): 80B total params, 3B active (MoE). 70.6% SWE-bench Verified. On 8GB VRAM with RAM offloading: ~1.2 t/s. If a smaller variant (14B-A3B) ships, it could replace Qwen3-8B as Architect.
 6. **Gemini CLI as cloud fallback** (Rev 2): Free (1000 req/day), 78% SWE-bench, 1M context, web search. Consider as opt-in cloud fallback alongside OpenRouter. Does not undermine edge-native positioning if opt-in.
@@ -909,11 +909,11 @@ agents:
 - [Aider Architect/Editor Benchmarks](https://aider.chat/2024/09/26/architect.html)
 - [SWE-bench](https://github.com/swe-bench/SWE-bench)
 - [MetaGPT](https://github.com/FoundationAgents/MetaGPT)
-- HybridCoder research: `docs/research/phase5-agent-teams-research.md`
-- HybridCoder research: `docs/research/claude-code-subagents.md`
-- HybridCoder research: `docs/research/opencode-and-competitors.md`
-- HybridCoder research: `docs/research/aider-architect-editor.md`
-- HybridCoder research: `docs/research/multi-agent-landscape-2026.md`
+- AutoCode research: `docs/research/phase5-agent-teams-research.md`
+- AutoCode research: `docs/research/claude-code-subagents.md`
+- AutoCode research: `docs/research/opencode-and-competitors.md`
+- AutoCode research: `docs/research/aider-architect-editor.md`
+- AutoCode research: `docs/research/multi-agent-landscape-2026.md`
 
 ---
 
@@ -957,9 +957,9 @@ Phase 6 cannot begin until ALL of these pass:
 | 1 | Single-installable file | PyInstaller/Nuitka packaging, zero-setup first-run | P0 |
 | 2 | First-run model bootstrap | Auto-download Ollama + models on first launch | P0 |
 | 3 | Offline mode | Full operation without network (local models only) | P0 |
-| 4 | Clean uninstall/rollback | `hybridcoder uninstall` removes everything cleanly | P0 |
+| 4 | Clean uninstall/rollback | `autocode uninstall` removes everything cleanly | P0 |
 | 5 | Advanced edit features | Multi-file editing, cross-file refactoring, rename | P1 |
-| 6 | Team persistence | Project-scoped agent teams in `.hybridcoder/teams/` | P1 |
+| 6 | Team persistence | Project-scoped agent teams in `.autocode/teams/` | P1 |
 | 7 | Routing quality benchmark | Success/latency/cost benchmark validating multi-model delegation | P1 |
 
 ### 13.3 Minimum Reliable Edit Capability (Phase 5 Boundary)
@@ -1120,7 +1120,7 @@ Each external tool adapter must implement versioned capability probes:
 
 | Probe | Description |
 |-------|-------------|
-| `supports_mcp_server` | Tool can serve as MCP client connecting to HybridCoder's MCP server |
+| `supports_mcp_server` | Tool can serve as MCP client connecting to AutoCode's MCP server |
 | `supports_json_schema_output` | Tool supports structured JSON output via CLI flags |
 | `supports_background_tasks` | Tool supports background/async task execution |
 
@@ -1202,7 +1202,7 @@ Ollama default context window is 4096 tokens (corrected from 2048). Policy:
 | `minimum_supported_ctx` | 4096 (hard floor — below this, refuse to start) |
 | `target_ctx` | 8192 (set by default when hardware budget permits) |
 | Downgrade behavior | If VRAM insufficient for 8192, fall back to 4096 with telemetry warning |
-| User override | Configurable via `hybridcoder.toml` provider settings |
+| User override | Configurable via `autocode.toml` provider settings |
 
 ProviderRegistry enforces this policy for all Ollama calls. Silent truncation is never acceptable — if context exceeds the window, raise an explicit error.
 
@@ -1429,7 +1429,7 @@ team:
 
 - `/team` command — Create/list/manage agent teams from CLI
 - Go TUI team panel — Show team members, active agent, SOP progress
-- Team persistence — Project-scoped in `.hybridcoder/teams/`
+- Team persistence — Project-scoped in `.autocode/teams/`
 - Context isolation — Per-agent context windows (private vs shared)
 - Handoff protocol — Structured context transfer between agents
 
@@ -1444,7 +1444,7 @@ team:
 ### 16.4 Extended Configuration
 
 ```yaml
-# Future .hybridcoder.yaml extensions
+# Future .autocode.yaml extensions
 teams:
   default_team: "solo"
   definitions:

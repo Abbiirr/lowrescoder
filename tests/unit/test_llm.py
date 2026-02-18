@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from hybridcoder.layer4.llm import ConversationHistory
+from autocode.layer4.llm import ConversationHistory
 
 
 class TestConversationHistory:

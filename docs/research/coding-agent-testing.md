@@ -1,4 +1,4 @@
-# How to Test Coding Agents: Research & Strategy
+﻿# How to Test Coding Agents: Research & Strategy
 
 > Last updated: 2026-02-18
 > Sources: SWE-bench (Princeton), Aider benchmarks, Terminal-Bench (Laude), SWE-PolyBench, SWE-Lancer (OpenAI), SWT-Bench, BaxBench, LiveCodeBench, EvalPlus, MAST taxonomy (UC Berkeley), Codex Entry 500 deep research
@@ -388,7 +388,7 @@ These benchmarks were identified through deep research and are especially releva
 | CrossCodeEval | TBD | Retrieval quality matters more than model size here |
 | RepoBench-R | TBD | L2 retrieval is deterministic — model size irrelevant |
 
-**Key insight:** For HybridCoder's architecture, L1/L2 benchmark performance (CrossCodeEval, RepoBench-R) is model-size-independent — it's about retrieval quality, not generation. This is where our deterministic-first approach has the biggest advantage. L3/L4 benchmarks will be limited by the 8B model, but our architecture compensates by feeding high-quality context from L1/L2.
+**Key insight:** For AutoCode's architecture, L1/L2 benchmark performance (CrossCodeEval, RepoBench-R) is model-size-independent — it's about retrieval quality, not generation. This is where our deterministic-first approach has the biggest advantage. L3/L4 benchmarks will be limited by the 8B model, but our architecture compensates by feeding high-quality context from L1/L2.
 
 ---
 

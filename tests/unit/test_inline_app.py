@@ -8,20 +8,20 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
-from hybridcoder.config import HybridCoderConfig
-from hybridcoder.inline.app import InlineApp
+from autocode.config import AutoCodeConfig
+from autocode.inline.app import InlineApp
 
 
 @pytest.fixture()
-def inline_config(tmp_path: Path) -> HybridCoderConfig:
+def inline_config(tmp_path: Path) -> AutoCodeConfig:
     """Create a test config with tmp_path DB."""
-    config = HybridCoderConfig()
+    config = AutoCodeConfig()
     config.tui.session_db_path = str(tmp_path / "test.db")
     return config
 
 
 @pytest.fixture()
-def inline_app(inline_config: HybridCoderConfig, tmp_path: Path) -> InlineApp:
+def inline_app(inline_config: AutoCodeConfig, tmp_path: Path) -> InlineApp:
     """Create an InlineApp with test config (no terminal needed)."""
     return InlineApp(config=inline_config, project_root=tmp_path)
 
@@ -293,7 +293,7 @@ class TestPromptSessionCreation:
     def test_prompt_session_has_status_footer_and_rprompt(self, inline_app: InlineApp) -> None:
         """PromptSession is configured with status footer and rprompt fallbacks."""
         # Patch PromptSession constructor to avoid terminal creation in unit tests
-        with patch("hybridcoder.inline.app.PromptSession") as mock_session:
+        with patch("autocode.inline.app.PromptSession") as mock_session:
             mock_session.return_value = MagicMock()
             inline_app.session = None
             created = inline_app._ensure_prompt_session()

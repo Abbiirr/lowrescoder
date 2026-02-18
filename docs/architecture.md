@@ -1,8 +1,8 @@
-# HybridCoder Architecture
+# AutoCode Architecture
 
 ## Overview
 
-HybridCoder is a local-first AI coding assistant that runs on consumer hardware. It uses a **4-layer intelligence model** where classical AI techniques handle the majority of operations, invoking LLMs only when necessary.
+AutoCode is a local-first AI coding assistant that runs on consumer hardware. It uses a **4-layer intelligence model** where classical AI techniques handle the majority of operations, invoking LLMs only when necessary.
 
 The system is split into a **Go TUI frontend** and a **Python backend**, communicating via JSON-RPC 2.0 over stdin/stdout.
 
@@ -18,7 +18,7 @@ The system is split into a **Go TUI frontend** and a **Python backend**, communi
                │ (stdin/stdout, newline-delimited)
 ┌──────────────┴──────────────────────┐
 │         Python Backend              │
-│  (hybridcoder serve)                │
+│  (autocode serve)                │
 │                                     │
 │  Agent Loop ─ Tools ─ LLM Providers │
 │  Session Store ─ Config ─ Commands  │
@@ -29,7 +29,7 @@ The system is split into a **Go TUI frontend** and a **Python backend**, communi
 
 ## Frontend: Go Bubble Tea TUI
 
-**Location:** `cmd/hybridcoder-tui/`
+**Location:** `cmd/autocode-tui/`
 
 The Go frontend handles all terminal interaction using Charm's [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework (Elm Architecture). It runs in **inline mode** (no alternate screen) to preserve native terminal scrollback.
 
@@ -63,7 +63,7 @@ The Go frontend handles all terminal interaction using Charm's [Bubble Tea](http
 | `askuser.go` | Ask-user prompt (options + free text) |
 | `commands.go` | Slash command parsing and routing |
 | `completion.go` | Prefix + fuzzy autocomplete via sahilm/fuzzy |
-| `history.go` | Persistent command history (~/.hybridcoder/go_history) |
+| `history.go` | Persistent command history (~/.autocode/go_history) |
 | `markdown.go` | Glamour markdown rendering (called once per turn) |
 | `detect.go` | Terminal detection (dumb term, isatty) + Python discovery |
 
@@ -93,13 +93,13 @@ stageInit ──(on_status)──► stageInput
 
 ## Backend: Python JSON-RPC Server
 
-**Location:** `src/hybridcoder/backend/server.py`
+**Location:** `src/autocode/backend/server.py`
 
-The Python backend exposes the full agent loop, tools, LLM providers, session management, and slash commands over a JSON-RPC 2.0 protocol. Launched by `hybridcoder serve`.
+The Python backend exposes the full agent loop, tools, LLM providers, session management, and slash commands over a JSON-RPC 2.0 protocol. Launched by `autocode serve`.
 
 ### Agent Loop
 
-**Location:** `src/hybridcoder/agent/loop.py`
+**Location:** `src/autocode/agent/loop.py`
 
 The `AgentLoop` orchestrates multi-turn interactions:
 1. Receives user message
@@ -121,7 +121,7 @@ Callbacks map to JSON-RPC notifications/requests:
 
 ### LLM Providers
 
-**Location:** `src/hybridcoder/layer4/llm.py`
+**Location:** `src/autocode/layer4/llm.py`
 
 | Provider | Use Case |
 |----------|----------|
@@ -132,13 +132,13 @@ Both implement async streaming via `generate(messages, stream=True)`.
 
 ### Tools
 
-**Location:** `src/hybridcoder/agent/tools.py`
+**Location:** `src/autocode/agent/tools.py`
 
 The agent has access to filesystem tools (read, write, edit, glob, grep), shell execution, and other coding-assistant tools. Each tool call goes through the approval system before execution.
 
 ### Approval System
 
-**Location:** `src/hybridcoder/agent/approval.py`
+**Location:** `src/autocode/agent/approval.py`
 
 Three modes:
 - **Ask**: Prompt user for every tool call (default)
@@ -149,13 +149,13 @@ Blocked patterns prevent dangerous operations (e.g., `rm -rf /`).
 
 ### Session Store
 
-**Location:** `src/hybridcoder/session/store.py`
+**Location:** `src/autocode/session/store.py`
 
-SQLite-backed (WAL mode) conversation persistence. Stores messages, metadata, and session state. Located at `~/.hybridcoder/sessions.db`.
+SQLite-backed (WAL mode) conversation persistence. Stores messages, metadata, and session state. Located at `~/.autocode/sessions.db`.
 
 ### Slash Commands
 
-**Location:** `src/hybridcoder/tui/commands.py`
+**Location:** `src/autocode/tui/commands.py`
 
 15 commands handled by `CommandRouter`:
 
@@ -251,9 +251,9 @@ The system always tries the cheapest layer first and only escalates when necessa
 ## Directory Structure
 
 ```
-hybridcoder/
+autocode/
 ├── cmd/
-│   └── hybridcoder-tui/       # Go TUI frontend (25 files)
+│   └── autocode-tui/       # Go TUI frontend (25 files)
 │       ├── go.mod
 │       ├── main.go             # Entry point
 │       ├── model.go            # Root model
@@ -274,7 +274,7 @@ hybridcoder/
 │       ├── backend_windows.go  # Windows process mgmt
 │       ├── backend_unix.go     # Unix process mgmt
 │       └── *_test.go           # Tests (7 files)
-├── src/hybridcoder/
+├── src/autocode/
 │   ├── cli.py                  # CLI entry point (Typer)
 │   ├── config.py               # Configuration (Pydantic)
 │   ├── agent/
@@ -327,7 +327,7 @@ uv sync --all-extras
 # Go TUI
 make tui
 # Or directly:
-cd cmd/hybridcoder-tui && go build -o ../../build/hybridcoder-tui .
+cd cmd/autocode-tui && go build -o ../../build/autocode-tui .
 ```
 
 ### Test
@@ -347,14 +347,14 @@ make lint
 
 ```bash
 # Default: Go TUI (if built) or Python inline REPL
-uv run hybridcoder chat
+uv run autocode chat
 
 # Force Go TUI
-uv run hybridcoder chat --go-tui
+uv run autocode chat --go-tui
 
 # Force Python inline REPL (legacy)
-uv run hybridcoder chat --legacy
+uv run autocode chat --legacy
 
 # Python backend only (for Go TUI subprocess)
-uv run hybridcoder serve
+uv run autocode serve
 ```

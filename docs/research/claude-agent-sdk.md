@@ -1,4 +1,4 @@
-# Claude Agent SDK — Research Notes
+﻿# Claude Agent SDK — Research Notes
 
 > Researched: 2026-02-17
 > Source: https://platform.claude.com/docs/en/agent-sdk/overview
@@ -87,7 +87,7 @@ options=ClaudeAgentOptions(
 )
 ```
 
-## 8. Relevance to HybridCoder
+## 8. Relevance to AutoCode
 
 The Agent SDK validates our design direction:
 - **Programmatic agent definition** (AgentDefinition) maps to our AgentCard

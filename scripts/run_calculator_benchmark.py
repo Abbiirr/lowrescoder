@@ -31,12 +31,12 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from hybridcoder.agent.approval import ApprovalManager, ApprovalMode  # noqa: E402
-from hybridcoder.agent.loop import AgentLoop  # noqa: E402
-from hybridcoder.agent.tools import create_default_registry  # noqa: E402
-from hybridcoder.config import ShellConfig, load_config  # noqa: E402
-from hybridcoder.layer4.llm import create_provider  # noqa: E402
-from hybridcoder.session.store import SessionStore  # noqa: E402
+from autocode.agent.approval import ApprovalManager, ApprovalMode  # noqa: E402
+from autocode.agent.loop import AgentLoop  # noqa: E402
+from autocode.agent.tools import create_default_registry  # noqa: E402
+from autocode.config import ShellConfig, load_config  # noqa: E402
+from autocode.layer4.llm import create_provider  # noqa: E402
+from autocode.session.store import SessionStore  # noqa: E402
 
 # --- Constants ---
 
@@ -134,9 +134,9 @@ def check_prerequisites() -> None:
     """Validate that .env has required config. Exit on failure."""
     errors: list[str] = []
 
-    provider = os.environ.get("HYBRIDCODER_LLM_PROVIDER")
+    provider = os.environ.get("AUTOCODE_LLM_PROVIDER") or os.environ.get("HYBRIDCODER_LLM_PROVIDER")
     if not provider:
-        errors.append("HYBRIDCODER_LLM_PROVIDER is not set in .env")
+        errors.append("AUTOCODE_LLM_PROVIDER is not set in .env")
 
     if provider == "openrouter":
         if not os.environ.get("OPENROUTER_API_KEY"):

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from hybridcoder.session.store import SessionStore
-from hybridcoder.session.task_store import TaskStore
+from autocode.session.store import SessionStore
+from autocode.session.task_store import TaskStore
 
 
 @pytest.fixture

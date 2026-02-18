@@ -1,6 +1,6 @@
 # UI Bug Tracker — Inline REPL
 
-Tracked bugs found during manual QA of `uv run hybridcoder chat` (Phase 2D).
+Tracked bugs found during manual QA of `uv run autocode chat` (Phase 2D).
 
 ## Open Bugs
 
@@ -19,17 +19,17 @@ Tracked bugs found during manual QA of `uv run hybridcoder chat` (Phase 2D).
 | BUG-11 | Low | Ctrl+C at idle after previous generation can show "generation cancelled" | `app.py:run()` | Fixed (`_agent_task` tracks active generation) |
 | BUG-12 | Medium | Status/footer line not visible/obvious at prompt on some terminals | `app.py:_ensure_prompt_session()` | Fixed (bottom_toolbar + rprompt fallback) |
 | BUG-13 | Medium | Streamed output feels like it appears "inside" the input line | `app.py:run()`, `renderer.py:print_user_turn()` | Fixed (erase_when_done + reprint user turn) |
-| BUG-14 | High | Subagent usage is not observable in runtime flow; task prompts only call `create_task`/`update_task`/`list_tasks` and no subagent lifecycle (`spawn/check/cancel`) appears in logs/UI | `src/hybridcoder/agent/subagent.py`, `src/hybridcoder/agent/subagent_tools.py`, `src/hybridcoder/backend/server.py` | Fixed (Sprint 4B) |
-| BUG-15 | High | `@` file autocomplete shows nothing while typing in Python inline REPL — `complete_while_typing=False` disables visible feedback | `src/hybridcoder/inline/app.py:340` | Fixed |
-| BUG-16 | High | `@` file autocomplete was missing in Go TUI (slash-only completion path) | `cmd/hybridcoder-tui/completion.go`, `cmd/hybridcoder-tui/update.go` | Fixed (verified) |
-| BUG-17 | Low | `HybridAutoSuggest` only provides ghost text for `/` commands, not for `@` file paths — no ghost text when typing `@README` | `src/hybridcoder/inline/completer.py:27-42` | Fixed |
-| BUG-18 | Medium | Task-breakdown replies can create tasks without showing a visible to-do board in the same turn | `src/hybridcoder/agent/task_tools.py`, `src/hybridcoder/agent/prompts.py` | Fixed (verified) |
-| BUG-19 | Medium | No dedicated `task_created`/`task_updated` log events — task mutations are logged only as generic `tool_call_start`/`tool_call_end` with no task ID, title, or status in structured fields | `src/hybridcoder/agent/task_tools.py` | Fixed |
-| BUG-20 | Medium | `on_task_state` notification never sent to Go TUI — plan Section 8.2 defines it but it's not implemented, so Go TUI has no reactive task board updates | `src/hybridcoder/backend/server.py` | Fixed (Sprint 4C) |
-| BUG-21 | Medium | TaskStore not reset on `/new` or `/resume` — `handle_session_new()` and `handle_session_resume()` set `_agent_loop = None` but leave `_task_store` pointing at old session ID; `handle_task_list()` then creates a new one but the agent loop still uses the stale one | `src/hybridcoder/backend/server.py:462,507` | Fixed |
-| BUG-22 | Low | `handle_chat()` session switch (`session_id != self.session_id`) does not reset `_task_store` or `_agent_loop`, so task tools operate on wrong session if Go TUI sends a different session_id | `src/hybridcoder/backend/server.py:353-354` | Fixed |
-| BUG-23 | Low | Tool result truncation applied to task tool output — `create_task` summary can get truncated by `ContextEngine.truncate_tool_result()` if task list grows long, losing the board snapshot that BUG-18 fix relies on | `src/hybridcoder/agent/loop.py:368-369` | Fixed |
-| BUG-24 | Medium | Path-scoped instruction is not honored when target directory does not exist: prompt "write all code inside sandboxes/test_123445" triggers file listing + clarification instead of creating the directory and proceeding under that path | `src/hybridcoder/agent/prompts.py`, `src/hybridcoder/agent/loop.py` | Patched (prompt policy) |
+| BUG-14 | High | Subagent usage is not observable in runtime flow; task prompts only call `create_task`/`update_task`/`list_tasks` and no subagent lifecycle (`spawn/check/cancel`) appears in logs/UI | `src/autocode/agent/subagent.py`, `src/autocode/agent/subagent_tools.py`, `src/autocode/backend/server.py` | Fixed (Sprint 4B) |
+| BUG-15 | High | `@` file autocomplete shows nothing while typing in Python inline REPL — `complete_while_typing=False` disables visible feedback | `src/autocode/inline/app.py:340` | Fixed |
+| BUG-16 | High | `@` file autocomplete was missing in Go TUI (slash-only completion path) | `cmd/autocode-tui/completion.go`, `cmd/autocode-tui/update.go` | Fixed (verified) |
+| BUG-17 | Low | `HybridAutoSuggest` only provides ghost text for `/` commands, not for `@` file paths — no ghost text when typing `@README` | `src/autocode/inline/completer.py:27-42` | Fixed |
+| BUG-18 | Medium | Task-breakdown replies can create tasks without showing a visible to-do board in the same turn | `src/autocode/agent/task_tools.py`, `src/autocode/agent/prompts.py` | Fixed (verified) |
+| BUG-19 | Medium | No dedicated `task_created`/`task_updated` log events — task mutations are logged only as generic `tool_call_start`/`tool_call_end` with no task ID, title, or status in structured fields | `src/autocode/agent/task_tools.py` | Fixed |
+| BUG-20 | Medium | `on_task_state` notification never sent to Go TUI — plan Section 8.2 defines it but it's not implemented, so Go TUI has no reactive task board updates | `src/autocode/backend/server.py` | Fixed (Sprint 4C) |
+| BUG-21 | Medium | TaskStore not reset on `/new` or `/resume` — `handle_session_new()` and `handle_session_resume()` set `_agent_loop = None` but leave `_task_store` pointing at old session ID; `handle_task_list()` then creates a new one but the agent loop still uses the stale one | `src/autocode/backend/server.py:462,507` | Fixed |
+| BUG-22 | Low | `handle_chat()` session switch (`session_id != self.session_id`) does not reset `_task_store` or `_agent_loop`, so task tools operate on wrong session if Go TUI sends a different session_id | `src/autocode/backend/server.py:353-354` | Fixed |
+| BUG-23 | Low | Tool result truncation applied to task tool output — `create_task` summary can get truncated by `ContextEngine.truncate_tool_result()` if task list grows long, losing the board snapshot that BUG-18 fix relies on | `src/autocode/agent/loop.py:368-369` | Fixed |
+| BUG-24 | Medium | Path-scoped instruction is not honored when target directory does not exist: prompt "write all code inside sandboxes/test_123445" triggers file listing + clarification instead of creating the directory and proceeding under that path | `src/autocode/agent/prompts.py`, `src/autocode/agent/loop.py` | Patched (prompt policy) |
 
 ## Resolution Notes
 

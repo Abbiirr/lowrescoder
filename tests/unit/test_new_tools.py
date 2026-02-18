@@ -6,7 +6,7 @@ import textwrap
 
 import pytest
 
-from hybridcoder.agent.tools import (
+from autocode.agent.tools import (
     create_default_registry,
 )
 
@@ -76,7 +76,7 @@ class TestNewToolHandlers:
         return tmp_path
 
     def test_find_references_handler(self, sample_project):
-        from hybridcoder.agent.tools import _handle_find_references
+        from autocode.agent.tools import _handle_find_references
 
         result = _handle_find_references(
             symbol="Parser", project_root=str(sample_project),
@@ -84,7 +84,7 @@ class TestNewToolHandlers:
         assert "Parser" in result
 
     def test_find_definition_handler(self, sample_project):
-        from hybridcoder.agent.tools import _handle_find_definition
+        from autocode.agent.tools import _handle_find_definition
 
         result = _handle_find_definition(
             symbol="helper", project_root=str(sample_project),
@@ -92,7 +92,7 @@ class TestNewToolHandlers:
         assert "helper" in result
 
     def test_get_type_info_handler(self, sample_project):
-        from hybridcoder.agent.tools import _handle_get_type_info
+        from autocode.agent.tools import _handle_get_type_info
 
         result = _handle_get_type_info(
             symbol="helper",
@@ -102,7 +102,7 @@ class TestNewToolHandlers:
         assert "helper" in result
 
     def test_list_symbols_handler(self, sample_project):
-        from hybridcoder.agent.tools import _handle_list_symbols
+        from autocode.agent.tools import _handle_list_symbols
 
         result = _handle_list_symbols(
             file="src/module.py", project_root=str(sample_project),
@@ -110,7 +110,7 @@ class TestNewToolHandlers:
         assert "Parser" in result or "helper" in result
 
     def test_search_code_handler(self, sample_project):
-        from hybridcoder.agent.tools import _handle_search_code
+        from autocode.agent.tools import _handle_search_code
 
         result = _handle_search_code(
             query="parse source", project_root=str(sample_project),
@@ -119,7 +119,7 @@ class TestNewToolHandlers:
         assert isinstance(result, str)
 
     def test_find_definition_not_found(self, sample_project):
-        from hybridcoder.agent.tools import _handle_find_definition
+        from autocode.agent.tools import _handle_find_definition
 
         result = _handle_find_definition(
             symbol="nonexistent_xyz", project_root=str(sample_project),

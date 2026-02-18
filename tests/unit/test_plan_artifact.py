@@ -6,9 +6,9 @@ import sqlite3
 
 import pytest
 
-from hybridcoder.agent.plan_artifact import export, sync_from_markdown
-from hybridcoder.session.models import ensure_tables
-from hybridcoder.session.task_store import TaskStore
+from autocode.agent.plan_artifact import export, sync_from_markdown
+from autocode.session.models import ensure_tables
+from autocode.session.task_store import TaskStore
 
 
 @pytest.fixture()

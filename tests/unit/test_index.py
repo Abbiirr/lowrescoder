@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import textwrap
 
-from hybridcoder.config import Layer2Config
-from hybridcoder.layer2.index import (
+from autocode.config import Layer2Config
+from autocode.layer2.index import (
     CodeIndex,
     _load_gitignore_patterns,
     _should_ignore,

@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from hybridcoder.agent.context import ContextEngine
-from hybridcoder.session.store import SessionStore
+from autocode.agent.context import ContextEngine
+from autocode.session.store import SessionStore
 
 
 @pytest.fixture

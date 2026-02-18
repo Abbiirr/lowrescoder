@@ -3,7 +3,7 @@
 Run with: uv run python -m pytest tests/integration/test_ollama_tool_calling.py -v -s
 Requires: OLLAMA_HOST env var pointing to a running Ollama server.
 
-Models that fail tool calling should NOT be used as the HybridCoder L4 model.
+Models that fail tool calling should NOT be used as the AutoCode L4 model.
 """
 
 from __future__ import annotations
@@ -20,11 +20,7 @@ load_dotenv()
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
 MODELS_TO_TEST = [
-    "qwen2.5-coder:7b",
-    "qwen2.5:14b",
-    "qwen3-coder-128k:latest",
-    "glm4-coder:latest",
-    "devstral-agent:latest",
+    "qwen3:8b",
 ]
 
 TOOL_SCHEMA = [
@@ -223,4 +219,4 @@ def test_summary_report(available_models: list[str]) -> None:
     print("=" * 80)
 
     passing = [r["model"] for r in results if r["success"]]
-    print(f"\nRecommended models for HybridCoder: {passing or 'NONE'}")
+    print(f"\nRecommended models for AutoCode: {passing or 'NONE'}")

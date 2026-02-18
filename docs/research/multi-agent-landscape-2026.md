@@ -1,4 +1,4 @@
-# Multi-Agent & Agent Orchestration Landscape — 2026 Research Notes
+﻿# Multi-Agent & Agent Orchestration Landscape — 2026 Research Notes
 
 > Researched: 2026-02-17
 > Sources: Multiple web searches, official docs, arXiv papers
@@ -24,7 +24,7 @@ Key v0.3 features:
 - **Parts**: text, fileReference, structuredData, html
 - **Artifacts**: Structured outputs from completed tasks
 
-### Fit for HybridCoder
+### Fit for AutoCode
 - A2A's JSON-RPC transport matches our Go TUI ↔ Python backend protocol
 - Task lifecycle maps to our TaskStore states
 - Agent Cards provide discovery mechanism
@@ -151,7 +151,7 @@ Automatic complexity-based routing:
 
 ---
 
-## 6. Key Takeaways for HybridCoder
+## 6. Key Takeaways for AutoCode
 
 1. **Our 4-layer architecture is ahead of the curve.** Industry converging on tiered intelligence. Our L1→L2→L3→L4 is essentially cascade routing.
 

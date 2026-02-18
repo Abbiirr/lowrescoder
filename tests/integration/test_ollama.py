@@ -32,9 +32,9 @@ def ollama_available() -> bool:
 @pytest.fixture()
 def config():  # type: ignore[no-untyped-def]
     """Create config with Ollama provider."""
-    from hybridcoder.config import HybridCoderConfig
+    from autocode.config import AutoCodeConfig
 
-    return HybridCoderConfig()
+    return AutoCodeConfig()
 
 
 def test_ollama_streaming(ollama_available: bool, config) -> None:  # type: ignore[no-untyped-def]
@@ -42,7 +42,7 @@ def test_ollama_streaming(ollama_available: bool, config) -> None:  # type: igno
     if not ollama_available:
         pytest.skip("Ollama not running")
 
-    from hybridcoder.layer4.llm import OllamaProvider
+    from autocode.layer4.llm import OllamaProvider
 
     provider = OllamaProvider(config)
 

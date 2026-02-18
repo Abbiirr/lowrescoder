@@ -1,8 +1,8 @@
-# HybridCoder
+# AutoCode
 
 Edge-native AI coding assistant — local-first, deterministic-first.
 
-HybridCoder runs on consumer hardware (8GB VRAM, 16GB RAM) with no cloud dependency. It uses classical AI techniques (tree-sitter, LSP, static analysis) as the primary intelligence layer, invoking LLMs only when necessary.
+AutoCode runs on consumer hardware (8GB VRAM, 16GB RAM) with no cloud dependency. It uses classical AI techniques (tree-sitter, LSP, static analysis) as the primary intelligence layer, invoking LLMs only when necessary.
 
 ## Requirements
 
@@ -15,8 +15,8 @@ HybridCoder runs on consumer hardware (8GB VRAM, 16GB RAM) with no cloud depende
 
 ```bash
 # Clone and install
-git clone https://github.com/your-username/hybridcoder.git
-cd hybridcoder
+git clone https://github.com/your-username/autocode.git
+cd autocode
 uv sync --all-extras
 
 # Build the Go TUI frontend
@@ -30,7 +30,7 @@ ollama pull qwen3:8b
 ollama serve
 
 # Start chatting
-uv run hybridcoder chat
+uv run autocode chat
 ```
 
 ## Installation
@@ -62,17 +62,17 @@ make tui
 build.bat tui
 
 # Or directly (any platform):
-cd cmd/hybridcoder-tui && go build -o ../../build/hybridcoder-tui .
+cd cmd/autocode-tui && go build -o ../../build/autocode-tui .
 ```
 
-The binary is placed in `build/hybridcoder-tui` (or `build/hybridcoder-tui.exe` on Windows).
+The binary is placed in `build/autocode-tui` (or `build/autocode-tui.exe` on Windows).
 
 ## Usage
 
 ### Interactive chat (default)
 
 ```bash
-uv run hybridcoder chat
+uv run autocode chat
 ```
 
 The default mode uses the Go Bubble Tea TUI (if built) or falls back to the Python inline REPL. Features:
@@ -88,52 +88,52 @@ The default mode uses the Go Bubble Tea TUI (if built) or falls back to the Pyth
 ### Explicit mode selection
 
 ```bash
-uv run hybridcoder chat --go-tui      # Force Go TUI
-uv run hybridcoder chat --legacy       # Python Rich REPL (no agent loop)
-uv run hybridcoder chat --tui          # Fullscreen Textual TUI
-uv run hybridcoder chat --sequential   # Disable parallel input
+uv run autocode chat --go-tui      # Force Go TUI
+uv run autocode chat --legacy       # Python Rich REPL (no agent loop)
+uv run autocode chat --tui          # Fullscreen Textual TUI
+uv run autocode chat --sequential   # Disable parallel input
 ```
 
 ### Single question
 
 ```bash
-uv run hybridcoder ask "How do I reverse a list in Python?"
+uv run autocode ask "How do I reverse a list in Python?"
 ```
 
 ### Ask with file context
 
 ```bash
-uv run hybridcoder ask "What does this function do?" --file src/myapp/utils.py
+uv run autocode ask "What does this function do?" --file src/myapp/utils.py
 ```
 
 ### View configuration
 
 ```bash
-uv run hybridcoder config show    # display current config
-uv run hybridcoder config check   # validate config and show warnings
-uv run hybridcoder config path    # show config file location
+uv run autocode config show    # display current config
+uv run autocode config check   # validate config and show warnings
+uv run autocode config path    # show config file location
 ```
 
 ### Backend server (used internally by Go TUI)
 
 ```bash
-uv run hybridcoder serve           # JSON-RPC server on stdin/stdout
-uv run hybridcoder serve --verbose # with debug logging
+uv run autocode serve           # JSON-RPC server on stdin/stdout
+uv run autocode serve --verbose # with debug logging
 ```
 
 ### Version
 
 ```bash
-uv run hybridcoder version
+uv run autocode version
 ```
 
 ## Configuration
 
-HybridCoder loads configuration with this precedence (highest wins):
+AutoCode loads configuration with this precedence (highest wins):
 
 1. Environment variables
-2. Project config (`.hybridcoder.yaml` in project root)
-3. Global config (`~/.hybridcoder/config.yaml`)
+2. Project config (`.autocode.yaml` in project root)
+3. Global config (`~/.autocode/config.yaml`)
 4. Built-in defaults
 
 ### Default backend: Ollama (local)
@@ -157,9 +157,9 @@ Then set the provider:
 
 ```bash
 # Via environment variable
-HYBRIDCODER_LLM_PROVIDER=openrouter uv run hybridcoder chat
+AUTOCODE_LLM_PROVIDER=openrouter uv run autocode chat
 
-# Or in .hybridcoder.yaml
+# Or in .autocode.yaml
 # llm:
 #   provider: openrouter
 ```
@@ -168,10 +168,10 @@ HYBRIDCODER_LLM_PROVIDER=openrouter uv run hybridcoder chat
 
 | Variable | Description |
 |----------|-------------|
-| `HYBRIDCODER_LLM_PROVIDER` | `ollama` (default) or `openrouter` |
-| `HYBRIDCODER_LLM_MODEL` | Model name override |
-| `HYBRIDCODER_LLM_API_BASE` | API base URL override |
-| `HYBRIDCODER_LLM_TEMPERATURE` | Sampling temperature (0.0-2.0) |
+| `AUTOCODE_LLM_PROVIDER` | `ollama` (default) or `openrouter` |
+| `AUTOCODE_LLM_MODEL` | Model name override |
+| `AUTOCODE_LLM_API_BASE` | API base URL override |
+| `AUTOCODE_LLM_TEMPERATURE` | Sampling temperature (0.0-2.0) |
 | `OPENROUTER_API_KEY` | OpenRouter API key (required if using OpenRouter) |
 | `OPENROUTER_MODEL` | OpenRouter model override |
 
@@ -191,12 +191,12 @@ build.bat setup  # Windows
 # Python tests (569+ unit tests)
 make test            # Linux/macOS
 build.bat test       # Windows
-# Or: uv run pytest tests/ -v --cov=src/hybridcoder
+# Or: uv run pytest tests/ -v --cov=src/autocode
 
 # Go tests (93 tests)
 make go-test         # Linux/macOS
 build.bat go-test    # Windows
-# Or: cd cmd/hybridcoder-tui && go test ./... -v
+# Or: cd cmd/autocode-tui && go test ./... -v
 ```
 
 ### Run linting
@@ -234,7 +234,7 @@ uv run pytest -m integration tests/integration/test_ollama.py
 
 ## Architecture
 
-HybridCoder uses a **Go TUI frontend** + **Python backend** split, communicating via JSON-RPC 2.0 over stdin/stdout:
+AutoCode uses a **Go TUI frontend** + **Python backend** split, communicating via JSON-RPC 2.0 over stdin/stdout:
 
 ```
 Go TUI (Bubble Tea)  ←── JSON-RPC ──►  Python Backend (agent loop, tools, LLM)

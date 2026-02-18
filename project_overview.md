@@ -1,4 +1,4 @@
-# HybridCoder — Project Overview
+# AutoCode — Project Overview
 
 ## What Is This?
 
@@ -34,7 +34,7 @@ A local-first AI coding assistant CLI that runs on consumer hardware (7-11B mode
 ## Project Structure
 
 ```
-src/hybridcoder/
+src/autocode/
   cli.py              # Typer CLI entry point
   config.py           # Pydantic config (env > yaml > defaults)
   core/types.py       # Request/Response/LayerResult types
@@ -74,10 +74,10 @@ tests/
 uv sync
 
 # Run inline REPL (main mode)
-uv run hybridcoder chat
+uv run autocode chat
 
 # Run Textual TUI
-uv run hybridcoder chat --tui
+uv run autocode chat --tui
 
 # Run tests
 uv run pytest tests/ -v

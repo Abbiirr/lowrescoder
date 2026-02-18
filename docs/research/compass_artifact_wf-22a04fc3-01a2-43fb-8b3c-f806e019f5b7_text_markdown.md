@@ -1,6 +1,6 @@
-# The long tail of building a production TUI coding agent in Go
+﻿# The long tail of building a production TUI coding agent in Go
 
-**HybridCoder's biggest risks aren't in the happy path — they're in unbounded resource growth that makes the app unusable after 8 hours, Windows platform gaps that silently break core features, security holes that turn prompt injection into RCE, and terminal multiplexer incompatibilities that affect the majority of power users.** OpenCode, the most architecturally similar project (Go + Bubble Tea + SQLite), has already hit most of these walls: 30GB+ memory after half a day, 100% CPU during streaming, nil-pointer panics crashing the TUI, and terminal corruption that kills the user's entire shell session. Every issue documented below has been observed in production in at least one shipping coding agent. This report is organized from highest to lowest rewrite risk across all 11 research areas.
+**AutoCode's biggest risks aren't in the happy path — they're in unbounded resource growth that makes the app unusable after 8 hours, Windows platform gaps that silently break core features, security holes that turn prompt injection into RCE, and terminal multiplexer incompatibilities that affect the majority of power users.** OpenCode, the most architecturally similar project (Go + Bubble Tea + SQLite), has already hit most of these walls: 30GB+ memory after half a day, 100% CPU during streaming, nil-pointer panics crashing the TUI, and terminal corruption that kills the user's entire shell session. Every issue documented below has been observed in production in at least one shipping coding agent. This report is organized from highest to lowest rewrite risk across all 11 research areas.
 
 ---
 
@@ -61,7 +61,7 @@ The required mitigations are non-negotiable:
 - **Never pass LLM output to `sh -c`**. Use `exec.Command(binary, arg1, arg2...)` with explicit argument separation.
 - **Argument injection validation**: Check all command arguments against GTFOBins/LOLBins patterns. Watch for `-exec`, `--pre`, `--output`, `-x=` flags on otherwise safe commands.
 - **Environment variable scrubbing**: Filter `*_KEY`, `*_SECRET`, `*_TOKEN`, `*_PASSWORD` from child process environments. Codex CLI implements `shell_environment_policy` for this.
-- **Untrusted repo config files**: Never auto-load `.hybridcoder/config` from cloned repos without explicit user consent. This is a primary supply chain attack vector.
+- **Untrusted repo config files**: Never auto-load `.autocode/config` from cloned repos without explicit user consent. This is a primary supply chain attack vector.
 - **Path traversal prevention**: Use Go 1.24+'s `os.Root` type for directory-scoped file access. Always verify `filepath.Abs(target)` starts with project root prefix.
 
 ---
@@ -240,4 +240,4 @@ The research across 11 areas and 5 competing tools reveals that production TUI a
 
 8. **A Ctrl+C state machine** (cancel current operation → warn → quit) rather than immediate exit prevents users from losing work — every competing tool has converged on this pattern.
 
-No individual edge case in this report is insurmountable. The risk is in the aggregate: any five of these ignored simultaneously create a product that works in demos but fails in production. The good news is that OpenCode, Claude Code, Codex CLI, and Aider have already discovered most of these failure modes — HybridCoder can learn from their mistakes rather than repeating them.
+No individual edge case in this report is insurmountable. The risk is in the aggregate: any five of these ignored simultaneously create a product that works in demos but fails in production. The good news is that OpenCode, Claude Code, Codex CLI, and Aider have already discovered most of these failure modes — AutoCode can learn from their mistakes rather than repeating them.

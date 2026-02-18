@@ -10,7 +10,7 @@
 
 ## Goal
 
-`hybridcoder doctor` command that runs 8 readiness checks with actionable remediation messages.
+`autocode doctor` command that runs 8 readiness checks with actionable remediation messages.
 
 ---
 
@@ -23,7 +23,7 @@
 
 ## Implementation
 
-- [ ] Create `hybridcoder doctor` CLI command
+- [ ] Create `autocode doctor` CLI command
 - [ ] Implement 8 readiness checks:
   - [ ] Check 1: Python version >= 3.11
   - [ ] Check 2: Ollama installed and reachable
@@ -38,7 +38,7 @@
 
 ## Acceptance Criteria
 
-- [ ] `hybridcoder doctor` runs 8 checks
+- [ ] `autocode doctor` runs 8 checks
 - [ ] Each check returns pass/fail with description
 - [ ] Failing checks have actionable remediation messages
 - [ ] Output is structured (JSON-parseable)

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from hybridcoder.core.context import ContextAssembler
-from hybridcoder.core.types import CodeChunk, SearchResult
+from autocode.core.context import ContextAssembler
+from autocode.core.types import CodeChunk, SearchResult
 
 
 def _make_result(content: str, score: float = 0.5) -> SearchResult:

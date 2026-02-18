@@ -9,18 +9,18 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from hybridcoder.config import HybridCoderConfig
-from hybridcoder.layer4.llm import LLMResponse
-from hybridcoder.tui.app import HybridCoderApp
-from hybridcoder.tui.widgets.chat_view import ChatView
-from hybridcoder.tui.widgets.input_bar import InputBar
-from hybridcoder.tui.widgets.status_bar import StatusBar
+from autocode.config import AutoCodeConfig
+from autocode.layer4.llm import LLMResponse
+from autocode.tui.app import AutoCodeApp
+from autocode.tui.widgets.chat_view import ChatView
+from autocode.tui.widgets.input_bar import InputBar
+from autocode.tui.widgets.status_bar import StatusBar
 
 
 @pytest.fixture()
-def tui_config(tmp_path: Path) -> HybridCoderConfig:
+def tui_config(tmp_path: Path) -> AutoCodeConfig:
     """Config with temp session DB path."""
-    config = HybridCoderConfig()
+    config = AutoCodeConfig()
     config.tui.session_db_path = str(tmp_path / "test.db")
     return config
 
@@ -49,9 +49,9 @@ def _make_slow_mock_provider(responses: list[LLMResponse]) -> Any:
 
 class TestTUIApp:
     @pytest.mark.asyncio()
-    async def test_app_mounts(self, tui_config: HybridCoderConfig) -> None:
+    async def test_app_mounts(self, tui_config: AutoCodeConfig) -> None:
         """App mounts all expected widgets."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test():
             assert app.query_one("#chat-view", ChatView) is not None
             assert app.query_one("#input-bar", InputBar) is not None
@@ -59,9 +59,9 @@ class TestTUIApp:
             assert app.query_one("#header") is not None
 
     @pytest.mark.asyncio()
-    async def test_input_submits_message(self, tui_config: HybridCoderConfig) -> None:
+    async def test_input_submits_message(self, tui_config: AutoCodeConfig) -> None:
         """Typing text and pressing enter adds a message to chat."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
 
         # Mock the provider to avoid real LLM calls
         mock_provider = AsyncMock()
@@ -90,9 +90,9 @@ class TestTUIApp:
             assert len(children) >= 1  # at least user message widget
 
     @pytest.mark.asyncio()
-    async def test_exit_command(self, tui_config: HybridCoderConfig) -> None:
+    async def test_exit_command(self, tui_config: AutoCodeConfig) -> None:
         """The /exit command quits the app."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             input_bar = app.query_one("#input-bar", InputBar)
             input_bar.focus()
@@ -103,11 +103,11 @@ class TestTUIApp:
 
     @pytest.mark.asyncio()
     async def test_bench_ready_sentinel(
-        self, tui_config: HybridCoderConfig, monkeypatch: pytest.MonkeyPatch,
+        self, tui_config: AutoCodeConfig, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """BENCH:READY is emitted when HYBRIDCODER_BENCH=1."""
-        monkeypatch.setenv("HYBRIDCODER_BENCH", "1")
-        app = HybridCoderApp(config=tui_config)
+        """BENCH:READY is emitted when AUTOCODE_BENCH=1."""
+        monkeypatch.setenv("AUTOCODE_BENCH", "1")
+        app = AutoCodeApp(config=tui_config)
 
         # Patch print to capture the sentinel
         original_print = print
@@ -128,11 +128,11 @@ class TestTUIApp:
 class TestThinkingIndicator:
     @pytest.mark.asyncio()
     async def test_status_bar_shows_thinking(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """StatusBar shows 'Thinking...' while generating."""
         mock = _make_slow_mock_provider([LLMResponse(content="done")])
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
 
         async with app.run_test() as pilot:
             app._provider = mock
@@ -158,10 +158,10 @@ class TestThinkingIndicator:
 
     @pytest.mark.asyncio()
     async def test_status_bar_render_with_thinking(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """StatusBar render includes animated 'Thinking' when thinking=True."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test():
             status_bar = app.query_one("#status-bar", StatusBar)
             status_bar.thinking = True
@@ -174,10 +174,10 @@ class TestThinkingIndicator:
 
     @pytest.mark.asyncio()
     async def test_chat_view_shows_thinking_indicator(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """ChatView shows a 'Thinking...' widget via show_thinking()."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             chat = app.query_one("#chat-view", ChatView)
 
@@ -199,10 +199,10 @@ class TestThinkingIndicator:
 
     @pytest.mark.asyncio()
     async def test_thinking_cleared_when_streaming_starts(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """start_streaming() removes the thinking indicator."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             chat = app.query_one("#chat-view", ChatView)
 
@@ -218,11 +218,11 @@ class TestThinkingIndicator:
 class TestInputHistory:
     @pytest.mark.asyncio()
     async def test_up_arrow_recalls_last_message(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Up arrow recalls the most recently submitted message."""
         mock = _make_slow_mock_provider([LLMResponse(content="ok")])
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
 
         async with app.run_test() as pilot:
             app._provider = mock
@@ -246,13 +246,13 @@ class TestInputHistory:
 
     @pytest.mark.asyncio()
     async def test_up_down_arrow_navigates_history(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Up/down arrows navigate through multiple history entries."""
         mock = _make_slow_mock_provider(
             [LLMResponse(content="r1"), LLMResponse(content="r2")],
         )
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
 
         async with app.run_test() as pilot:
             app._provider = mock
@@ -294,11 +294,11 @@ class TestInputHistory:
 
     @pytest.mark.asyncio()
     async def test_up_arrow_preserves_draft(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Up arrow saves current draft, down arrow restores it."""
         mock = _make_slow_mock_provider([LLMResponse(content="ok")])
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
 
         async with app.run_test() as pilot:
             app._provider = mock
@@ -329,10 +329,10 @@ class TestInputHistory:
 
     @pytest.mark.asyncio()
     async def test_up_arrow_does_nothing_with_no_history(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Up arrow with no history does not crash or change text."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             input_bar = app.query_one("#input-bar", InputBar)
             input_bar.focus()
@@ -350,12 +350,12 @@ class TestInputHistory:
 class TestStreamingSmooth:
     @pytest.mark.asyncio()
     async def test_streaming_uses_static_then_markdown(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """During streaming, a lightweight Static is used; after, it becomes Markdown."""
         from textual.widgets import Markdown, Static
 
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             chat = app.query_one("#chat-view", ChatView)
 
@@ -387,10 +387,10 @@ class TestStreamingSmooth:
 
     @pytest.mark.asyncio()
     async def test_streaming_chunks_scroll_to_end(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Each streaming chunk scrolls the chat to the end."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             chat = app.query_one("#chat-view", ChatView)
 
@@ -413,10 +413,10 @@ class TestStreamingSmooth:
 class TestAutocomplete:
     @pytest.mark.asyncio()
     async def test_slash_command_suggestion(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Typing / shows slash command suggestions."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             input_bar = app.query_one("#input-bar", InputBar)
             input_bar.focus()
@@ -429,10 +429,10 @@ class TestAutocomplete:
 
     @pytest.mark.asyncio()
     async def test_slash_command_tab_accepts(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Tab accepts the inline slash command suggestion."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             input_bar = app.query_one("#input-bar", InputBar)
             input_bar.focus()
@@ -449,14 +449,14 @@ class TestAutocomplete:
 
     @pytest.mark.asyncio()
     async def test_at_file_suggestion(
-        self, tui_config: HybridCoderConfig, tmp_path: Path,
+        self, tui_config: AutoCodeConfig, tmp_path: Path,
     ) -> None:
         """Typing @ with a file prefix shows file path suggestions."""
         # Create a test file tree
         (tmp_path / "main.py").write_text("print('hi')")
         (tmp_path / "main_test.py").write_text("test")
 
-        app = HybridCoderApp(config=tui_config, project_root=tmp_path)
+        app = AutoCodeApp(config=tui_config, project_root=tmp_path)
         async with app.run_test() as pilot:
             input_bar = app.query_one("#input-bar", InputBar)
             input_bar.focus()
@@ -471,10 +471,10 @@ class TestAutocomplete:
 
     @pytest.mark.asyncio()
     async def test_no_suggestion_for_regular_text(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Regular text (not / or @) shows no suggestions."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             input_bar = app.query_one("#input-bar", InputBar)
             input_bar.focus()
@@ -486,10 +486,10 @@ class TestAutocomplete:
 
     @pytest.mark.asyncio()
     async def test_completions_wired_on_mount(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Slash command names are wired into InputBar on app mount."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test():
             input_bar = app.query_one("#input-bar", InputBar)
             # Should have all 11+ command names loaded (9 original + shell + copy + aliases)
@@ -501,10 +501,10 @@ class TestAutocomplete:
 
     @pytest.mark.asyncio()
     async def test_enter_accepts_suggestion_instead_of_submit(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Enter accepts an active suggestion instead of submitting."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             input_bar = app.query_one("#input-bar", InputBar)
             input_bar.focus()
@@ -528,10 +528,10 @@ class TestAutocomplete:
 
     @pytest.mark.asyncio()
     async def test_tab_does_not_switch_focus(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Tab never switches focus away from InputBar."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             input_bar = app.query_one("#input-bar", InputBar)
             input_bar.focus()
@@ -546,10 +546,10 @@ class TestAutocomplete:
 
     @pytest.mark.asyncio()
     async def test_tab_accepts_and_stays_focused(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Tab accepts suggestion and keeps focus in InputBar."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             input_bar = app.query_one("#input-bar", InputBar)
             input_bar.focus()
@@ -568,10 +568,10 @@ class TestAutocomplete:
 class TestThinkingToggle:
     @pytest.mark.asyncio()
     async def test_ctrl_t_toggles_thinking_visibility(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Ctrl+T toggles the show_thinking flag."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             assert app._show_thinking is True
 
@@ -585,10 +585,10 @@ class TestThinkingToggle:
 
     @pytest.mark.asyncio()
     async def test_toggle_shows_message_in_chat(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Toggling thinking shows a status message in chat."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             chat = app.query_one("#chat-view", ChatView)
             initial_count = len(list(chat.children))
@@ -603,7 +603,7 @@ class TestThinkingToggle:
 class TestInputDuringGeneration:
     @pytest.mark.asyncio()
     async def test_input_bar_stays_focused_during_generation(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """InputBar remains focused and editable while response is generating."""
 
@@ -624,7 +624,7 @@ class TestInputDuringGeneration:
         mock.generate_with_tools = slow_generate
         mock.count_tokens = lambda text: len(text) // 4
 
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
 
         async with app.run_test() as pilot:
             app._provider = mock
@@ -650,11 +650,11 @@ class TestInputDuringGeneration:
 
     @pytest.mark.asyncio()
     async def test_input_not_disabled_during_generation(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """InputBar is never disabled, even while generating."""
         mock = _make_slow_mock_provider([LLMResponse(content="ok")])
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
 
         async with app.run_test() as pilot:
             app._provider = mock
@@ -674,10 +674,10 @@ class TestInputDuringGeneration:
 class TestResumeListsSessions:
     @pytest.mark.asyncio()
     async def test_resume_no_args_lists_sessions(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """/resume with no args lists available sessions with overview."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             # Create a session with messages
             sid = app.session_store.create_session(
@@ -708,13 +708,13 @@ class TestResumeListsSessions:
 
     @pytest.mark.asyncio()
     async def test_resume_no_sessions_shows_message(
-        self, tui_config: HybridCoderConfig, tmp_path: Path,
+        self, tui_config: AutoCodeConfig, tmp_path: Path,
     ) -> None:
         """/resume with no sessions shows helpful message."""
         # Use a fresh DB with no extra sessions
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.tui.session_db_path = str(tmp_path / "empty.db")
-        app = HybridCoderApp(config=config)
+        app = AutoCodeApp(config=config)
 
         async with app.run_test() as pilot:
             input_bar = app.query_one("#input-bar", InputBar)
@@ -735,12 +735,12 @@ class TestSessionNaming:
 
     def test_generate_title_from_simple_message(self) -> None:
         """Simple messages produce clean titles."""
-        title = HybridCoderApp._generate_title("Fix the login page crash")
+        title = AutoCodeApp._generate_title("Fix the login page crash")
         assert title == "Fix the login page crash"
 
     def test_generate_title_truncates_long_messages(self) -> None:
         """Long messages are truncated to ~6 words with ellipsis."""
-        title = HybridCoderApp._generate_title(
+        title = AutoCodeApp._generate_title(
             "Please refactor the authentication module to use JWT tokens instead of sessions"
         )
         assert title.endswith("...")
@@ -750,13 +750,13 @@ class TestSessionNaming:
 
     def test_generate_title_strips_at_references(self) -> None:
         """@file references are removed from titles."""
-        title = HybridCoderApp._generate_title("Fix bug in @src/auth.py")
+        title = AutoCodeApp._generate_title("Fix bug in @src/auth.py")
         assert "@" not in title
         assert "Fix bug in" in title
 
     def test_generate_title_strips_code_blocks(self) -> None:
         """Code blocks are removed from titles."""
-        title = HybridCoderApp._generate_title(
+        title = AutoCodeApp._generate_title(
             "Fix this ```python\nprint('hello')\n``` please"
         )
         assert "```" not in title
@@ -764,21 +764,21 @@ class TestSessionNaming:
 
     def test_generate_title_strips_markdown(self) -> None:
         """Markdown formatting is cleaned from titles."""
-        title = HybridCoderApp._generate_title("Fix the **critical** _bug_")
+        title = AutoCodeApp._generate_title("Fix the **critical** _bug_")
         assert "**" not in title
         assert "Fix" in title
 
     def test_generate_title_capitalizes(self) -> None:
         """First letter of title is capitalized."""
-        title = HybridCoderApp._generate_title("fix the login")
+        title = AutoCodeApp._generate_title("fix the login")
         assert title[0].isupper()
 
     @pytest.mark.asyncio()
     async def test_session_starts_with_timestamp_title(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """New session is created with a timestamp-based title."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test():
             session = app.session_store.get_session(app.session_id)
             assert session is not None
@@ -786,11 +786,11 @@ class TestSessionNaming:
 
     @pytest.mark.asyncio()
     async def test_session_auto_titled_after_first_message(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Session title is updated from the first user message."""
         mock = _make_slow_mock_provider([LLMResponse(content="ok")])
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
 
         async with app.run_test() as pilot:
             app._provider = mock
@@ -816,7 +816,7 @@ class TestInteractiveApproval:
     @pytest.mark.asyncio()
     async def test_approval_prompt_widget_creates(self) -> None:
         """ApprovalPrompt widget can be created with a future."""
-        from hybridcoder.tui.widgets.approval_prompt import ApprovalPrompt
+        from autocode.tui.widgets.approval_prompt import ApprovalPrompt
 
         loop = asyncio.get_running_loop()
         future: asyncio.Future[tuple[str, bool]] = loop.create_future()
@@ -827,7 +827,7 @@ class TestInteractiveApproval:
     @pytest.mark.asyncio()
     async def test_option_selector_widget_creates(self) -> None:
         """OptionSelector widget can be created with options."""
-        from hybridcoder.tui.widgets.approval_prompt import OptionSelector
+        from autocode.tui.widgets.approval_prompt import OptionSelector
 
         loop = asyncio.get_running_loop()
         future: asyncio.Future[list[str]] = loop.create_future()
@@ -840,7 +840,7 @@ class TestInteractiveApproval:
     @pytest.mark.asyncio()
     async def test_option_selector_multi_creates(self) -> None:
         """OptionSelector in multi-select mode can be created."""
-        from hybridcoder.tui.widgets.approval_prompt import OptionSelector
+        from autocode.tui.widgets.approval_prompt import OptionSelector
 
         loop = asyncio.get_running_loop()
         future: asyncio.Future[list[str]] = loop.create_future()
@@ -852,9 +852,9 @@ class TestInteractiveApproval:
         assert selector._multi is True
 
     @pytest.mark.asyncio()
-    async def test_format_tool_description_write_file(self, tui_config: HybridCoderConfig) -> None:
+    async def test_format_tool_description_write_file(self, tui_config: AutoCodeConfig) -> None:
         """Tool description for write_file shows path and size."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test():
             desc = app._format_tool_description(
                 "write_file", {"path": "test.py", "content": "x" * 50},
@@ -863,9 +863,9 @@ class TestInteractiveApproval:
             assert "test.py" in desc
 
     @pytest.mark.asyncio()
-    async def test_format_tool_description_run_command(self, tui_config: HybridCoderConfig) -> None:
+    async def test_format_tool_description_run_command(self, tui_config: AutoCodeConfig) -> None:
         """Tool description for run_command shows the command."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test():
             desc = app._format_tool_description(
                 "run_command", {"command": "pytest tests/"},
@@ -874,11 +874,11 @@ class TestInteractiveApproval:
 
     @pytest.mark.asyncio()
     async def test_format_tool_description_run_command_shell_disabled(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """When shell is disabled, run_command description mentions enabling."""
         tui_config.shell.enabled = False
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test():
             desc = app._format_tool_description(
                 "run_command", {"command": "pwd"},
@@ -887,9 +887,9 @@ class TestInteractiveApproval:
             assert "pwd" in desc
 
     @pytest.mark.asyncio()
-    async def test_format_tool_description_generic(self, tui_config: HybridCoderConfig) -> None:
+    async def test_format_tool_description_generic(self, tui_config: AutoCodeConfig) -> None:
         """Tool description for unknown tools shows args."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test():
             desc = app._format_tool_description(
                 "custom_tool", {"arg1": "val1"},
@@ -903,28 +903,28 @@ class TestCopyAndScroll:
 
     @pytest.mark.asyncio()
     async def test_page_up_binding_exists(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Page Up binding is registered."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         binding_keys = [b.key for b in app.BINDINGS]
         assert "pageup" in binding_keys
 
     @pytest.mark.asyncio()
     async def test_page_down_binding_exists(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Page Down binding is registered."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         binding_keys = [b.key for b in app.BINDINGS]
         assert "pagedown" in binding_keys
 
     @pytest.mark.asyncio()
     async def test_page_up_scrolls_chat(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Page Up scrolls the chat view upward."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             chat = app.query_one("#chat-view", ChatView)
 
@@ -946,10 +946,10 @@ class TestCopyAndScroll:
 
     @pytest.mark.asyncio()
     async def test_copy_command_no_messages(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """/copy with no assistant messages shows error."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             input_bar = app.query_one("#input-bar", InputBar)
             input_bar.focus()
@@ -966,10 +966,10 @@ class TestCopyAndScroll:
 
     @pytest.mark.asyncio()
     async def test_shell_command_shows_status(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """/shell with no args shows current status."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             input_bar = app.query_one("#input-bar", InputBar)
             input_bar.focus()
@@ -985,10 +985,10 @@ class TestCopyAndScroll:
 
     @pytest.mark.asyncio()
     async def test_shell_on_enables_shell(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """/shell on enables shell execution."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         assert app.config.shell.enabled is False
 
         async with app.run_test() as pilot:
@@ -1004,10 +1004,10 @@ class TestCopyAndScroll:
 
     @pytest.mark.asyncio()
     async def test_shell_off_disables_shell(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """/shell off disables shell execution."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         app.config.shell.enabled = True
 
         async with app.run_test() as pilot:
@@ -1027,10 +1027,10 @@ class TestAskUserUI:
 
     @pytest.mark.asyncio()
     async def test_ask_user_future_intercepts_submit(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """When ask_user future is set, InputBar submit resolves the future."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             loop = asyncio.get_running_loop()
             future: asyncio.Future[str] = loop.create_future()
@@ -1048,10 +1048,10 @@ class TestAskUserUI:
 
     @pytest.mark.asyncio()
     async def test_ask_user_free_text_resolved_via_submit(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Free-text ask_user is resolved when InputBar submits."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             # Run ask_user in a background task (it will block waiting)
             async def ask() -> str:
@@ -1078,12 +1078,12 @@ class TestAskUserUI:
 
     @pytest.mark.asyncio()
     async def test_ask_user_with_options_creates_selector(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """ask_user with options mounts an OptionSelector with OptionList."""
-        from hybridcoder.tui.widgets.approval_prompt import OptionSelector
+        from autocode.tui.widgets.approval_prompt import OptionSelector
 
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             # Run ask_user in a task so we can interact with the selector
             async def ask_and_respond() -> str:
@@ -1107,10 +1107,10 @@ class TestAskUserUI:
 
     @pytest.mark.asyncio()
     async def test_ask_user_escape_returns_skipped(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Pressing escape on OptionSelector returns '(user skipped)'."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             async def ask_and_escape() -> str:
                 return await app._interactive_ask_user(
@@ -1133,10 +1133,10 @@ class TestTypingIndicator:
 
     @pytest.mark.asyncio()
     async def test_status_bar_has_user_typing_property(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """StatusBar has a user_typing reactive property."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test():
             status_bar = app.query_one("#status-bar", StatusBar)
             assert hasattr(status_bar, "user_typing")
@@ -1144,10 +1144,10 @@ class TestTypingIndicator:
 
     @pytest.mark.asyncio()
     async def test_typing_shown_in_status_during_generation(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Status bar shows 'typing' when user types during generation."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             status_bar = app.query_one("#status-bar", StatusBar)
             app._generating = True
@@ -1162,10 +1162,10 @@ class TestTypingIndicator:
 
     @pytest.mark.asyncio()
     async def test_typing_not_shown_when_not_generating(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Status bar does not show typing when not generating."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             status_bar = app.query_one("#status-bar", StatusBar)
             app._generating = False
@@ -1180,10 +1180,10 @@ class TestTypingIndicator:
 
     @pytest.mark.asyncio()
     async def test_typing_cleared_after_generation_ends(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """Typing indicator is cleared when generation finishes."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test():
             status_bar = app.query_one("#status-bar", StatusBar)
             status_bar.user_typing = True

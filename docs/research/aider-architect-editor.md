@@ -1,4 +1,4 @@
-# Aider Architect/Editor Pattern — Research Notes
+﻿# Aider Architect/Editor Pattern — Research Notes
 
 > Researched: 2026-02-17
 > Source: https://aider.chat/2024/09/26/architect.html
@@ -70,7 +70,7 @@ Previous best (solo models): 79.7%
 - **whole format**: Model rewrites entire file, slower but more reliable
 - Choice significantly impacts latency
 
-## 7. Relevance to HybridCoder
+## 7. Relevance to AutoCode
 
 This maps PERFECTLY to our L3/L4 split:
 - **Architect = L4 (Qwen3-8B)**: Complex reasoning, natural language plan

@@ -8,16 +8,16 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from hybridcoder.config import HybridCoderConfig
-from hybridcoder.layer4.llm import LLMResponse
-from hybridcoder.tui.app import HybridCoderApp
-from hybridcoder.tui.widgets.chat_view import ChatView
-from hybridcoder.tui.widgets.input_bar import InputBar
+from autocode.config import AutoCodeConfig
+from autocode.layer4.llm import LLMResponse
+from autocode.tui.app import AutoCodeApp
+from autocode.tui.widgets.chat_view import ChatView
+from autocode.tui.widgets.input_bar import InputBar
 
 
 @pytest.fixture()
-def tui_config(tmp_path: Path) -> HybridCoderConfig:
-    config = HybridCoderConfig()
+def tui_config(tmp_path: Path) -> AutoCodeConfig:
+    config = AutoCodeConfig()
     config.tui.session_db_path = str(tmp_path / "test.db")
     return config
 
@@ -49,10 +49,10 @@ def _make_mock_provider(responses: list[LLMResponse]) -> Any:
 
 class TestTUIIntegration:
     @pytest.mark.asyncio()
-    async def test_send_message_and_get_response(self, tui_config: HybridCoderConfig) -> None:
+    async def test_send_message_and_get_response(self, tui_config: AutoCodeConfig) -> None:
         """Sending a message triggers agent loop and shows response."""
         mock = _make_mock_provider([LLMResponse(content="Mock response")])
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
 
         async with app.run_test() as pilot:
             app._provider = mock
@@ -71,9 +71,9 @@ class TestTUIIntegration:
             assert len(list(chat.children)) >= 1
 
     @pytest.mark.asyncio()
-    async def test_tool_call_displayed_in_chat(self, tui_config: HybridCoderConfig) -> None:
+    async def test_tool_call_displayed_in_chat(self, tui_config: AutoCodeConfig) -> None:
         """Tool calls are displayed in the chat view."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
         async with app.run_test() as pilot:
             chat = app.query_one("#chat-view", ChatView)
             chat.add_tool_call_display("read_file", "completed", "file contents here")
@@ -83,11 +83,11 @@ class TestTUIIntegration:
 
     @pytest.mark.asyncio()
     async def test_approval_prompt_shown_in_suggest_mode(
-        self, tui_config: HybridCoderConfig,
+        self, tui_config: AutoCodeConfig,
     ) -> None:
         """In suggest mode, write tools trigger diff preview."""
         tui_config.tui.approval_mode = "suggest"
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
 
         async with app.run_test() as pilot:
             # Test diff preview directly
@@ -99,9 +99,9 @@ class TestTUIIntegration:
             assert len(children) >= 1
 
     @pytest.mark.asyncio()
-    async def test_session_resume(self, tui_config: HybridCoderConfig) -> None:
+    async def test_session_resume(self, tui_config: AutoCodeConfig) -> None:
         """Resuming a session loads its messages."""
-        app = HybridCoderApp(config=tui_config)
+        app = AutoCodeApp(config=tui_config)
 
         async with app.run_test() as pilot:
             # Add messages to the session

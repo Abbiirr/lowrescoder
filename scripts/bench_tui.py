@@ -129,8 +129,8 @@ def run_tui_bench(cmd: list[str], timeout_ready: float, timeout_ping: float) -> 
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="HybridCoder TUI benchmark")
-    parser.add_argument("--cmd", default="hybridcoder", help="Command to run")
+    parser = argparse.ArgumentParser(description="AutoCode TUI benchmark")
+    parser.add_argument("--cmd", default="autocode", help="Command to run")
     parser.add_argument("--args", default="chat", help="Arguments for the command")
     parser.add_argument("--timeout-ready", type=float, default=3.0)
     parser.add_argument("--timeout-ping", type=float, default=1.0)

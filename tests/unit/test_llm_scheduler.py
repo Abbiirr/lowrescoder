@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-from hybridcoder.agent.subagent import LLMScheduler
+from autocode.agent.subagent import LLMScheduler
 
 
 @pytest.fixture

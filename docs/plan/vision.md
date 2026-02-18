@@ -1,4 +1,4 @@
-# HybridCoder Vision — Phase 4 → 5 → 6 → 7
+# AutoCode Vision — Phase 4 → 5 → 6 → 7
 
 > Last updated: 2026-02-18
 > Status: Draft — Codex-reviewed (Entry 498), corrections applied
@@ -7,7 +7,7 @@
 
 ## What We Have Now (Post-Phase 4)
 
-HybridCoder is a working edge-native AI coding assistant CLI with a 4-layer deterministic-first architecture. It is local-first and fully local-capable, running on consumer hardware (8GB VRAM, 16GB RAM), with an optional cloud fallback via OpenRouter.
+AutoCode is a working edge-native AI coding assistant CLI with a 4-layer deterministic-first architecture. It is local-first and fully local-capable, running on consumer hardware (8GB VRAM, 16GB RAM), with an optional cloud fallback via OpenRouter.
 
 | Capability | Layer | Status |
 |-----------|-------|--------|
@@ -39,7 +39,7 @@ HybridCoder is a working edge-native AI coding assistant CLI with a 4-layer dete
 
 ## What We'll Have After Phase 5 (Universal Orchestrator)
 
-Phase 5 transforms HybridCoder from a search/retrieval tool into a **real AI coding assistant** with multi-step planning, structured editing, quality measurement, and ecosystem integration.
+Phase 5 transforms AutoCode from a search/retrieval tool into a **real AI coding assistant** with multi-step planning, structured editing, quality measurement, and ecosystem integration.
 
 ### Sprint 5A0: Quick Wins
 | Capability | Value |
@@ -80,7 +80,7 @@ Phase 5 transforms HybridCoder from a search/retrieval tool into a **real AI cod
 ### Sprint 5D: Ecosystem Integration
 | Capability | Value |
 |-----------|-------|
-| **MCP server** | Expose HybridCoder's L1/L2 tools to Claude Code, Codex, OpenCode |
+| **MCP server** | Expose AutoCode's L1/L2 tools to Claude Code, Codex, OpenCode |
 | Config generator | Auto-generate MCP config for Claude Code and Codex |
 | CLIBroker | Subprocess management for external tool invocation |
 | Golden path integration tests | End-to-end tests with real external tools |
@@ -88,7 +88,7 @@ Phase 5 transforms HybridCoder from a search/retrieval tool into a **real AI cod
 
 ### Phase 5 Exit State
 
-After Phase 5, HybridCoder can:
+After Phase 5, AutoCode can:
 1. **Plan multi-file edits** using an Architect/Editor pattern with verification
 2. **Measure its own quality** via eval harness + task bank + regression suite
 3. **Integrate with the AI ecosystem** as an MCP server (Claude Code, Codex, OpenCode can use its tools)
@@ -103,7 +103,7 @@ Phase 6 builds on the standalone MVP + MCP foundation from Phase 5. Candidates r
 
 ### P0: Single Installable / Zero Setup
 
-The immediate post-Phase 5 priority is making HybridCoder trivially installable and usable out of the box — single command install, auto-detect hardware, auto-download models, zero manual configuration. This is the user's top-priority vision item.
+The immediate post-Phase 5 priority is making AutoCode trivially installable and usable out of the box — single command install, auto-detect hardware, auto-download models, zero manual configuration. This is the user's top-priority vision item.
 
 ### Tier 1: High Value, Clear Path
 
@@ -132,22 +132,22 @@ Phase 6 must explicitly define minimum model contracts for any feature that depe
 | **Quantization tuning** | Systematic evaluation of quantization levels vs quality tradeoffs |
 | **Model selection automation** | Auto-select best model for task based on hardware profile |
 | **VRAM budget optimization** | Dynamic model loading/unloading based on available VRAM |
-| **Fine-tuning for editor role** | Train a small model specifically for HybridCoder's edit format |
+| **Fine-tuning for editor role** | Train a small model specifically for AutoCode's edit format |
 | **Speculative decoding** | Use small model to draft, large model to verify |
 
 ---
 
 ## Competitive Landscape Context
 
-| Tool | Stars | Architecture | HybridCoder Differentiator |
+| Tool | Stars | Architecture | AutoCode Differentiator |
 |------|-------|-------------|---------------------------|
-| Claude Code | N/A (proprietary) | Cloud LLM + MCP | HybridCoder: local-first, no API costs, deterministic L1/L2 |
-| Codex CLI | N/A (proprietary) | Cloud LLM + sandbox | HybridCoder: runs on consumer hardware, no cloud dependency |
-| OpenCode | 106k (as of 2026-02) | Go+Bubble Tea, LLM-centric | HybridCoder: 4-layer architecture, LLM as last resort |
-| Aider | 30k+ (as of 2026-02) | Python, LLM-first | HybridCoder: deterministic context retrieval, lower token usage |
-| Cursor | N/A (proprietary) | VS Code fork, cloud | HybridCoder: CLI-native, editor-agnostic, open source |
+| Claude Code | N/A (proprietary) | Cloud LLM + MCP | AutoCode: local-first, no API costs, deterministic L1/L2 |
+| Codex CLI | N/A (proprietary) | Cloud LLM + sandbox | AutoCode: runs on consumer hardware, no cloud dependency |
+| OpenCode | 106k (as of 2026-02) | Go+Bubble Tea, LLM-centric | AutoCode: 4-layer architecture, LLM as last resort |
+| Aider | 30k+ (as of 2026-02) | Python, LLM-first | AutoCode: deterministic context retrieval, lower token usage |
+| Cursor | N/A (proprietary) | VS Code fork, cloud | AutoCode: CLI-native, editor-agnostic, open source |
 
-**HybridCoder's core differentiator:** Deterministic intelligence first. L1/L2 are designed to handle 60-70% of tasks with zero tokens (target/hypothesis — to be validated by Phase 5 eval harness with frozen task bank). LLM is only invoked when deterministic tools can't solve the problem. This means lower cost, lower latency, and higher reliability for the majority of coding tasks.
+**AutoCode's core differentiator:** Deterministic intelligence first. L1/L2 are designed to handle 60-70% of tasks with zero tokens (target/hypothesis — to be validated by Phase 5 eval harness with frozen task bank). LLM is only invoked when deterministic tools can't solve the problem. This means lower cost, lower latency, and higher reliability for the majority of coding tasks.
 
 ---
 

@@ -22,8 +22,8 @@ Evaluation harness skeleton: scenario format, deterministic grader, cost/latency
 
 ## Implementation
 
-- [ ] Create `src/hybridcoder/eval/harness.py`
-- [ ] Create `src/hybridcoder/eval/context_packer.py`
+- [ ] Create `src/autocode/eval/harness.py`
+- [ ] Create `src/autocode/eval/context_packer.py`
 - [ ] Implement `EvalScenario` dataclass (id, task_type, input, gold_files, gold_symbols)
 - [ ] Implement `ContextStrategy` interface (L1, L2, L1+L2, LLM-curated)
 - [ ] Implement `EvalHarness.run()` - runs scenarios against strategies
@@ -46,6 +46,6 @@ Evaluation harness skeleton: scenario format, deterministic grader, cost/latency
 
 ## Artifacts
 
-- New files: `src/hybridcoder/eval/harness.py`, `src/hybridcoder/eval/context_packer.py`
+- New files: `src/autocode/eval/harness.py`, `src/autocode/eval/context_packer.py`
 - Test file: `tests/unit/test_eval_harness.py`
 - QA artifact: `docs/qa/test-results/sprint-5a-4-eval-harness.md`

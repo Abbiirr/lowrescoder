@@ -2,7 +2,7 @@
 
 Last updated: 2026-02-17
 
-This is the fastest way to rebuild working context for HybridCoder in a new session.
+This is the fastest way to rebuild working context for AutoCode in a new session.
 
 ## 1) Read Order (10-15 minutes)
 
@@ -31,11 +31,11 @@ This is the fastest way to rebuild working context for HybridCoder in a new sess
 ## 3) Current System Snapshot
 
 - Language/runtime split:
-  - Python backend and CLI under `src/hybridcoder/`
-  - Go TUI code under `cmd/hybridcoder-tui/` (JSON-RPC client to Python backend)
+  - Python backend and CLI under `src/autocode/`
+  - Go TUI code under `cmd/autocode-tui/` (JSON-RPC client to Python backend)
 - Python UI frontends in repo:
-  - Inline: `src/hybridcoder/inline/`
-  - Textual: `src/hybridcoder/tui/`
+  - Inline: `src/autocode/inline/`
+  - Textual: `src/autocode/tui/`
 - Agent tool baseline (current, 19 tools):
   - Phase 0-2: `read_file`, `write_file`, `list_files`, `search_text`, `run_command`, `ask_user`
   - Phase 3: `find_references`, `find_definition`, `get_type_info`, `list_symbols`, `search_code`
@@ -44,19 +44,19 @@ This is the fastest way to rebuild working context for HybridCoder in a new sess
 
 ## 4) Codebase Map (High Value Paths)
 
-- Backend RPC server: `src/hybridcoder/backend/server.py`
-- Tool registry: `src/hybridcoder/agent/tools.py`
-- Config schema: `src/hybridcoder/config.py`
-- Session state: `src/hybridcoder/session/`
-- Task store (DAG): `src/hybridcoder/session/task_store.py`
-- Context engine: `src/hybridcoder/agent/context.py`
-- Task tools: `src/hybridcoder/agent/task_tools.py`
-- Structured logging: `src/hybridcoder/core/logging.py`
-- Blob store: `src/hybridcoder/core/blob_store.py`
-- Episode store: `src/hybridcoder/session/episode_store.py`
-- Event recorder: `src/hybridcoder/agent/event_recorder.py`
-- Training export: `src/hybridcoder/training/exporter.py`
-- Go TUI transport and event loop: `cmd/hybridcoder-tui/backend.go`, `cmd/hybridcoder-tui/update.go`
+- Backend RPC server: `src/autocode/backend/server.py`
+- Tool registry: `src/autocode/agent/tools.py`
+- Config schema: `src/autocode/config.py`
+- Session state: `src/autocode/session/`
+- Task store (DAG): `src/autocode/session/task_store.py`
+- Context engine: `src/autocode/agent/context.py`
+- Task tools: `src/autocode/agent/task_tools.py`
+- Structured logging: `src/autocode/core/logging.py`
+- Blob store: `src/autocode/core/blob_store.py`
+- Episode store: `src/autocode/session/episode_store.py`
+- Event recorder: `src/autocode/agent/event_recorder.py`
+- Training export: `src/autocode/training/exporter.py`
+- Go TUI transport and event loop: `cmd/autocode-tui/backend.go`, `cmd/autocode-tui/update.go`
 - Benchmarks: `tests/benchmark/`
 - E2E scenario runner: `scripts/e2e/`
 - E2E seed fixtures: `scripts/e2e/fixtures/`
@@ -81,7 +81,7 @@ Sprint 4A (Core Primitives) is complete as of 2026-02-14. All exit criteria pass
 - TaskStore: SQLite-backed CRUD, DAG dependencies, mandatory cycle detection via `graphlib.TopologicalSorter`, snapshot/restore
 - Task tools: `create_task`, `update_task`, `list_tasks`, `add_task_dependency` registered via factory pattern (15 tools total)
 - ToolDefinition capability flags: `mutates_fs`, `executes_shell` (ready for Sprint 4B plan mode gating)
-- AgentConfig: compaction/subagent/memory settings in `HybridCoderConfig`
+- AgentConfig: compaction/subagent/memory settings in `AutoCodeConfig`
 - `/tasks` command (16 slash commands total), `task.list` JSON-RPC handler
 - Carry-forward fixes: Go badge reset, islice bounded iteration, CodeIndex caching, layer_used assertion
 - Tests: 868 collected, 755 passed, 113 skipped (tree-sitter dependent), 0 failed. Ruff clean.
@@ -135,7 +135,7 @@ Implemented 2026-02-14. All tests passing, ruff clean.
 - **MemoryStore:** Episodic memory scoped to project_id. Save/retrieve, Jaccard dedup (0.7 threshold), relevance decay (0.95x per session), context budget for prompt injection, LLM-powered learning via scheduler.
 - **CheckpointStore:** Save/restore task state snapshots with transactional rollback. `autocommit=False` params added to `SessionStore.add_message()` and `TaskStore.restore_from_snapshot()` for BEGIN IMMEDIATE transaction boundary.
 - **L3Provider:** llama-cpp-python + Outlines wrapper with lazy model loading, generate/generate_structured, graceful ImportError degradation, VRAM cleanup.
-- **PlanArtifact:** Export task state as `.hybridcoder/plans/<session-id>.md` with checkboxes, sync checkbox changes back to TaskStore.
+- **PlanArtifact:** Export task state as `.autocode/plans/<session-id>.md` with checkboxes, sync checkbox changes back to TaskStore.
 - **L2/L3 routing in server:** SEMANTIC_SEARCH → L2 (ContextAssembler + HybridSearch + cache reuse), SIMPLE_EDIT → L3 (constrained gen), fallback to L4.
 - **BUG-20 fixed:** `on_task_state` notification emitted from task tool completions AND subagent lifecycle events (spawn/done) via `on_state_change` callback on SubagentManager.
 - **Go TUI task panel:** `backendTaskStateMsg`, `TaskStateParams`, `dispatchNotification` handler, `taskpanel.go` renderer, task panel in view between thinking and tool calls. L3 layer indicator added.
@@ -152,7 +152,7 @@ Implemented 2026-02-14. All tests passing, ruff clean.
   - `uv run pytest tests/ -v`
 - Lint/typecheck:
   - `uv run ruff check src/ tests/`
-  - `uv run mypy src/hybridcoder/`
+  - `uv run mypy src/autocode/`
 - **E2E benchmarks:**
   - `uv run python scripts/run_calculator_benchmark.py` — Calculator benchmark
   - `uv run python scripts/e2e/run_scenario.py E2E-BugFix` — BugFix scenario

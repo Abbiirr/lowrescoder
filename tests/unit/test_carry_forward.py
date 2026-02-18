@@ -21,7 +21,7 @@ class TestBoundedRglob:
 class TestCodeIndexCache:
     def test_code_index_cache_reused(self):
         """Verify CodeIndex is reused across calls via module-level cache."""
-        import hybridcoder.agent.tools as tools_module
+        import autocode.agent.tools as tools_module
 
         # Clear cache first
         tools_module._code_index_cache = None

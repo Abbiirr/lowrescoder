@@ -39,12 +39,12 @@ from e2e.scoring import (  # noqa: E402
 # Import infrastructure from calculator benchmark (not duplicated)
 import run_calculator_benchmark as rcb  # noqa: E402
 
-from hybridcoder.agent.approval import ApprovalManager, ApprovalMode  # noqa: E402
-from hybridcoder.agent.loop import AgentLoop  # noqa: E402
-from hybridcoder.agent.tools import create_default_registry  # noqa: E402
-from hybridcoder.config import ShellConfig, load_config  # noqa: E402
-from hybridcoder.layer4.llm import create_provider  # noqa: E402
-from hybridcoder.session.store import SessionStore  # noqa: E402
+from autocode.agent.approval import ApprovalManager, ApprovalMode  # noqa: E402
+from autocode.agent.loop import AgentLoop  # noqa: E402
+from autocode.agent.tools import create_default_registry  # noqa: E402
+from autocode.config import ShellConfig, load_config  # noqa: E402
+from autocode.layer4.llm import create_provider  # noqa: E402
+from autocode.session.store import SessionStore  # noqa: E402
 
 # Scenario registry — import manifests
 from e2e.scenarios.bugfix import MANIFEST as BUGFIX_MANIFEST  # noqa: E402

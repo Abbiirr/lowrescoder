@@ -8,8 +8,8 @@ import logging.handlers
 import sys
 from pathlib import Path
 
-from hybridcoder.config import LoggingConfig
-from hybridcoder.core.logging import (
+from autocode.config import LoggingConfig
+from autocode.core.logging import (
     JSONFormatter,
     log_debug_prompt,
     log_event,
@@ -128,8 +128,8 @@ class TestSetupLogging:
             if isinstance(h, logging.handlers.RotatingFileHandler)
         ]
         assert len(file_handlers) == 2  # main (INFO) + debug (DEBUG)
-        assert (tmp_path / "logs" / "hybridcoder.jsonl").exists()
-        assert (tmp_path / "logs" / "hybridcoder-debug.jsonl").exists()
+        assert (tmp_path / "logs" / "autocode.jsonl").exists()
+        assert (tmp_path / "logs" / "autocode-debug.jsonl").exists()
 
     def test_no_file_handler_when_disabled(self, tmp_path: Path) -> None:
         config = LoggingConfig(log_dir=str(tmp_path / "logs"), file_enabled=False)
@@ -186,19 +186,19 @@ class TestDebugPromptsLogger:
     def setup_method(self) -> None:
         root = logging.getLogger()
         root.handlers.clear()
-        debug_logger = logging.getLogger("hybridcoder.debug_prompts")
+        debug_logger = logging.getLogger("autocode.debug_prompts")
         debug_logger.handlers.clear()
 
     def test_debug_prompts_logger_does_not_propagate(self, tmp_path: Path) -> None:
         config = LoggingConfig(log_dir=str(tmp_path / "logs"), debug_prompts=True)
         setup_logging(config)
-        debug_logger = logging.getLogger("hybridcoder.debug_prompts")
+        debug_logger = logging.getLogger("autocode.debug_prompts")
         assert debug_logger.propagate is False
 
     def test_debug_prompts_file_created_when_enabled(self, tmp_path: Path) -> None:
         config = LoggingConfig(log_dir=str(tmp_path / "logs"), debug_prompts=True)
         setup_logging(config)
-        debug_logger = logging.getLogger("hybridcoder.debug_prompts")
+        debug_logger = logging.getLogger("autocode.debug_prompts")
         assert len(debug_logger.handlers) == 1
         # Write something to create the file
         log_debug_prompt("sess1", [{"role": "user", "content": "hi"}], "response")
@@ -207,7 +207,7 @@ class TestDebugPromptsLogger:
     def test_debug_prompts_no_handler_when_disabled(self, tmp_path: Path) -> None:
         config = LoggingConfig(log_dir=str(tmp_path / "logs"), debug_prompts=False)
         setup_logging(config)
-        debug_logger = logging.getLogger("hybridcoder.debug_prompts")
+        debug_logger = logging.getLogger("autocode.debug_prompts")
         assert len(debug_logger.handlers) == 0
 
 
@@ -232,7 +232,7 @@ class TestLogEvent:
         for h in logging.getLogger().handlers:
             h.flush()
 
-        log_file = tmp_path / "logs" / "hybridcoder.jsonl"
+        log_file = tmp_path / "logs" / "autocode.jsonl"
         lines = log_file.read_text(encoding="utf-8").strip().split("\n")
         found = False
         for line in lines:
@@ -274,7 +274,7 @@ class TestSessionLogDir:
 
         assert sdir.exists()
         assert sdir.is_dir()
-        assert (sdir / "hybridcoder.jsonl").exists() or True  # handler created, file on first write
+        assert (sdir / "autocode.jsonl").exists() or True  # handler created, file on first write
 
     def test_setup_session_logging_moves_handlers(self, tmp_path: Path) -> None:
         root = logging.getLogger()

@@ -26,7 +26,7 @@ The agent decides WHEN to use tools, WHICH tool to use, and HOW to interpret res
 The agent detects failures and adapts. The model generates code; the agent notices it broke tests and feeds the error back. Recovery-Bench showed this is **orthogonal** to raw coding ability — the best coder is not the best recoverer.
 
 ### 3. Context Engineering Layer
-The agent decides what context the model sees. Put garbage in the prompt, the model produces garbage. Put the perfect 3 functions in the prompt, even a small model produces correct patches. This is the L2 retrieval layer in HybridCoder's architecture.
+The agent decides what context the model sees. Put garbage in the prompt, the model produces garbage. Put the perfect 3 functions in the prompt, even a small model produces correct patches. This is the L2 retrieval layer in AutoCode's architecture.
 
 ### 4. Planning Layer
 The agent breaks complex tasks into steps and executes them in order. The model generates each step; the agent sequences them, detects failures, and replans.
@@ -35,7 +35,7 @@ The agent breaks complex tasks into steps and executes them in order. The model 
 The model proposes changes in natural language or diff format. The agent turns these into actual file modifications. Aider showed that edit format compliance varies wildly and is the #1 source of failures.
 
 ### 6. Deterministic Bypass Layer
-HybridCoder's unique advantage: L1-L2 can solve many problems **without invoking the LLM at all**. Tree-sitter, LSP, and static analysis produce zero-token solutions. Tests should measure how much work gets done at zero token cost.
+AutoCode's unique advantage: L1-L2 can solve many problems **without invoking the LLM at all**. Tree-sitter, LSP, and static analysis produce zero-token solutions. Tests should measure how much work gets done at zero token cost.
 
 ## The Scaffold Delta Test
 
@@ -46,10 +46,10 @@ agent_quality = performance(model + agent) - performance(model alone)
 ```
 
 Run the same model (e.g., Qwen3-8B) through:
-1. HybridCoder's full 4-layer system
+1. AutoCode's full 4-layer system
 2. A naive single-prompt scaffold (just send the task to the model)
 
-The delta IS the agent quality measurement. If HybridCoder's scaffold doesn't improve over naive prompting, the agent adds no value.
+The delta IS the agent quality measurement. If AutoCode's scaffold doesn't improve over naive prompting, the agent adds no value.
 
 ## Design Principles for Agent Tests
 
@@ -73,7 +73,7 @@ Graders must be explicitly constrained by lane to prevent token-cost creep:
 
 **Rationale:** The PR lane must be fast and cheap. Deterministic graders (build passes, tests pass, acceptance checks pass) provide sufficient signal for regression gating. LLM judges add noise and cost — reserve them for deeper nightly analysis where the extra signal justifies the token spend.
 
-## HybridCoder's Natural Advantages to Measure
+## AutoCode's Natural Advantages to Measure
 
 | Advantage | How to Test It |
 |-----------|---------------|

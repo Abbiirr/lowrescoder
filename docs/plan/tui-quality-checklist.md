@@ -1,6 +1,6 @@
 # TUI Quality Checklist & Performance Budget
 
-Goal: The HybridCoder TUI should feel faster and more polished than Claude Code’s TUI.
+Goal: The AutoCode TUI should feel faster and more polished than Claude Code’s TUI.
 
 ---
 
@@ -35,7 +35,7 @@ Goal: The HybridCoder TUI should feel faster and more polished than Claude Code�
 ---
 
 **Benchmark Instrumentation Contract**
-When `HYBRIDCODER_BENCH=1` is set, the TUI should emit sentinel lines:
+When `AUTOCODE_BENCH=1` is set, the TUI should emit sentinel lines:
 - `BENCH:READY` when the UI is ready for input
 - `BENCH:PONG` after receiving `:bench-ping`
 - `BENCH:EXIT` after receiving `:quit` or `:exit`
@@ -48,7 +48,7 @@ The benchmark harness depends on these strings and will report unsupported if th
 1. Run the benchmark script:
 
 ```bash
-uv run python scripts/bench_tui.py --cmd hybridcoder --args "chat"
+uv run python scripts/bench_tui.py --cmd autocode --args "chat"
 ```
 
 2. Compare results to the budgets above.
@@ -100,7 +100,7 @@ Sources (for reference):
 
 ---
 
-**Best-of-Three Target Feature Set (HybridCoder TUI)**
+**Best-of-Three Target Feature Set (AutoCode TUI)**
 
 Layout and interaction:
 - Multi-pane layout with header, main chat pane, and right-side context panel (plan/to-do, tool calls, diffs).
@@ -117,7 +117,7 @@ Workflow controls:
 Memory and continuity:
 - Local session storage with transcript export.
 - SQLite-backed session index + summaries for fast resume.
-- Project memory file `.hybridcoder/memory.md` editable in-place.
+- Project memory file `.autocode/memory.md` editable in-place.
 
 Tooling and feedback:
 - Inline tool call blocks with collapsible output.

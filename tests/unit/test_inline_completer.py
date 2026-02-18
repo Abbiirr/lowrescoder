@@ -7,8 +7,8 @@ from unittest.mock import MagicMock
 
 from prompt_toolkit.document import Document
 
-from hybridcoder.inline.completer import HybridAutoSuggest, HybridCompleter
-from hybridcoder.tui.commands import create_default_router
+from autocode.inline.completer import HybridAutoSuggest, HybridCompleter
+from autocode.tui.commands import create_default_router
 
 
 def _make_completer(tmp_path: Path) -> HybridCompleter:
@@ -184,24 +184,24 @@ class TestHybridAutoSuggest:
         assert result is None
 
     def test_at_prefix_match_ghost_text(self, tmp_path: Path) -> None:
-        """@src/hy produces ghost text completing hybridcoder/..."""
+        """@src/au produces ghost text completing autocode/..."""
         src = tmp_path / "src"
         src.mkdir()
-        hc = src / "hybridcoder"
+        hc = src / "autocode"
         hc.mkdir()
         (hc / "main.py").write_text("# main")
         suggest = _make_auto_suggest(tmp_path)
-        doc = Document("@src/hy", cursor_position=7)
+        doc = Document("@src/au", cursor_position=7)
         buf = MagicMock()
         result = suggest.get_suggestion(buf, doc)
         assert result is not None
-        assert result.text.startswith("bridcoder/")
+        assert result.text.startswith("tocode/")
 
     def test_at_substring_only_no_ghost(self, tmp_path: Path) -> None:
-        """@hy matches src/hybridcoder but doesn't start with 'hy', so no ghost."""
+        """@au matches src/autocode but doesn't start with 'au', so no ghost."""
         src = tmp_path / "src"
         src.mkdir()
-        hc = src / "hybridcoder"
+        hc = src / "autocode"
         hc.mkdir()
         (hc / "main.py").write_text("# main")
         suggest = _make_auto_suggest(tmp_path)

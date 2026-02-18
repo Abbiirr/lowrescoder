@@ -8,9 +8,9 @@ import time
 
 import pytest
 
-from hybridcoder.core.types import ParseResult, Symbol
-from hybridcoder.layer1.parser import TreeSitterParser
-from hybridcoder.layer1.symbols import SymbolExtractor
+from autocode.core.types import ParseResult, Symbol
+from autocode.layer1.parser import TreeSitterParser
+from autocode.layer1.symbols import SymbolExtractor
 
 # --- Fixtures ---
 
@@ -207,7 +207,7 @@ class TestTreeSitterParser:
     def test_parse_all_project_python_files(self):
         """Parser should successfully parse all .py files in the project."""
         parser = TreeSitterParser()
-        src_dir = os.path.join(os.path.dirname(__file__), "..", "..", "src", "hybridcoder")
+        src_dir = os.path.join(os.path.dirname(__file__), "..", "..", "src", "autocode")
         src_dir = os.path.abspath(src_dir)
 
         if not os.path.isdir(src_dir):

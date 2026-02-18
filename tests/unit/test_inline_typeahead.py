@@ -13,19 +13,19 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from hybridcoder.config import HybridCoderConfig
-from hybridcoder.inline.app import InlineApp
+from autocode.config import AutoCodeConfig
+from autocode.inline.app import InlineApp
 
 
 @pytest.fixture()
-def inline_config(tmp_path: Path) -> HybridCoderConfig:
-    config = HybridCoderConfig()
+def inline_config(tmp_path: Path) -> AutoCodeConfig:
+    config = AutoCodeConfig()
     config.tui.session_db_path = str(tmp_path / "test.db")
     return config
 
 
 @pytest.fixture()
-def inline_app(inline_config: HybridCoderConfig, tmp_path: Path) -> InlineApp:
+def inline_app(inline_config: AutoCodeConfig, tmp_path: Path) -> InlineApp:
     return InlineApp(config=inline_config, project_root=tmp_path)
 
 

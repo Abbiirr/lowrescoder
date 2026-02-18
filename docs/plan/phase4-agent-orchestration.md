@@ -45,7 +45,7 @@
 4. **Plan mode** as first-class execution mode with capability-based tool gating
 5. **Episodic memories** extracted from sessions and injected into prompts
 6. **Checkpoints** can be created and restored with transactional guarantees
-7. **Markdown plan artifact** — export/import `.hybridcoder/plans/<session-id>.md`
+7. **Markdown plan artifact** — export/import `.autocode/plans/<session-id>.md`
 8. **Go TUI task panel** — JSON-RPC backed task/subagent display
 9. **L2 runtime wiring** — `SEMANTIC_SEARCH` routed through ContextAssembler
 10. **L3 minimal scope** — `SIMPLE_EDIT` routed to L3Provider (constrained gen), L4 fallback
@@ -71,7 +71,7 @@
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│                    HybridCoderApp                     │
+│                    AutoCodeApp                     │
 │  (Go TUI or Python Inline — same agent backend)      │
 │                                                       │
 │  ┌─────────────┐  ┌──────────────┐  ┌─────────────┐ │
@@ -134,7 +134,7 @@
 | `SIMPLE_EDIT` | **L3** | L3Provider (constrained gen), **L4 fallback if L3 disabled** |
 | `COMPLEX_TASK`, `CHAT` | L4 | AgentLoop (full reasoning) |
 
-> **Note:** L2 handles `SEMANTIC_SEARCH` only. `SIMPLE_EDIT` goes to L3 (not L2). This aligns with `src/hybridcoder/core/types.py:19` which maps `SIMPLE_EDIT = "simple_edit"  # → Layer 3`.
+> **Note:** L2 handles `SEMANTIC_SEARCH` only. `SIMPLE_EDIT` goes to L3 (not L2). This aligns with `src/autocode/core/types.py:19` which maps `SIMPLE_EDIT = "simple_edit"  # → Layer 3`.
 
 ### 2.4 Token Budget
 
@@ -277,18 +277,18 @@ This document (the one you are reading).
 
 | # | Fix | File | Change |
 |---|-----|------|--------|
-| CF-1 | Go layer badge reset | `cmd/hybridcoder-tui/update.go` | Add `m.statusBar.Layer = ""` in `sendChat()` at new-turn reset |
-| CF-2 | Bounded iteration | `src/hybridcoder/layer1/queries.py` | `itertools.islice(path.rglob(...), N)` instead of `list(rglob)[:N]` |
-| CF-3 | search_code index reuse | `src/hybridcoder/agent/tools.py` | Cache CodeIndex instance; rebuild only on `/index` |
+| CF-1 | Go layer badge reset | `cmd/autocode-tui/update.go` | Add `m.statusBar.Layer = ""` in `sendChat()` at new-turn reset |
+| CF-2 | Bounded iteration | `src/autocode/layer1/queries.py` | `itertools.islice(path.rglob(...), N)` instead of `list(rglob)[:N]` |
+| CF-3 | search_code index reuse | `src/autocode/agent/tools.py` | Cache CodeIndex instance; rebuild only on `/index` |
 | CF-4 | Integration tests | `tests/unit/test_integration_router_agent.py` | Assert `layer_used` for L1 route (L2/L4 added in 4C) |
 
 ### 5.2 New Files
 
 | File | Purpose |
 |------|---------|
-| `src/hybridcoder/agent/context.py` | ContextEngine: token budgets, auto-compaction at 75%, tool result truncation |
-| `src/hybridcoder/session/task_store.py` | TaskStore: CRUD + DAG deps + **mandatory cycle detection** via `graphlib.TopologicalSorter` + prefix resolution + snapshot/restore + summary |
-| `src/hybridcoder/agent/task_tools.py` | `create_task`, `update_task`, `list_tasks` tool definitions + handlers |
+| `src/autocode/agent/context.py` | ContextEngine: token budgets, auto-compaction at 75%, tool result truncation |
+| `src/autocode/session/task_store.py` | TaskStore: CRUD + DAG deps + **mandatory cycle detection** via `graphlib.TopologicalSorter` + prefix resolution + snapshot/restore + summary |
+| `src/autocode/agent/task_tools.py` | `create_task`, `update_task`, `list_tasks` tool definitions + handlers |
 | `tests/unit/test_context_engine.py` | 8 tests |
 | `tests/unit/test_task_store.py` | 9 tests (incl. cycle_detection_rejects) |
 | `tests/unit/test_task_tools.py` | 6 tests |
@@ -298,16 +298,16 @@ This document (the one you are reading).
 
 | File | Changes |
 |------|---------|
-| `src/hybridcoder/agent/loop.py` | Add `context_engine`, `task_store`, `llm_scheduler` params (all defaultable). Replace raw message building with `context_engine.build_messages()`. Wrap LLM calls with scheduler `submit()`. Inject task_summary. |
-| `src/hybridcoder/agent/prompts.py` | Add `task_summary`, `memory_context`, `subagent_status` kwargs to `build_system_prompt()`. Add task management instructions. |
-| `src/hybridcoder/agent/tools.py` | CF-3: cache CodeIndex. **Add capability flags** to `ToolDefinition`: `mutates_fs: bool = False`, `executes_shell: bool = False`. Mark `write_file` and `run_command` accordingly. (Entry 311 C3) |
-| `src/hybridcoder/session/models.py` | DDL for `tasks` + `task_dependencies` tables. `TaskRow` dataclass. **Add `ensure_tables(conn)` function** that creates all Phase 4 tables idempotently (Entry 314 CD). Called at SessionStore init and backend bootstrap. |
-| `src/hybridcoder/session/store.py` | Add `get_connection()` accessor. Call `ensure_tables()` at init. |
-| `src/hybridcoder/config.py` | Add `AgentConfig` sub-model. Add `agent: AgentConfig` to `HybridCoderConfig`. |
-| `src/hybridcoder/tui/commands.py` | Add `/tasks` command. |
-| `src/hybridcoder/backend/server.py` | Wire TaskStore. `task.list` JSON-RPC method. |
-| `src/hybridcoder/layer1/queries.py` | CF-2: `itertools.islice`. |
-| `cmd/hybridcoder-tui/update.go` | CF-1: badge reset. |
+| `src/autocode/agent/loop.py` | Add `context_engine`, `task_store`, `llm_scheduler` params (all defaultable). Replace raw message building with `context_engine.build_messages()`. Wrap LLM calls with scheduler `submit()`. Inject task_summary. |
+| `src/autocode/agent/prompts.py` | Add `task_summary`, `memory_context`, `subagent_status` kwargs to `build_system_prompt()`. Add task management instructions. |
+| `src/autocode/agent/tools.py` | CF-3: cache CodeIndex. **Add capability flags** to `ToolDefinition`: `mutates_fs: bool = False`, `executes_shell: bool = False`. Mark `write_file` and `run_command` accordingly. (Entry 311 C3) |
+| `src/autocode/session/models.py` | DDL for `tasks` + `task_dependencies` tables. `TaskRow` dataclass. **Add `ensure_tables(conn)` function** that creates all Phase 4 tables idempotently (Entry 314 CD). Called at SessionStore init and backend bootstrap. |
+| `src/autocode/session/store.py` | Add `get_connection()` accessor. Call `ensure_tables()` at init. |
+| `src/autocode/config.py` | Add `AgentConfig` sub-model. Add `agent: AgentConfig` to `AutoCodeConfig`. |
+| `src/autocode/tui/commands.py` | Add `/tasks` command. |
+| `src/autocode/backend/server.py` | Wire TaskStore. `task.list` JSON-RPC method. |
+| `src/autocode/layer1/queries.py` | CF-2: `itertools.islice`. |
+| `cmd/autocode-tui/update.go` | CF-1: badge reset. |
 
 ### 5.4 Key Design: ToolDefinition Capability Flags (Entry 311 C3)
 
@@ -361,7 +361,7 @@ class TaskStore:
 - [x] LLM can create/update/list tasks via tools
 - [x] Task summary in system prompt each iteration
 - [x] `/tasks` command works
-- [x] AgentConfig added to HybridCoderConfig
+- [x] AgentConfig added to AutoCodeConfig
 - [x] `ensure_tables()` creates all Phase 4 tables idempotently
 - [x] Baseline + 26 new tests pass (868 collected, 755 passed, 0 failed); `ruff check` passes
 
@@ -376,8 +376,8 @@ class TaskStore:
 
 | File | Purpose |
 |------|---------|
-| `src/hybridcoder/agent/subagent.py` | `SubagentLoop`, `SubagentManager`, `SubagentResult`, `LLMScheduler` |
-| `src/hybridcoder/agent/subagent_tools.py` | `spawn_subagent`, `check_subagent`, `cancel_subagent`, `list_subagents` tools |
+| `src/autocode/agent/subagent.py` | `SubagentLoop`, `SubagentManager`, `SubagentResult`, `LLMScheduler` |
+| `src/autocode/agent/subagent_tools.py` | `spawn_subagent`, `check_subagent`, `cancel_subagent`, `list_subagents` tools |
 | `tests/unit/test_subagent.py` | 10 tests |
 | `tests/unit/test_subagent_tools.py` | 5 tests |
 | `tests/unit/test_plan_mode.py` | 5 tests |
@@ -387,10 +387,10 @@ class TaskStore:
 
 | File | Changes |
 |------|---------|
-| `src/hybridcoder/agent/loop.py` | Add `AgentMode` enum. Plan mode blocks tools with `mutates_fs` or `executes_shell` flags (not by name). `set_mode()`/`get_mode()`. |
-| `src/hybridcoder/agent/prompts.py` | Plan mode + delegation guidance in system prompt. |
-| `src/hybridcoder/tui/commands.py` | `/plan` command (`/plan on`, `/plan approve`/`off`). |
-| `src/hybridcoder/backend/server.py` | Wire SubagentManager. `subagent.list`/`subagent.cancel` RPC. `plan.status` RPC. Cancel propagation. |
+| `src/autocode/agent/loop.py` | Add `AgentMode` enum. Plan mode blocks tools with `mutates_fs` or `executes_shell` flags (not by name). `set_mode()`/`get_mode()`. |
+| `src/autocode/agent/prompts.py` | Plan mode + delegation guidance in system prompt. |
+| `src/autocode/tui/commands.py` | `/plan` command (`/plan on`, `/plan approve`/`off`). |
+| `src/autocode/backend/server.py` | Wire SubagentManager. `subagent.list`/`subagent.cancel` RPC. `plan.status` RPC. Cancel propagation. |
 
 ### 6.3 Key Design: LLM Scheduler Queue (Entry 311 C2 — replaces PriorityLock)
 
@@ -532,37 +532,37 @@ Key constraints:
 
 | File | Purpose |
 |------|---------|
-| `src/hybridcoder/agent/memory.py` | MemoryStore: episodic memory with decay, dedup, LLM extraction |
-| `src/hybridcoder/session/checkpoint_store.py` | CheckpointStore: save/list/restore with **transactional TaskStore rehydration** |
-| `src/hybridcoder/agent/plan_artifact.py` | PlanArtifact: export/import `.hybridcoder/plans/<session-id>.md` |
-| `src/hybridcoder/layer3/__init__.py` | L3 public API |
-| `src/hybridcoder/layer3/provider.py` | L3Provider: llama-cpp-python wrapper, lazy model loading, Outlines structured generation |
+| `src/autocode/agent/memory.py` | MemoryStore: episodic memory with decay, dedup, LLM extraction |
+| `src/autocode/session/checkpoint_store.py` | CheckpointStore: save/list/restore with **transactional TaskStore rehydration** |
+| `src/autocode/agent/plan_artifact.py` | PlanArtifact: export/import `.autocode/plans/<session-id>.md` |
+| `src/autocode/layer3/__init__.py` | L3 public API |
+| `src/autocode/layer3/provider.py` | L3Provider: llama-cpp-python wrapper, lazy model loading, Outlines structured generation |
 | `tests/unit/test_memory.py` | 7 tests |
 | `tests/unit/test_checkpoint.py` | 7 tests (incl. transactional restore, session targeting) |
 | `tests/unit/test_l2_wiring.py` | 7 tests (5 L2 wiring + 2 L3 routing) |
 | `tests/unit/test_plan_artifact.py` | 4 tests |
 | `tests/unit/test_l3_provider.py` | 5 tests (mock: load, generate, structured output, error, cleanup) |
-| `cmd/hybridcoder-tui/taskpanel.go` | Go task panel: JSON-RPC backed task/subagent display |
+| `cmd/autocode-tui/taskpanel.go` | Go task panel: JSON-RPC backed task/subagent display |
 
 ### 7.2 Modified Files
 
 | File | Changes |
 |------|---------|
-| `src/hybridcoder/session/models.py` | DDL for `memories` + `checkpoints` tables. Dataclasses. |
-| `src/hybridcoder/tui/commands.py` | `/memory`, `/checkpoint`, `/plan export`, `/plan sync` commands. |
-| `src/hybridcoder/backend/server.py` | Wire MemoryStore + CheckpointStore + PlanArtifact + L3Provider. L2 routing: `SEMANTIC_SEARCH` → ContextAssembler → LLM → `layer_used=2`. L3 routing: `SIMPLE_EDIT` → L3Provider → `layer_used=3` (L4 fallback). JSON-RPC: `memory.list`, `checkpoint.list`, `plan.export`, `plan.sync`. |
-| `src/hybridcoder/agent/loop.py` | Memory injection at session start. Accept optional `l3_provider`; use for SIMPLE_EDIT. |
+| `src/autocode/session/models.py` | DDL for `memories` + `checkpoints` tables. Dataclasses. |
+| `src/autocode/tui/commands.py` | `/memory`, `/checkpoint`, `/plan export`, `/plan sync` commands. |
+| `src/autocode/backend/server.py` | Wire MemoryStore + CheckpointStore + PlanArtifact + L3Provider. L2 routing: `SEMANTIC_SEARCH` → ContextAssembler → LLM → `layer_used=2`. L3 routing: `SIMPLE_EDIT` → L3Provider → `layer_used=3` (L4 fallback). JSON-RPC: `memory.list`, `checkpoint.list`, `plan.export`, `plan.sync`. |
+| `src/autocode/agent/loop.py` | Memory injection at session start. Accept optional `l3_provider`; use for SIMPLE_EDIT. |
 | `tests/unit/test_integration_router_agent.py` | +3 tests: L2 SEMANTIC_SEARCH, L3 SIMPLE_EDIT, L4 fallback. |
-| `cmd/hybridcoder-tui/messages.go` | Add `backendTaskStateMsg` for task panel updates. |
-| `cmd/hybridcoder-tui/update.go` | Handle task state messages, refresh task panel. |
-| `cmd/hybridcoder-tui/view.go` | Render task panel in sidebar/footer area. |
+| `cmd/autocode-tui/messages.go` | Add `backendTaskStateMsg` for task panel updates. |
+| `cmd/autocode-tui/update.go` | Handle task state messages, refresh task panel. |
+| `cmd/autocode-tui/view.go` | Render task panel in sidebar/footer area. |
 
 ### 7.3 Key Design: L3Provider (Minimal Scope)
 
 **Existing infrastructure (no changes needed):**
-- `Layer3Config` in `src/hybridcoder/config.py:38-47`
-- `RequestType.SIMPLE_EDIT` in `src/hybridcoder/core/types.py:19`
-- Router classification in `src/hybridcoder/core/router.py:88-102`
+- `Layer3Config` in `src/autocode/config.py:38-47`
+- `RequestType.SIMPLE_EDIT` in `src/autocode/core/types.py:19`
+- Router classification in `src/autocode/core/router.py:88-102`
 - Dependencies in `pyproject.toml:34` (`llama-cpp-python>=0.3`, `outlines>=0.1`)
 
 ```python
@@ -642,7 +642,7 @@ class CheckpointStore:
 
 ### 7.5 Key Design: L2 Routing (Entry 311 C5, Entry 388 C2)
 
-**L2 cache strategy:** Reuse the existing `_code_index_cache` singleton from `src/hybridcoder/agent/tools.py` (CF-3 carry-forward fix). Do NOT rebuild `CodeIndex` per request — `CodeIndex.build()` is expensive (file scanning + embedding). The cache is invalidated only on `/index` command via `clear_code_index_cache()`. Per-turn reindexing in `handle_chat()` is explicitly prohibited.
+**L2 cache strategy:** Reuse the existing `_code_index_cache` singleton from `src/autocode/agent/tools.py` (CF-3 carry-forward fix). Do NOT rebuild `CodeIndex` per request — `CodeIndex.build()` is expensive (file scanning + embedding). The cache is invalidated only on `/index` command via `clear_code_index_cache()`. Per-turn reindexing in `handle_chat()` is explicitly prohibited.
 
 | Component | Lifecycle | Cost |
 |-----------|-----------|------|
@@ -688,7 +688,7 @@ class PlanArtifact:
     def export(self, session_id: str, task_store: TaskStore,
                subagent_manager: SubagentManager | None = None,
                project_root: Path | None = None) -> str:
-        """Generate .hybridcoder/plans/<session-id>.md from current state."""
+        """Generate .autocode/plans/<session-id>.md from current state."""
         ...
 
     def sync_from_markdown(self, session_id: str, task_store: TaskStore,
@@ -698,7 +698,7 @@ class PlanArtifact:
         ...
 ```
 
-Output format (`.hybridcoder/plans/<session-id>.md`):
+Output format (`.autocode/plans/<session-id>.md`):
 ```markdown
 # Plan: <session title>
 Generated: <timestamp>
@@ -716,12 +716,12 @@ Generated: <timestamp>
 ```
 
 Commands:
-- `/plan export` — writes `.hybridcoder/plans/<session-id>.md`
+- `/plan export` — writes `.autocode/plans/<session-id>.md`
 - `/plan sync` — reads markdown checkboxes, updates TaskStore status
 
 ### 7.7 Key Design: Go Task Panel + on_task_state Notifications (Entry 312, Entry 388 C4)
 
-New file `cmd/hybridcoder-tui/taskpanel.go`:
+New file `cmd/autocode-tui/taskpanel.go`:
 - Receives `on_task_state` JSON-RPC notifications with task list + subagent states
 - Renders compact panel below chat area (collapsible)
 - Shows: `[>] Refactor auth [x] Add tests [ ] Update docs`
@@ -837,25 +837,25 @@ All additions are **additive**. Go TUI ignores unknown notifications (existing b
 
 | Sprint | File | Tests |
 |--------|------|-------|
-| 4A | `src/hybridcoder/agent/context.py` | — |
-| 4A | `src/hybridcoder/session/task_store.py` | — |
-| 4A | `src/hybridcoder/agent/task_tools.py` | — |
+| 4A | `src/autocode/agent/context.py` | — |
+| 4A | `src/autocode/session/task_store.py` | — |
+| 4A | `src/autocode/agent/task_tools.py` | — |
 | 4A | `tests/unit/test_context_engine.py` | 8 |
 | 4A | `tests/unit/test_task_store.py` | 9 |
 | 4A | `tests/unit/test_task_tools.py` | 6 |
 | 4A | `tests/unit/test_carry_forward.py` | 2 |
-| 4B | `src/hybridcoder/agent/subagent.py` | — |
-| 4B | `src/hybridcoder/agent/subagent_tools.py` | — |
+| 4B | `src/autocode/agent/subagent.py` | — |
+| 4B | `src/autocode/agent/subagent_tools.py` | — |
 | 4B | `tests/unit/test_subagent.py` | 10 |
 | 4B | `tests/unit/test_subagent_tools.py` | 5 |
 | 4B | `tests/unit/test_plan_mode.py` | 5 |
 | 4B | `tests/unit/test_llm_scheduler.py` | 4 |
-| 4C | `src/hybridcoder/agent/memory.py` | — |
-| 4C | `src/hybridcoder/session/checkpoint_store.py` | — |
-| 4C | `src/hybridcoder/agent/plan_artifact.py` | — |
-| 4C | `src/hybridcoder/layer3/__init__.py` | — |
-| 4C | `src/hybridcoder/layer3/provider.py` | — |
-| 4C | `cmd/hybridcoder-tui/taskpanel.go` | — |
+| 4C | `src/autocode/agent/memory.py` | — |
+| 4C | `src/autocode/session/checkpoint_store.py` | — |
+| 4C | `src/autocode/agent/plan_artifact.py` | — |
+| 4C | `src/autocode/layer3/__init__.py` | — |
+| 4C | `src/autocode/layer3/provider.py` | — |
+| 4C | `cmd/autocode-tui/taskpanel.go` | — |
 | 4C | `tests/unit/test_memory.py` | 7 |
 | 4C | `tests/unit/test_checkpoint.py` | 7 |
 | 4C | `tests/unit/test_l2_wiring.py` | 7 |
@@ -866,28 +866,28 @@ All additions are **additive**. Go TUI ignores unknown notifications (existing b
 
 | Sprint | File |
 |--------|------|
-| 4A | `src/hybridcoder/agent/loop.py` |
-| 4A | `src/hybridcoder/agent/prompts.py` |
-| 4A | `src/hybridcoder/agent/tools.py` |
-| 4A | `src/hybridcoder/session/models.py` |
-| 4A | `src/hybridcoder/session/store.py` |
-| 4A | `src/hybridcoder/config.py` |
-| 4A | `src/hybridcoder/tui/commands.py` |
-| 4A | `src/hybridcoder/backend/server.py` |
-| 4A | `src/hybridcoder/layer1/queries.py` |
-| 4A | `cmd/hybridcoder-tui/update.go` |
-| 4B | `src/hybridcoder/agent/loop.py` |
-| 4B | `src/hybridcoder/agent/prompts.py` |
-| 4B | `src/hybridcoder/tui/commands.py` |
-| 4B | `src/hybridcoder/backend/server.py` |
-| 4C | `src/hybridcoder/session/models.py` |
-| 4C | `src/hybridcoder/tui/commands.py` |
-| 4C | `src/hybridcoder/backend/server.py` |
-| 4C | `src/hybridcoder/agent/loop.py` |
+| 4A | `src/autocode/agent/loop.py` |
+| 4A | `src/autocode/agent/prompts.py` |
+| 4A | `src/autocode/agent/tools.py` |
+| 4A | `src/autocode/session/models.py` |
+| 4A | `src/autocode/session/store.py` |
+| 4A | `src/autocode/config.py` |
+| 4A | `src/autocode/tui/commands.py` |
+| 4A | `src/autocode/backend/server.py` |
+| 4A | `src/autocode/layer1/queries.py` |
+| 4A | `cmd/autocode-tui/update.go` |
+| 4B | `src/autocode/agent/loop.py` |
+| 4B | `src/autocode/agent/prompts.py` |
+| 4B | `src/autocode/tui/commands.py` |
+| 4B | `src/autocode/backend/server.py` |
+| 4C | `src/autocode/session/models.py` |
+| 4C | `src/autocode/tui/commands.py` |
+| 4C | `src/autocode/backend/server.py` |
+| 4C | `src/autocode/agent/loop.py` |
 | 4C | `tests/unit/test_integration_router_agent.py` |
-| 4C | `cmd/hybridcoder-tui/messages.go` |
-| 4C | `cmd/hybridcoder-tui/update.go` |
-| 4C | `cmd/hybridcoder-tui/view.go` |
+| 4C | `cmd/autocode-tui/messages.go` |
+| 4C | `cmd/autocode-tui/update.go` |
+| 4C | `cmd/autocode-tui/view.go` |
 
 ---
 
@@ -942,10 +942,10 @@ class AgentConfig(BaseModel):
     )
 ```
 
-Add to `HybridCoderConfig`:
+Add to `AutoCodeConfig`:
 
 ```python
-class HybridCoderConfig(BaseModel):
+class AutoCodeConfig(BaseModel):
     ...
     agent: AgentConfig = Field(default_factory=AgentConfig)
 ```
@@ -1088,7 +1088,7 @@ Verification order is mandatory: **core runtime functionality first, TUI parity 
 ### Sprint 4A
 
 ```bash
-./scripts/store_test_results.sh sprint-4a-unit -- uv run pytest tests/ -v --cov=src/hybridcoder
+./scripts/store_test_results.sh sprint-4a-unit -- uv run pytest tests/ -v --cov=src/autocode
 ./scripts/store_test_results.sh sprint-4a-lint -- make lint
 ./scripts/store_test_results.sh sprint-4a-bench -- uv run python -m pytest tests/benchmark -v -m "not integration"
 ./scripts/store_test_results.sh sprint-4a-calc -- uv run python scripts/run_calculator_benchmark.py --runs 2
@@ -1101,7 +1101,7 @@ Verification order is mandatory: **core runtime functionality first, TUI parity 
 ### Sprint 4B
 
 ```bash
-./scripts/store_test_results.sh sprint-4b-unit -- uv run pytest tests/ -v --cov=src/hybridcoder
+./scripts/store_test_results.sh sprint-4b-unit -- uv run pytest tests/ -v --cov=src/autocode
 ./scripts/store_test_results.sh sprint-4b-lint -- make lint
 ./scripts/store_test_results.sh sprint-4b-calc -- uv run python scripts/run_calculator_benchmark.py --runs 2
 ./scripts/store_test_results.sh sprint-4b-bugfix -- uv run python scripts/e2e/run_scenario.py E2E-BugFix
@@ -1114,7 +1114,7 @@ Verification order is mandatory: **core runtime functionality first, TUI parity 
 ### Sprint 4C (Phase 4 Final Gate)
 
 ```bash
-./scripts/store_test_results.sh phase4-unit -- uv run pytest tests/ -v --cov=src/hybridcoder
+./scripts/store_test_results.sh phase4-unit -- uv run pytest tests/ -v --cov=src/autocode
 ./scripts/store_test_results.sh phase4-lint -- make lint
 ./scripts/store_test_results.sh phase4-bench -- uv run python -m pytest tests/benchmark -v -m "not integration"
 ./scripts/store_test_results.sh phase4-calc -- uv run python scripts/run_calculator_benchmark.py --runs 3 --strict
@@ -1145,7 +1145,7 @@ Verification order is mandatory: **core runtime functionality first, TUI parity 
 - [x] LLM can create/update/list tasks via tools
 - [x] Task summary in system prompt each iteration
 - [x] `/tasks` command works
-- [x] AgentConfig added to HybridCoderConfig
+- [x] AgentConfig added to AutoCodeConfig
 - [x] `ensure_tables()` idempotent
 - [x] Sprint 4A verification gates pass — 868 collected, 755 passed, 0 failed, ruff clean
 

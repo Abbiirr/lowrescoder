@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from hybridcoder.tui.commands import create_default_router
+from autocode.tui.commands import create_default_router
 
 
 async def _noop_handler(app: object, args: str) -> None:
@@ -170,10 +170,10 @@ class TestCommandRouter:
 
 def _make_mock_app(tmp_path: Path) -> MagicMock:
     """Create a mock app with real SessionStore and config for handler tests."""
-    from hybridcoder.config import HybridCoderConfig
-    from hybridcoder.session.store import SessionStore
+    from autocode.config import AutoCodeConfig
+    from autocode.session.store import SessionStore
 
-    config = HybridCoderConfig()
+    config = AutoCodeConfig()
     config.tui.session_db_path = str(tmp_path / "test.db")
     store = SessionStore(str(tmp_path / "test.db"))
     sid = store.create_session(
@@ -205,7 +205,7 @@ class TestHandleExit:
     @pytest.mark.asyncio()
     async def test_exit_raises_eof(self, tmp_path: Path) -> None:
         """_handle_exit raises EOFError."""
-        from hybridcoder.tui.commands import _handle_exit
+        from autocode.tui.commands import _handle_exit
 
         app = _make_mock_app(tmp_path)
         app.exit_app.side_effect = EOFError
@@ -217,7 +217,7 @@ class TestHandleNew:
     @pytest.mark.asyncio()
     async def test_new_creates_session(self, tmp_path: Path) -> None:
         """_handle_new creates a new session with default title."""
-        from hybridcoder.tui.commands import _handle_new
+        from autocode.tui.commands import _handle_new
 
         app = _make_mock_app(tmp_path)
         old_id = app.session_id
@@ -229,7 +229,7 @@ class TestHandleNew:
     @pytest.mark.asyncio()
     async def test_new_with_custom_title(self, tmp_path: Path) -> None:
         """_handle_new uses custom title when provided."""
-        from hybridcoder.tui.commands import _handle_new
+        from autocode.tui.commands import _handle_new
 
         app = _make_mock_app(tmp_path)
         await _handle_new(app, "My Custom Title")
@@ -240,7 +240,7 @@ class TestHandleHelp:
     @pytest.mark.asyncio()
     async def test_help_lists_all_commands(self, tmp_path: Path) -> None:
         """_handle_help lists all 14 commands."""
-        from hybridcoder.tui.commands import _handle_help
+        from autocode.tui.commands import _handle_help
 
         app = _make_mock_app(tmp_path)
         await _handle_help(app, "")
@@ -257,17 +257,17 @@ class TestHandleModel:
     @pytest.mark.asyncio()
     async def test_model_no_args_shows_current(self, tmp_path: Path) -> None:
         """_handle_model with no args shows current model."""
-        from hybridcoder.tui.commands import _handle_model
+        from autocode.tui.commands import _handle_model
 
         app = _make_mock_app(tmp_path)
-        with patch("hybridcoder.tui.commands._list_ollama_models", return_value=[]):
+        with patch("autocode.tui.commands._list_ollama_models", return_value=[]):
             await _handle_model(app, "")
         assert "Current model" in app._messages[-1]
 
     @pytest.mark.asyncio()
     async def test_model_set_changes_config(self, tmp_path: Path) -> None:
         """_handle_model with arg changes model."""
-        from hybridcoder.tui.commands import _handle_model
+        from autocode.tui.commands import _handle_model
 
         app = _make_mock_app(tmp_path)
         await _handle_model(app, "llama3")
@@ -279,7 +279,7 @@ class TestHandleMode:
     @pytest.mark.asyncio()
     async def test_mode_no_args_shows_current(self, tmp_path: Path) -> None:
         """_handle_mode with no args shows current mode."""
-        from hybridcoder.tui.commands import _handle_mode
+        from autocode.tui.commands import _handle_mode
 
         app = _make_mock_app(tmp_path)
         await _handle_mode(app, "")
@@ -288,7 +288,7 @@ class TestHandleMode:
     @pytest.mark.asyncio()
     async def test_mode_set_valid(self, tmp_path: Path) -> None:
         """_handle_mode sets valid mode."""
-        from hybridcoder.tui.commands import _handle_mode
+        from autocode.tui.commands import _handle_mode
 
         app = _make_mock_app(tmp_path)
         await _handle_mode(app, "auto")
@@ -298,7 +298,7 @@ class TestHandleMode:
     @pytest.mark.asyncio()
     async def test_mode_set_invalid_rejected(self, tmp_path: Path) -> None:
         """_handle_mode rejects invalid mode."""
-        from hybridcoder.tui.commands import _handle_mode
+        from autocode.tui.commands import _handle_mode
 
         app = _make_mock_app(tmp_path)
         await _handle_mode(app, "invalid-mode")
@@ -309,7 +309,7 @@ class TestHandleCompact:
     @pytest.mark.asyncio()
     async def test_compact_few_messages_early_return(self, tmp_path: Path) -> None:
         """_handle_compact returns early with <4 messages."""
-        from hybridcoder.tui.commands import _handle_compact
+        from autocode.tui.commands import _handle_compact
 
         app = _make_mock_app(tmp_path)
         # Add only 2 messages
@@ -321,7 +321,7 @@ class TestHandleCompact:
     @pytest.mark.asyncio()
     async def test_compact_enough_messages(self, tmp_path: Path) -> None:
         """_handle_compact compacts when enough messages exist."""
-        from hybridcoder.tui.commands import _handle_compact
+        from autocode.tui.commands import _handle_compact
 
         app = _make_mock_app(tmp_path)
         for i in range(6):
@@ -335,7 +335,7 @@ class TestHandleShell:
     @pytest.mark.asyncio()
     async def test_shell_on(self, tmp_path: Path) -> None:
         """_handle_shell enables shell."""
-        from hybridcoder.tui.commands import _handle_shell
+        from autocode.tui.commands import _handle_shell
 
         app = _make_mock_app(tmp_path)
         await _handle_shell(app, "on")
@@ -345,7 +345,7 @@ class TestHandleShell:
     @pytest.mark.asyncio()
     async def test_shell_off(self, tmp_path: Path) -> None:
         """_handle_shell disables shell."""
-        from hybridcoder.tui.commands import _handle_shell
+        from autocode.tui.commands import _handle_shell
 
         app = _make_mock_app(tmp_path)
         await _handle_shell(app, "off")
@@ -355,7 +355,7 @@ class TestHandleShell:
     @pytest.mark.asyncio()
     async def test_shell_no_args_shows_status(self, tmp_path: Path) -> None:
         """_handle_shell with no args shows status."""
-        from hybridcoder.tui.commands import _handle_shell
+        from autocode.tui.commands import _handle_shell
 
         app = _make_mock_app(tmp_path)
         await _handle_shell(app, "")
@@ -367,7 +367,7 @@ class TestHandleCopy:
     @pytest.mark.asyncio()
     async def test_copy_no_args_copies_last(self, tmp_path: Path) -> None:
         """_handle_copy with no args copies last assistant message."""
-        from hybridcoder.tui.commands import _handle_copy
+        from autocode.tui.commands import _handle_copy
 
         app = _make_mock_app(tmp_path)
         app.session_store.add_message(app.session_id, "assistant", "response text")
@@ -379,7 +379,7 @@ class TestHandleCopy:
     @pytest.mark.asyncio()
     async def test_copy_n(self, tmp_path: Path) -> None:
         """_handle_copy N copies Nth-last assistant message."""
-        from hybridcoder.tui.commands import _handle_copy
+        from autocode.tui.commands import _handle_copy
 
         app = _make_mock_app(tmp_path)
         app.session_store.add_message(app.session_id, "assistant", "first")
@@ -391,7 +391,7 @@ class TestHandleCopy:
     @pytest.mark.asyncio()
     async def test_copy_all(self, tmp_path: Path) -> None:
         """_handle_copy all copies all messages."""
-        from hybridcoder.tui.commands import _handle_copy
+        from autocode.tui.commands import _handle_copy
 
         app = _make_mock_app(tmp_path)
         app.session_store.add_message(app.session_id, "user", "hello")
@@ -405,7 +405,7 @@ class TestHandleCopy:
     @pytest.mark.asyncio()
     async def test_copy_last_n(self, tmp_path: Path) -> None:
         """_handle_copy last N copies last N messages."""
-        from hybridcoder.tui.commands import _handle_copy
+        from autocode.tui.commands import _handle_copy
 
         app = _make_mock_app(tmp_path)
         app.session_store.add_message(app.session_id, "user", "u1")
@@ -420,7 +420,7 @@ class TestHandleCopy:
     @pytest.mark.asyncio()
     async def test_copy_no_messages(self, tmp_path: Path) -> None:
         """_handle_copy with no assistant messages shows error."""
-        from hybridcoder.tui.commands import _handle_copy
+        from autocode.tui.commands import _handle_copy
 
         app = _make_mock_app(tmp_path)
         await _handle_copy(app, "")
@@ -429,7 +429,7 @@ class TestHandleCopy:
     @pytest.mark.asyncio()
     async def test_copy_clipboard_fail(self, tmp_path: Path) -> None:
         """_handle_copy shows fallback when clipboard fails."""
-        from hybridcoder.tui.commands import _handle_copy
+        from autocode.tui.commands import _handle_copy
 
         app = _make_mock_app(tmp_path)
         app.session_store.add_message(app.session_id, "assistant", "response")
@@ -442,7 +442,7 @@ class TestHandleThinking:
     @pytest.mark.asyncio()
     async def test_thinking_toggles(self, tmp_path: Path) -> None:
         """_handle_thinking toggles show_thinking on/off."""
-        from hybridcoder.tui.commands import _handle_thinking
+        from autocode.tui.commands import _handle_thinking
 
         app = _make_mock_app(tmp_path)
         assert app.show_thinking is False
@@ -455,7 +455,7 @@ class TestHandleClear:
     @pytest.mark.asyncio()
     async def test_clear_writes_ansi_and_message(self, tmp_path: Path) -> None:
         """_handle_clear writes ANSI clear + confirmation."""
-        from hybridcoder.tui.commands import _handle_clear
+        from autocode.tui.commands import _handle_clear
 
         app = _make_mock_app(tmp_path)
         with patch("sys.stdout"):
@@ -467,7 +467,7 @@ class TestHandleFreeze:
     @pytest.mark.asyncio()
     async def test_freeze_inline_mode(self, tmp_path: Path) -> None:
         """_handle_freeze in inline mode shows 'not needed' message."""
-        from hybridcoder.tui.commands import _handle_freeze
+        from autocode.tui.commands import _handle_freeze
 
         app = _make_mock_app(tmp_path)
         # MagicMock doesn't have query_one by default (no hasattr match)
@@ -480,21 +480,21 @@ class TestHandleInit:
     @pytest.mark.asyncio()
     async def test_init_creates_memory(self, tmp_path: Path) -> None:
         """_handle_init creates memory.md."""
-        from hybridcoder.tui.commands import _handle_init
+        from autocode.tui.commands import _handle_init
 
         app = _make_mock_app(tmp_path)
         await _handle_init(app, "")
-        memory_file = tmp_path / ".hybridcoder" / "memory.md"
+        memory_file = tmp_path / ".autocode" / "memory.md"
         assert memory_file.exists()
         assert "Created" in app._messages[-1]
 
     @pytest.mark.asyncio()
     async def test_init_already_exists(self, tmp_path: Path) -> None:
         """_handle_init reports if memory.md already exists."""
-        from hybridcoder.tui.commands import _handle_init
+        from autocode.tui.commands import _handle_init
 
         app = _make_mock_app(tmp_path)
-        memory_dir = tmp_path / ".hybridcoder"
+        memory_dir = tmp_path / ".autocode"
         memory_dir.mkdir(parents=True)
         (memory_dir / "memory.md").write_text("existing")
         await _handle_init(app, "")
@@ -503,13 +503,13 @@ class TestHandleInit:
     @pytest.mark.asyncio()
     async def test_init_reads_key_files(self, tmp_path: Path) -> None:
         """_handle_init includes key files in memory."""
-        from hybridcoder.tui.commands import _handle_init
+        from autocode.tui.commands import _handle_init
 
         app = _make_mock_app(tmp_path)
         (tmp_path / "README.md").write_text("# Test Project")
         (tmp_path / "pyproject.toml").write_text("[tool.poetry]\nname = 'test'")
         await _handle_init(app, "")
-        memory_file = tmp_path / ".hybridcoder" / "memory.md"
+        memory_file = tmp_path / ".autocode" / "memory.md"
         content = memory_file.read_text()
         assert "README.md" in content
         assert "pyproject.toml" in content
@@ -519,11 +519,11 @@ class TestTitleTruncation:
     @pytest.mark.asyncio()
     async def test_resume_truncates_long_title(self, tmp_path: Path) -> None:
         """/resume truncates session titles longer than 40 chars."""
-        from hybridcoder.config import HybridCoderConfig
-        from hybridcoder.session.store import SessionStore
-        from hybridcoder.tui.commands import _handle_resume
+        from autocode.config import AutoCodeConfig
+        from autocode.session.store import SessionStore
+        from autocode.tui.commands import _handle_resume
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.tui.session_db_path = str(tmp_path / "test.db")
         store = SessionStore(str(tmp_path / "test.db"))
 
@@ -555,11 +555,11 @@ class TestTitleTruncation:
     @pytest.mark.asyncio()
     async def test_sessions_truncates_long_title(self, tmp_path: Path) -> None:
         """/sessions truncates session titles longer than 40 chars."""
-        from hybridcoder.config import HybridCoderConfig
-        from hybridcoder.session.store import SessionStore
-        from hybridcoder.tui.commands import _handle_sessions
+        from autocode.config import AutoCodeConfig
+        from autocode.session.store import SessionStore
+        from autocode.tui.commands import _handle_sessions
 
-        config = HybridCoderConfig()
+        config = AutoCodeConfig()
         config.tui.session_db_path = str(tmp_path / "test.db")
         store = SessionStore(str(tmp_path / "test.db"))
 
@@ -591,14 +591,14 @@ class TestSystemPromptContent:
 
     def test_write_file_directory_rule_in_prompt(self) -> None:
         """SYSTEM_PROMPT includes the path-scoped write intent rule."""
-        from hybridcoder.agent.prompts import SYSTEM_PROMPT
+        from autocode.agent.prompts import SYSTEM_PROMPT
 
         assert "write files directly inside that directory" in SYSTEM_PROMPT
         assert "write_file tool automatically creates parent directories" in SYSTEM_PROMPT
 
     def test_build_system_prompt_includes_rule(self) -> None:
         """build_system_prompt() output includes the directory write rule."""
-        from hybridcoder.agent.prompts import build_system_prompt
+        from autocode.agent.prompts import build_system_prompt
 
         prompt = build_system_prompt()
         assert "write files directly inside that directory" in prompt

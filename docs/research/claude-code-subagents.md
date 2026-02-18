@@ -1,4 +1,4 @@
-# Claude Code Subagent Architecture — Research Notes
+﻿# Claude Code Subagent Architecture — Research Notes
 
 > Researched: 2026-02-17
 > Source: https://code.claude.com/docs/en/sub-agents, https://code.claude.com/docs/en/agent-teams
@@ -225,7 +225,7 @@ Subagents support lifecycle hooks:
 
 ---
 
-## 11. Key Patterns for HybridCoder
+## 11. Key Patterns for AutoCode
 
 ### Pattern 1: Tiered Model Routing
 Use cheapest model for read-only exploration (our L1/L2), mid-tier for implementation (our L3), expensive for reasoning (our L4). This is exactly what Claude Code does with Haiku/Sonnet/Opus.

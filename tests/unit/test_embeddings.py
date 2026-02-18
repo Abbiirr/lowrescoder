@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from hybridcoder.layer2.embeddings import BM25, EmbeddingEngine
+from autocode.layer2.embeddings import BM25, EmbeddingEngine
 
 
 class TestEmbeddingEngine:

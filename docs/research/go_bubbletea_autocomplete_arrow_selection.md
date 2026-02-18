@@ -1,4 +1,4 @@
-# Autocomplete and Arrow-Key Selection in Go Bubble Tea
+﻿# Autocomplete and Arrow-Key Selection in Go Bubble Tea
 
 **Research Date**: 2026-02-07
 **Context**: Building a Claude Code-style CLI with slash commands, @file references, and interactive selection prompts
@@ -967,7 +967,7 @@ function ChatInterface() {
 
 ## Recommended Implementation Strategies
 
-### For Your Go CLI (HybridCoder)
+### For Your Go CLI (AutoCode)
 
 Based on the research, here are recommended approaches for different features:
 

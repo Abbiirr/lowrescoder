@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import textwrap
 
-from hybridcoder.core.types import CodeChunk
-from hybridcoder.layer2.chunker import ASTChunker
+from autocode.core.types import CodeChunk
+from autocode.layer2.chunker import ASTChunker
 
 SIMPLE_MODULE = textwrap.dedent("""\
     import os
