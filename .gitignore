@@ -52,3 +52,5 @@ docs/qa/phase3-benchmarks/
 
 
 toolsharbor-cli/
+
+benchmarks/*/node_modules/

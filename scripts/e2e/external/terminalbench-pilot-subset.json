@@ -5,7 +5,9 @@
     "source": "https://github.com/terminal-bench/terminal-bench",
     "id_format": "kebab-case task slugs from terminal-bench-core dataset",
     "last_verified": "2026-02-13",
-    "provenance": "Task IDs sourced from published Terminal-Bench 2.0 dataset (terminal-bench-core). Verified against dataset catalog via web research."
+    "provenance": "Task IDs sourced from published Terminal-Bench 2.0 dataset (terminal-bench-core). Verified against dataset catalog via web research.",
+    "setup_template": "Create sandbox with task initial state",
+    "grading_template": "Run grading script, check expected output"
   },
   "tasks": [
     {

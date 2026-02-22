@@ -105,14 +105,263 @@ def _parse_think_tags(text: str) -> tuple[str, str]:
     return content, reasoning
 
 
+def _find_balanced_json(text: str, start: int) -> str | None:
+    """Find a balanced JSON object starting at position `start` (which must be '{').
+
+    Uses brace counting to handle nested objects, respecting string literals.
+    Returns the full JSON string or None if unbalanced.
+    """
+    if start >= len(text) or text[start] != "{":
+        return None
+    depth = 0
+    in_string = False
+    escape = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if escape:
+            escape = False
+            continue
+        if ch == "\\":
+            if in_string:
+                escape = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+    return None
+
+
+def _extract_tool_calls_from_text(
+    text: str,
+    available_tools: list[ToolSchema] | None = None,
+) -> list[ToolCall]:
+    """Extract tool calls from text when model outputs them inline instead of via API.
+
+    Some models output tool calls as ```json blocks, bare JSON objects, or XML-style
+    <function=name> tags rather than using Ollama's structured tool calling API.
+    This function parses all these formats and returns ToolCall objects.
+
+    Only extracts calls whose name matches a known tool (if available_tools provided).
+    """
+    import re
+
+    # Collect known tool names for validation
+    known_names: set[str] | None = None
+    if available_tools:
+        known_names = set()
+        for tool in available_tools:
+            fn = tool.get("function", {})
+            if fn.get("name"):
+                known_names.add(fn["name"])
+
+    tool_calls: list[ToolCall] = []
+
+    # Strategy 1: Extract from ```json ... ``` code blocks
+    for m in re.finditer(r"```(?:json)?\s*\n?", text):
+        block_start = m.end()
+        json_str = _find_balanced_json(text, block_start)
+        if json_str:
+            data = _try_parse_json(json_str)
+            if data and isinstance(data, dict) and "name" in data:
+                _maybe_add_tool_call(data, known_names, tool_calls)
+
+    # Strategy 2: Find bare JSON objects starting with {"name": "tool_name"
+    if not tool_calls:
+        for m in re.finditer(r'\{\s*"name"\s*:', text):
+            json_str = _find_balanced_json(text, m.start())
+            if json_str:
+                data = _try_parse_json(json_str)
+                if data and isinstance(data, dict) and "name" in data:
+                    _maybe_add_tool_call(data, known_names, tool_calls)
+
+    # Strategy 3: XML-style <function=name> tags (qwen3-coder, etc.)
+    # Format: <function=tool_name>\n<parameter=key>\nvalue\n</parameter>\n</function>
+    if not tool_calls:
+        for m in re.finditer(
+            r"<function=([^>]+)>(.*?)</function>", text, re.DOTALL,
+        ):
+            func_name = m.group(1).strip()
+            body = m.group(2)
+            args: dict[str, Any] = {}
+            for pm in re.finditer(
+                r"<parameter=([^>]+)>(.*?)</parameter>", body, re.DOTALL,
+            ):
+                param_name = pm.group(1).strip()
+                param_value = pm.group(2).strip()
+                args[param_name] = param_value
+            data = {"name": func_name, "arguments": args}
+            _maybe_add_tool_call(data, known_names, tool_calls)
+
+    return tool_calls
+
+
+def _try_parse_json(text: str) -> dict | None:
+    """Try to parse JSON, with fallback sanitization for common model errors.
+
+    Models sometimes produce JSON with backtick quotes instead of double quotes,
+    trailing commas, or other malformations. This tries standard parsing first,
+    then applies sanitization.
+    """
+    import json
+    import re
+
+    # Try standard parse first
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # Sanitize: replace backtick-quoted strings with double-quoted
+    sanitized = re.sub(r'`([^`]*)`', r'"\1"', text)
+    # Remove trailing commas before } or ]
+    sanitized = re.sub(r',\s*([}\]])', r'\1', sanitized)
+
+    try:
+        return json.loads(sanitized)
+    except json.JSONDecodeError:
+        pass
+
+    # Last resort: try to extract just name and arguments fields manually
+    name_match = re.search(r'"name"\s*:\s*"([^"]+)"', text)
+    if not name_match:
+        return None
+
+    name = name_match.group(1)
+    # Find "arguments": { and try to parse the arguments block
+    args_match = re.search(r'"arguments"\s*:\s*', text)
+    if not args_match:
+        return {"name": name, "arguments": {}}
+
+    args_start = args_match.end()
+    args_json = _find_balanced_json(text, args_start)
+    if args_json:
+        try:
+            args = json.loads(args_json)
+            return {"name": name, "arguments": args}
+        except json.JSONDecodeError:
+            # Try sanitized version
+            sanitized_args = re.sub(r'`([^`]*)`', r'"\1"', args_json)
+            sanitized_args = re.sub(r',\s*([}\]])', r'\1', sanitized_args)
+            try:
+                args = json.loads(sanitized_args)
+                return {"name": name, "arguments": args}
+            except json.JSONDecodeError:
+                pass
+
+    return {"name": name, "arguments": {}}
+
+
+def _fuzzy_match_tool_name(name: str, known_names: set[str]) -> str | None:
+    """Map a hallucinated tool name to the closest known tool.
+
+    Models sometimes produce variations like "update_package_json" instead
+    of "write_file". This function maps common patterns.
+    """
+    # Exact match
+    if name in known_names:
+        return name
+
+    # Common mappings for hallucinated names
+    write_patterns = {
+        "update_file", "create_file", "save_file", "update_package_json",
+        "write_package_json", "create_package_json", "edit_file",
+        "put_file", "write_to_file",
+    }
+    if name in write_patterns and "write_file" in known_names:
+        return "write_file"
+
+    run_patterns = {
+        "execute_command", "exec_command", "shell", "bash",
+        "run_shell", "execute", "run_bash",
+    }
+    if name in run_patterns and "run_command" in known_names:
+        return "run_command"
+
+    read_patterns = {"get_file", "open_file", "cat_file", "view_file"}
+    if name in read_patterns and "read_file" in known_names:
+        return "read_file"
+
+    return None
+
+
+def _maybe_add_tool_call(
+    data: dict,
+    known_names: set[str] | None,
+    tool_calls: list[ToolCall],
+) -> None:
+    """Validate and append a tool call extracted from text."""
+    name = data.get("name", "")
+    arguments = data.get("arguments", {})
+
+    if not name or not isinstance(arguments, dict):
+        return
+
+    if known_names:
+        matched = _fuzzy_match_tool_name(name, known_names)
+        if matched is None:
+            return
+        name = matched
+
+    tool_calls.append(ToolCall(
+        id=f"text_tc_{len(tool_calls)}",
+        name=name,
+        arguments=arguments,
+    ))
+
+
+def _fix_ollama_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Fix message format for Ollama SDK compatibility.
+
+    The agent loop stores tool_call arguments as JSON strings (OpenAI format),
+    but the Ollama SDK's pydantic models expect arguments as dicts.
+    This converts string arguments back to dicts.
+    """
+    import copy
+    import json
+
+    fixed = copy.deepcopy(messages)
+    for msg in fixed:
+        if "tool_calls" not in msg:
+            continue
+        for tc in msg["tool_calls"]:
+            fn = tc.get("function", {})
+            args = fn.get("arguments")
+            if isinstance(args, str):
+                try:
+                    fn["arguments"] = json.loads(args)
+                except (json.JSONDecodeError, ValueError):
+                    fn["arguments"] = {}
+    return fixed
+
+
 class OllamaProvider:
     """Ollama LLM provider for Layer 4 (production)."""
+
+    # Per-request timeout in seconds (generous for thinking models)
+    REQUEST_TIMEOUT = 3600.0
 
     def __init__(self, config: AutoCodeConfig) -> None:
         self.model = config.llm.model
         self.api_base = config.llm.api_base
         self.temperature = config.llm.temperature
         self.max_tokens = config.llm.max_tokens
+        self.context_length = config.llm.context_length
+
+    def _build_options(self) -> dict[str, Any]:
+        """Build Ollama options dict with context window cap."""
+        return {
+            "temperature": self.temperature,
+            "num_predict": self.max_tokens,
+            "num_ctx": self.context_length,
+        }
 
     async def generate(
         self,
@@ -124,7 +373,7 @@ class OllamaProvider:
         import ollama
 
         client = ollama.AsyncClient(host=self.api_base)
-        options = {"temperature": self.temperature, "num_predict": self.max_tokens}
+        options = self._build_options()
 
         if stream:
             stream_response = await client.chat(
@@ -161,7 +410,7 @@ class OllamaProvider:
             model=self.model,
             messages=messages,
             format="json",
-            options={"temperature": self.temperature, "num_predict": self.max_tokens},
+            options=self._build_options(),
         )
         raw = json.loads(result.message.content or "{}")
         return schema.model_validate(raw)
@@ -176,12 +425,13 @@ class OllamaProvider:
         reasoning_enabled: bool = True,
     ) -> LLMResponse:
         """Generate with tool calling via Ollama (non-streaming to avoid partial JSON)."""
+        import asyncio
         import json
 
         import ollama
 
         client = ollama.AsyncClient(host=self.api_base)
-        options = {"temperature": self.temperature, "num_predict": self.max_tokens}
+        options = self._build_options()
 
         log_event(
             logger, logging.DEBUG, "llm_request",
@@ -189,21 +439,34 @@ class OllamaProvider:
         )
         _start = time.monotonic()
 
+        # Ollama SDK expects tool_call arguments as dict, not JSON string.
+        # The agent loop stores arguments as JSON strings (OpenAI format),
+        # so we convert them back to dicts here.
+        cleaned_messages = _fix_ollama_messages(messages)
+
         try:
-            result = await client.chat(
-                model=self.model,
-                messages=messages,
-                tools=tools,
-                stream=False,
-                options=options,
+            result = await asyncio.wait_for(
+                client.chat(
+                    model=self.model,
+                    messages=cleaned_messages,
+                    tools=tools,
+                    stream=False,
+                    options=options,
+                ),
+                timeout=self.REQUEST_TIMEOUT,
             )
-        except Exception:
+        except (TimeoutError, Exception) as e:
+            if isinstance(e, TimeoutError):
+                raise  # Let caller handle request-level timeouts
             # Fall back to text-only if tool calling fails
-            result = await client.chat(
-                model=self.model,
-                messages=messages,
-                stream=False,
-                options=options,
+            result = await asyncio.wait_for(
+                client.chat(
+                    model=self.model,
+                    messages=cleaned_messages,
+                    stream=False,
+                    options=options,
+                ),
+                timeout=self.REQUEST_TIMEOUT,
             )
 
         _duration_ms = int((time.monotonic() - _start) * 1000)
@@ -228,6 +491,20 @@ class OllamaProvider:
 
         # Parse <think> tags (DeepSeek R1 style models on Ollama)
         content, reasoning = _parse_think_tags(raw_content)
+
+        # Fallback: extract tool calls from text if model didn't use structured API
+        # Some models (qwen2.5-coder, etc.) output tool calls as JSON blocks in text
+        if not tool_calls and content:
+            text_tool_calls = _extract_tool_calls_from_text(content, tools)
+            if text_tool_calls:
+                tool_calls = text_tool_calls
+                # Remove the JSON blocks from content since they're now tool calls
+                content = ""
+                log_event(
+                    logger, logging.INFO, "llm_text_tool_fallback",
+                    provider="ollama", model=self.model,
+                    extracted_count=len(tool_calls),
+                )
 
         log_event(
             logger, logging.DEBUG, "llm_response",
@@ -257,6 +534,12 @@ class OllamaProvider:
 class OpenRouterProvider:
     """OpenRouter LLM provider for Layer 4 (development)."""
 
+    # Retry config for free-tier reliability
+    MAX_RETRIES = 5
+    RETRY_BASE_DELAY = 5.0  # seconds, doubles each retry
+    RATE_LIMIT_DELAY = 15.0  # extra delay on 429
+    REQUEST_TIMEOUT = 120.0  # seconds
+
     def __init__(self, config: AutoCodeConfig) -> None:
         self.model = config.llm.model
         self.api_base = config.llm.api_base
@@ -264,61 +547,108 @@ class OpenRouterProvider:
         self.max_tokens = config.llm.max_tokens
         self.api_key = os.environ.get("OPENROUTER_API_KEY", "")
 
+    def _make_client(self) -> Any:
+        """Create AsyncOpenAI client with robust timeout settings."""
+        import httpx
+        from openai import AsyncOpenAI
+
+        return AsyncOpenAI(
+            api_key=self.api_key,
+            base_url=self.api_base,
+            timeout=httpx.Timeout(self.REQUEST_TIMEOUT, connect=30.0),
+            max_retries=0,  # we handle retries ourselves
+        )
+
     async def generate(
         self,
         messages: list[dict[str, str]],
         *,
         stream: bool = True,
     ) -> AsyncIterator[str]:
-        """Generate via OpenRouter (OpenAI-compatible API)."""
-        from openai import AsyncOpenAI
+        """Generate via OpenRouter (OpenAI-compatible API) with retry."""
+        import asyncio as _asyncio
 
-        client = AsyncOpenAI(api_key=self.api_key, base_url=self.api_base)
+        client = self._make_client()
 
-        if stream:
-            response_stream = await client.chat.completions.create(
-                model=self.model,
-                messages=messages,  # type: ignore[arg-type]
-                temperature=self.temperature,
-                max_tokens=self.max_tokens,
-                stream=True,
-            )
-            async for chunk in response_stream:  # type: ignore[union-attr]
-                delta = chunk.choices[0].delta if chunk.choices else None
-                if delta and delta.content:
-                    yield delta.content
-        else:
-            result = await client.chat.completions.create(
-                model=self.model,
-                messages=messages,  # type: ignore[arg-type]
-                temperature=self.temperature,
-                max_tokens=self.max_tokens,
-            )
-            content = result.choices[0].message.content or ""
-            yield content
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                if stream:
+                    response_stream = await client.chat.completions.create(
+                        model=self.model,
+                        messages=messages,  # type: ignore[arg-type]
+                        temperature=self.temperature,
+                        max_tokens=self.max_tokens,
+                        stream=True,
+                    )
+                    async for chunk in response_stream:  # type: ignore[union-attr]
+                        delta = chunk.choices[0].delta if chunk.choices else None
+                        if delta and delta.content:
+                            yield delta.content
+                    return
+                else:
+                    result = await client.chat.completions.create(
+                        model=self.model,
+                        messages=messages,  # type: ignore[arg-type]
+                        temperature=self.temperature,
+                        max_tokens=self.max_tokens,
+                    )
+                    content = result.choices[0].message.content or ""
+                    yield content
+                    return
+            except Exception as e:
+                if attempt < self.MAX_RETRIES - 1:
+                    is_rate_limit = "429" in str(e)
+                    delay = (
+                        self.RATE_LIMIT_DELAY * (1 + attempt)
+                        if is_rate_limit
+                        else self.RETRY_BASE_DELAY * (2 ** attempt)
+                    )
+                    logger.warning(
+                        "OpenRouter generate retry %d/%d%s: %s (waiting %.0fs)",
+                        attempt + 1, self.MAX_RETRIES,
+                        " [rate-limit]" if is_rate_limit else "",
+                        str(e)[:120], delay,
+                    )
+                    await _asyncio.sleep(delay)
+                else:
+                    raise
 
     async def generate_json(
         self,
         messages: list[dict[str, str]],
         schema: type[BaseModel],
     ) -> BaseModel:
-        """Generate JSON via OpenRouter with response_format."""
+        """Generate JSON via OpenRouter with response_format and retry."""
+        import asyncio as _asyncio
         import json
 
-        from openai import AsyncOpenAI
         from openai.types.shared_params import ResponseFormatJSONObject
 
-        client = AsyncOpenAI(api_key=self.api_key, base_url=self.api_base)
-        result = await client.chat.completions.create(
-            model=self.model,
-            messages=messages,  # type: ignore[arg-type]
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
-            response_format=ResponseFormatJSONObject(type="json_object"),
-        )
-        raw_text = result.choices[0].message.content or "{}"
-        raw = json.loads(raw_text)
-        return schema.model_validate(raw)
+        client = self._make_client()
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                result = await client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,  # type: ignore[arg-type]
+                    temperature=self.temperature,
+                    max_tokens=self.max_tokens,
+                    response_format=ResponseFormatJSONObject(type="json_object"),
+                )
+                raw_text = result.choices[0].message.content or "{}"
+                raw = json.loads(raw_text)
+                return schema.model_validate(raw)
+            except Exception as e:
+                if attempt < self.MAX_RETRIES - 1:
+                    delay = self.RETRY_BASE_DELAY * (2 ** attempt)
+                    logger.warning(
+                        "OpenRouter generate_json retry %d/%d: %s (waiting %.1fs)",
+                        attempt + 1, self.MAX_RETRIES, e, delay,
+                    )
+                    await _asyncio.sleep(delay)
+                else:
+                    raise
+        msg = "unreachable"
+        raise RuntimeError(msg)
 
     async def generate_with_tools(
         self,
@@ -329,12 +659,10 @@ class OpenRouterProvider:
         on_thinking_chunk: Any | None = None,
         reasoning_enabled: bool = True,
     ) -> LLMResponse:
-        """Generate with tool calling via OpenRouter (OpenAI-compatible streaming)."""
-        import json
+        """Generate with tool calling via OpenRouter with retry + non-streaming fallback."""
+        import asyncio as _asyncio
 
-        from openai import AsyncOpenAI
-
-        client = AsyncOpenAI(api_key=self.api_key, base_url=self.api_base)
+        client = self._make_client()
 
         extra_body: dict[str, Any] = {}
         if reasoning_enabled:
@@ -344,130 +672,183 @@ class OpenRouterProvider:
             logger, logging.DEBUG, "llm_request",
             provider="openrouter", model=self.model,
         )
-        _start = time.monotonic()
 
+        for attempt in range(self.MAX_RETRIES):
+            _start = time.monotonic()
+            # Stream on first attempt, non-streaming fallback on retries
+            use_stream = attempt == 0
+
+            try:
+                if use_stream:
+                    result = await self._tools_streaming(
+                        client, messages, tools, extra_body,
+                        on_chunk, on_thinking_chunk,
+                    )
+                else:
+                    result = await self._tools_non_streaming(
+                        client, messages, tools, extra_body,
+                    )
+
+                _duration_ms = int((time.monotonic() - _start) * 1000)
+
+                # Fallback: extract tool calls from text
+                if not result.tool_calls and result.content:
+                    text_tool_calls = _extract_tool_calls_from_text(
+                        result.content, tools,
+                    )
+                    if text_tool_calls:
+                        result = LLMResponse(
+                            content="",
+                            tool_calls=text_tool_calls,
+                            finish_reason="tool_calls",
+                            reasoning=result.reasoning,
+                        )
+                        log_event(
+                            logger, logging.INFO, "llm_text_tool_fallback",
+                            provider="openrouter", model=self.model,
+                            extracted_count=len(text_tool_calls),
+                        )
+
+                log_event(
+                    logger, logging.DEBUG, "llm_response",
+                    provider="openrouter", model=self.model,
+                    duration_ms=_duration_ms,
+                    content_length=len(result.content or ""),
+                    tool_calls_count=len(result.tool_calls),
+                    attempt=attempt + 1,
+                    streamed=use_stream,
+                )
+                return result
+
+            except Exception as e:
+                if attempt < self.MAX_RETRIES - 1:
+                    # Longer delay on rate limit (429)
+                    is_rate_limit = "429" in str(e)
+                    delay = (
+                        self.RATE_LIMIT_DELAY * (1 + attempt)
+                        if is_rate_limit
+                        else self.RETRY_BASE_DELAY * (2 ** attempt)
+                    )
+                    logger.warning(
+                        "OpenRouter retry %d/%d%s: %s "
+                        "(waiting %.0fs)",
+                        attempt + 1, self.MAX_RETRIES,
+                        " [rate-limit]" if is_rate_limit else "",
+                        str(e)[:120], delay,
+                    )
+                    await _asyncio.sleep(delay)
+                else:
+                    log_event(
+                        logger, logging.ERROR, "llm_error",
+                        provider="openrouter", model=self.model,
+                        error=str(e), attempts=self.MAX_RETRIES,
+                    )
+                    raise
+
+        msg = "unreachable"
+        raise RuntimeError(msg)
+
+    async def _tools_streaming(
+        self,
+        client: Any,
+        messages: list[dict[str, Any]],
+        tools: list[ToolSchema],
+        extra_body: dict[str, Any],
+        on_chunk: Any | None,
+        on_thinking_chunk: Any | None,
+    ) -> LLMResponse:
+        """Streaming path for generate_with_tools."""
         content_parts: list[str] = []
         reasoning_parts: list[str] = []
         tool_call_data: dict[int, dict[str, Any]] = {}
         finish_reason = "stop"
         in_think_tag = False
 
-        try:
-            response_stream = await client.chat.completions.create(
-                model=self.model,
-                messages=messages,  # type: ignore[arg-type]
-                temperature=self.temperature,
-                max_tokens=self.max_tokens,
-                tools=tools,  # type: ignore[arg-type]
-                stream=True,
-                extra_body=extra_body or None,
-            )
+        response_stream = await client.chat.completions.create(
+            model=self.model,
+            messages=messages,  # type: ignore[arg-type]
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+            tools=tools,  # type: ignore[arg-type]
+            stream=True,
+            extra_body=extra_body or None,
+        )
 
-            async for chunk in response_stream:  # type: ignore[union-attr]
-                if not chunk.choices:
-                    continue
-                choice = chunk.choices[0]
-                if choice.finish_reason:
-                    finish_reason = choice.finish_reason
+        async for chunk in response_stream:  # type: ignore[union-attr]
+            if not chunk.choices:
+                continue
+            choice = chunk.choices[0]
+            if choice.finish_reason:
+                finish_reason = choice.finish_reason
 
-                delta = choice.delta
+            delta = choice.delta
 
-                # Capture reasoning field (OpenRouter native thinking)
-                reasoning_text = getattr(delta, "reasoning", None) if delta else None
-                if reasoning_text:
-                    reasoning_parts.append(reasoning_text)
-                    if on_thinking_chunk:
-                        on_thinking_chunk(reasoning_text)
+            reasoning_text = getattr(delta, "reasoning", None) if delta else None
+            if reasoning_text:
+                reasoning_parts.append(reasoning_text)
+                if on_thinking_chunk:
+                    on_thinking_chunk(reasoning_text)
 
-                if delta and delta.content:
-                    text = delta.content
+            if delta and delta.content:
+                text = delta.content
 
-                    # Parse <think> tags (DeepSeek R1 style)
-                    if "<think>" in text:
-                        in_think_tag = True
-                        # Split: before tag goes to content, after goes to reasoning
-                        before, _, after = text.partition("<think>")
-                        if before:
-                            content_parts.append(before)
-                            if on_chunk:
-                                on_chunk(before)
-                        if after:
-                            reasoning_parts.append(after)
-                            if on_thinking_chunk:
-                                on_thinking_chunk(after)
-                        continue
-
-                    if "</think>" in text:
-                        in_think_tag = False
-                        before, _, after = text.partition("</think>")
-                        if before:
-                            reasoning_parts.append(before)
-                            if on_thinking_chunk:
-                                on_thinking_chunk(before)
-                        if after:
-                            content_parts.append(after)
-                            if on_chunk:
-                                on_chunk(after)
-                        continue
-
-                    if in_think_tag:
-                        reasoning_parts.append(text)
-                        if on_thinking_chunk:
-                            on_thinking_chunk(text)
-                    else:
-                        content_parts.append(text)
+                if "<think>" in text:
+                    in_think_tag = True
+                    before, _, after = text.partition("<think>")
+                    if before:
+                        content_parts.append(before)
                         if on_chunk:
-                            on_chunk(text)
+                            on_chunk(before)
+                    if after:
+                        reasoning_parts.append(after)
+                        if on_thinking_chunk:
+                            on_thinking_chunk(after)
+                    continue
 
-                if delta and delta.tool_calls:
-                    for tc_delta in delta.tool_calls:
-                        idx = tc_delta.index
-                        if idx not in tool_call_data:
-                            tool_call_data[idx] = {
-                                "id": tc_delta.id or "",
-                                "name": "",
-                                "arguments": "",
-                            }
-                        if tc_delta.id:
-                            tool_call_data[idx]["id"] = tc_delta.id
-                        if tc_delta.function:
-                            if tc_delta.function.name:
-                                tool_call_data[idx]["name"] = tc_delta.function.name
-                            if tc_delta.function.arguments:
-                                tool_call_data[idx]["arguments"] += tc_delta.function.arguments
-        except Exception as e:
-            # If we got partial content before the error, include it
-            # Otherwise re-raise so the caller (agent loop) handles it
-            if not content_parts and not tool_call_data:
-                log_event(
-                    logger, logging.ERROR, "llm_error",
-                    provider="openrouter", model=self.model, error=str(e),
-                )
-                raise
-            logger.warning("OpenRouter stream error (partial data kept): %s", e)
+                if "</think>" in text:
+                    in_think_tag = False
+                    before, _, after = text.partition("</think>")
+                    if before:
+                        reasoning_parts.append(before)
+                        if on_thinking_chunk:
+                            on_thinking_chunk(before)
+                    if after:
+                        content_parts.append(after)
+                        if on_chunk:
+                            on_chunk(after)
+                    continue
 
-        _duration_ms = int((time.monotonic() - _start) * 1000)
+                if in_think_tag:
+                    reasoning_parts.append(text)
+                    if on_thinking_chunk:
+                        on_thinking_chunk(text)
+                else:
+                    content_parts.append(text)
+                    if on_chunk:
+                        on_chunk(text)
+
+            if delta and delta.tool_calls:
+                for tc_delta in delta.tool_calls:
+                    idx = tc_delta.index
+                    if idx not in tool_call_data:
+                        tool_call_data[idx] = {
+                            "id": tc_delta.id or "",
+                            "name": "",
+                            "arguments": "",
+                        }
+                    if tc_delta.id:
+                        tool_call_data[idx]["id"] = tc_delta.id
+                    if tc_delta.function:
+                        if tc_delta.function.name:
+                            tool_call_data[idx]["name"] = tc_delta.function.name
+                        if tc_delta.function.arguments:
+                            tool_call_data[idx]["arguments"] += (
+                                tc_delta.function.arguments
+                            )
+
         content = "".join(content_parts) or None
         reasoning = "".join(reasoning_parts) or None
-        tool_calls: list[ToolCall] = []
-        for _idx, tc_data in sorted(tool_call_data.items()):
-            try:
-                args = json.loads(tc_data["arguments"]) if tc_data["arguments"] else {}
-            except json.JSONDecodeError:
-                args = {}
-            tool_calls.append(ToolCall(
-                id=tc_data["id"],
-                name=tc_data["name"],
-                arguments=args,
-            ))
-
-        log_event(
-            logger, logging.DEBUG, "llm_response",
-            provider="openrouter", model=self.model,
-            duration_ms=_duration_ms,
-            content_length=len(content or ""),
-            tool_calls_count=len(tool_calls),
-        )
+        tool_calls = self._parse_tool_calls(tool_call_data)
 
         return LLMResponse(
             content=content,
@@ -475,6 +856,78 @@ class OpenRouterProvider:
             finish_reason="tool_calls" if tool_calls else finish_reason,
             reasoning=reasoning,
         )
+
+    async def _tools_non_streaming(
+        self,
+        client: Any,
+        messages: list[dict[str, Any]],
+        tools: list[ToolSchema],
+        extra_body: dict[str, Any],
+    ) -> LLMResponse:
+        """Non-streaming fallback — more reliable on free tier."""
+        import json
+
+        result = await client.chat.completions.create(
+            model=self.model,
+            messages=messages,  # type: ignore[arg-type]
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+            tools=tools,  # type: ignore[arg-type]
+            stream=False,
+            extra_body=extra_body or None,
+        )
+
+        choice = result.choices[0]
+        msg = choice.message
+        content = msg.content or None
+        finish_reason = choice.finish_reason or "stop"
+        reasoning = getattr(msg, "reasoning", None)
+
+        tool_calls: list[ToolCall] = []
+        if msg.tool_calls:
+            for tc in msg.tool_calls:
+                try:
+                    args = (
+                        json.loads(tc.function.arguments)
+                        if tc.function.arguments else {}
+                    )
+                except json.JSONDecodeError:
+                    args = {}
+                tool_calls.append(ToolCall(
+                    id=tc.id or "",
+                    name=tc.function.name or "",
+                    arguments=args,
+                ))
+
+        return LLMResponse(
+            content=content,
+            tool_calls=tool_calls,
+            finish_reason="tool_calls" if tool_calls else finish_reason,
+            reasoning=reasoning,
+        )
+
+    @staticmethod
+    def _parse_tool_calls(
+        tool_call_data: dict[int, dict[str, Any]],
+    ) -> list[ToolCall]:
+        """Parse accumulated streaming tool call deltas into ToolCall objects."""
+        import json
+
+        tool_calls: list[ToolCall] = []
+        for _idx, tc_data in sorted(tool_call_data.items()):
+            try:
+                args = (
+                    json.loads(tc_data["arguments"])
+                    if tc_data["arguments"] else {}
+                )
+            except json.JSONDecodeError:
+                args = {}
+            tool_calls.append(ToolCall(
+                id=tc_data["id"],
+                name=tc_data["name"],
+                arguments=args,
+            ))
+        return tool_calls
 
     def count_tokens(self, text: str) -> int:
         """Approximate token count (~4 chars per token)."""

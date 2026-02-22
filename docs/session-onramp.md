@@ -1,6 +1,6 @@
 # Session Onramp (Current State)
 
-Last updated: 2026-02-17
+Last updated: 2026-02-21
 
 This is the fastest way to rebuild working context for AutoCode in a new session.
 
@@ -162,9 +162,15 @@ Implemented 2026-02-14. All tests passing, ruff clean.
   - `.\scripts\run_e2e_benchmark.ps1 -Scenario E2E-BugFix` — PS wrapper for BugFix
   - `.\scripts\run_e2e_benchmark.ps1 -Scenario E2E-CLI` — PS wrapper for CLI
   - See `TESTING.md` for full guide, or `docs/qa/e2e-benchmark-guide.md` for deep details
-- **External benchmarks (requires Docker + Harbor):**
+- **Unified benchmark runner (parity harness):**
+  - `uv run python scripts/benchmark_runner.py --list-lanes` — Show all lanes
+  - `uv run python scripts/benchmark_runner.py --agent autocode --lane B7` — Run AutoCode on B7
+  - `uv run python scripts/benchmark_runner.py --agent codex --lane B7` — Run Codex on B7 (parity)
+  - `uv run python scripts/benchmark_runner.py --agent claude-code --lane B7` — Run Claude Code on B7 (parity)
+  - `uv run python scripts/benchmark_runner.py --agent all --lane B7` — All agents on B7 (comparison)
+  - See `benchmarks/EVALUATION.md` for full parity contract and artifact schema
+- **External benchmarks (Harbor, legacy):**
   - `uv run python scripts/e2e/external/run_external_pilot.py --agent codex --suite swebench` — SWE-bench pilot
-  - `uv run python scripts/e2e/external/run_external_pilot.py --agent claude-code --suite terminalbench` — Terminal-Bench pilot
   - `uv run python scripts/e2e/external/run_external_pilot.py --help` — All options
   - See `docs/plan/agentic-benchmarks/external-benchmark-runbook.md` for full setup
 - Before/after Phase 3 benchmark snapshots:
@@ -185,11 +191,50 @@ Implemented 2026-02-14. All tests passing, ruff clean.
 - Session logs: `logs/<YYYY>/<MM>/<DD>/<HH>/<session[:8]>/` (latest: `logs/latest`)
 - Training blobs: `<session-log-dir>/blobs/` (when training logging enabled)
 
-## 8) Known Baseline QA State (as of 2026-02-14, post-Sprint 4C re-review)
+## 8) Crash Recovery: Benchmark In Progress
 
-- pytest suite: **987 collected**, 978 passed, 9 skipped (8 Ollama + 1 OpenRouter rate limit), 0 failed
+If a session crashes while a benchmark is running, follow these steps:
+
+### Check sandbox state
+```bash
+ls sandboxes/bench_*
+```
+
+### If sandbox has files (package.json, src/):
+The agent finished generating. Re-score without re-running the agent:
+```bash
+AUTOCODE_LLM_PROVIDER=ollama uv run python scripts/run_calculator_benchmark.py \
+  --replay sandboxes/bench_<timestamp> --score-only
+```
+
+### If sandbox is empty or incomplete:
+Re-run the benchmark from scratch:
+```bash
+AUTOCODE_LLM_PROVIDER=ollama uv run python scripts/run_calculator_benchmark.py \
+  --runs 1 --min-score 30
+```
+
+### After benchmark completes:
+1. Check results: `cat sandboxes/bench_<timestamp>/.hybridcoder-benchmark.json | python -m json.tool`
+2. Copy to B6 target: `cp -r sandboxes/bench_<best>/* benchmarks/B6-react-calculator/`
+3. Run scoring test: `uv run pytest tests/benchmark/test_project_creation.py::test_project_creation_real_life_task_external_project -v`
+4. Read `current_directives.md` for full post-benchmark workflow
+5. Check `benchmarks/STATUS.md` for gate status across all lanes
+
+### Key files to check:
+- `current_directives.md` — Active sprint, what to do next
+- `benchmarks/STATUS.md` — All benchmark lane statuses
+- `benchmarks/EVALUATION.md` — Evaluation criteria
+- `AGENTS_CONVERSATION.MD` — Pending comms
+- `docs/qa/test-results/` — Stored artifacts
+
+## 8b) Known Baseline QA State (as of 2026-02-21, post B7 calibration)
+
+- pytest suite: **1088 passed**, 1 failed (latency benchmark only), 1 skipped
 - ruff: **0 errors**
 - Go tests: all passing
+- B7 SWE-bench: 20% (1/5) across 3 models — root cause identified, plan written
+- New tests: XML-style tool-call parser (2 tests added to test_llm.py)
 - E2E scenarios: E2E-BugFix, E2E-CLI, E2E-Calculator defined and runnable
 - E2E verdict system: PASS (exit 0), FAIL (exit 1), INFRA_FAIL (exit 2)
 - Sprint 4A test artifacts: `docs/qa/test-results/sprint-4a-summary.md`
@@ -199,10 +244,29 @@ Implemented 2026-02-14. All tests passing, ruff clean.
 - Go build artifact: `docs/qa/test-results/20260214-164329-phase4-go-build.md`
 - E2E-Calculator artifact: `docs/qa/test-results/20260214-220725-e2e-react-calculator.md` (86/100)
 
+## 8c) B7 Benchmark Status (2026-02-21)
+
+Three models tested, all at 20% (1/5). Root cause: agent harness issue, not model capability.
+
+| Model | Resolved | Time | Artifact |
+|-------|----------|------|----------|
+| qwen2.5-coder:14b | 1/5 | 389s | `20260219-113147-B7-autocode.json` |
+| qwen3-coder:latest | 1/5 | 339s | `20260219-162516-B7-autocode.json` |
+| glm-4.7-flash-bench | 1/5 | 11,346s | `20260221-160438-B7-autocode.json` |
+
+**Root cause:** Agent modifies tests but never fixes source code. Plan: `docs/plan/b7-resolve-rate-plan.md`
+
+**Code changes this session:**
+- `src/autocode/layer4/llm.py`: XML tool-call parser, `_build_options()` with num_ctx, per-request timeout, OpenRouter retry
+- `tests/unit/test_llm.py`: 2 new XML parser tests (15 total, all passing)
+- `scripts/benchmark_runner.py`: B7 budget → 3600s
+- `scripts/Modelfile.glm-4.7-flash-bench`: Custom GLM model (num_ctx=8192, num_gpu=999)
+
 ## 9) Session Start Checklist
 
 1. Read this file and `AGENTS.md`.
 2. Check active thread state in `AGENTS_CONVERSATION.MD`.
-3. Confirm whether task is plan/doc only or implementation.
-4. If implementation: run baseline tests and store artifacts before changes.
-5. If Phase 3 work: use the before/after snapshot protocol.
+3. Read `current_directives.md` for active sprint.
+4. If continuing B7 work: read `docs/plan/b7-resolve-rate-plan.md` for the improvement plan.
+5. If implementation: run baseline tests and store artifacts before changes.
+6. If Phase 3 work: use the before/after snapshot protocol.

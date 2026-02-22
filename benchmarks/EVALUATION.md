@@ -2,6 +2,7 @@
 
 > All benchmarks must PASS before Phase 5 can start.
 > Each benchmark evaluates three dimensions: quality, cost, and speed.
+> Updated: 2026-02-19
 
 ## Evaluation Dimensions
 
@@ -11,15 +12,17 @@ Does AutoCode produce correct, complete output?
 
 | Lane | Metric | Pass Threshold |
 |------|--------|----------------|
-| B6 React Calculator | Rubric score (0-100) | >= 60 |
+| B6 React Calculator | Rubric score (0-100) + build + app runs | >= 90, build pass, app runs |
 | B7 SWE-bench Verified | % tasks resolved | TBD after R0 calibration |
 | B8 SWE-bench Bash-Only | % tasks resolved | TBD after R0 calibration |
 | B9 Terminal-Bench | % tasks completed | TBD after R0 calibration |
-| B10 Multi-SWE-bench | % tasks resolved | TBD after R0 calibration |
+| B10 SWE-bench Multilingual | % tasks resolved + per-language rate | TBD after R0 calibration |
 | B11 BaxBench | % tasks passing | TBD after R0 calibration |
-| B12 SWE-Lancer | % tasks resolved | TBD (access-gated) |
-| B13 CodeClash | % goals achieved | TBD (access-gated) |
+| B12-PROXY SWE-Lancer Equivalent | % tasks resolved | TBD after R0 (proxy-only) |
+| B13-PROXY CodeClash Equivalent | % goals achieved | TBD after R0 (proxy-only) |
 | B14 LiveCodeBench | % tasks passing | TBD after R0 calibration |
+
+**B6 special rule (Entry 526):** If `npm run build` fails, total score = 0.
 
 ### 2. Cost Efficiency (tracked per run)
 
@@ -44,85 +47,145 @@ How long does it take?
 | Time in LLM vs tools | Where time is spent |
 | Cooldown/retry time | Wasted time from API errors |
 
-## Artifact Schema (per benchmark run)
+## Unified Parity Harness
 
-Every run must produce a JSON artifact with:
+**Runner:** `scripts/benchmark_runner.py`
+
+All agents are driven by the same harness with identical prompts, budgets, and grading.
+
+### Usage
+
+```bash
+# Run AutoCode on a lane
+uv run python scripts/benchmark_runner.py --agent autocode --lane B7
+
+# Run Codex on a lane (parity)
+uv run python scripts/benchmark_runner.py --agent codex --lane B7
+
+# Run Claude Code on a lane (parity)
+uv run python scripts/benchmark_runner.py --agent claude-code --lane B7
+
+# Run all agents (parity comparison)
+uv run python scripts/benchmark_runner.py --agent all --lane B7
+
+# List available lanes
+uv run python scripts/benchmark_runner.py --list-lanes
+
+# B6 delegates to its own runner
+uv run python scripts/benchmark_runner.py --agent autocode --lane B6 --strict
+```
+
+### Agent Adapters
+
+| Adapter | File | Provider Mode |
+|---------|------|---------------|
+| AutoCode | `scripts/adapters/autocode_adapter.py` | `local_free` (Ollama) |
+| Codex | `scripts/adapters/codex_adapter.py` | `subscription` (Codex CLI) |
+| Claude Code | `scripts/adapters/claude_adapter.py` | `subscription` (Claude CLI) |
+
+## Parity Validity Contract (Entries 529-531)
+
+For any cross-agent comparison to be valid, ALL of these must match:
+
+| Field | Requirement |
+|-------|-------------|
+| `harness_version` | Same across all agents in comparison |
+| `manifest_hash` | Same (SHA-256 of manifest file) |
+| `budget_profile_id` | Same (wall_time + token_cap + tool_calls) |
+| `comparison_validity` | `parity-valid` (or `proxy-only` for B12/B13) |
+
+If any field differs, the comparison is marked `invalid` — no parity claims allowed.
+
+## Reproducibility Contract
+
+Every benchmark run produces a JSON artifact containing:
 
 ```json
 {
-  "lane": "B6",
-  "timestamp": "2026-02-18T18:28:20Z",
-  "model": "qwen3:8b",
-  "provider": "ollama",
-  "quality": {
-    "score": 72,
-    "max_score": 100,
-    "pass_threshold": 60,
-    "verdict": "PASS",
-    "breakdown": {}
+  "contract": {
+    "harness_version": "1.0.0",
+    "agent": "autocode",
+    "agent_version": "0.1.0",
+    "model": "qwen2.5-coder:14b-instruct-q4_K_M",
+    "provider_mode": "local_free",
+    "lane": "B7",
+    "manifest_hash": "sha256:a1b2c3d4e5f6...",
+    "budget_profile": {
+      "wall_time_s": 600,
+      "token_cap": 50000,
+      "max_tool_calls": 100
+    },
+    "budget_profile_id": "wt600_tc50000_mc100",
+    "command_trace": "uv run python scripts/benchmark_runner.py --agent autocode --lane B7",
+    "timestamp": "2026-02-19T10:00:00Z",
+    "comparison_validity": "parity-valid"
   },
-  "cost": {
-    "tokens_in": 12000,
-    "tokens_out": 8000,
-    "tool_calls": 25,
-    "turns_used": 3,
-    "turns_budget": 5,
-    "api_errors": 0,
-    "retries": 0
+  "lane": "B7",
+  "agent": "autocode",
+  "model": "qwen2.5-coder:14b-instruct-q4_K_M",
+  "provider_mode": "local_free",
+  "aggregate": {
+    "total_tasks": 25,
+    "resolved": 5,
+    "resolve_rate": 0.2,
+    "infra_fails": 0,
+    "infra_fail_rate": 0.0,
+    "total_wall_time_s": 1500.0,
+    "avg_wall_time_s": 60.0
   },
-  "speed": {
-    "wall_time_s": 180,
-    "llm_time_s": 120,
-    "tool_time_s": 60
-  }
+  "results": [
+    {
+      "task_id": "django__django-11099",
+      "resolved": true,
+      "score": 1.0,
+      "wall_time_s": 45.2,
+      "tool_calls": 8,
+      "error": ""
+    }
+  ]
 }
 ```
 
-## How to Run
+## Provider Policy (Entry 530)
 
-### B6 — React Calculator (from scratch)
+| Provider Mode | Status | Examples |
+|---------------|--------|----------|
+| `local_free` | ALLOWED | Ollama, OpenRouter free-tier (glm-4.5-air:free) |
+| `subscription` | ALLOWED | Codex CLI (user sub), Claude Code CLI (user sub) |
+| `paid_metered` | FORBIDDEN | Any metered API billing |
 
-The benchmark script uses AutoCode's AgentLoop to generate a complete React calculator project from scratch, then scores it.
+## B12/B13 Comparability (Entry 527)
 
-```bash
-# Using Ollama (local, no API cost):
-uv run python scripts/run_calculator_benchmark.py
+| Track | Label | Parity Claims |
+|-------|-------|---------------|
+| B12-PROXY / B13-PROXY | `comparison_validity: proxy-only` | Internal baselines only |
+| B12-OFFICIAL / B13-OFFICIAL | `comparison_validity: official` | Published benchmark parity |
 
-# The generated project lands in sandboxes/bench_<timestamp>/
-# Copy to benchmarks dir for the external test:
-# cp -r sandboxes/bench_<timestamp>/* benchmarks/B6-react-calculator/
+## What We're Benchmarking
 
-# Then run the scoring test:
-uv run pytest tests/benchmark/test_project_creation.py::test_project_creation_real_life_task_external_project -v
-```
+**We are benchmarking AutoCode as a whole agentic coding tool** — not individual models. The benchmarks measure:
+- How well AutoCode's AgentLoop + tools + orchestration can complete real coding tasks
+- End-to-end quality: from user prompt to working code
+- Cost efficiency: tokens, tool calls, turns used
+- Speed: wall time to completion
 
-### B7-B14 — External Benchmarks
-
-```bash
-# Requires Docker + Harbor CLI for most lanes
-# See docs/plan/agentic-benchmarks/external-benchmark-runbook.md
-
-# SWE-bench (B7/B8):
-uv run python scripts/e2e/external/run_external_pilot.py --agent autocode --suite swebench
-
-# Terminal-Bench (B9):
-uv run python scripts/e2e/external/run_external_pilot.py --agent autocode --suite terminalbench
-```
+The LLM model is AutoCode's "brain" but the benchmark tests the full pipeline: prompt engineering, tool calling, file management, command execution, error recovery, and code generation.
 
 ## Provider Recommendations
 
-| Provider | Best for | Cost |
-|----------|----------|------|
-| Ollama (qwen3:8b) | B6 calculator, local dev | Free (local GPU) |
-| OpenRouter (paid model) | B7-B14 external benchmarks | Per-token |
-| OpenRouter (free model) | Testing only | Free but rate-limited |
+AutoCode runs on local hardware (8GB VRAM, 16GB RAM). The model is selected by the user in `.env`.
 
-**Important:** Free OpenRouter models (`*:free`) are rate-limited and will cause API errors during benchmarks. Use Ollama or a paid model for reliable benchmark runs.
+| Provider | Model | Best for | Cost |
+|----------|-------|----------|------|
+| Ollama | qwen2.5-coder:14b-instruct-q4_K_M | B6 calculator (current default) | Free (local GPU, ~8GB VRAM) |
+| Ollama | qwen3:8b | B6 calculator (faster, lighter) | Free (local GPU, ~5GB VRAM) |
+| OpenRouter (free) | *:free models | Quick testing only | Free but rate-limited |
 
 ## Workflow
 
 1. **R0 (Calibration):** Run each lane once to establish baseline scores
-2. **Lock baselines:** Record scores in `phase5-benchmark-baselines.json`
+2. **Lock baselines:** Record pass thresholds in `benchmarks/STATUS.md`
 3. **R1 (Gate run):** Run all lanes, compare against baselines
 4. **Store artifacts:** Save to `docs/qa/test-results/` per Codex gate policy
-5. **Review:** Codex reviews artifacts, issues APPROVE/NEEDS_WORK per lane
+5. **Parity runs:** Run Codex + Claude Code on same lanes via unified harness
+6. **Review:** Codex reviews artifacts, issues APPROVE/NEEDS_WORK per lane

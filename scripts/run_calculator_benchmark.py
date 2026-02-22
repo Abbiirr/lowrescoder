@@ -75,10 +75,33 @@ BENCHMARK_PROMPT = (
     "vite.config.js, and src/ should all be at the top level of the current "
     "directory. Use `npm init -y` to initialize, then install dependencies "
     "with `npm install`. Use `write_file` to create source files.\n"
+    "- You MUST create an index.html in the project root with "
+    '`<div id="root"></div>` and `<script type="module" src="/src/main.jsx">'
+    "</script>`. Vite requires this file as the entry point.\n"
     "- Config files (vite.config.js, postcss.config.js, tailwind.config.js) "
     "MUST use CommonJS syntax: `module.exports = { ... }`. Do NOT use "
     "`export default` — Node.js will fail with 'Unexpected token export'. "
-    "This is critical for the build to succeed."
+    "This is critical for the build to succeed.\n\n"
+    "CODE QUALITY RULES:\n"
+    "- NEVER use eval() or new Function() for calculations. Use mathjs "
+    "evaluate() instead: `import { evaluate } from 'mathjs'`. "
+    "eval() is a security vulnerability and will be penalized.\n"
+    "- Put each calculator page in its own file under src/pages/ "
+    "(e.g. src/pages/RegularCalculator.jsx, src/pages/ScientificCalculator.jsx, "
+    "src/pages/CurrencyConverter.jsx, src/pages/UnitConverter.jsx, "
+    "src/pages/LandingPage.jsx). Import them in src/App.jsx.\n"
+    "- Create a src/constants/ directory with conversion factors "
+    "(e.g. src/constants/conversionFactors.js).\n"
+    "- Create a src/hooks/ directory with at least one custom hook "
+    "(e.g. src/hooks/useCalculator.js).\n"
+    "- Do NOT leave TODO or FIXME comments — implement everything fully.\n\n"
+    "VERIFICATION (mandatory before finishing):\n"
+    "- Run `npm run build` to check for errors.\n"
+    "- If build fails, read the error, fix the issue.\n"
+    "- Common fix: ensure package.json lists ALL imported packages "
+    "(react, react-dom, react-router-dom, mathjs, big.js, etc.).\n"
+    "- Re-run `npm run build` until it succeeds.\n"
+    "- Verify that dist/index.html exists after a successful build."
 )
 
 FOLLOW_UP_PROMPTS = [
@@ -339,6 +362,42 @@ def _benchmark_run_command(command: str, timeout: int = 30) -> str:
         return f"Error running command: {e}"
 
 
+def _quick_build_check(project_root: Path) -> tuple[bool, str]:
+    """Run npm install + npm run build quickly and return (success, error_output).
+
+    Used between turns to decide if a verification follow-up is needed.
+    """
+    if not (project_root / "package.json").exists():
+        return False, "No package.json found"
+    if not shutil.which("npm"):
+        return True, ""  # Can't check, assume OK
+
+    try:
+        proc = _run_npm(["install"], cwd=project_root, timeout=120)
+        if proc.returncode != 0:
+            return False, f"npm install failed:\n{proc.stderr[-500:]}"
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return False, f"npm install error: {e}"
+
+    try:
+        proc = _run_npm(["run", "build"], cwd=project_root, timeout=120)
+        if proc.returncode != 0:
+            error_out = proc.stderr[-1000:] if proc.stderr else proc.stdout[-1000:]
+            return False, f"npm run build failed:\n{error_out}"
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return False, f"npm build error: {e}"
+
+    return True, ""
+
+
+def _app_smoke_check(project_root: Path) -> tuple[bool, str]:
+    """Check that the built app is runnable (dist/index.html exists)."""
+    dist_index = project_root / "dist" / "index.html"
+    if dist_index.exists():
+        return True, ""
+    return False, "dist/index.html not found after build"
+
+
 # --- Phase C: Agent Execution ---
 
 
@@ -544,24 +603,52 @@ async def run_agent(
         turn_data = await _run_turn(BENCHMARK_PROMPT, turn_num=1, tc_before=0)
         turns.append(turn_data)
 
-        # Follow-up turns if max iterations was hit OR if the initial turn
-        # errored but made some progress (tool calls > 0)
+        # Follow-up turns if max iterations was hit, API error with progress,
+        # or build failed (agent needs to fix it)
         all_prompts = FOLLOW_UP_PROMPTS + [
             "Almost done. Check which page components are still missing and "
             "create them. Make sure App.jsx imports match the actual files in "
             "src/pages/. All files in current directory (.).",
+            # Extra verification turn for build fix
+            "Run `npm run build` and fix any remaining errors. Ensure all "
+            "imported packages are in package.json dependencies. All files "
+            "in the current directory (.).",
         ]
         for i, followup in enumerate(all_prompts):
             last = turns[-1]
+
+            # Check build status between turns
+            project_root = find_project_root(sandbox)
+            build_ok, build_error = _quick_build_check(project_root)
+
             should_continue = (
                 last["hit_max_iterations"]
                 or (last.get("error") and last["tool_calls"] > 0)
+                or not build_ok  # Always continue while build is failing
             )
             if not should_continue:
                 break
 
             turn_num = i + 2
             tc_before = tool_call_count
+
+            # If build failed, include actual error in the follow-up prompt
+            if not build_ok and build_error:
+                followup = (
+                    f"The npm build failed with this error:\n\n"
+                    f"```\n{build_error[:1500]}\n```\n\n"
+                    f"You MUST use write_file and run_command tools to fix this. "
+                    f"Do NOT just explain the fix — actually do it using tools.\n"
+                    f"Steps: 1) Use write_file to fix the broken file. "
+                    f"2) Use run_command to install any missing dependencies "
+                    f"(e.g. `npm install axios`). "
+                    f"3) Use run_command to run `npm run build` to verify. "
+                    f"If index.html is missing, create it with write_file. "
+                    f"All files in the current directory (.)."
+                )
+                print("  [Build check] FAILED — sending error to agent", flush=True)
+            else:
+                print(f"  [Build check] {'PASSED' if build_ok else 'SKIPPED'}", flush=True)
 
             print(f"\n--- Turn {turn_num}: Follow-up ---", flush=True)
             turn_data = await _run_turn(followup, turn_num=turn_num, tc_before=tc_before)
@@ -922,13 +1009,21 @@ def classify_result(
         reasons.append(f"API errors in {len(api_errors)} turn(s)")
         return BenchmarkVerdict.INFRA_FAIL, reasons
 
+    # Build fail = total score 0 per Entry 526
+    build_result = npm_result.get("build") or {}
+    npm_build_ok = build_result.get("success", False)
+    if not npm_build_ok:
+        scores["total"] = 0
+        reasons.append("npm build failed (score overridden to 0 per policy)")
+
+    # App smoke check — app must run per Entry 526
+    smoke_result = npm_result.get("smoke_check") or {}
+    if not smoke_result.get("success", False):
+        reasons.append(f"App smoke check failed: {smoke_result.get('error', 'unknown')}")
+
     total = scores.get("total", 0)
     if total < min_score:
         reasons.append(f"Score {total} < minimum {min_score}")
-
-    build_result = npm_result.get("build") or {}
-    if not build_result.get("success", False):
-        reasons.append("npm build failed")
 
     if reasons:
         return BenchmarkVerdict.FAIL, reasons
@@ -1030,7 +1125,7 @@ def check_budgets(agent_result: dict, bench_log: object) -> dict:
 
 
 # Strict mode constants
-STRICT_MIN_SCORE = 60
+STRICT_MIN_SCORE = 90
 STRICT_REQUIRE_BUILD = True
 
 
@@ -1051,13 +1146,21 @@ def classify_result_strict(
         reasons.append(f"API errors in {len(api_errors)} turn(s)")
         return BenchmarkVerdict.INFRA_FAIL, reasons
 
+    # Build fail = total score 0 per Entry 526
+    build_result = npm_result.get("build") or {}
+    npm_build_ok = build_result.get("success", False)
+    if STRICT_REQUIRE_BUILD and not npm_build_ok:
+        scores["total"] = 0
+        reasons.append("npm build failed (score overridden to 0 per policy)")
+
+    # App smoke check — app must run per Entry 526
+    smoke_result = npm_result.get("smoke_check") or {}
+    if not smoke_result.get("success", False):
+        reasons.append(f"App smoke check failed: {smoke_result.get('error', 'unknown')}")
+
     total = scores.get("total", 0)
     if total < STRICT_MIN_SCORE:
         reasons.append(f"Score {total} < strict minimum {STRICT_MIN_SCORE}")
-
-    build_result = npm_result.get("build") or {}
-    if STRICT_REQUIRE_BUILD and not build_result.get("success", False):
-        reasons.append("npm build failed (required in strict mode)")
 
     # Critical anti-patterns block in strict mode
     if anti_patterns and anti_patterns.get("critical"):
@@ -1474,8 +1577,22 @@ async def run_single_benchmark(
     if import_val.get("missing"):
         print(f"  WARNING: Missing deps: {', '.join(import_val['missing'])}")
 
+    # App smoke check (dist/index.html exists after build)
+    npm_build_ok = (npm_result.get("build") or {}).get("success", False)
+    if npm_build_ok:
+        smoke_ok, smoke_err = _app_smoke_check(project_root)
+        print(f"\n[Phase D.2] App smoke check: {'PASS' if smoke_ok else 'FAIL'}")
+        if not smoke_ok:
+            print(f"  {smoke_err}")
+            npm_result["smoke_check"] = {"success": False, "error": smoke_err}
+        else:
+            npm_result["smoke_check"] = {"success": True}
+    else:
+        npm_result["smoke_check"] = {"success": False, "error": "Build failed, smoke check skipped"}
+        print("\n[Phase D.2] App smoke check: SKIPPED (build failed)")
+
     # Security checks
-    print("\n[Phase D.2] Running security checks...")
+    print("\n[Phase D.3] Running security checks...")
     security = run_security_checks(project_root)
 
     # Phase E: Scoring
