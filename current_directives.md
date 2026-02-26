@@ -114,17 +114,17 @@ that harness-driven completion checking is the most reliable pattern. See plan d
 
 #### What to implement (changes to `scripts/adapters/autocode_adapter.py` only)
 
-- [ ] **Outer grading retry loop** in `solve_task()`:
+- [x] **Outer grading retry loop** in `solve_task()`:
   - Create `AgentLoop` once, reuse across all attempts (same session = full history retained)
   - After each agent run: grade via `task.grading_command`
   - If pass → done. If fail → inject tail of pytest output as next user message → re-run
   - Max `MAX_GRADE_ATTEMPTS = 3`, min `MIN_ATTEMPT_BUDGET_S = 60s` per attempt
   - Track per-attempt info in `AgentResult.artifacts["grade_attempts"]`
-- [ ] **Rewrite `_build_prompt()`**:
+- [x] **Rewrite `_build_prompt()`**:
   - State that test_patch is pre-applied (agent fixes SOURCE only)
   - Include `task.grading_command` so agent can self-test
   - Step-by-step workflow: run tests → read error → fix source → verify → repeat
-- [ ] **Add `_build_feedback_prompt()`**:
+- [x] **Add `_build_feedback_prompt()`**:
   - Injects last 2000 chars of pytest output (tail = summary section)
   - Includes grading command for re-run
   - No changes to `loop.py` or `tools.py`

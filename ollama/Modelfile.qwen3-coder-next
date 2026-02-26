@@ -1,0 +1,17 @@
+# Ollama Modelfile for qwen3-coder-next
+# Optimized for 24GB VRAM with partial CPU offload
+#
+# Usage:
+#   ollama create qwen3-coder-autocode -f ollama/Modelfile.qwen3-coder-next
+#   ollama run qwen3-coder-autocode
+
+FROM qwen3-coder-next:q4_K_M
+
+# --- Context & generation ---
+PARAMETER num_ctx 32768
+PARAMETER temperature 0.2
+PARAMETER top_p 0.9
+PARAMETER repeat_penalty 1.05
+
+# --- Coding-tuned system prompt ---
+SYSTEM """You are a precise coding assistant. You read code carefully, make minimal targeted changes, and explain your reasoning concisely. When generating code, output only the relevant code — no unnecessary commentary. Prefer correctness over cleverness."""

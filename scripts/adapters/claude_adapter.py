@@ -11,6 +11,8 @@ import subprocess
 import time
 from pathlib import Path
 
+from scripts.docker_helpers import docker_exec as _docker_exec
+
 from .base import AgentResult, BenchmarkTask, BudgetProfile
 
 
@@ -85,8 +87,35 @@ class ClaudeCodeAdapter:
             output = proc.stdout[:2000]
             if proc.returncode != 0:
                 error = proc.stderr[:1000]
+
+            # Grading: use grading_command if available, else CLI exit code
+            if task.grading_command:
+                _cname = task.extra.get("_container_name")
+                if _cname:
+                    grade_result = _docker_exec(
+                        _cname,
+                        task.grading_command,
+                        timeout=120,
+                    )
+                else:
+                    grade_result = subprocess.run(
+                        task.grading_command,
+                        shell=True,
+                        cwd=str(sandbox),
+                        capture_output=True,
+                        text=True,
+                        timeout=120,
+                    )
+                resolved = grade_result.returncode == 0
+                if not resolved:
+                    output += (
+                        f"\n--- Grading ---\n"
+                        f"Exit code: {grade_result.returncode}\n"
+                        f"stdout: {grade_result.stdout[:500]}\n"
+                        f"stderr: {grade_result.stderr[:500]}"
+                    )
             else:
-                resolved = True
+                resolved = proc.returncode == 0
         except subprocess.TimeoutExpired:
             error = f"Timeout after {budget.wall_time_s}s"
         except Exception as e:

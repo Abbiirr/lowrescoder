@@ -33,9 +33,10 @@
         "cd django && git remote add origin https://github.com/django/django.git",
         "cd django && git fetch --depth=1 origin 838e432e3e5519c5383d12018e6c78f8ec7833c1",
         "cd django && git checkout FETCH_HEAD",
-        "cd django && pip install -e . 2>&1 | tail -3"
+        "cd django && pip install -e ."
       ],
-      "grading_command": "cd django && python tests/runtests.py --settings=test_sqlite aggregation"
+      "grading_command": "cd django && python tests/runtests.py --settings=test_sqlite aggregation",
+      "python_version": "3.8"
     },
     {
       "task_id": "sympy__sympy-12096",
@@ -55,9 +56,10 @@
         "cd sympy && git remote add origin https://github.com/sympy/sympy.git",
         "cd sympy && git fetch --depth=1 origin d7c3045115693e887bcd03599b7ca4650ac5f2cb",
         "cd sympy && git checkout FETCH_HEAD",
-        "cd sympy && pip install -e . 2>&1 | tail -3"
+        "cd sympy && pip install -e ."
       ],
-      "grading_command": "cd sympy && python -m pytest -xvs -k \"test_issue_12092\""
+      "grading_command": "cd sympy && python -m pytest -xvs sympy/utilities/tests/test_lambdify.py -k \"test_issue_12092\"",
+      "python_version": "3.9"
     },
     {
       "task_id": "scikit-learn__scikit-learn-11310",
@@ -77,9 +79,13 @@
         "cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-learn.git",
         "cd scikit-learn && git fetch --depth=1 origin 553b5fb8f84ba05c8397f26dd079deece2b05029",
         "cd scikit-learn && git checkout FETCH_HEAD",
-        "cd scikit-learn && pip install -e . 2>&1 | tail -3"
+        "cd scikit-learn && pip install -e ."
       ],
-      "grading_command": "cd scikit-learn && python -m pytest \"sklearn/model_selection/tests/test_search.py::test_search_cv_timing\" -x -q"
+      "grading_command": "cd scikit-learn && python -m pytest \"sklearn/model_selection/tests/test_search.py::test_search_cv_timing\" -x -q",
+      "python_version": "3.7",
+      "extra_pip_deps": [
+        "Cython<3"
+      ]
     },
     {
       "task_id": "pytest-dev__pytest-10081",
@@ -99,9 +105,10 @@
         "cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git",
         "cd pytest && git fetch --depth=1 origin da9a2b584eb7a6c7e924b2621ed0ddaeca0a7bea",
         "cd pytest && git checkout FETCH_HEAD",
-        "cd pytest && pip install -e . 2>&1 | tail -3"
+        "cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0 pip install -e ."
       ],
-      "grading_command": "cd pytest && python -m pytest \"testing/test_unittest.py::test_pdb_teardown_skipped_for_classes[@unittest.skip]\" -x -q"
+      "grading_command": "cd pytest && python -m pytest \"testing/test_unittest.py::test_pdb_teardown_skipped_for_classes[@unittest.skip]\" -x -q",
+      "python_version": "3.9"
     },
     {
       "task_id": "matplotlib__matplotlib-13989",
@@ -121,9 +128,14 @@
         "cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib.git",
         "cd matplotlib && git fetch --depth=1 origin a3e2897bfaf9eaac1d6649da535c4e721c89fa69",
         "cd matplotlib && git checkout FETCH_HEAD",
-        "cd matplotlib && pip install -e . 2>&1 | tail -3"
+        "cd matplotlib && pip install -e ."
       ],
-      "grading_command": "cd matplotlib && python -m pytest \"lib/matplotlib/tests/test_axes.py::test_hist_range_and_density\" -x -q"
+      "grading_command": "cd matplotlib && python -m pytest \"lib/matplotlib/tests/test_axes.py::test_hist_range_and_density\" -x -q",
+      "python_version": "3.7",
+      "extra_apt_deps": [
+        "libfreetype6-dev",
+        "libpng-dev"
+      ]
     },
     {
       "task_id": "django__django-10973",
@@ -146,9 +158,10 @@
         "cd django && git remote add origin https://github.com/django/django.git",
         "cd django && git fetch --depth=1 origin ddb293685235fd09e932805771ae97f72e817181",
         "cd django && git checkout FETCH_HEAD",
-        "cd django && pip install -e . 2>&1 | tail -3"
+        "cd django && pip install -e ."
       ],
-      "grading_command": "cd django && python tests/runtests.py --settings=test_sqlite dbshell"
+      "grading_command": "cd django && python tests/runtests.py --settings=test_sqlite dbshell",
+      "python_version": "3.8"
     },
     {
       "task_id": "django__django-10554",
@@ -169,9 +182,10 @@
         "cd django && git remote add origin https://github.com/django/django.git",
         "cd django && git fetch --depth=1 origin 14d026cccb144c6877294ba4cd4e03ebf0842498",
         "cd django && git checkout FETCH_HEAD",
-        "cd django && pip install -e . 2>&1 | tail -3"
+        "cd django && pip install -e ."
       ],
-      "grading_command": "cd django && python tests/runtests.py --settings=test_sqlite queries"
+      "grading_command": "cd django && python tests/runtests.py --settings=test_sqlite queries",
+      "python_version": "3.8"
     },
     {
       "task_id": "django__django-10914",
@@ -191,9 +205,10 @@
         "cd django && git remote add origin https://github.com/django/django.git",
         "cd django && git fetch --depth=1 origin e7fd69d051eaa67cb17f172a39b57253e9cb831a",
         "cd django && git checkout FETCH_HEAD",
-        "cd django && pip install -e . 2>&1 | tail -3"
+        "cd django && pip install -e ."
       ],
-      "grading_command": "cd django && python tests/runtests.py --settings=test_sqlite test_utils"
+      "grading_command": "cd django && python tests/runtests.py --settings=test_sqlite test_utils",
+      "python_version": "3.8"
     },
     {
       "task_id": "django__django-11087",
@@ -213,9 +228,10 @@
         "cd django && git remote add origin https://github.com/django/django.git",
         "cd django && git fetch --depth=1 origin 8180ffba21bf10f4be905cb0d4890dc2bcff2788",
         "cd django && git checkout FETCH_HEAD",
-        "cd django && pip install -e . 2>&1 | tail -3"
+        "cd django && pip install -e ."
       ],
-      "grading_command": "cd django && python tests/runtests.py --settings=test_sqlite delete"
+      "grading_command": "cd django && python tests/runtests.py --settings=test_sqlite delete",
+      "python_version": "3.8"
     },
     {
       "task_id": "sympy__sympy-11618",
@@ -235,9 +251,10 @@
         "cd sympy && git remote add origin https://github.com/sympy/sympy.git",
         "cd sympy && git fetch --depth=1 origin 360290c4c401e386db60723ddb0109ed499c9f6e",
         "cd sympy && git checkout FETCH_HEAD",
-        "cd sympy && pip install -e . 2>&1 | tail -3"
+        "cd sympy && pip install -e ."
       ],
-      "grading_command": "cd sympy && python -m pytest -xvs -k \"test_issue_11617\""
+      "grading_command": "cd sympy && python -m pytest -xvs sympy/geometry/tests/test_point.py -k \"test_issue_11617\"",
+      "python_version": "3.9"
     },
     {
       "task_id": "sympy__sympy-12489",
@@ -257,9 +274,10 @@
         "cd sympy && git remote add origin https://github.com/sympy/sympy.git",
         "cd sympy && git fetch --depth=1 origin aa9780761ad8c3c0f68beeef3a0ce5caac9e100b",
         "cd sympy && git checkout FETCH_HEAD",
-        "cd sympy && pip install -e . 2>&1 | tail -3"
+        "cd sympy && pip install -e ."
       ],
-      "grading_command": "cd sympy && python -m pytest -xvs -k \"test_Permutation_subclassing\""
+      "grading_command": "cd sympy && python -m pytest -xvs sympy/combinatorics/tests/test_permutations.py -k \"test_Permutation_subclassing\"",
+      "python_version": "3.9"
     },
     {
       "task_id": "sympy__sympy-12481",
@@ -279,9 +297,10 @@
         "cd sympy && git remote add origin https://github.com/sympy/sympy.git",
         "cd sympy && git fetch --depth=1 origin c807dfe7569692cad24f02a08477b70c1679a4dd",
         "cd sympy && git checkout FETCH_HEAD",
-        "cd sympy && pip install -e . 2>&1 | tail -3"
+        "cd sympy && pip install -e ."
       ],
-      "grading_command": "cd sympy && python -m pytest -xvs -k \"test_args\""
+      "grading_command": "cd sympy && python -m pytest -xvs sympy/combinatorics/tests/test_permutations.py -k \"test_args\"",
+      "python_version": "3.9"
     },
     {
       "task_id": "sympy__sympy-12419",
@@ -301,9 +320,10 @@
         "cd sympy && git remote add origin https://github.com/sympy/sympy.git",
         "cd sympy && git fetch --depth=1 origin 479939f8c65c8c2908bbedc959549a257a7c0b0b",
         "cd sympy && git checkout FETCH_HEAD",
-        "cd sympy && pip install -e . 2>&1 | tail -3"
+        "cd sympy && pip install -e ."
       ],
-      "grading_command": "cd sympy && python -m pytest -xvs -k \"test_Identity\""
+      "grading_command": "cd sympy && python -m pytest -xvs sympy/matrices/expressions/tests/test_matexpr.py -k \"test_Identity\"",
+      "python_version": "3.9"
     },
     {
       "task_id": "scikit-learn__scikit-learn-10297",
@@ -323,9 +343,13 @@
         "cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-learn.git",
         "cd scikit-learn && git fetch --depth=1 origin b90661d6a46aa3619d3eec94d5281f5888add501",
         "cd scikit-learn && git checkout FETCH_HEAD",
-        "cd scikit-learn && pip install -e . 2>&1 | tail -3"
+        "cd scikit-learn && pip install -e ."
       ],
-      "grading_command": "cd scikit-learn && python -m pytest \"sklearn/linear_model/tests/test_ridge.py::test_ridge_classifier_cv_store_cv_values\" -x -q"
+      "grading_command": "cd scikit-learn && python -m pytest \"sklearn/linear_model/tests/test_ridge.py::test_ridge_classifier_cv_store_cv_values\" -x -q",
+      "python_version": "3.7",
+      "extra_pip_deps": [
+        "Cython<3"
+      ]
     },
     {
       "task_id": "scikit-learn__scikit-learn-25102",
@@ -346,9 +370,13 @@
         "cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-learn.git",
         "cd scikit-learn && git fetch --depth=1 origin f9a1cf072da9d7375d6c2163f68a6038b13b310f",
         "cd scikit-learn && git checkout FETCH_HEAD",
-        "cd scikit-learn && pip install -e . 2>&1 | tail -3"
+        "cd scikit-learn && pip install -e ."
       ],
-      "grading_command": "cd scikit-learn && python -m pytest \"sklearn/feature_selection/tests/test_base.py::test_output_dataframe\" \"sklearn/feature_selection/tests/test_feature_select.py::test_dataframe_output_dtypes\" -x -q"
+      "grading_command": "cd scikit-learn && python -m pytest \"sklearn/feature_selection/tests/test_base.py::test_output_dataframe\" \"sklearn/feature_selection/tests/test_feature_select.py::test_dataframe_output_dtypes\" -x -q",
+      "python_version": "3.9",
+      "extra_pip_deps": [
+        "Cython<3"
+      ]
     },
     {
       "task_id": "scikit-learn__scikit-learn-12585",
@@ -368,9 +396,13 @@
         "cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-learn.git",
         "cd scikit-learn && git fetch --depth=1 origin bfc4a566423e036fbdc9fb02765fd893e4860c85",
         "cd scikit-learn && git checkout FETCH_HEAD",
-        "cd scikit-learn && pip install -e . 2>&1 | tail -3"
+        "cd scikit-learn && pip install -e ."
       ],
-      "grading_command": "cd scikit-learn && python -m pytest \"sklearn/tests/test_base.py::test_clone_estimator_types\" -x -q"
+      "grading_command": "cd scikit-learn && python -m pytest \"sklearn/tests/test_base.py::test_clone_estimator_types\" -x -q",
+      "python_version": "3.7",
+      "extra_pip_deps": [
+        "Cython<3"
+      ]
     },
     {
       "task_id": "scikit-learn__scikit-learn-10844",
@@ -390,9 +422,13 @@
         "cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-learn.git",
         "cd scikit-learn && git fetch --depth=1 origin 97523985b39ecde369d83352d7c3baf403b60a22",
         "cd scikit-learn && git checkout FETCH_HEAD",
-        "cd scikit-learn && pip install -e . 2>&1 | tail -3"
+        "cd scikit-learn && pip install -e ."
       ],
-      "grading_command": "cd scikit-learn && python -m pytest \"sklearn/metrics/cluster/tests/test_supervised.py::test_int_overflow_mutual_info_fowlkes_mallows_score\" -x -q"
+      "grading_command": "cd scikit-learn && python -m pytest \"sklearn/metrics/cluster/tests/test_supervised.py::test_int_overflow_mutual_info_fowlkes_mallows_score\" -x -q",
+      "python_version": "3.7",
+      "extra_pip_deps": [
+        "Cython<3"
+      ]
     },
     {
       "task_id": "pytest-dev__pytest-10051",
@@ -412,9 +448,10 @@
         "cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git",
         "cd pytest && git fetch --depth=1 origin aa55975c7d3f6c9f6d7f68accc41bb7cadf0eb9a",
         "cd pytest && git checkout FETCH_HEAD",
-        "cd pytest && pip install -e . 2>&1 | tail -3"
+        "cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0 pip install -e ."
       ],
-      "grading_command": "cd pytest && python -m pytest \"testing/logging/test_fixture.py::test_clear_for_call_stage\" -x -q"
+      "grading_command": "cd pytest && python -m pytest \"testing/logging/test_fixture.py::test_clear_for_call_stage\" -x -q",
+      "python_version": "3.9"
     },
     {
       "task_id": "pytest-dev__pytest-10356",
@@ -434,9 +471,10 @@
         "cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git",
         "cd pytest && git fetch --depth=1 origin 3c1534944cbd34e8a41bc9e76818018fadefc9a1",
         "cd pytest && git checkout FETCH_HEAD",
-        "cd pytest && pip install -e . 2>&1 | tail -3"
+        "cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0 pip install -e ."
       ],
-      "grading_command": "cd pytest && python -m pytest \"testing/test_mark.py::test_mark_mro\" -x -q"
+      "grading_command": "cd pytest && python -m pytest \"testing/test_mark.py::test_mark_mro\" -x -q",
+      "python_version": "3.9"
     },
     {
       "task_id": "pytest-dev__pytest-5262",
@@ -456,9 +494,10 @@
         "cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git",
         "cd pytest && git fetch --depth=1 origin 58e6a09db49f34886ff13f3b7520dd0bcd7063cd",
         "cd pytest && git checkout FETCH_HEAD",
-        "cd pytest && pip install -e . 2>&1 | tail -3"
+        "cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=4.5.0 pip install -e ."
       ],
-      "grading_command": "cd pytest && python -m pytest \"testing/test_capture.py::TestFDCapture::test_capfd_sys_stdout_mode\" -x -q"
+      "grading_command": "cd pytest && python -m pytest \"testing/test_capture.py::TestFDCapture::test_capfd_sys_stdout_mode\" -x -q",
+      "python_version": "3.9"
     },
     {
       "task_id": "pytest-dev__pytest-5631",
@@ -478,9 +517,10 @@
         "cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git",
         "cd pytest && git fetch --depth=1 origin cb828ebe70b4fa35cd5f9a7ee024272237eab351",
         "cd pytest && git checkout FETCH_HEAD",
-        "cd pytest && pip install -e . 2>&1 | tail -3"
+        "cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=5.0.0 pip install -e ."
       ],
-      "grading_command": "cd pytest && python -m pytest \"testing/python/integration.py::TestMockDecoration::test_mock_sentinel_check_against_numpy_like\" -x -q"
+      "grading_command": "cd pytest && python -m pytest \"testing/python/integration.py::TestMockDecoration::test_mock_sentinel_check_against_numpy_like\" -x -q",
+      "python_version": "3.9"
     },
     {
       "task_id": "matplotlib__matplotlib-14623",
@@ -500,9 +540,14 @@
         "cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib.git",
         "cd matplotlib && git fetch --depth=1 origin d65c9ca20ddf81ef91199e6d819f9d3506ef477c",
         "cd matplotlib && git checkout FETCH_HEAD",
-        "cd matplotlib && pip install -e . 2>&1 | tail -3"
+        "cd matplotlib && pip install -e ."
       ],
-      "grading_command": "cd matplotlib && python -m pytest \"lib/matplotlib/tests/test_axes.py::test_inverted_limits\" -x -q"
+      "grading_command": "cd matplotlib && python -m pytest \"lib/matplotlib/tests/test_axes.py::test_inverted_limits\" -x -q",
+      "python_version": "3.7",
+      "extra_apt_deps": [
+        "libfreetype6-dev",
+        "libpng-dev"
+      ]
     },
     {
       "task_id": "matplotlib__matplotlib-20676",
@@ -523,9 +568,14 @@
         "cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib.git",
         "cd matplotlib && git fetch --depth=1 origin 6786f437df54ca7780a047203cbcfaa1db8dc542",
         "cd matplotlib && git checkout FETCH_HEAD",
-        "cd matplotlib && pip install -e . 2>&1 | tail -3"
+        "cd matplotlib && pip install -e ."
       ],
-      "grading_command": "cd matplotlib && python -m pytest \"lib/matplotlib/tests/test_widgets.py::test_span_selector_bound[horizontal]\" \"lib/matplotlib/tests/test_widgets.py::test_span_selector_bound[vertical]\" -x -q"
+      "grading_command": "cd matplotlib && python -m pytest \"lib/matplotlib/tests/test_widgets.py::test_span_selector_bound[horizontal]\" \"lib/matplotlib/tests/test_widgets.py::test_span_selector_bound[vertical]\" -x -q",
+      "python_version": "3.9",
+      "extra_apt_deps": [
+        "libfreetype6-dev",
+        "libpng-dev"
+      ]
     },
     {
       "task_id": "matplotlib__matplotlib-20488",
@@ -545,9 +595,14 @@
         "cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib.git",
         "cd matplotlib && git fetch --depth=1 origin b7ce415c15eb39b026a097a2865da73fbcf15c9c",
         "cd matplotlib && git checkout FETCH_HEAD",
-        "cd matplotlib && pip install -e . 2>&1 | tail -3"
+        "cd matplotlib && pip install -e ."
       ],
-      "grading_command": "cd matplotlib && python -m pytest \"lib/matplotlib/tests/test_image.py::test_huge_range_log[png--1]\" -x -q"
+      "grading_command": "cd matplotlib && python -m pytest \"lib/matplotlib/tests/test_image.py::test_huge_range_log[png--1]\" -x -q",
+      "python_version": "3.9",
+      "extra_apt_deps": [
+        "libfreetype6-dev",
+        "libpng-dev"
+      ]
     }
   ]
 }

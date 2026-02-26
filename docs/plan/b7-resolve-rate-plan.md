@@ -2,7 +2,7 @@
 
 > Created: 2026-02-21
 > Updated: 2026-02-21 — Revised to harness-driven outer retry loop (simpler, no loop.py changes)
-> Status: IMPLEMENTED — outer grading retry loop live in `scripts/adapters/autocode_adapter.py`
+> Status: IN PROGRESS — outer grading retry loop implemented in `scripts/adapters/autocode_adapter.py`, awaiting rerun validation
 
 ## Root Cause (confirmed across 3 models, R0-R2)
 
@@ -41,11 +41,28 @@ the most reliable pattern is **harness-driven completion checking**, not model-d
 |----------|-------|
 | Max outer attempts | 3 (configurable via `MAX_GRADE_ATTEMPTS`) |
 | Min budget per attempt | 60s (configurable via `MIN_ATTEMPT_BUDGET_S`) |
+| Budget strategy | **First-attempt priority** (see below) |
 | Session reuse | YES — same `AgentLoop` instance, same `session_id` |
 | Agent context across retries | Full history preserved (agent sees what it did before) |
 | Human intervention | None — fully autonomous |
 | Changes to loop.py | None |
 | Changes to tools.py | None |
+
+### Budget strategy: first-attempt priority (intentional)
+
+Each attempt receives `timeout = remaining_budget` (not `budget / MAX_GRADE_ATTEMPTS`).
+This means attempt 1 can consume most or all of the budget, leaving little for retries.
+
+**Why this is correct:**
+- Most tasks should resolve on attempt 1 with good prompting. Capping attempt 1 at 1/3 budget
+  would reduce first-attempt quality for the common case.
+- The `MIN_ATTEMPT_BUDGET_S` check prevents starting a doomed retry with < 60s remaining.
+- Retries are **opportunistic**: they fire when attempt 1 finishes quickly but fails grading.
+  For long-thinking models (glm-4.7-flash at ~2000s/task), practical behavior collapses to one
+  attempt — this is expected and acceptable.
+
+**When retries are most effective:** fast models (qwen3-coder at ~60s/task) that produce wrong
+fixes quickly. The harness can re-drive with feedback 2-3 times within budget.
 
 ### Why same session matters
 

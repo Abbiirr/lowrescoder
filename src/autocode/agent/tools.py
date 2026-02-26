@@ -40,6 +40,15 @@ class ToolRegistry:
     def get_all(self) -> list[ToolDefinition]:
         return list(self._tools.values())
 
+    def filter(self, allowed_names: set[str]) -> ToolRegistry:
+        """Return a new registry containing only the named tools."""
+        filtered = ToolRegistry()
+        for name in allowed_names:
+            tool = self._tools.get(name)
+            if tool is not None:
+                filtered.register(tool)
+        return filtered
+
     def get_schemas_openai_format(self) -> list[dict[str, Any]]:
         """Return tool schemas in OpenAI function-calling format."""
         schemas: list[dict[str, Any]] = []

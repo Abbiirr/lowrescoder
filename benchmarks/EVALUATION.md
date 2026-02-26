@@ -13,14 +13,14 @@ Does AutoCode produce correct, complete output?
 | Lane | Metric | Pass Threshold |
 |------|--------|----------------|
 | B6 React Calculator | Rubric score (0-100) + build + app runs | >= 90, build pass, app runs |
-| B7 SWE-bench Verified | % tasks resolved | TBD after R0 calibration |
-| B8 SWE-bench Bash-Only | % tasks resolved | TBD after R0 calibration |
-| B9 Terminal-Bench | % tasks completed | TBD after R0 calibration |
-| B10 SWE-bench Multilingual | % tasks resolved + per-language rate | TBD after R0 calibration |
-| B11 BaxBench | % tasks passing | TBD after R0 calibration |
-| B12-PROXY SWE-Lancer Equivalent | % tasks resolved | TBD after R0 (proxy-only) |
-| B13-PROXY CodeClash Equivalent | % goals achieved | TBD after R0 (proxy-only) |
-| B14 LiveCodeBench | % tasks passing | TBD after R0 calibration |
+| B7 SWE-bench Verified | % tasks resolved | >= 40% |
+| B8 SWE-bench Bash-Only | % tasks resolved | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run |
+| B9 Terminal-Bench | % tasks completed | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run |
+| B10 SWE-bench Multilingual | % tasks resolved + per-language rate | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run |
+| B11 BaxBench | % tasks passing | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run |
+| B12-PROXY SWE-Lancer Equivalent | % tasks resolved | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run (proxy-only) |
+| B13-PROXY CodeClash Equivalent | % goals achieved | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run (proxy-only) |
+| B14 LiveCodeBench | % tasks passing | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run |
 
 **B6 special rule (Entry 526):** If `npm run build` fails, total score = 0.
 
@@ -51,7 +51,32 @@ How long does it take?
 
 **Runner:** `scripts/benchmark_runner.py`
 
-All agents are driven by the same harness with identical prompts, budgets, and grading.
+All agents are driven by the same harness with identical budgets and grading. Prompts differ by adapter design but grading is normalized: all agents are scored by `task.grading_command` execution, not CLI exit code.
+
+### Known Non-Equivalences
+
+The following adapter-level differences are inherent to agent design and do not invalidate parity claims for grading:
+
+| Aspect | AutoCode | Codex / Claude Code |
+|--------|----------|---------------------|
+| Execution model | In-process AgentLoop | External CLI subprocess |
+| Working directory | Resolved repo dir (for tool operations) | Sandbox root (CLI navigates internally) |
+| Prompt | Multi-step workflow with grading command | Simple `Fix this issue: ...` |
+| Retry loop | Harness-driven outer retry (up to 3 attempts) | Single CLI invocation |
+
+Grading is the normalization point: all agents are scored by the same `task.grading_command` executed from the same `sandbox` directory.
+
+### Restricted-Lane Adapter Support
+
+Some lanes impose tool restrictions. Only adapters that can enforce the restriction at the tool-registry level are allowed to run. Non-enforceable adapters are blocked at preflight.
+
+| Lane | Restriction | AutoCode | Codex | Claude Code |
+|------|-------------|----------|-------|-------------|
+| B7 | None | Supported | Supported | Supported |
+| B8 | `bash-only` (`run_command`, `read_file` only) | **Supported** (enforced via `ToolRegistry.filter()`) | Blocked | Blocked |
+| B9-B14 | None | Supported | Supported | Supported |
+
+When `tool_restriction=bash-only` is active, the prompt is adapted to instruct the agent to use `run_command` with shell editing commands (`sed`, `tee`) instead of `write_file`. The enforcement is recorded in `AgentResult.artifacts["enforced_policy"]`.
 
 ### Usage
 
@@ -104,6 +129,7 @@ Every benchmark run produces a JSON artifact containing:
 {
   "contract": {
     "harness_version": "1.0.0",
+    "harness_commit_sha": "a1b2c3d4e5f6...",
     "agent": "autocode",
     "agent_version": "0.1.0",
     "model": "qwen2.5-coder:14b-instruct-q4_K_M",
@@ -118,14 +144,16 @@ Every benchmark run produces a JSON artifact containing:
     "budget_profile_id": "wt600_tc50000_mc100",
     "command_trace": "uv run python scripts/benchmark_runner.py --agent autocode --lane B7",
     "timestamp": "2026-02-19T10:00:00Z",
-    "comparison_validity": "parity-valid"
+    "comparison_validity": "parity-valid",
+    "seed": null,
+    "image_digest": null
   },
   "lane": "B7",
   "agent": "autocode",
   "model": "qwen2.5-coder:14b-instruct-q4_K_M",
   "provider_mode": "local_free",
   "aggregate": {
-    "total_tasks": 25,
+    "total_tasks": 24,
     "resolved": 5,
     "resolve_rate": 0.2,
     "infra_fails": 0,

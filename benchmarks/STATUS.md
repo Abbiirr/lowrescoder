@@ -6,9 +6,9 @@
 
 | ID | Lane | Status | Score | Artifact | Blocker |
 |----|------|--------|-------|----------|---------|
-| B6 | React Calculator (external project) | OPEN | 0/100 (build fail = score 0 per policy) | `docs/qa/test-results/20260218-223425-e2e-react-calculator.md` | Score >= 90 + build pass + app runs |
-| B7 | SWE-bench Verified (24 tasks) | R0 DONE | 20% (1/5) | `docs/qa/test-results/20260219-113147-B7-autocode.json` | Baseline: 20% resolve rate |
-| B8 | SWE-bench Bash-Only (25 tasks) | READY | — | — | Awaiting R0 calibration run |
+| B6 | React Calculator (external project) | OPEN | 0/100 (build fail = score 0 per policy) | `docs/qa/test-results/20260218-223425-e2e-react-calculator.md` (artifact not present — generated in prior session, not committed) | Score >= 90 + build pass + app runs |
+| B7 | SWE-bench Verified (24 tasks) | R0 DONE | 20% (1/5) | `docs/qa/test-results/20260219-113147-B7-autocode.json` (artifact not present — generated in prior session, not committed) | Baseline: 20% resolve rate |
+| B8 | SWE-bench Bash-Only (24 tasks) | READY | — | — | Awaiting R0 calibration run |
 | B9 | Terminal-Bench (10 tasks) | READY | — | — | Awaiting R0 calibration run |
 | B10 | SWE-bench Multilingual (36 tasks) | READY | — | — | Awaiting R0 calibration run |
 | B11 | BaxBench (12 tasks) | READY | — | — | Awaiting R0 calibration run |
@@ -21,7 +21,8 @@
 ## Pass Criteria (per Entries 525-531)
 
 - **B6:** score >= 90 AND npm build passes AND app runs (build fail = score 0)
-- **B7-B14:** TBD after calibration runs (R0)
+- **B7:** >= 40% resolve rate (locked — double R0 baseline of 20%)
+- **B8-B14:** Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run. No lane may be gated without a locked threshold
 - **B12/B13-PROXY:** `comparison_validity: proxy-only` — NO published parity claims
 - **B12/B13-OFFICIAL:** `comparison_validity: official` — requires official dataset access
 
@@ -44,7 +45,7 @@
   - Infra failures: 0 (all 5 setups + test patches OK)
   - Thinking enabled (~365s avg per tool call due to internal reasoning)
   - Manifest hash: `sha256:0c389801f73787b7`
-  - Artifact: `docs/qa/test-results/20260221-160438-B7-autocode.json`
+  - Artifact: `docs/qa/test-results/20260221-160438-B7-autocode.json` (artifact not present — generated in prior session, not committed)
 
 - **B7 R1 (qwen3-coder):** COMPLETED (2026-02-19T16:25)
   - **Resolve rate: 1/5 (20.0%)** — same subset, new model
@@ -55,7 +56,7 @@
   - Infra failures: 0 (all 5 setups + test patches OK)
   - XML tool-call parser added for qwen3-coder's `<function=name>` format
   - Manifest hash: `sha256:0c389801f73787b7`
-  - Artifact: `docs/qa/test-results/20260219-162516-B7-autocode.json`
+  - Artifact: `docs/qa/test-results/20260219-162516-B7-autocode.json` (artifact not present — generated in prior session, not committed)
 
 - **B7 R0 (qwen2.5-coder):** COMPLETED (2026-02-19T11:31)
   - **Resolve rate: 1/5 (20.0%)** — R0 calibration on 5 easy tasks
@@ -65,7 +66,7 @@
   - Total time: 389.3s (~6.5 min), avg 77.9s per task
   - Infra failures: 0 (all 5 setups + test patches OK)
   - Manifest hash: `sha256:5ce583e8ecad8ee3`
-  - Artifact: `docs/qa/test-results/20260219-113147-B7-autocode.json`
+  - Artifact: `docs/qa/test-results/20260219-113147-B7-autocode.json` (artifact not present — generated in prior session, not committed)
 
 ## B7 Root Cause Analysis (2026-02-21)
 
@@ -87,7 +88,7 @@
 
 - **B6 latest:** Score 64/100 (effective: 0, build fail = 0 per Entry 526)
   - Model ceiling issue, not harness — shifted focus to B7
-  - Artifact: `docs/qa/test-results/20260219-151230-e2e-react-calculator.md`
+  - Artifact: `docs/qa/test-results/20260219-151230-e2e-react-calculator.md` (artifact not present — generated in prior session, not committed)
 
 ## Sprint 1 Fixes Applied (2026-02-19)
 
@@ -115,7 +116,7 @@ Changes to `scripts/run_calculator_benchmark.py`:
 | Codex adapter | `scripts/adapters/codex_adapter.py` | WORKING |
 | Claude Code adapter | `scripts/adapters/claude_adapter.py` | WORKING |
 | External pilot runner (Harbor) | `scripts/e2e/external/run_external_pilot.py` | WORKING (legacy) |
-| B7 manifest (25 tasks) | `scripts/e2e/external/swebench-pilot-subset.json` | READY |
+| B7 manifest (24 tasks) | `scripts/e2e/external/swebench-pilot-subset.json` | READY |
 | B9 manifest (10 tasks) | `scripts/e2e/external/terminalbench-pilot-subset.json` | READY |
 | B10 manifest (36 tasks) | `scripts/e2e/external/b10-multilingual-subset.json` | READY |
 | B11 manifest (12 tasks) | `scripts/e2e/external/baxbench-pilot-subset.json` | READY |

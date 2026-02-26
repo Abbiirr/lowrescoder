@@ -250,9 +250,9 @@ Three models tested, all at 20% (1/5). Root cause: agent harness issue, not mode
 
 | Model | Resolved | Time | Artifact |
 |-------|----------|------|----------|
-| qwen2.5-coder:14b | 1/5 | 389s | `20260219-113147-B7-autocode.json` |
-| qwen3-coder:latest | 1/5 | 339s | `20260219-162516-B7-autocode.json` |
-| glm-4.7-flash-bench | 1/5 | 11,346s | `20260221-160438-B7-autocode.json` |
+| qwen2.5-coder:14b | 1/5 | 389s | `20260219-113147-B7-autocode.json` (artifact not present — generated in prior session, not committed) |
+| qwen3-coder:latest | 1/5 | 339s | `20260219-162516-B7-autocode.json` (artifact not present — generated in prior session, not committed) |
+| glm-4.7-flash-bench | 1/5 | 11,346s | `20260221-160438-B7-autocode.json` (artifact not present — generated in prior session, not committed) |
 
 **Root cause:** Agent modifies tests but never fixes source code. Plan: `docs/plan/b7-resolve-rate-plan.md`
 

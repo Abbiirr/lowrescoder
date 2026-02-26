@@ -2,7 +2,7 @@
 """Unified benchmark runner with agent adapter selection.
 
 Runs benchmark lanes (B6-B14) against any agent (AutoCode, Codex, Claude Code)
-with identical prompts, budgets, and grading for valid parity comparisons.
+with identical budgets and grading for valid parity comparisons.
 
 Usage:
     # Run AutoCode on B6
@@ -26,6 +26,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
+import re
+import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -46,6 +49,16 @@ from scripts.adapters.base import (  # noqa: E402
 )
 from scripts.adapters.claude_adapter import ClaudeCodeAdapter  # noqa: E402
 from scripts.adapters.codex_adapter import CodexAdapter  # noqa: E402
+from scripts.docker_helpers import (  # noqa: E402
+    docker_available,
+    docker_exec,
+    fix_permissions,
+    get_image_digest,
+    install_build_deps,
+    make_container_name,
+    start_container,
+    stop_and_remove,
+)
 
 # --- Version ---
 HARNESS_VERSION = "1.0.0"
@@ -54,6 +67,23 @@ HARNESS_VERSION = "1.0.0"
 MANIFEST_DIR = PROJECT_ROOT / "scripts" / "e2e" / "external"
 RESULTS_DIR = PROJECT_ROOT / "docs" / "qa" / "test-results"
 SANDBOXES_DIR = PROJECT_ROOT / "sandboxes"
+
+
+def _extract_patch_files(patch_text: str) -> list[str]:
+    """Extract file paths from a unified diff patch.
+
+    Parses '--- a/path' and '+++ b/path' lines to find which files
+    the test patch modifies. Returns relative paths.
+    """
+    files: set[str] = set()
+    for match in re.finditer(
+        r"^(?:\+\+\+|---) [ab]/(.+)$", patch_text, re.MULTILINE,
+    ):
+        path = match.group(1).strip()
+        if path and path != "/dev/null":
+            files.add(path)
+    return sorted(files)
+
 
 # --- Lane Configs ---
 LANE_CONFIGS: dict[str, dict] = {
@@ -71,7 +101,7 @@ LANE_CONFIGS: dict[str, dict] = {
             wall_time_s=3600, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
-        "description": "Fix Python bugs from SWE-bench Verified (25 tasks)",
+        "description": "Fix Python bugs from SWE-bench Verified (24 tasks)",
     },
     "B8": {
         "name": "SWE-bench Bash-Only",
@@ -170,16 +200,33 @@ def create_task_sandbox(lane: str, task_id: str) -> Path:
 
 # --- Run Contract (Reproducibility) ---
 
+def _get_harness_commit_sha() -> str:
+    """Get the current git commit SHA for reproducibility."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(PROJECT_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        return result.stdout.strip() if result.returncode == 0 else "unknown"
+    except Exception:
+        return "unknown"
+
+
 def build_run_contract(
     agent: AgentAdapter,
     lane: str,
     manifest_path: Path | None,
     budget: BudgetProfile,
     command_trace: str,
+    image_digests: dict[str, str] | None = None,
 ) -> dict:
     """Build the reproducibility contract for a run."""
     return {
         "harness_version": HARNESS_VERSION,
+        "harness_commit_sha": _get_harness_commit_sha(),
         "agent": agent.name,
         "agent_version": agent.version,
         "model": agent.model,
@@ -201,6 +248,8 @@ def build_run_contract(
         "comparison_validity": (
             LANE_CONFIGS.get(lane, {}).get("comparison_validity", "parity-valid")
         ),
+        "seed": None,  # deterministic, no randomness
+        "image_digests": image_digests or {},
     }
 
 
@@ -218,6 +267,7 @@ async def run_lane(
     resolved_count = 0
     total_time = 0.0
     infra_fails = 0
+    image_digests: dict[str, str] = {}  # python_version -> digest
 
     print(f"\n{'=' * 60}")
     print(f"Lane: {lane} | Agent: {agent.name} | Model: {agent.model}")
@@ -231,53 +281,319 @@ async def run_lane(
         sandbox = create_task_sandbox(lane, task.task_id)
         print(f"  Sandbox: {sandbox}")
 
-        # Run setup commands if any
-        import subprocess
+        # Determine if this task needs Docker isolation
+        python_version = task.extra.get("python_version", "")
+        use_docker = bool(python_version)
+        container_name = ""
+
+        if use_docker and not docker_available():
+            print("  Docker not available — falling back to host")
+            use_docker = False
+
+        if use_docker:
+            container_name = make_container_name(task.task_id, lane)
+            print(
+                f"  Docker: python:{python_version}-slim "
+                f"({container_name})"
+            )
+
+        # Run setup commands
         setup_ok = True
-        for cmd in task.setup_commands:
-            print(f"  Setup: {cmd[:80]}...")
-            try:
-                proc = subprocess.run(
-                    cmd, shell=True, cwd=str(sandbox),
-                    capture_output=True, text=True, timeout=300,
+        # Ensure venv bin is on PATH so pip/python resolve (host path)
+        setup_env = os.environ.copy()
+        venv_bin = str(PROJECT_ROOT / ".venv" / "bin")
+        if venv_bin not in setup_env.get("PATH", ""):
+            setup_env["PATH"] = f"{venv_bin}:{setup_env.get('PATH', '')}"
+
+        # Setup log collects full output for diagnostics
+        setup_log_parts: list[str] = []
+
+        try:
+            if use_docker:
+                # --- Docker path: setup inside container ---
+                proc = start_container(
+                    container_name, python_version, str(sandbox),
                 )
                 if proc.returncode != 0:
-                    print(f"  Setup warning (rc={proc.returncode}): {proc.stderr[:200]}")
-            except Exception as e:
-                print(f"  Setup failed: {e}")
-                setup_ok = False
-
-        # Apply test_patch if present (SWE-bench workflow)
-        test_patch = task.extra.get("test_patch", "")
-        if test_patch and setup_ok:
-            repo_name = task.extra.get("repo_name", "")
-            patch_dir = sandbox / repo_name if repo_name else sandbox
-            if patch_dir.exists():
-                patch_file = sandbox / "test_patch.diff"
-                patch_file.write_text(test_patch, encoding="utf-8")
-                # Use forward slashes for git on Windows
-                patch_path_str = str(patch_file).replace("\\", "/")
-                try:
-                    proc = subprocess.run(
-                        f'git apply --allow-empty --ignore-whitespace "{patch_path_str}"',
-                        shell=True, cwd=str(patch_dir),
-                        capture_output=True, text=True, timeout=30,
+                    setup_log_parts.append(
+                        f"[container-start] FAILED rc={proc.returncode}\n"
+                        f"stdout: {proc.stdout}\nstderr: {proc.stderr}"
                     )
-                    if proc.returncode == 0:
-                        print("  Test patch applied successfully")
-                    else:
-                        print(f"  Test patch warning: {proc.stderr[:200]}")
-                except Exception as e:
-                    print(f"  Test patch failed: {e}")
+                    print(
+                        f"  Container start FAILED: "
+                        f"{proc.stderr[:200]}"
+                    )
+                    setup_ok = False
+                else:
+                    # Collect image digest for reproducibility
+                    if python_version not in image_digests:
+                        image_digests[python_version] = (
+                            get_image_digest(python_version)
+                        )
+                    # Install build deps (gcc, git, etc.)
+                    try:
+                        dep_proc = install_build_deps(container_name)
+                        setup_log_parts.append(
+                            f"[build-deps] rc={dep_proc.returncode}\n"
+                            f"stdout: {dep_proc.stdout}\n"
+                            f"stderr: {dep_proc.stderr}"
+                        )
+                        if dep_proc.returncode != 0:
+                            print(
+                                f"  Build deps FAILED: "
+                                f"{dep_proc.stderr[:200]}"
+                            )
+                            setup_ok = False
+                    except Exception as e:
+                        setup_log_parts.append(
+                            f"[build-deps] EXCEPTION: {e}"
+                        )
+                        print(f"  Build deps failed: {e}")
+                        setup_ok = False
 
-        if not setup_ok:
-            result = AgentResult(
-                task_id=task.task_id,
-                resolved=False,
-                error="Setup failed",
-            )
-        else:
-            result = await agent.solve_task(task, sandbox, budget)
+                # Install per-task extra deps (manifest-driven)
+                if setup_ok:
+                    extra_apt = task.extra.get("extra_apt_deps", [])
+                    if extra_apt:
+                        apt_cmd = (
+                            "apt-get install -y -qq "
+                            + " ".join(extra_apt)
+                        )
+                        try:
+                            dep_proc = docker_exec(
+                                container_name, apt_cmd, timeout=120,
+                            )
+                            setup_log_parts.append(
+                                f"[extra-apt] {apt_cmd}\n"
+                                f"rc={dep_proc.returncode}\n"
+                                f"stdout: {dep_proc.stdout}\n"
+                                f"stderr: {dep_proc.stderr}"
+                            )
+                            if dep_proc.returncode != 0:
+                                print(
+                                    f"  Extra apt deps FAILED: "
+                                    f"{dep_proc.stderr[:200]}"
+                                )
+                                setup_ok = False
+                        except Exception as e:
+                            setup_log_parts.append(
+                                f"[extra-apt] EXCEPTION: {e}"
+                            )
+                            print(f"  Extra apt deps failed: {e}")
+                            setup_ok = False
+
+                if setup_ok:
+                    extra_pip = task.extra.get("extra_pip_deps", [])
+                    if extra_pip:
+                        pip_cmd = (
+                            "pip install -q "
+                            + " ".join(
+                                f"'{p}'" for p in extra_pip
+                            )
+                        )
+                        try:
+                            dep_proc = docker_exec(
+                                container_name, pip_cmd, timeout=120,
+                            )
+                            setup_log_parts.append(
+                                f"[extra-pip] {pip_cmd}\n"
+                                f"rc={dep_proc.returncode}\n"
+                                f"stdout: {dep_proc.stdout}\n"
+                                f"stderr: {dep_proc.stderr}"
+                            )
+                            if dep_proc.returncode != 0:
+                                print(
+                                    f"  Extra pip deps FAILED: "
+                                    f"{dep_proc.stderr[:200]}"
+                                )
+                                setup_ok = False
+                        except Exception as e:
+                            setup_log_parts.append(
+                                f"[extra-pip] EXCEPTION: {e}"
+                            )
+                            print(f"  Extra pip deps failed: {e}")
+                            setup_ok = False
+
+                if setup_ok:
+                    for cmd in task.setup_commands:
+                        print(f"  Setup (docker): {cmd[:80]}...")
+                        try:
+                            proc = docker_exec(
+                                container_name, cmd, timeout=600,
+                            )
+                            setup_log_parts.append(
+                                f"[setup] {cmd[:80]}\n"
+                                f"rc={proc.returncode}\n"
+                                f"stdout: {proc.stdout}\n"
+                                f"stderr: {proc.stderr}"
+                            )
+                            if proc.returncode != 0:
+                                print(
+                                    f"  Setup FAILED "
+                                    f"(rc={proc.returncode}): "
+                                    f"{proc.stderr[:200]}"
+                                )
+                                setup_ok = False
+                                break
+                        except Exception as e:
+                            setup_log_parts.append(
+                                f"[setup] {cmd[:80]}\nEXCEPTION: {e}"
+                            )
+                            print(f"  Setup failed: {e}")
+                            setup_ok = False
+                            break
+            else:
+                # --- Host path: original behavior ---
+                for cmd in task.setup_commands:
+                    print(f"  Setup: {cmd[:80]}...")
+                    try:
+                        wrapped_cmd = f"set -o pipefail; {cmd}"
+                        proc = subprocess.run(
+                            wrapped_cmd, shell=True, cwd=str(sandbox),
+                            capture_output=True, text=True, timeout=300,
+                            executable="/bin/bash", env=setup_env,
+                        )
+                        if proc.returncode != 0:
+                            print(
+                                f"  Setup FAILED "
+                                f"(rc={proc.returncode}): "
+                                f"{proc.stderr[:200]}"
+                            )
+                            setup_ok = False
+                            break
+                    except Exception as e:
+                        print(f"  Setup failed: {e}")
+                        setup_ok = False
+
+            # Apply test_patch if present (SWE-bench workflow)
+            test_patch = task.extra.get("test_patch", "")
+            if test_patch and setup_ok:
+                repo_name = task.extra.get("repo_name", "")
+                patch_dir = sandbox / repo_name if repo_name else sandbox
+                if patch_dir.exists():
+                    # Write patch file on host (visible in container
+                    # via volume mount)
+                    patch_file = sandbox / "test_patch.diff"
+                    patch_file.write_text(test_patch, encoding="utf-8")
+
+                    if use_docker:
+                        # Run git apply inside container — files
+                        # are root-owned so host can't overwrite
+                        container_patch = (
+                            f"/work/{repo_name}"
+                            if repo_name else "/work"
+                        )
+                        try:
+                            proc = docker_exec(
+                                container_name,
+                                "git apply --allow-empty "
+                                "--ignore-whitespace "
+                                "/work/test_patch.diff",
+                                workdir=container_patch,
+                                timeout=30,
+                            )
+                            if proc.returncode == 0:
+                                print(
+                                    "  Test patch applied "
+                                    "successfully (docker)"
+                                )
+                                test_patch_files = (
+                                    _extract_patch_files(test_patch)
+                                )
+                                if test_patch_files:
+                                    task.extra[
+                                        "test_patch_files"
+                                    ] = test_patch_files
+                            else:
+                                print(
+                                    f"  Test patch FAILED: "
+                                    f"{proc.stderr[:200]}"
+                                )
+                                setup_ok = False
+                        except Exception as e:
+                            print(f"  Test patch failed: {e}")
+                            setup_ok = False
+                    else:
+                        # Host path — original behavior
+                        patch_path_str = str(
+                            patch_file,
+                        ).replace("\\", "/")
+                        try:
+                            proc = subprocess.run(
+                                f'git apply --allow-empty '
+                                f'--ignore-whitespace '
+                                f'"{patch_path_str}"',
+                                shell=True,
+                                cwd=str(patch_dir),
+                                capture_output=True,
+                                text=True,
+                                timeout=30,
+                            )
+                            if proc.returncode == 0:
+                                print(
+                                    "  Test patch applied "
+                                    "successfully"
+                                )
+                                test_patch_files = (
+                                    _extract_patch_files(test_patch)
+                                )
+                                if test_patch_files:
+                                    task.extra[
+                                        "test_patch_files"
+                                    ] = test_patch_files
+                            else:
+                                print(
+                                    f"  Test patch FAILED: "
+                                    f"{proc.stderr[:200]}"
+                                )
+                                setup_ok = False
+                        except Exception as e:
+                            print(f"  Test patch failed: {e}")
+                            setup_ok = False
+
+            # Persist full setup log for diagnostics (Finding 3)
+            if setup_log_parts:
+                setup_log_path = sandbox / "setup_log.txt"
+                setup_log_path.write_text(
+                    "\n\n".join(setup_log_parts),
+                    encoding="utf-8",
+                )
+                task.extra["_setup_log_path"] = str(setup_log_path)
+                print(f"  Setup log: {setup_log_path}")
+
+            # Fix file permissions so host user can run git ops
+            if use_docker and container_name and setup_ok:
+                fix_permissions(container_name)
+
+            # Inject tool_restriction from lane config into task extra
+            tool_restriction = LANE_CONFIGS.get(
+                lane, {},
+            ).get("tool_restriction")
+            if tool_restriction:
+                task.extra["tool_restriction"] = tool_restriction
+
+            # Pass container name to adapters for grading
+            if use_docker and container_name:
+                task.extra["_container_name"] = container_name
+
+            if not setup_ok:
+                result = AgentResult(
+                    task_id=task.task_id,
+                    resolved=False,
+                    error="Setup failed",
+                    artifacts={
+                        "setup_log_path": task.extra.get(
+                            "_setup_log_path", "",
+                        ),
+                    },
+                )
+            else:
+                result = await agent.solve_task(task, sandbox, budget)
+
+        finally:
+            # Always clean up Docker container
+            if use_docker and container_name:
+                stop_and_remove(container_name)
 
         status = "RESOLVED" if result.resolved else "FAILED"
         if result.error:
@@ -290,6 +606,11 @@ async def run_lane(
             resolved_count += 1
         total_time += result.wall_time_s
 
+        task_artifacts = dict(result.artifacts or {})
+        setup_log = task.extra.get("_setup_log_path", "")
+        if setup_log:
+            task_artifacts["setup_log_path"] = setup_log
+
         results.append({
             "task_id": result.task_id,
             "resolved": result.resolved,
@@ -299,6 +620,7 @@ async def run_lane(
             "tokens_in": result.tokens_in,
             "tokens_out": result.tokens_out,
             "error": result.error,
+            "artifacts": task_artifacts,
         })
 
     # Aggregate
@@ -333,6 +655,7 @@ async def run_lane(
         "provider_mode": agent.provider_mode,
         "aggregate": aggregate,
         "results": results,
+        "image_digests": image_digests,
     }
 
 
@@ -430,7 +753,6 @@ async def run_b6(agent_name: str, strict: bool) -> dict:
         return {"lane": "B6", "error": "B6 only supports autocode"}
 
     print("\nDelegating B6 to scripts/run_calculator_benchmark.py...")
-    import subprocess
     cmd = [
         sys.executable, "-m", "scripts.run_calculator_benchmark",
         "--runs", "1",
@@ -558,11 +880,21 @@ async def main() -> int:
             )
             continue
 
-        contract = build_run_contract(
-            adapter, lane, manifest_path, budget, command_trace,
-        )
+        # Validate tool_restriction enforcement capability
+        tool_restriction = lane_cfg.get("tool_restriction")
+        if tool_restriction and agent_name not in ("autocode",):
+            print(
+                f"BLOCKED: Agent {agent_name} cannot enforce "
+                f"tool_restriction={tool_restriction!r}."
+            )
+            continue
 
         run_data = await run_lane(adapter, lane, tasks, budget, manifest_path)
+
+        contract = build_run_contract(
+            adapter, lane, manifest_path, budget, command_trace,
+            image_digests=run_data.get("image_digests"),
+        )
         run_data["contract"] = contract
 
         save_run_report(run_data, contract)
