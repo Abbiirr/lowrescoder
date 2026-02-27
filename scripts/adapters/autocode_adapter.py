@@ -211,11 +211,16 @@ class AutoCodeAdapter:
                 tool_restriction = task.extra.get("tool_restriction")
                 enforced_policy = None
                 if tool_restriction == "bash-only":
-                    registry = registry.filter(BASH_ONLY_TOOLS)
+                    allowed = set(BASH_ONLY_TOOLS)
+                    # Include run_tests if registered (Docker mode)
+                    if _container_name and task.grading_command:
+                        allowed.add("run_tests")
+                    allowed_frozen = frozenset(allowed)
+                    registry = registry.filter(allowed_frozen)
                     enforced_policy = {
                         "tool_restriction": "bash-only",
                         "enforced": True,
-                        "allowed_tools": sorted(BASH_ONLY_TOOLS),
+                        "allowed_tools": sorted(allowed_frozen),
                     }
                 shell_config = ShellConfig(
                     enabled=True,
@@ -545,13 +550,17 @@ class AutoCodeAdapter:
                 "- You MUST call tools. Do NOT just describe the fix.\n"
                 "- Do NOT modify test files — they are already correct.\n"
                 "- Fix the SOURCE code that the tests exercise.\n"
-                "- Use edit_file (NOT write_file) for editing existing "
-                "files.\n"
             )
             if bash_only:
                 prompt += (
-                    "- You only have run_command and read_file available.\n"
+                    "- You only have run_command, read_file, and "
+                    "run_tests available.\n"
                     "- Use run_command with sed/tee/echo to edit files.\n"
+                )
+            else:
+                prompt += (
+                    "- Use edit_file (NOT write_file) for editing "
+                    "existing files.\n"
                 )
             prompt += (
                 "- If you receive feedback that tests failed, read the "
@@ -614,6 +623,18 @@ class AutoCodeAdapter:
             prompt += (
                 "\n\nINITIAL TEST OUTPUT (current failures):\n"
                 f"```\n{initial_test_output}\n```"
+            )
+
+        # Inject test patch so agent sees exactly what tests expect
+        test_patch = task.extra.get("test_patch", "")
+        if test_patch:
+            # Truncate very large patches to keep prompt reasonable
+            if len(test_patch) > 3000:
+                test_patch = test_patch[:3000] + "\n...(truncated)"
+            prompt += (
+                "\n\nTEST PATCH (the failing test code — read this "
+                "carefully to understand what the test expects):\n"
+                f"```diff\n{test_patch}\n```"
             )
 
         return prompt

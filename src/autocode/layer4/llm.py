@@ -458,30 +458,46 @@ class OllamaProvider:
         # so we convert them back to dicts here.
         cleaned_messages = _fix_ollama_messages(messages)
 
-        try:
-            result = await asyncio.wait_for(
-                client.chat(
-                    model=self.model,
-                    messages=cleaned_messages,
-                    tools=tools,
-                    stream=False,
-                    options=options,
-                ),
-                timeout=self.REQUEST_TIMEOUT,
-            )
-        except (TimeoutError, Exception) as e:
-            if isinstance(e, TimeoutError):
+        # Retry with tools on transient errors (e.g., XML parse errors
+        # from malformed model output), then fall back to text-only.
+        result = None
+        max_tool_retries = 2
+        for _retry in range(max_tool_retries):
+            try:
+                result = await asyncio.wait_for(
+                    client.chat(
+                        model=self.model,
+                        messages=cleaned_messages,
+                        tools=tools,
+                        stream=False,
+                        options=options,
+                    ),
+                    timeout=self.REQUEST_TIMEOUT,
+                )
+                break  # Success
+            except TimeoutError:
                 raise  # Let caller handle request-level timeouts
-            # Fall back to text-only if tool calling fails
-            result = await asyncio.wait_for(
-                client.chat(
-                    model=self.model,
-                    messages=cleaned_messages,
-                    stream=False,
-                    options=options,
-                ),
-                timeout=self.REQUEST_TIMEOUT,
-            )
+            except Exception as e:
+                log_event(
+                    logger, logging.WARNING, "llm_tool_retry",
+                    provider="ollama", model=self.model,
+                    retry=_retry + 1, error=str(e)[:200],
+                )
+                if _retry < max_tool_retries - 1:
+                    continue  # Retry with tools
+                # Final fallback: text-only request without tools
+                try:
+                    result = await asyncio.wait_for(
+                        client.chat(
+                            model=self.model,
+                            messages=cleaned_messages,
+                            stream=False,
+                            options=options,
+                        ),
+                        timeout=self.REQUEST_TIMEOUT,
+                    )
+                except Exception:
+                    raise e  # Re-raise original tool error
 
         _duration_ms = int((time.monotonic() - _start) * 1000)
         raw_content = result.message.content or ""
