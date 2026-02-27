@@ -107,7 +107,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "SWE-bench Bash-Only",
         "manifest": "swebench-pilot-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=600, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=3600, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
         "tool_restriction": "bash-only",
@@ -117,7 +117,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "Terminal-Bench",
         "manifest": "terminalbench-pilot-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=900, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=3600, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "terminalbench",
         "description": "Terminal workflow tasks (10 tasks)",
@@ -126,7 +126,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "SWE-bench Multilingual",
         "manifest": "b10-multilingual-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=1200, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=3600, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
         "description": "Multilingual bug fixes (36 tasks, 9 languages)",
@@ -135,7 +135,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "BaxBench",
         "manifest": "baxbench-pilot-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=600, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=3600, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
         "description": "Backend/security tasks (10-15 tasks)",
@@ -144,7 +144,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "SWE-Lancer Equivalent (PROXY)",
         "manifest": "b12-proxy-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=900, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=3600, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
         "comparison_validity": "proxy-only",
@@ -154,7 +154,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "CodeClash Equivalent (PROXY)",
         "manifest": "b13-proxy-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=600, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=3600, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "competitive",
         "comparison_validity": "proxy-only",
@@ -164,7 +164,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "LiveCodeBench",
         "manifest": "livecodebench-pilot-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=600, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=3600, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "competitive",
         "description": "LeetCode-style problems (15-20 tasks)",
