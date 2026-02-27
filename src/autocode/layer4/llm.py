@@ -270,12 +270,26 @@ def _fuzzy_match_tool_name(name: str, known_names: set[str]) -> str | None:
         return name
 
     # Common mappings for hallucinated names
+    edit_patterns = {
+        "modify_file", "patch_file", "replace_in_file",
+        "search_replace", "str_replace",
+    }
+    if name in edit_patterns:
+        if "edit_file" in known_names:
+            return "edit_file"
+        if "write_file" in known_names:
+            return "write_file"
+
     write_patterns = {
         "update_file", "create_file", "save_file", "update_package_json",
-        "write_package_json", "create_package_json", "edit_file",
+        "write_package_json", "create_package_json",
         "put_file", "write_to_file",
     }
     if name in write_patterns and "write_file" in known_names:
+        return "write_file"
+
+    # Fallback: if model calls edit_file but it's not in registry, map to write_file
+    if name == "edit_file" and "edit_file" not in known_names and "write_file" in known_names:
         return "write_file"
 
     run_patterns = {

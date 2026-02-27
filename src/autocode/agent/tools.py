@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from autocode.utils.file_tools import list_files, read_file, write_file
+from autocode.utils.file_tools import edit_file, list_files, read_file, write_file
 
 
 @dataclass
@@ -89,6 +89,18 @@ def _handle_write_file(path: str, content: str, project_root: str = "") -> str:
         return f"Written to {result}"
     except Exception as e:
         return f"Error writing file: {e}"
+
+
+def _handle_edit_file(
+    path: str, old_string: str, new_string: str, project_root: str = "",
+) -> str:
+    """Edit a file by replacing a specific string."""
+    try:
+        root = project_root or None
+        result = edit_file(path, old_string, new_string, project_root=root)
+        return f"Edited {result}"
+    except Exception as e:
+        return f"Error editing file: {e}"
 
 
 def _handle_list_files(directory: str = ".", pattern: str = "*", project_root: str = "") -> str:
@@ -370,7 +382,7 @@ def _handle_search_code(query: str, top_k: int = 5, project_root: str = "") -> s
 
 
 def create_default_registry(project_root: str = "") -> ToolRegistry:
-    """Create a registry with the 11 built-in tools (6 original + 5 L1/L2)."""
+    """Create a registry with the 12 built-in tools (7 original + 5 L1/L2)."""
     registry = ToolRegistry()
 
     registry.register(ToolDefinition(
@@ -401,6 +413,32 @@ def create_default_registry(project_root: str = "") -> ToolRegistry:
             "required": ["path", "content"],
         },
         handler=lambda **kwargs: _handle_write_file(project_root=project_root, **kwargs),
+        requires_approval=True,
+        mutates_fs=True,
+    ))
+
+    registry.register(ToolDefinition(
+        name="edit_file",
+        description=(
+            "Edit an existing file by replacing a specific string. "
+            "Preferred over write_file for modifying existing files."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "File path to edit"},
+                "old_string": {
+                    "type": "string",
+                    "description": "The exact text to find (must match exactly once)",
+                },
+                "new_string": {
+                    "type": "string",
+                    "description": "The replacement text",
+                },
+            },
+            "required": ["path", "old_string", "new_string"],
+        },
+        handler=lambda **kwargs: _handle_edit_file(project_root=project_root, **kwargs),
         requires_approval=True,
         mutates_fs=True,
     ))

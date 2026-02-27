@@ -18,7 +18,7 @@ SYSTEM_PROMPT = (
     "When using tools:\n"
     "- Use read_file to understand existing code before making changes\n"
     "- Use list_files and search_text to explore the codebase\n"
-    "- Use write_file to make changes (the user will see a diff preview)\n"
+    "- Use edit_file to modify existing files, write_file for new files\n"
     "- Use run_command sparingly and only when needed (e.g., running tests)\n"
     "- Use ask_user ONLY for genuine questions: clarifications, choosing "
     "between approaches, or gathering requirements. Do NOT use ask_user to "

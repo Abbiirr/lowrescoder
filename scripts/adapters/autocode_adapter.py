@@ -13,6 +13,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 # Add project root to path for imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -163,6 +164,49 @@ class AutoCodeAdapter:
                     project_root=str(work_dir),
                 )
 
+                # Register run_tests tool for Docker mode
+                _container_name = task.extra.get("_container_name")
+                if _container_name and task.grading_command:
+                    from autocode.agent.tools import ToolDefinition
+
+                    _cname_for_closure = _container_name
+                    _gcmd_for_closure = task.grading_command
+
+                    def _handle_run_tests(**_kwargs: Any) -> str:
+                        """Run the grading tests in the Docker container."""
+                        try:
+                            result = _docker_exec(
+                                _cname_for_closure,
+                                _gcmd_for_closure,
+                                timeout=120,
+                            )
+                            output = (
+                                result.stdout + result.stderr
+                            )
+                            # Truncate to last 2000 chars
+                            if len(output) > 2000:
+                                output = "...(truncated)\n" + output[-2000:]
+                            if result.returncode == 0:
+                                return f"PASSED\n{output}"
+                            return f"FAILED (exit code {result.returncode})\n{output}"
+                        except Exception as e:
+                            return f"Error running tests: {e}"
+
+                    registry.register(ToolDefinition(
+                        name="run_tests",
+                        description=(
+                            "Run the test suite to verify your fix. "
+                            "Returns PASSED or FAILED with test output."
+                        ),
+                        parameters={
+                            "type": "object",
+                            "properties": {},
+                            "required": [],
+                        },
+                        handler=_handle_run_tests,
+                        requires_approval=False,
+                    ))
+
                 # Enforce tool restriction (B8 bash-only lane)
                 tool_restriction = task.extra.get("tool_restriction")
                 enforced_policy = None
@@ -229,8 +273,32 @@ class AutoCodeAdapter:
                         return options[0]
                     return "Proceed with your best judgment."
 
+                # Run initial test to capture error output for prompt
+                initial_test_output = ""
+                _cname_init = task.extra.get("_container_name")
+                if _cname_init and task.grading_command:
+                    try:
+                        init_result = _docker_exec(
+                            _cname_init,
+                            task.grading_command,
+                            timeout=120,
+                        )
+                        raw_output = init_result.stdout + init_result.stderr
+                        # Take last 1500 chars to keep prompt reasonable
+                        if len(raw_output) > 1500:
+                            initial_test_output = (
+                                "...(truncated)\n" + raw_output[-1500:]
+                            )
+                        else:
+                            initial_test_output = raw_output
+                    except Exception:
+                        pass  # Non-critical: agent can still run_tests
+
                 # Build initial prompt
-                prompt = self._build_prompt(task)
+                prompt = self._build_prompt(
+                    task,
+                    initial_test_output=initial_test_output,
+                )
 
                 # P0-1: Snapshot test file paths for enforcement
                 test_patch_files: list[str] = list(
@@ -408,7 +476,11 @@ class AutoCodeAdapter:
             artifacts=artifacts,
         )
 
-    def _build_prompt(self, task: BenchmarkTask) -> str:
+    def _build_prompt(
+        self,
+        task: BenchmarkTask,
+        initial_test_output: str = "",
+    ) -> str:
         """Build the agent prompt from the task."""
         fail_tests = task.extra.get("FAIL_TO_PASS", [])
         test_list = (
@@ -443,7 +515,7 @@ class AutoCodeAdapter:
         bash_only = task.extra.get("tool_restriction") == "bash-only"
 
         if docker_grading:
-            # Docker tasks: harness handles grading; agent focuses on fixing
+            # Docker tasks: agent can now self-verify via run_tests tool
             prompt += (
                 "MANDATORY WORKFLOW — follow these steps exactly:\n"
                 "Step 1: Read the failing test file(s) to understand what "
@@ -461,20 +533,20 @@ class AutoCodeAdapter:
                 )
             else:
                 prompt += (
-                    "Step 4: Use write_file to fix the SOURCE code. "
-                    "Make the MINIMUM change needed.\n"
+                    "Step 4: Use edit_file to fix the SOURCE code. "
+                    "Make the MINIMUM change needed. Use edit_file "
+                    "(NOT write_file) for editing existing files.\n"
                 )
             prompt += (
-                "Step 5: Review your changes to make sure they are "
-                "correct.\n\n"
-                "NOTE: Tests run in a separate Docker container. Do NOT "
-                "try to run the test command yourself — the harness will "
-                "grade your fix automatically and provide feedback if "
-                "tests fail.\n\n"
+                "Step 5: Use run_tests to verify your fix. If tests "
+                "fail, read the error output, adjust your fix, and "
+                "repeat from Step 4.\n\n"
                 "RULES:\n"
                 "- You MUST call tools. Do NOT just describe the fix.\n"
                 "- Do NOT modify test files — they are already correct.\n"
                 "- Fix the SOURCE code that the tests exercise.\n"
+                "- Use edit_file (NOT write_file) for editing existing "
+                "files.\n"
             )
             if bash_only:
                 prompt += (
@@ -520,8 +592,9 @@ class AutoCodeAdapter:
                 "need fixing (NOT the test files).\n"
                 "Step 3: Understand what the tests expect and what the "
                 "source code does wrong.\n"
-                "Step 4: Use write_file to fix the SOURCE code. Make the "
-                "MINIMUM change needed.\n"
+                "Step 4: Use edit_file to fix the SOURCE code. Make the "
+                "MINIMUM change needed. Use edit_file (NOT write_file) "
+                "for editing existing files.\n"
                 "Step 5: Run the grading command again to verify tests "
                 "pass.\n"
                 "Step 6: If tests still fail, read the error output, "
@@ -530,9 +603,17 @@ class AutoCodeAdapter:
                 "- You MUST call tools. Do NOT just describe the fix.\n"
                 "- Do NOT modify test files — they are already correct.\n"
                 "- Fix the SOURCE code that the tests exercise.\n"
+                "- Use edit_file (NOT write_file) for editing existing "
+                "files.\n"
                 "- After writing your fix, ALWAYS run the grading "
                 "command to verify.\n"
                 "- If tests fail, read the error output and iterate."
+            )
+
+        if initial_test_output:
+            prompt += (
+                "\n\nINITIAL TEST OUTPUT (current failures):\n"
+                f"```\n{initial_test_output}\n```"
             )
 
         return prompt

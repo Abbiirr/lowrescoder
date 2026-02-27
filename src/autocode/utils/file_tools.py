@@ -96,6 +96,55 @@ def write_file(
     return file_path
 
 
+def edit_file(
+    path: str | Path,
+    old_string: str,
+    new_string: str,
+    project_root: str | Path | None = None,
+) -> Path:
+    """Edit a file by replacing a specific string occurrence.
+
+    Args:
+        path: File path (absolute or relative to project_root).
+        old_string: The exact text to find and replace. Must be non-empty.
+        new_string: The replacement text.
+        project_root: Project root for path validation. If None, skips validation.
+
+    Returns:
+        The resolved file path.
+
+    Raises:
+        ValueError: If old_string is empty, not found, or matches multiple times.
+        FileNotFoundError: If the file does not exist.
+    """
+    if not old_string:
+        msg = "old_string must not be empty"
+        raise ValueError(msg)
+
+    file_path = Path(path)
+    if project_root is not None:
+        root = Path(project_root)
+        file_path = _validate_path(file_path, root)
+    elif not file_path.is_absolute():
+        file_path = file_path.resolve()
+
+    content = file_path.read_text(encoding="utf-8")
+    count = content.count(old_string)
+    if count == 0:
+        msg = f"old_string not found in {file_path.name}"
+        raise ValueError(msg)
+    if count > 1:
+        msg = (
+            f"old_string matches {count} times in {file_path.name}"
+            " — add more context to make it unique"
+        )
+        raise ValueError(msg)
+
+    new_content = content.replace(old_string, new_string, 1)
+    file_path.write_text(new_content, encoding="utf-8")
+    return file_path
+
+
 def list_files(
     directory: str | Path,
     pattern: str = "*",

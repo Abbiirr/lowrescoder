@@ -619,3 +619,63 @@ class TestInjectedContext:
         msgs = captured_messages[0]
         system_msgs = [m for m in msgs if m["role"] == "system"]
         assert len(system_msgs) == 1  # Only the main system prompt
+
+
+class TestTextOnlyNudge:
+    """Tests for the text-only nudge feature in AUTO mode."""
+
+    @pytest.mark.asyncio()
+    async def test_auto_mode_nudges_on_text_only(
+        self, store: SessionStore, session_id: str,
+    ) -> None:
+        """In AUTO mode, text-only responses trigger a nudge before returning."""
+        call_count = 0
+
+        async def counting_generate(
+            messages: Any, tools: Any, **kwargs: Any,
+        ) -> LLMResponse:
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 2:
+                # First 2 calls: text-only (should be nudged)
+                return LLMResponse(content=f"I think the fix is... (attempt {call_count})")
+            # Third call: still text-only, but nudge limit reached
+            return LLMResponse(content="Final text response")
+
+        mock = AsyncMock()
+        mock.generate_with_tools = counting_generate
+        registry = ToolRegistry()
+        approval = ApprovalManager(ApprovalMode.AUTO)
+
+        loop = AgentLoop(mock, registry, approval, store, session_id)
+        result = await loop.run("fix the bug")
+
+        # Should have been called 3 times: 2 nudges + final acceptance
+        assert call_count == 3
+        assert "Final text response" in result
+
+    @pytest.mark.asyncio()
+    async def test_suggest_mode_does_not_nudge(
+        self, store: SessionStore, session_id: str,
+    ) -> None:
+        """In SUGGEST mode, text-only responses return immediately (no nudge)."""
+        call_count = 0
+
+        async def counting_generate(
+            messages: Any, tools: Any, **kwargs: Any,
+        ) -> LLMResponse:
+            nonlocal call_count
+            call_count += 1
+            return LLMResponse(content="Here is my answer")
+
+        mock = AsyncMock()
+        mock.generate_with_tools = counting_generate
+        registry = ToolRegistry()
+        approval = ApprovalManager(ApprovalMode.SUGGEST)
+
+        loop = AgentLoop(mock, registry, approval, store, session_id)
+        result = await loop.run("fix the bug")
+
+        # Should return immediately — only 1 call
+        assert call_count == 1
+        assert "Here is my answer" in result

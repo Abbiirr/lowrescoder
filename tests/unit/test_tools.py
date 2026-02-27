@@ -8,6 +8,7 @@ from pathlib import Path
 from autocode.agent.tools import (
     ToolDefinition,
     ToolRegistry,
+    _handle_edit_file,
     _handle_read_file,
     _handle_search_text,
     _handle_write_file,
@@ -34,10 +35,10 @@ class TestToolRegistry:
     def test_get_schemas_openai_format(self) -> None:
         registry = create_default_registry()
         schemas = registry.get_schemas_openai_format()
-        assert len(schemas) == 11
+        assert len(schemas) == 12
         names = {s["function"]["name"] for s in schemas}
         assert names == {
-            "read_file", "write_file", "list_files",
+            "read_file", "write_file", "edit_file", "list_files",
             "search_text", "run_command", "ask_user",
             "find_references", "find_definition", "get_type_info",
             "list_symbols", "search_code",
@@ -178,3 +179,68 @@ class TestSearchEfficiency:
         result = _handle_search_text("test", "/nonexistent/path/xyz")
         # All backends will fail; Python fallback returns error
         assert "No matches" in result or "Not a directory" in result
+
+
+class TestEditFileTool:
+    """Tests for the edit_file tool."""
+
+    def test_basic_replacement(self, tmp_path: Path) -> None:
+        """edit_file replaces a unique string occurrence."""
+        f = tmp_path / "code.py"
+        f.write_text("def hello():\n    return 'world'\n")
+        result = _handle_edit_file(
+            path=str(f), old_string="return 'world'", new_string="return 'earth'",
+        )
+        assert "Edited" in result
+        assert f.read_text() == "def hello():\n    return 'earth'\n"
+
+    def test_no_match_error(self, tmp_path: Path) -> None:
+        """edit_file returns error when old_string is not found."""
+        f = tmp_path / "code.py"
+        f.write_text("def hello():\n    pass\n")
+        result = _handle_edit_file(
+            path=str(f), old_string="nonexistent", new_string="replacement",
+        )
+        assert "Error" in result
+        assert "not found" in result
+
+    def test_ambiguous_match_error(self, tmp_path: Path) -> None:
+        """edit_file returns error when old_string matches multiple times."""
+        f = tmp_path / "code.py"
+        f.write_text("x = 1\nx = 2\n")
+        result = _handle_edit_file(
+            path=str(f), old_string="x = ", new_string="y = ",
+        )
+        assert "Error" in result
+        assert "2 times" in result
+
+    def test_empty_old_string_error(self, tmp_path: Path) -> None:
+        """edit_file returns error when old_string is empty."""
+        f = tmp_path / "code.py"
+        f.write_text("content\n")
+        result = _handle_edit_file(
+            path=str(f), old_string="", new_string="new",
+        )
+        assert "Error" in result
+        assert "empty" in result
+
+    def test_preserves_surrounding_content(self, tmp_path: Path) -> None:
+        """edit_file preserves content before and after the replacement."""
+        f = tmp_path / "code.py"
+        original = "line1\nline2\nline3\nline4\n"
+        f.write_text(original)
+        result = _handle_edit_file(
+            path=str(f), old_string="line2\nline3", new_string="replaced2\nreplaced3",
+        )
+        assert "Edited" in result
+        assert f.read_text() == "line1\nreplaced2\nreplaced3\nline4\n"
+
+    def test_registered_in_registry(self) -> None:
+        """edit_file is registered in the default registry."""
+        registry = create_default_registry()
+        tool = registry.get("edit_file")
+        assert tool is not None
+        assert tool.requires_approval is True
+        assert tool.mutates_fs is True
+        assert "old_string" in tool.parameters["properties"]
+        assert "new_string" in tool.parameters["properties"]

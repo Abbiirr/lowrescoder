@@ -9,7 +9,7 @@ from collections.abc import Awaitable, Callable
 from enum import Enum
 from typing import Any
 
-from autocode.agent.approval import ApprovalManager
+from autocode.agent.approval import ApprovalManager, ApprovalMode
 from autocode.agent.context import ContextEngine
 from autocode.agent.event_recorder import EventRecorder
 from autocode.agent.prompts import build_system_prompt
@@ -32,6 +32,7 @@ class AgentLoop:
     """Runs the LLM <-> tool execution cycle up to MAX_ITERATIONS."""
 
     MAX_ITERATIONS = 10
+    MAX_TEXT_NUDGES = 2
 
     def __init__(
         self,
@@ -158,6 +159,8 @@ class AgentLoop:
             tool_count=len(tool_schemas),
         )
 
+        _text_nudge_count = 0
+
         for _iteration in range(self.MAX_ITERATIONS):
             if self._cancelled:
                 logger.debug("Cancelled at iteration %d", _iteration)
@@ -204,9 +207,31 @@ class AgentLoop:
             else:
                 log_debug_prompt(self.session_id, messages, response)
 
-            # If text-only response (no tool calls), we're done
+            # If text-only response (no tool calls)
             if not response.tool_calls:
                 text = response.content or ""
+
+                # In AUTO mode, nudge the model to use tools instead of just talking
+                if (
+                    self.approval_manager.mode == ApprovalMode.AUTO
+                    and _text_nudge_count < self.MAX_TEXT_NUDGES
+                    and text
+                ):
+                    _text_nudge_count += 1
+                    logger.debug(
+                        "Text-only nudge %d/%d in AUTO mode",
+                        _text_nudge_count, self.MAX_TEXT_NUDGES,
+                    )
+                    messages.append({"role": "assistant", "content": text})
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            "You must call tools to make changes. "
+                            "Do not just describe the fix — call a tool now."
+                        ),
+                    })
+                    continue
+
                 self.session_store.add_message(self.session_id, "assistant", text)
                 logger.debug("Text-only response, returning (%d chars)", len(text))
                 _total_ms = int((time.monotonic() - _run_start) * 1000)

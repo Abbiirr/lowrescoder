@@ -161,7 +161,7 @@ class TestAgentLoopThinkingCallback:
 
         loop = AgentLoop(
             mock, ToolRegistry(),
-            ApprovalManager(ApprovalMode.AUTO),
+            ApprovalManager(ApprovalMode.SUGGEST),
             store, session_id,
         )
 

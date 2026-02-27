@@ -148,13 +148,13 @@ class TestToolSelection:
     """Does the tool system correctly route to the right handler?"""
 
     def test_registry_has_all_expected_tools(self) -> None:
-        """Default registry has exactly 6 tools."""
+        """Default registry has exactly 12 tools."""
         registry = create_default_registry()
         tools = registry.get_all()
-        assert len(tools) == 11
+        assert len(tools) == 12
         names = {t.name for t in tools}
         assert names == {
-            "read_file", "write_file", "list_files",
+            "read_file", "write_file", "edit_file", "list_files",
             "search_text", "run_command", "ask_user",
             "find_references", "find_definition", "get_type_info",
             "list_symbols", "search_code",

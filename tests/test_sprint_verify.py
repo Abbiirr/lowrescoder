@@ -318,9 +318,9 @@ class TestSprint2Session:
 
 
 class TestSprint2Tools:
-    """S2.3: ToolRegistry registers 11 tools."""
+    """S2.3: ToolRegistry registers 12 tools."""
 
-    def test_eleven_tools_registered(self) -> None:
+    def test_twelve_tools_registered(self) -> None:
         from autocode.agent.tools import create_default_registry
 
         registry = create_default_registry()
@@ -329,6 +329,7 @@ class TestSprint2Tools:
         assert names == {
             "read_file",
             "write_file",
+            "edit_file",
             "list_files",
             "search_text",
             "run_command",

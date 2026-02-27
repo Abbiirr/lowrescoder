@@ -12,11 +12,11 @@ from autocode.agent.tools import (
 
 
 class TestToolRegistration:
-    """Verify all 11 tools are registered."""
+    """Verify all 12 tools are registered."""
 
     def test_total_tool_count(self):
         registry = create_default_registry()
-        assert len(registry.get_all()) == 11
+        assert len(registry.get_all()) == 12
 
     def test_new_tools_exist(self):
         registry = create_default_registry()
@@ -39,7 +39,7 @@ class TestToolRegistration:
     def test_openai_schema_count(self):
         registry = create_default_registry()
         schemas = registry.get_schemas_openai_format()
-        assert len(schemas) == 11
+        assert len(schemas) == 12
 
     def test_new_tools_no_approval(self):
         """L1/L2 tools should not require approval."""
