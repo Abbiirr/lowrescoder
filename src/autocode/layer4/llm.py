@@ -6,6 +6,7 @@ Provider selected by config.llm.provider.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import time
@@ -356,11 +357,36 @@ def _fix_ollama_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]
     return fixed
 
 
+def _is_connection_error(exc: Exception) -> bool:
+    """Check if an exception is a connection/network error (retryable)."""
+    conn_types = (ConnectionError, OSError, ConnectionRefusedError)
+    if isinstance(exc, conn_types):
+        return True
+    # httpx and ollama wrap connection errors in their own types
+    type_name = type(exc).__name__
+    if type_name in (
+        "ConnectError", "RemoteProtocolError", "ReadError",
+        "ResponseError", "RequestError",
+    ):
+        return True
+    # Check message for connection-related keywords
+    msg = str(exc).lower()
+    return any(kw in msg for kw in (
+        "connection", "connect", "refused", "unreachable",
+        "network", "timed out", "eof", "reset by peer",
+    ))
+
+
 class OllamaProvider:
     """Ollama LLM provider for Layer 4 (production)."""
 
     # Per-request timeout in seconds (generous for thinking models)
     REQUEST_TIMEOUT = 3600.0
+
+    # Exponential backoff for connection errors
+    CONN_RETRY_MAX = 10
+    CONN_RETRY_BASE_S = 5.0    # first wait: 5s
+    CONN_RETRY_MAX_S = 300.0   # cap at 5 minutes
 
     def __init__(self, config: AutoCodeConfig) -> None:
         self.model = config.llm.model
@@ -377,6 +403,41 @@ class OllamaProvider:
             "num_ctx": self.context_length,
         }
 
+    async def _with_conn_backoff(
+        self,
+        coro_fn: Any,
+        *,
+        label: str = "ollama_call",
+    ) -> Any:
+        """Wrap an async call with exponential backoff on connection errors.
+
+        If the remote Ollama server is down, pauses and retries up to
+        CONN_RETRY_MAX times with exponential backoff (5s → 10s → … → 300s).
+        Non-connection errors are raised immediately.
+        """
+        last_exc: Exception | None = None
+        for attempt in range(self.CONN_RETRY_MAX + 1):
+            try:
+                return await coro_fn()
+            except Exception as e:
+                if not _is_connection_error(e):
+                    raise  # Not a connection issue — fail fast
+                last_exc = e
+                if attempt >= self.CONN_RETRY_MAX:
+                    break
+                delay = min(
+                    self.CONN_RETRY_BASE_S * (2 ** attempt),
+                    self.CONN_RETRY_MAX_S,
+                )
+                log_event(
+                    logger, logging.WARNING, "ollama_conn_retry",
+                    label=label, attempt=attempt + 1,
+                    max_retries=self.CONN_RETRY_MAX,
+                    delay_s=delay, error=str(e)[:200],
+                )
+                await asyncio.sleep(delay)
+        raise last_exc  # type: ignore[misc]
+
     async def generate(
         self,
         messages: list[dict[str, str]],
@@ -390,22 +451,28 @@ class OllamaProvider:
         options = self._build_options()
 
         if stream:
-            stream_response = await client.chat(
-                model=self.model,
-                messages=messages,
-                stream=True,
-                options=options,
+            stream_response = await self._with_conn_backoff(
+                lambda: client.chat(
+                    model=self.model,
+                    messages=messages,
+                    stream=True,
+                    options=options,
+                ),
+                label="generate_stream",
             )
             async for chunk in stream_response:
                 content = chunk.message.content or ""
                 if content:
                     yield content
         else:
-            result = await client.chat(
-                model=self.model,
-                messages=messages,
-                stream=False,
-                options=options,
+            result = await self._with_conn_backoff(
+                lambda: client.chat(
+                    model=self.model,
+                    messages=messages,
+                    stream=False,
+                    options=options,
+                ),
+                label="generate",
             )
             yield result.message.content or ""
 
@@ -420,11 +487,14 @@ class OllamaProvider:
         import ollama
 
         client = ollama.AsyncClient(host=self.api_base)
-        result = await client.chat(
-            model=self.model,
-            messages=messages,
-            format="json",
-            options=self._build_options(),
+        result = await self._with_conn_backoff(
+            lambda: client.chat(
+                model=self.model,
+                messages=messages,
+                format="json",
+                options=self._build_options(),
+            ),
+            label="generate_json",
         )
         raw = json.loads(result.message.content or "{}")
         return schema.model_validate(raw)
@@ -439,7 +509,6 @@ class OllamaProvider:
         reasoning_enabled: bool = True,
     ) -> LLMResponse:
         """Generate with tool calling via Ollama (non-streaming to avoid partial JSON)."""
-        import asyncio
         import json
 
         import ollama
@@ -460,17 +529,21 @@ class OllamaProvider:
 
         # Retry with tools on transient errors (e.g., XML parse errors
         # from malformed model output), then fall back to text-only.
+        # Connection errors get exponential backoff via _with_conn_backoff.
         result = None
         max_tool_retries = 2
         for _retry in range(max_tool_retries):
             try:
                 result = await asyncio.wait_for(
-                    client.chat(
-                        model=self.model,
-                        messages=cleaned_messages,
-                        tools=tools,
-                        stream=False,
-                        options=options,
+                    self._with_conn_backoff(
+                        lambda: client.chat(
+                            model=self.model,
+                            messages=cleaned_messages,
+                            tools=tools,
+                            stream=False,
+                            options=options,
+                        ),
+                        label="generate_with_tools",
                     ),
                     timeout=self.REQUEST_TIMEOUT,
                 )
@@ -478,6 +551,10 @@ class OllamaProvider:
             except TimeoutError:
                 raise  # Let caller handle request-level timeouts
             except Exception as e:
+                # Connection errors already retried by _with_conn_backoff;
+                # if we get here it's exhausted — re-raise.
+                if _is_connection_error(e):
+                    raise
                 log_event(
                     logger, logging.WARNING, "llm_tool_retry",
                     provider="ollama", model=self.model,
@@ -488,11 +565,14 @@ class OllamaProvider:
                 # Final fallback: text-only request without tools
                 try:
                     result = await asyncio.wait_for(
-                        client.chat(
-                            model=self.model,
-                            messages=cleaned_messages,
-                            stream=False,
-                            options=options,
+                        self._with_conn_backoff(
+                            lambda: client.chat(
+                                model=self.model,
+                                messages=cleaned_messages,
+                                stream=False,
+                                options=options,
+                            ),
+                            label="generate_with_tools_fallback",
                         ),
                         timeout=self.REQUEST_TIMEOUT,
                     )

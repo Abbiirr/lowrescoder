@@ -1,7 +1,7 @@
 # Testing & Evaluation Guide
 
 > How to test, evaluate, and interpret results for AutoCode.
-> Last updated: 2026-02-18
+> Last updated: 2026-02-28
 
 ---
 
@@ -23,6 +23,9 @@
 | List all E2E scenarios | `uv run python scripts/e2e/run_scenario.py --list` | Instant |
 | External pilot (SWE-bench) | `uv run python scripts/e2e/external/run_external_pilot.py --agent claude-code --suite swebench` | Varies |
 | External pilot (Terminal-Bench) | `uv run python scripts/e2e/external/run_external_pilot.py --agent claude-code --suite terminalbench` | Varies |
+| Unified benchmark (single lane) | `uv run python scripts/benchmark_runner.py --agent autocode --lane B7 --model glm-4.7-flash` | 1-10 hrs |
+| Unified benchmark (all lanes) | `bash scripts/run_all_benchmarks.sh` | 8-40 hrs |
+| List benchmark lanes | `uv run python scripts/benchmark_runner.py --list-lanes` | Instant |
 
 ---
 
@@ -324,6 +327,61 @@ uv run python scripts/e2e/external/run_external_pilot.py --help
 
 **Artifacts:** Saved under `docs/qa/test-results/<timestamp>-external-pilot-<suite>-<agent>/` with `config.json`, `summary.json`, `summary.md`, and per-task results.
 
+### 5.6 Unified Benchmark Runner (B7-B14)
+
+The unified benchmark runner (`scripts/benchmark_runner.py`) runs all benchmark lanes sequentially with identical budgets for parity comparisons. It supports Docker-based isolation, resumability, and exponential backoff for remote Ollama servers.
+
+```bash
+# Run a single lane
+uv run python scripts/benchmark_runner.py --agent autocode --lane B7 --model glm-4.7-flash
+
+# Run with task limit
+uv run python scripts/benchmark_runner.py --agent autocode --lane B7 --max-tasks 5 --model glm-4.7-flash
+
+# Resume from crash (skips already-completed tasks)
+uv run python scripts/benchmark_runner.py --agent autocode --lane B7 --max-tasks 5 --model glm-4.7-flash --resume
+
+# Run ALL lanes sequentially (B7-B14) with resume
+bash scripts/run_all_benchmarks.sh
+
+# List available lanes
+uv run python scripts/benchmark_runner.py --list-lanes
+```
+
+**Monitoring a running benchmark:**
+
+```bash
+# Check progress of a running benchmark
+tail -50 /tmp/claude-1000/-home-bs01763-projects-ai-lowrescoder/benchmark_full_run.log
+```
+
+**Available lanes:**
+
+| Lane | Name | Description |
+|------|------|-------------|
+| B7 | SWE-bench Verified | Fix Python bugs (Docker, 7200s/task) |
+| B8 | SWE-bench Bash-Only | Same as B7, bash tools only (control) |
+| B9 | Terminal-Bench | Terminal workflow tasks |
+| B10 | Multilingual | Bug fixes across 9 languages |
+| B11 | BaxBench | Backend/security tasks |
+| B12-PROXY | SWE-Lancer Equivalent | Freelance-style tasks (proxy) |
+| B13-PROXY | CodeClash Equivalent | Competitive coding (proxy) |
+| B14 | LiveCodeBench | LeetCode-style problems |
+
+**Resumability:** Progress is saved after each task to `sandboxes/progress/{lane}_{agent}_progress.json`. When `--resume` is passed, completed tasks are skipped. The progress file is cleaned up when a lane finishes. If the Ollama server crashes mid-lane, re-run with `--resume` to pick up where you left off.
+
+**Exponential backoff:** If the remote Ollama server is temporarily unreachable, the LLM layer retries with exponential backoff (5s → 10s → 20s → ... up to 5 minutes, 10 retries max) before failing.
+
+**Environment variables:**
+
+| Variable | Purpose |
+|----------|---------|
+| `AUTOCODE_LLM_PROVIDER` | Must be `ollama` |
+| `OLLAMA_HOST` | Ollama server URL (e.g., `http://10.112.30.10:11434`) |
+| `OLLAMA_MODEL` | Model name (e.g., `glm-4.7-flash`) |
+
+**Artifacts:** Saved as `docs/qa/test-results/<timestamp>-<lane>-<agent>.json` with full run contract, per-task results, and aggregate metrics.
+
 ---
 
 ## 6. Understanding Benchmark Output
@@ -432,5 +490,9 @@ All stored artifacts live in `docs/qa/test-results/`. Naming convention:
 | `scripts/run_e2e_benchmark.ps1` | PowerShell wrapper for all E2E scenarios |
 | `docs/plan/agentic-benchmarks/external-benchmark-runbook.md` | External benchmark setup + rerun instructions |
 | `tests/benchmark/test_project_creation.py` | Calculator scoring rubric |
+| `scripts/benchmark_runner.py` | Unified benchmark runner (B7-B14, Docker, resumability) |
+| `scripts/run_all_benchmarks.sh` | Shell script to run all lanes sequentially with resume |
+| `scripts/adapters/autocode_adapter.py` | AutoCode agent adapter for benchmarks |
 | `docs/qa/test-results/` | Stored benchmark reports |
 | `sandboxes/` | Benchmark sandbox outputs |
+| `sandboxes/progress/` | Benchmark resume checkpoints |

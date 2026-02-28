@@ -1,6 +1,6 @@
 # E2E Benchmark Guide
 
-Last updated: 2026-02-13
+Last updated: 2026-02-28
 
 ## What Is This?
 
@@ -199,6 +199,49 @@ See `TESTING.md` for the full testing & evaluation guide, or `docs/plan/agentic-
 4. Register in `scripts/e2e/run_scenario.py`'s `SCENARIO_REGISTRY`
 5. Tag as `regression-lane` (deterministic, CI-gatable) or `capability-lane` (exploratory)
 
+## Unified Benchmark Runner (B7-B14)
+
+The unified runner (`scripts/benchmark_runner.py`) replaces the Harbor-based external pilot for local evaluation. It runs benchmark tasks directly with Docker isolation, supports resumability, and includes exponential backoff for remote Ollama servers.
+
+### Quick Start
+
+```bash
+# Run a single lane
+uv run python scripts/benchmark_runner.py --agent autocode --lane B7 --model glm-4.7-flash
+
+# Run all lanes sequentially (B7-B14) with resume enabled
+bash scripts/run_all_benchmarks.sh
+
+# Resume after a crash (skips completed tasks)
+uv run python scripts/benchmark_runner.py --agent autocode --lane B7 --resume --model glm-4.7-flash
+
+# List available lanes
+uv run python scripts/benchmark_runner.py --list-lanes
+```
+
+### Monitoring
+
+```bash
+# Check progress of a running benchmark
+tail -50 /tmp/claude-1000/-home-bs01763-projects-ai-lowrescoder/benchmark_full_run.log
+```
+
+### Resumability
+
+Progress is saved to `sandboxes/progress/{lane}_{agent}_progress.json` after each task. Pass `--resume` to skip completed tasks. The shell script `run_all_benchmarks.sh` enables resume by default.
+
+### Exponential Backoff
+
+If the remote Ollama server goes down temporarily, the LLM layer retries with exponential backoff (5s, 10s, 20s, ... up to 5 minutes, 10 retries) before failing the task.
+
+### Environment
+
+```bash
+AUTOCODE_LLM_PROVIDER=ollama
+OLLAMA_HOST=http://10.112.30.10:11434
+OLLAMA_MODEL=glm-4.7-flash
+```
+
 ## Adding New E2E Benchmarks
 
 The framework is designed for reuse. To add a new benchmark:
@@ -229,5 +272,9 @@ The framework is designed for reuse. To add a new benchmark:
 | `docs/plan/agentic-benchmarks/external-benchmark-runbook.md` | External benchmark runbook |
 | `benchmark-matrix.json` | Multi-model matrix config |
 | `docs/qa/e2e-tests/calculator-app/` | UI reference images |
+| `scripts/benchmark_runner.py` | Unified benchmark runner (B7-B14 lanes) |
+| `scripts/run_all_benchmarks.sh` | Run all lanes sequentially with resume |
+| `scripts/adapters/autocode_adapter.py` | AutoCode agent adapter for benchmarks |
 | `docs/qa/test-results/` | Stored benchmark reports |
 | `sandboxes/` | Benchmark sandbox outputs |
+| `sandboxes/progress/` | Benchmark resume checkpoints |

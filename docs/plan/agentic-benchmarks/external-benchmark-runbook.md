@@ -1,6 +1,6 @@
 # External Benchmark Runbook: SWE-bench + Terminal-Bench Pilot
 
-Last verified: 2026-02-13
+Last verified: 2026-02-28
 
 ## Overview
 
@@ -299,6 +299,35 @@ uv run python scripts/e2e/external/run_external_pilot.py \
 | API keys | Required | Per agent provider |
 | Network access | Required | For API calls and dataset download |
 | Disk space | 10GB+ | For datasets + container images |
+
+---
+
+## Unified Benchmark Runner (Recommended)
+
+The unified benchmark runner (`scripts/benchmark_runner.py`) supersedes the Harbor-based pilot runner for local benchmarking. It provides Docker-based isolation, resumability, and exponential backoff for remote Ollama servers.
+
+### Run All Lanes
+
+```bash
+# Set environment
+export AUTOCODE_LLM_PROVIDER=ollama
+export OLLAMA_HOST=http://10.112.30.10:11434
+export OLLAMA_MODEL=glm-4.7-flash
+
+# Run all lanes sequentially with resume (B7-B14)
+bash scripts/run_all_benchmarks.sh
+
+# Monitor progress
+tail -50 /tmp/claude-1000/-home-bs01763-projects-ai-lowrescoder/benchmark_full_run.log
+```
+
+### Resumability
+
+If the Ollama server crashes mid-run, simply re-run the same command. The `--resume` flag (enabled by default in the shell script) skips already-completed tasks by reading checkpoint files from `sandboxes/progress/`.
+
+### Exponential Backoff
+
+Temporary Ollama outages are handled by the LLM layer with exponential backoff: 5s, 10s, 20s, 40s, 80s, 160s, 300s (capped), up to 10 retries. This means a brief server restart won't kill the entire benchmark run.
 
 ---
 

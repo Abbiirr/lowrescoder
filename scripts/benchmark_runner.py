@@ -67,6 +67,57 @@ HARNESS_VERSION = "1.0.0"
 MANIFEST_DIR = PROJECT_ROOT / "scripts" / "e2e" / "external"
 RESULTS_DIR = PROJECT_ROOT / "docs" / "qa" / "test-results"
 SANDBOXES_DIR = PROJECT_ROOT / "sandboxes"
+PROGRESS_DIR = PROJECT_ROOT / "sandboxes" / "progress"
+
+
+# --- Progress Tracking (Resumability) ---
+
+def _progress_path(lane: str, agent_name: str) -> Path:
+    """Return path to the progress file for a lane+agent combination."""
+    PROGRESS_DIR.mkdir(parents=True, exist_ok=True)
+    return PROGRESS_DIR / f"{lane}_{agent_name}_progress.json"
+
+
+def _load_progress(lane: str, agent_name: str) -> dict:
+    """Load existing progress for a lane+agent. Returns empty dict if none."""
+    path = _progress_path(lane, agent_name)
+    if path.exists():
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return {}
+    return {}
+
+
+def _save_progress(
+    lane: str,
+    agent_name: str,
+    completed_results: list[dict],
+    image_digests: dict[str, str],
+) -> None:
+    """Save progress after each task completes.
+
+    Stores completed task results so a resumed run can skip them.
+    """
+    path = _progress_path(lane, agent_name)
+    data = {
+        "lane": lane,
+        "agent": agent_name,
+        "completed_task_ids": [r["task_id"] for r in completed_results],
+        "results": completed_results,
+        "image_digests": image_digests,
+        "last_updated": datetime.now(UTC).isoformat(),
+    }
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+
+def _clear_progress(lane: str, agent_name: str) -> None:
+    """Remove progress file after a lane completes successfully."""
+    path = _progress_path(lane, agent_name)
+    if path.exists():
+        path.unlink()
 
 
 def _extract_patch_files(patch_text: str) -> list[str]:
@@ -98,7 +149,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "SWE-bench Verified",
         "manifest": "swebench-pilot-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=3600, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
         "description": "Fix Python bugs from SWE-bench Verified (24 tasks)",
@@ -107,7 +158,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "SWE-bench Bash-Only",
         "manifest": "swebench-pilot-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=3600, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
         "tool_restriction": "bash-only",
@@ -117,7 +168,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "Terminal-Bench",
         "manifest": "terminalbench-pilot-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=3600, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "terminalbench",
         "description": "Terminal workflow tasks (10 tasks)",
@@ -126,7 +177,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "SWE-bench Multilingual",
         "manifest": "b10-multilingual-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=3600, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
         "description": "Multilingual bug fixes (36 tasks, 9 languages)",
@@ -135,7 +186,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "BaxBench",
         "manifest": "baxbench-pilot-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=3600, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
         "description": "Backend/security tasks (10-15 tasks)",
@@ -144,7 +195,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "SWE-Lancer Equivalent (PROXY)",
         "manifest": "b12-proxy-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=3600, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
         "comparison_validity": "proxy-only",
@@ -154,7 +205,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "CodeClash Equivalent (PROXY)",
         "manifest": "b13-proxy-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=3600, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "competitive",
         "comparison_validity": "proxy-only",
@@ -164,7 +215,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "LiveCodeBench",
         "manifest": "livecodebench-pilot-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=3600, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "competitive",
         "description": "LeetCode-style problems (15-20 tasks)",
@@ -261,6 +312,8 @@ async def run_lane(
     tasks: list[BenchmarkTask],
     budget: BudgetProfile,
     manifest_path: Path | None,
+    *,
+    resume: bool = False,
 ) -> dict:
     """Run all tasks in a lane sequentially and return aggregated results."""
     results: list[dict] = []
@@ -269,12 +322,42 @@ async def run_lane(
     infra_fails = 0
     image_digests: dict[str, str] = {}  # python_version -> digest
 
+    # Resume: load previously completed tasks
+    skipped_ids: set[str] = set()
+    if resume:
+        progress = _load_progress(lane, agent.name)
+        prev_results = progress.get("results", [])
+        prev_ids = set(progress.get("completed_task_ids", []))
+        if prev_ids:
+            # Restore previous results
+            results.extend(prev_results)
+            for r in prev_results:
+                if r.get("resolved"):
+                    resolved_count += 1
+                total_time += r.get("wall_time_s", 0.0)
+                if r.get("error"):
+                    infra_fails += 1
+            skipped_ids = prev_ids
+            # Restore image digests
+            image_digests.update(progress.get("image_digests", {}))
+            print(
+                f"\n[RESUME] Loaded {len(prev_ids)} completed tasks "
+                f"from progress file"
+            )
+
     print(f"\n{'=' * 60}")
     print(f"Lane: {lane} | Agent: {agent.name} | Model: {agent.model}")
-    print(f"Tasks: {len(tasks)} | Budget: {budget.profile_id}")
+    remaining = len(tasks) - len(skipped_ids)
+    print(
+        f"Tasks: {len(tasks)} total, {remaining} remaining "
+        f"| Budget: {budget.profile_id}"
+    )
     print(f"{'=' * 60}")
 
     for i, task in enumerate(tasks, 1):
+        if task.task_id in skipped_ids:
+            print(f"\n--- Task {i}/{len(tasks)}: {task.task_id} [SKIPPED — already completed] ---")
+            continue
         print(f"\n--- Task {i}/{len(tasks)}: {task.task_id} ---")
         print(f"  Description: {task.description[:80]}")
 
@@ -623,6 +706,12 @@ async def run_lane(
             "artifacts": task_artifacts,
         })
 
+        # Save progress after each task for resumability
+        _save_progress(lane, agent.name, results, image_digests)
+
+    # Lane complete — clear progress file
+    _clear_progress(lane, agent.name)
+
     # Aggregate
     resolve_rate = resolved_count / len(tasks) if tasks else 0
     infra_fail_rate = infra_fails / len(tasks) if tasks else 0
@@ -806,6 +895,11 @@ async def main() -> int:
         default=0,
         help="Limit number of tasks (0 = all)",
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume from last checkpoint (skip already-completed tasks)",
+    )
 
     args = parser.parse_args()
 
@@ -889,7 +983,10 @@ async def main() -> int:
             )
             continue
 
-        run_data = await run_lane(adapter, lane, tasks, budget, manifest_path)
+        run_data = await run_lane(
+            adapter, lane, tasks, budget, manifest_path,
+            resume=args.resume,
+        )
 
         contract = build_run_contract(
             adapter, lane, manifest_path, budget, command_trace,
