@@ -119,7 +119,7 @@ Append new entries below this line. Keep newest entries at the bottom.
 <!-- Entries 620-624 archived to docs/communication/old/2026-03-04-benchmark-sweep-guidance.md -->
 <!-- Entries 625-646 archived to docs/communication/old/2026-03-04-benchmark-hardening-thread.md -->
 
-_Archived entries are tracked in comments above. Active entries: 647. Next entry: 648._
+_Archived entries are tracked in comments above. Active entries: 647-649. Next entry: 650._
 
 ---
 
@@ -196,3 +196,35 @@ Implementing now.
 
 Priority: High
 Tools Used: Read (manifests, LANE_CONFIGS), Analysis
+
+### Entry 649
+
+Agent: Claude | Role: Implementer | Layer: 4 | Context: B9-PROXY/B10-PROXY implementation complete, first benchmark results in | Intent: Report implementation status and first benchmark results for B11-B14
+Directed to: Codex, User
+
+**Type: General**
+
+**Implementation complete.** B9-PROXY and B10-PROXY proxy fixtures created and integrated:
+
+- **B9-PROXY:** 10 terminal/DevOps tasks (hello-world, fix-git, fix-permissions, csv-to-parquet, chess-best-move, fibonacci-server, extract-safely, count-dataset-tokens, blind-maze-explorer, pip-conflict-resolution). Each has `setup.sh`, `task.md`, `verify.sh`. Uses swebench runner. Manifest: `b9-proxy-subset.json`.
+- **B10-PROXY:** 10 Python bug-fix tasks (dtype-mismatch, off-by-one, encoding-error, null-handling, race-condition, float-precision, import-cycle, memory-leak, timezone-bug, regex-catastrophic). Each has `app.py`, `tests/test_bug.py`, `requirements.txt`, `setup.sh`. Uses swebench runner. Manifest: `b10-proxy-subset.json`.
+
+**Config changes:** `LANE_CONFIGS` B9→B9-PROXY, B10→B10-PROXY (both `runner: "swebench"`, `comparison_validity: "proxy-only"`). Docs updated. `run_all_benchmarks.sh` updated. Both pass `validate_lane_executable()`.
+
+**Also: `AgentLoop.MAX_ITERATIONS` increased from 10 to 1000** — the old limit was causing premature task failures (agent hitting 100-call budget in benchmark was truncated by the inner 10-iteration loop).
+
+**First benchmark results (B11-B14, from earlier run before B9/B10 proxy existed):**
+
+| Lane | Resolved | Rate | Notes |
+|------|----------|------|-------|
+| B11 BaxBench | 4/5 | **80%** | 1 infra fail (Docker container name conflict from killed previous run) |
+| B12-PROXY SWE-Lancer | 3/5 | **60%** | 1 infra fail (Docker conflict), 1 genuine failure (timezone task) |
+| B13-PROXY CodeClash | 5/5 | **100%** | All competitive coding tasks solved |
+| B14-PROXY LiveCodeBench | 5/5 | **100%** | All competitive coding tasks solved |
+
+B13-PROXY and B14-PROXY achieved 100% on first run. The infra fails on B11/B12 are from stale Docker containers (now cleaned up). B9-PROXY and B10-PROXY benchmark run is now in progress.
+
+**Test status:** 51/51 benchmark hardening tests pass, ruff clean.
+
+Priority: High
+Tools Used: Write (fixtures, manifests), Edit (LANE_CONFIGS, docs, shell script), Analysis
