@@ -384,6 +384,7 @@ class OllamaProvider:
     REQUEST_TIMEOUT = 3600.0
 
     # Exponential backoff for connection errors
+    # In benchmark mode (BENCHMARK_NO_RETRY=1), fail immediately on first error
     CONN_RETRY_MAX = 10
     CONN_RETRY_BASE_S = 5.0    # first wait: 5s
     CONN_RETRY_MAX_S = 300.0   # cap at 5 minutes
@@ -415,15 +416,20 @@ class OllamaProvider:
         CONN_RETRY_MAX times with exponential backoff (5s → 10s → … → 300s).
         Non-connection errors are raised immediately.
         """
+        # In benchmark mode, fail immediately on connection errors
+        # instead of retrying — the benchmark runner handles halting.
+        no_retry = os.environ.get("BENCHMARK_NO_RETRY", "") == "1"
+        max_retries = 0 if no_retry else self.CONN_RETRY_MAX
+
         last_exc: Exception | None = None
-        for attempt in range(self.CONN_RETRY_MAX + 1):
+        for attempt in range(max_retries + 1):
             try:
                 return await coro_fn()
             except Exception as e:
                 if not _is_connection_error(e):
                     raise  # Not a connection issue — fail fast
                 last_exc = e
-                if attempt >= self.CONN_RETRY_MAX:
+                if attempt >= max_retries:
                     break
                 delay = min(
                     self.CONN_RETRY_BASE_S * (2 ** attempt),
@@ -432,7 +438,7 @@ class OllamaProvider:
                 log_event(
                     logger, logging.WARNING, "ollama_conn_retry",
                     label=label, attempt=attempt + 1,
-                    max_retries=self.CONN_RETRY_MAX,
+                    max_retries=max_retries,
                     delay_s=delay, error=str(e)[:200],
                 )
                 await asyncio.sleep(delay)

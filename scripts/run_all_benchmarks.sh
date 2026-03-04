@@ -2,10 +2,14 @@
 set -a && source /home/bs01763/projects/ai/lowrescoder/.env && set +a
 cd /home/bs01763/projects/ai/lowrescoder
 
+# Fail-fast on Ollama/network issues — no retries, halt immediately
+export BENCHMARK_NO_RETRY=1
+
 echo "=========================================="
 echo "Sequential Benchmark Run — $(date)"
 echo "Model: $OLLAMA_MODEL | Host: $OLLAMA_HOST"
 echo "Resume mode: enabled (skips completed tasks)"
+echo "Ollama fail-fast: ON (halts on connection errors)"
 echo "=========================================="
 
 LANES="B7 B8 B9-PROXY B10-PROXY B11 B12-PROXY B13-PROXY B14-PROXY"
@@ -16,6 +20,12 @@ for lane in $LANES; do
     uv run python scripts/benchmark_runner.py --agent autocode --lane "$lane" --max-tasks 5 --model "$OLLAMA_MODEL" --resume 2>&1
     RC=$?
     echo "<<<<<<<<<< $lane finished (rc=$RC) at $(date) >>>>>>>>>>"
+    # If runner exited with error, stop all lanes (Ollama may be down)
+    if [ $RC -ne 0 ]; then
+        echo "!!!! Lane $lane exited with rc=$RC — stopping all lanes !!!!"
+        echo "!!!! Fix the issue and re-run with --resume !!!!"
+        break
+    fi
     echo ""
 done
 

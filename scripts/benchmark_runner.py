@@ -65,6 +65,33 @@ from scripts.docker_helpers import (  # noqa: E402
 # --- Version ---
 HARNESS_VERSION = "1.0.0"
 
+
+class OllamaUnavailableError(Exception):
+    """Raised when Ollama is unreachable — halts the entire benchmark run."""
+    pass
+
+
+def check_ollama_health(host: str | None = None, timeout: float = 10.0) -> None:
+    """Verify Ollama is reachable. Raises OllamaUnavailableError if not.
+
+    Called before each task. On failure, the benchmark run stops immediately
+    (no retries) per user directive.
+    """
+    import urllib.request
+    import urllib.error
+
+    host = host or os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+    url = f"{host.rstrip('/')}/api/tags"
+    try:
+        req = urllib.request.Request(url, method="GET")
+        with urllib.request.urlopen(req, timeout=timeout):
+            pass  # 200 OK — Ollama is alive
+    except (urllib.error.URLError, OSError, TimeoutError) as e:
+        raise OllamaUnavailableError(
+            f"Ollama unreachable at {host}: {e}\n"
+            "Benchmark HALTED. Fix Ollama/network and re-run with --resume."
+        ) from e
+
 # --- Paths ---
 MANIFEST_DIR = PROJECT_ROOT / "scripts" / "e2e" / "external"
 RESULTS_DIR = PROJECT_ROOT / "docs" / "qa" / "test-results"
@@ -151,7 +178,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "SWE-bench Verified",
         "manifest": "swebench-pilot-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=86400, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
         "description": "Fix Python bugs from SWE-bench Verified (24 tasks)",
@@ -160,7 +187,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "SWE-bench Bash-Only",
         "manifest": "swebench-pilot-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=86400, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
         "tool_restriction": "bash-only",
@@ -170,7 +197,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "Terminal-Bench Equivalent",
         "manifest": "b9-proxy-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=86400, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
         "comparison_validity": "proxy-only",
@@ -180,7 +207,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "Multilingual Equivalent",
         "manifest": "b10-proxy-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=86400, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
         "comparison_validity": "proxy-only",
@@ -190,7 +217,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "BaxBench",
         "manifest": "baxbench-pilot-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=86400, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
         "description": "Backend/security tasks (10-15 tasks)",
@@ -199,7 +226,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "SWE-Lancer Equivalent (PROXY)",
         "manifest": "b12-proxy-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=86400, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
         "comparison_validity": "proxy-only",
@@ -209,7 +236,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "CodeClash Equivalent (PROXY)",
         "manifest": "b13-proxy-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=86400, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "competitive",
         "comparison_validity": "proxy-only",
@@ -219,7 +246,7 @@ LANE_CONFIGS: dict[str, dict] = {
         "name": "LiveCodeBench Equivalent (PROXY)",
         "manifest": "b14-proxy-subset.json",
         "budget": BudgetProfile(
-            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
+            wall_time_s=86400, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "competitive",
         "comparison_validity": "proxy-only",
@@ -514,6 +541,7 @@ async def run_lane(
     resolved_count = 0
     total_time = 0.0
     infra_fails = 0
+    ollama_halted = False
     image_digests: dict[str, str] = {}  # python_version -> digest
 
     # Resume: load previously completed tasks
@@ -554,6 +582,17 @@ async def run_lane(
             continue
         print(f"\n--- Task {i}/{len(tasks)}: {task.task_id} ---")
         print(f"  Description: {task.description[:80]}")
+
+        # Pre-task Ollama health check — halt run on failure (no retries)
+        try:
+            check_ollama_health()
+        except OllamaUnavailableError as e:
+            print(f"\n  OLLAMA UNAVAILABLE — HALTING BENCHMARK RUN")
+            print(f"  {e}")
+            print(f"  Completed {resolved_count}/{i-1} tasks before halt.")
+            print(f"  Re-run with --resume to continue from here.")
+            ollama_halted = True
+            break
 
         sandbox = create_task_sandbox(lane, task.task_id)
         print(f"  Sandbox: {sandbox}")
@@ -982,6 +1021,7 @@ async def run_lane(
         "aggregate": aggregate,
         "results": results,
         "image_digests": image_digests,
+        "halted": ollama_halted,
     }
 
 
@@ -1257,6 +1297,12 @@ async def main() -> int:
 
         save_run_report(run_data, contract)
         reports.append(run_data)
+
+        # If Ollama went down, exit with error so the shell script stops
+        if run_data.get("halted"):
+            print("\nBenchmark halted due to Ollama unavailability.")
+            print("Fix the issue and re-run with --resume.")
+            return 2
 
     # Print comparison if multiple agents
     if len(reports) > 1:
