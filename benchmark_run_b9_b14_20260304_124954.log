@@ -87,3 +87,66 @@ Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260
 >>>>>>>>>> Starting B12-PROXY at Wed Mar  4 01:05:34 PM +06 2026 <<<<<<<<<<
 Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
 Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+
+============================================================
+Lane: B12-PROXY | Agent: autocode | Model: glm-4.7-flash
+Tasks: 5 total, 5 remaining | Budget: wt7200_tc50000_mc100
+============================================================
+
+--- Task 1/5: swl-001-add-pagination ---
+  Description: Add cursor-based pagination to the /api/users endpoint with next/prev links
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-001-add-pagination_20260304_070534
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-001-add-pagination
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-001-add-pagination)
+  Container start FAILED: docker: Error response from daemon: Conflict. The container name "/bench-B12-PROXY-swl-001-add-pagination" is already in use by container "f4347d2b1bcd365c82679d325240f82cd86c896717c86063751ab76cfbd42
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-001-add-pagination_20260304_070534/setup_log.txt
+  Result: ERROR: Setup failed (0.0s)
+
+--- Task 2/5: swl-002-fix-search ---
+  Description: Fix search endpoint returning 500 when query contains special characters
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-002-fix-search_20260304_070544
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-002-fix-search
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-002-fix-search)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-002-fix-search_20260304_070544/setup_log.txt
+  Result: RESOLVED (151.7s)
+
+--- Task 3/5: swl-003-add-export ---
+  Description: Add CSV export functionality to the dashboard reports page
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-003-add-export_20260304_070927
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-003-add-export
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-003-add-export)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-003-add-export_20260304_070927/setup_log.txt
+  Result: RESOLVED (38.8s)
+
+--- Task 4/5: swl-004-fix-timezone ---
+  Description: Fix event scheduling showing wrong times for non-UTC timezones
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-004-fix-timezone_20260304_071108
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-004-fix-timezone
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-004-fix-timezone)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-004-fix-timezone_20260304_071108/setup_log.txt
+  Result: FAILED (756.7s)
+
+--- Task 5/5: swl-005-add-webhook ---
+  Description: Implement webhook notification system for order status changes
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-005-add-webhook_20260304_072434
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-005-add-webhook
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-005-add-webhook)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-005-add-webhook_20260304_072434/setup_log.txt
+  Result: RESOLVED (489.0s)
+
+============================================================
+LANE B12-PROXY COMPLETE
+  Resolved: 3/5 (60.0%)
+  Infra fails: 1
+  Total time: 1436.2s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260304-073335-B12-PROXY-autocode.json
+<<<<<<<<<< B12-PROXY finished (rc=0) at Wed Mar  4 01:33:36 PM +06 2026 >>>>>>>>>>
+
+
+>>>>>>>>>> Starting B13-PROXY at Wed Mar  4 01:33:36 PM +06 2026 <<<<<<<<<<
