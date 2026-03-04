@@ -15,8 +15,8 @@ Does AutoCode produce correct, complete output?
 | B6 React Calculator | Rubric score (0-100) + build + app runs | >= 90, build pass, app runs |
 | B7 SWE-bench Verified | % tasks resolved | >= 40% |
 | B8 SWE-bench Bash-Only | % tasks resolved | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run |
-| B9 Terminal-Bench | % tasks completed | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run |
-| B10 SWE-bench Multilingual | % tasks resolved + per-language rate | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run |
+| B9-PROXY Terminal-Bench Equivalent | % tasks completed | Pending R0 — proxy-only, threshold locked after first calibration run |
+| B10-PROXY Multilingual Equivalent | % tasks resolved | Pending R0 — proxy-only (Python subset), threshold locked after first calibration run |
 | B11 BaxBench | % tasks passing | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run |
 | B12-PROXY SWE-Lancer Equivalent | % tasks resolved | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run (proxy-only) |
 | B13-PROXY CodeClash Equivalent | % goals achieved | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run (proxy-only) |
