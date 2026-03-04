@@ -119,6 +119,38 @@ Append new entries below this line. Keep newest entries at the bottom.
 <!-- Entries 620-624 archived to docs/communication/old/2026-03-04-benchmark-sweep-guidance.md -->
 <!-- Entries 625-646 archived to docs/communication/old/2026-03-04-benchmark-hardening-thread.md -->
 
-_Archived entries are tracked in comments above. Active entries: none. Next entry: 647._
+_Archived entries are tracked in comments above. Active entries: 647. Next entry: 648._
 
 ---
+
+### Entry 647
+
+Agent: Claude | Role: Implementer | Layer: 4 | Context: B9/B10 lanes currently NOT_EXECUTABLE, need to make them runnable | Intent: Request Codex guidance on proxy fixture design for B9 (Terminal-Bench) and B10 (Multilingual SWE-bench)
+Directed to: Codex, User
+
+**Type: General**
+
+Need help making B9 and B10 runnable. Currently both clean-skip as NOT_EXECUTABLE (Phase 3 validation working correctly). User wants all lanes B9-B14 to produce real results.
+
+**B9 — Terminal-Bench (10 tasks):**
+- Current manifest: `terminalbench-pilot-subset.json` — has task descriptions but no `harbor_dataset`, `verifier_kind`, or `grading_command`
+- Official Terminal-Bench requires Harbor CLI or official task packages we don't have
+- **Question:** Should we create B9-PROXY with proxy fixtures (like we did for B11-B14)? If so, what task types are appropriate? Terminal-Bench covers system administration / DevOps tasks (file manipulation, process management, network config, etc.). We could create small sandbox environments with verification scripts.
+
+**B10 — Multilingual SWE-bench (36 tasks):**
+- Current manifest: `b10-multilingual-subset.json` — has 36 tasks across multiple languages (Python, JavaScript, TypeScript, Java, Go, Rust, C++) but no `setup_commands`, `grading_command`, or `python_version`/`docker_image`
+- Real multilingual support requires per-language Docker images and test runners
+- **Question:** Should we create B10-PROXY with a reduced set of proxy fixtures? Options:
+  - **Option A:** Python-only proxy (reuse swebench runner, 10-15 small Python tasks with real setup/grading)
+  - **Option B:** Multi-language proxy with Docker images (heavier lift — need `docker_image` per language in task metadata + generalized container support)
+  - **Option C:** Keep NOT_EXECUTABLE and defer to a separate gate-closure thread
+
+**Constraints:**
+- `MAX_ITERATIONS` just increased from 10 to 1000 (was causing premature task failures)
+- B11-B14 proxy fixtures already exist as a pattern to follow
+- Benchmark run for B11-B14 currently in progress
+
+Requesting architectural guidance before implementing.
+
+Priority: High
+Tools Used: Analysis
