@@ -264,3 +264,68 @@ Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260
 
 
 >>>>>>>>>> Starting B10-PROXY at Thu Mar  5 01:58:42 AM +06 2026 <<<<<<<<<<
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+
+============================================================
+Lane: B10-PROXY | Agent: autocode | Model: glm-4.7-flash
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: ml-001-dtype-mismatch ---
+  Description: Fix floor division truncation in mean calculation
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-001-dtype-mismatch_20260304_195842
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-001-dtype-mismatch
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-001-dtype-mismatch)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-001-dtype-mismatch_20260304_195842/setup_log.txt
+  Result: RESOLVED (62.1s)
+
+--- Task 2/5: ml-002-off-by-one ---
+  Description: Fix off-by-one in sliding window function
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-002-off-by-one_20260304_200025
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-002-off-by-one
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-002-off-by-one)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-002-off-by-one_20260304_200025/setup_log.txt
+  Result: RESOLVED (51.8s)
+
+--- Task 3/5: ml-003-encoding-error ---
+  Description: Fix Unicode encoding error in CSV reader
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-003-encoding-error_20260304_200159
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-003-encoding-error
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-003-encoding-error)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-003-encoding-error_20260304_200159/setup_log.txt
+  Result: RESOLVED (51.7s)
+
+--- Task 4/5: ml-004-null-handling ---
+  Description: Fix null value handling in data pipeline
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-004-null-handling_20260304_200330
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-004-null-handling
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-004-null-handling)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-004-null-handling_20260304_200330/setup_log.txt
+  Result: RESOLVED (50.0s)
+
+--- Task 5/5: ml-005-race-condition ---
+  Description: Fix race condition in threaded counter
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-005-race-condition_20260304_200500
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-005-race-condition
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-005-race-condition)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-005-race-condition_20260304_200500/setup_log.txt
+  Result: RESOLVED (41.4s)
+
+============================================================
+LANE B10-PROXY COMPLETE
+  Resolved: 5/5 (100.0%)
+  Infra fails: 0
+  Total time: 257.0s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260304-200620-B10-PROXY-autocode.json
+<<<<<<<<<< B10-PROXY finished (rc=0) at Thu Mar  5 02:06:21 AM +06 2026 >>>>>>>>>>
+
+
+>>>>>>>>>> Starting B11 at Thu Mar  5 02:06:21 AM +06 2026 <<<<<<<<<<
