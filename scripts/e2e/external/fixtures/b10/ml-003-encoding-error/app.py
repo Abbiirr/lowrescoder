@@ -1,12 +1,19 @@
-"""CSV reader with encoding support."""
+"""CSV reader with encoding support.
+
+Bug: opens file without specifying encoding='utf-8', and also opens in
+text mode which can fail on binary-like UTF-8 sequences depending on
+the system's default encoding. Additionally, does not handle BOM
+(byte-order mark) that some tools add to UTF-8 files.
+"""
 
 
 def read_csv(filepath):
     """Read a CSV file and return rows as list of lists.
 
-    Bug: opens file without specifying encoding='utf-8', which causes
-    failures on systems where the default encoding is not UTF-8
-    (e.g., Windows with cp1252, or POSIX with C locale).
+    Bug: opens file without encoding='utf-8' and without
+    errors='replace' or handling for BOM.
+    On systems with non-UTF-8 default encoding, this will raise
+    UnicodeDecodeError or produce garbled output for non-ASCII text.
     """
     # Bug: missing encoding='utf-8'
     with open(filepath, "r") as f:
@@ -18,22 +25,20 @@ def read_csv(filepath):
     return rows
 
 
-def get_column(filepath, col_index):
-    """Extract a single column from a CSV file."""
-    rows = read_csv(filepath)
-    if not rows:
-        return []
-    return [row[col_index] for row in rows if col_index < len(row)]
+def read_csv_with_header(filepath):
+    """Read CSV and return (header, rows) tuple."""
+    all_rows = read_csv(filepath)
+    if not all_rows:
+        return [], []
+    return all_rows[0], all_rows[1:]
 
 
-def search_csv(filepath, column_index, search_term):
-    """Search for rows where the given column contains the search term."""
-    rows = read_csv(filepath)
-    if not rows:
-        return []
-    header = rows[0]
-    matches = []
-    for row in rows[1:]:
-        if column_index < len(row) and search_term in row[column_index]:
-            matches.append(row)
-    return matches
+def write_csv(filepath, rows):
+    """Write rows to a CSV file.
+
+    Bug: missing encoding='utf-8', same issue as read_csv.
+    """
+    # Bug: missing encoding='utf-8'
+    with open(filepath, "w") as f:
+        for row in rows:
+            f.write(",".join(str(cell) for cell in row) + "\n")

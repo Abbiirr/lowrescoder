@@ -1,53 +1,59 @@
-"""Matrix operations with dtype handling."""
+"""Statistical computations on numeric data.
+
+Bug: uses integer floor division (//) instead of true division (/)
+in the mean calculation, which truncates results for integer inputs.
+"""
 
 
-def matrix_multiply(a, b):
-    """Multiply two 2D lists as matrices.
+def mean(values):
+    """Compute the arithmetic mean of a list of numbers.
 
-    Both matrices should be treated as float for consistent results.
-    Returns a 2D list of floats.
+    Bug: uses // (floor division) instead of / (true division).
+    For integer inputs, this truncates the result.
+    Example: mean([1, 2]) should be 1.5, but // gives 1.
     """
-    rows_a, cols_a = len(a), len(a[0])
-    rows_b, cols_b = len(b), len(b[0])
-
-    if cols_a != rows_b:
-        raise ValueError(
-            f"Incompatible shapes: ({rows_a},{cols_a}) x ({rows_b},{cols_b})"
-        )
-
-    result = []
-    for i in range(rows_a):
-        row = []
-        for j in range(cols_b):
-            total = 0  # Bug: integer zero, causes integer division truncation
-            for k in range(cols_a):
-                total += a[i][k] * b[k][j]
-            row.append(total)
-        result.append(row)
-
-    return result
+    if not values:
+        raise ValueError("Cannot compute mean of empty list")
+    return sum(values) // len(values)  # Bug: should be / not //
 
 
-def normalize_matrix(matrix):
-    """Normalize matrix values to [0, 1] range by dividing by the max value."""
-    max_val = max(max(row) for row in matrix)
-    if max_val == 0:
-        return matrix
+def variance(values):
+    """Compute the population variance.
 
-    result = []
-    for row in matrix:
-        result.append([val / max_val for val in row])
-    return result
-
-
-def weighted_sum(values, weights):
-    """Compute weighted sum of values.
-
-    Bug: uses integer division when values and weights are ints.
+    Depends on mean(), so inherits the floor division bug.
     """
-    total = 0  # Bug: should be 0.0 to ensure float arithmetic
-    count = 0  # Bug: should be 0.0
-    for v, w in zip(values, weights):
-        total += v * w
-        count += w
-    return total / count  # Integer division when all inputs are ints
+    if not values:
+        raise ValueError("Cannot compute variance of empty list")
+    avg = mean(values)
+    return sum((x - avg) ** 2 for x in values) / len(values)
+
+
+def standard_deviation(values):
+    """Compute the population standard deviation."""
+    return variance(values) ** 0.5
+
+
+def z_scores(values):
+    """Compute z-scores for each value: (x - mean) / std.
+
+    Returns a list of z-scores. If std is 0, returns all zeros.
+    """
+    avg = mean(values)
+    std = standard_deviation(values)
+    if std == 0:
+        return [0.0] * len(values)
+    return [(x - avg) / std for x in values]
+
+
+def percentile(values, p):
+    """Compute the p-th percentile (0-100) using linear interpolation."""
+    if not values:
+        raise ValueError("Cannot compute percentile of empty list")
+    sorted_vals = sorted(values)
+    n = len(sorted_vals)
+    k = (p / 100) * (n - 1)
+    f = int(k)
+    c = f + 1
+    if c >= n:
+        return float(sorted_vals[-1])
+    return sorted_vals[f] + (k - f) * (sorted_vals[c] - sorted_vals[f])

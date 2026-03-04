@@ -1,79 +1,124 @@
-"""Tests for encoding error bug in CSV reader."""
+"""Tests for encoding error bug in CSV reader.
+
+These tests write files as raw UTF-8 bytes, then read them using the
+app functions. If the app does not specify encoding='utf-8', it will
+fail when the system locale is not UTF-8 (simulated via PYTHONIOENCODING
+and/or by writing files that contain non-ASCII bytes).
+"""
 import sys
 import os
-import locale
+import subprocess
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app import read_csv, get_column, search_csv
+from app import read_csv, read_csv_with_header, write_csv
 
 
-def _write_utf8_csv(tmp_path, filename, content):
-    """Write a UTF-8 encoded CSV file."""
-    p = tmp_path / filename
-    p.write_bytes(content.encode("utf-8"))
-    return str(p)
+def _write_raw_utf8(filepath, content_str):
+    """Write content as raw UTF-8 bytes (bypasses system encoding)."""
+    with open(filepath, "wb") as f:
+        f.write(content_str.encode("utf-8"))
 
 
 def test_reads_ascii_csv(tmp_path):
-    """Basic ASCII CSV should be readable."""
-    path = _write_utf8_csv(tmp_path, "simple.csv", "name,age\nAlice,30\nBob,25\n")
-    rows = read_csv(path)
+    """Basic ASCII CSV should always work."""
+    p = tmp_path / "simple.csv"
+    _write_raw_utf8(p, "name,age\nAlice,30\nBob,25\n")
+    rows = read_csv(str(p))
     assert len(rows) == 3
     assert rows[0] == ["name", "age"]
     assert rows[1] == ["Alice", "30"]
 
 
-def test_reads_utf8_names(tmp_path):
-    """CSV with accented characters must be read correctly.
+def test_reads_utf8_in_subprocess(tmp_path):
+    """Read a UTF-8 CSV in a subprocess with C locale to expose the bug.
 
-    This test forces the C locale to simulate a non-UTF-8 default encoding,
-    which exposes the missing encoding='utf-8' parameter.
+    When LANG=C and PYTHONIOENCODING is not set to utf-8, Python's
+    default encoding is ASCII, so open() without encoding='utf-8'
+    will raise UnicodeDecodeError on non-ASCII content.
     """
-    old_locale = os.environ.get("LC_ALL")
-    try:
-        os.environ["LC_ALL"] = "C"
-        path = _write_utf8_csv(
-            tmp_path, "intl.csv",
-            "name,city\nJos\u00e9,S\u00e3o Paulo\nM\u00fcller,Z\u00fcrich\n"
-        )
-        rows = read_csv(path)
-        assert len(rows) == 3
-        assert "Jos\u00e9" in rows[1][0], f"Expected 'Jos\u00e9', got {rows[1][0]!r}"
-        assert "S\u00e3o Paulo" in rows[1][1]
-    finally:
-        if old_locale is None:
-            os.environ.pop("LC_ALL", None)
-        else:
-            os.environ["LC_ALL"] = old_locale
+    csv_path = tmp_path / "intl.csv"
+    _write_raw_utf8(csv_path, "name,city\nJos\u00e9,S\u00e3o Paulo\n")
 
-
-def test_reads_utf8_emoji(tmp_path):
-    """CSV with emoji characters should work."""
-    path = _write_utf8_csv(
-        tmp_path, "emoji.csv",
-        "item,status\ncoffee,\u2615 ready\nrocket,\U0001f680 launched\n"
+    # Run a subprocess with C locale to force ASCII default encoding
+    script = (
+        f"import sys; sys.path.insert(0, {str(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))!r}); "
+        f"from app import read_csv; rows = read_csv({str(csv_path)!r}); "
+        f"assert len(rows) == 2, f'Expected 2 rows, got {{len(rows)}}'; "
+        f"assert 'Jos\\u00e9' in rows[1][0], f'Expected Jos\\u00e9, got {{rows[1][0]!r}}'; "
+        f"print('OK')"
     )
-    rows = read_csv(path)
-    assert len(rows) == 3
-    assert "\u2615" in rows[1][1]
 
+    env = os.environ.copy()
+    env["LANG"] = "C"
+    env["LC_ALL"] = "C"
+    env.pop("PYTHONIOENCODING", None)
+    # Force Python to use ASCII as default encoding
+    env["PYTHONCOERCECLOCALE"] = "0"
 
-def test_get_column_utf8(tmp_path):
-    """get_column should handle UTF-8 content."""
-    path = _write_utf8_csv(
-        tmp_path, "col.csv",
-        "name,city\nRen\u00e9,Montr\u00e9al\n"
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=10,
     )
-    cities = get_column(path, 1)
-    assert "Montr\u00e9al" in cities
 
-
-def test_search_csv_utf8(tmp_path):
-    """search_csv should find rows with UTF-8 content."""
-    path = _write_utf8_csv(
-        tmp_path, "search.csv",
-        "name,city\nJos\u00e9,S\u00e3o Paulo\nAlice,London\n"
+    assert result.returncode == 0, (
+        f"UTF-8 CSV reading failed with C locale.\n"
+        f"stdout: {result.stdout}\n"
+        f"stderr: {result.stderr}\n"
+        f"This means open() is not specifying encoding='utf-8'"
     )
-    results = search_csv(path, 1, "S\u00e3o")
-    assert len(results) == 1
-    assert results[0][0] == "Jos\u00e9"
+
+
+def test_roundtrip_utf8(tmp_path):
+    """Write then read should preserve UTF-8 content in C locale."""
+    csv_path = tmp_path / "roundtrip.csv"
+
+    script = (
+        f"import sys; sys.path.insert(0, {str(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))!r}); "
+        f"from app import write_csv, read_csv; "
+        f"write_csv({str(csv_path)!r}, [['name', 'city'], ['Ren\\u00e9', 'Montr\\u00e9al']]); "
+        f"rows = read_csv({str(csv_path)!r}); "
+        f"assert rows[1][0] == 'Ren\\u00e9', f'Expected Ren\\u00e9, got {{rows[1][0]!r}}'; "
+        f"print('OK')"
+    )
+
+    env = os.environ.copy()
+    env["LANG"] = "C"
+    env["LC_ALL"] = "C"
+    env.pop("PYTHONIOENCODING", None)
+    env["PYTHONCOERCECLOCALE"] = "0"
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    assert result.returncode == 0, (
+        f"UTF-8 CSV roundtrip failed with C locale.\n"
+        f"stdout: {result.stdout}\n"
+        f"stderr: {result.stderr}\n"
+        f"This means open() is not specifying encoding='utf-8'"
+    )
+
+
+def test_read_csv_with_header(tmp_path):
+    """read_csv_with_header should separate header from data rows."""
+    p = tmp_path / "headed.csv"
+    _write_raw_utf8(p, "name,score\nAlice,95\nBob,87\n")
+    header, rows = read_csv_with_header(str(p))
+    assert header == ["name", "score"]
+    assert len(rows) == 2
+
+
+def test_write_csv_creates_file(tmp_path):
+    """write_csv should create a readable CSV file."""
+    p = tmp_path / "output.csv"
+    write_csv(str(p), [["a", "b"], ["1", "2"]])
+    rows = read_csv(str(p))
+    assert rows[0] == ["a", "b"]
+    assert rows[1] == ["1", "2"]

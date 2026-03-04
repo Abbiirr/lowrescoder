@@ -1,70 +1,81 @@
-"""Tests for dtype mismatch bug in matrix operations."""
+"""Tests for floor division bug in statistical computations."""
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app import matrix_multiply, normalize_matrix, weighted_sum
+from app import mean, variance, standard_deviation, z_scores, percentile
 
 
-def test_matrix_multiply_float_result():
-    """Matrix multiplication with ints should still produce float-compatible results."""
-    a = [[1, 2], [3, 4]]
-    b = [[5, 6], [7, 8]]
-    result = matrix_multiply(a, b)
-    assert result == [[19, 22], [43, 50]]
+def test_mean_even_division():
+    """Mean of [2, 4] = 3.0 -- works even with floor division."""
+    assert mean([2, 4]) == 3.0
 
 
-def test_matrix_multiply_mixed_types():
-    """Mixed int/float inputs should produce float results."""
-    a = [[1, 2], [3, 4]]
-    b = [[0.5, 0.0], [0.0, 0.5]]
-    result = matrix_multiply(a, b)
-    assert result[0][0] == 0.5
-    assert result[0][1] == 1.0
-    assert result[1][0] == 1.5
-    assert result[1][1] == 2.0
+def test_mean_fractional_result():
+    """Mean of [1, 2] should be 1.5, not 1.
 
-
-def test_normalize_matrix():
-    """Normalize should produce float values in [0, 1]."""
-    matrix = [[2, 4], [6, 8]]
-    result = normalize_matrix(matrix)
-    assert result[0][0] == 0.25
-    assert result[1][1] == 1.0
-
-
-def test_weighted_sum_with_ints():
-    """Weighted sum of integers should return accurate float result.
-
-    values=[1, 2, 3], weights=[2, 3, 5]
-    weighted = 1*2 + 2*3 + 3*5 = 2 + 6 + 15 = 23
-    total_weight = 2 + 3 + 5 = 10
-    result = 23 / 10 = 2.3
-
-    Bug: with integer division (Python 2 style accumulator issue),
-    this could truncate. In Python 3, `/` does float division, but
-    the real bug is when `total` is built with integer ops and
-    intermediate values lose precision in certain edge cases.
+    This is the core bug: // truncates 3 // 2 = 1, but / gives 3 / 2 = 1.5.
     """
-    result = weighted_sum([1, 2, 3], [2, 3, 5])
-    assert result == 2.3
-
-
-def test_weighted_sum_precision():
-    """Weighted sum should maintain float precision.
-
-    values=[1, 1, 1], weights=[3, 3, 3]
-    weighted = 3 + 3 + 3 = 9
-    total_weight = 9
-    result = 9/9 = 1.0
-    """
-    result = weighted_sum([1, 1, 1], [3, 3, 3])
-    assert isinstance(result, float), "Result should be float, not int"
-
-
-def test_weighted_sum_returns_float_type():
-    """Even when result is a whole number, return type should be float."""
-    result = weighted_sum([4, 4], [1, 1])
-    assert isinstance(result, float), (
-        "weighted_sum should return float, got %s" % type(result).__name__
+    result = mean([1, 2])
+    assert result == 1.5, (
+        f"mean([1, 2]) should be 1.5, got {result} — "
+        "using floor division (//) instead of true division (/)"
     )
+
+
+def test_mean_of_single_value():
+    """Mean of a single value should be that value as float."""
+    result = mean([7])
+    assert result == 7
+
+
+def test_mean_with_odd_sum():
+    """Mean of [1, 2, 4] = 7/3 = 2.333..."""
+    result = mean([1, 2, 4])
+    assert abs(result - 7 / 3) < 1e-9, (
+        f"mean([1, 2, 4]) should be ~2.333, got {result}"
+    )
+
+
+def test_variance_depends_on_mean():
+    """Variance computation depends on correct mean.
+
+    If mean is truncated, variance will be wrong too.
+    """
+    # values = [1, 2, 3], mean should be 2.0
+    # variance = ((1-2)^2 + (2-2)^2 + (3-2)^2) / 3 = (1+0+1)/3 = 0.666...
+    result = variance([1, 2, 3])
+    assert abs(result - 2 / 3) < 1e-9, (
+        f"variance([1, 2, 3]) should be ~0.667, got {result}"
+    )
+
+
+def test_standard_deviation():
+    """Standard deviation of [1, 2, 3]."""
+    result = standard_deviation([1, 2, 3])
+    expected = (2 / 3) ** 0.5  # ~0.8165
+    assert abs(result - expected) < 1e-9
+
+
+def test_z_scores():
+    """Z-scores should be symmetric for symmetric data."""
+    scores = z_scores([1, 2, 3])
+    # Mean = 2, std = sqrt(2/3)
+    # z(1) = -sqrt(3/2), z(2) = 0, z(3) = sqrt(3/2)
+    assert abs(scores[1]) < 1e-9, "Middle value z-score should be ~0"
+    assert abs(scores[0] + scores[2]) < 1e-9, "Z-scores should be symmetric"
+
+
+def test_mean_empty_raises():
+    """Mean of empty list should raise ValueError."""
+    try:
+        mean([])
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+
+
+def test_percentile_median():
+    """50th percentile should match the median."""
+    result = percentile([1, 2, 3, 4, 5], 50)
+    assert result == 3.0

@@ -14,7 +14,7 @@
       "language": "python",
       "difficulty": "easy",
       "category": "bug-fix",
-      "description": "Fix numpy dtype mismatch in matrix multiplication",
+      "description": "Fix floor division truncation in mean calculation",
       "fixture_dir": "fixtures/b10/ml-001-dtype-mismatch",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
