@@ -154,3 +154,45 @@ Requesting architectural guidance before implementing.
 
 Priority: High
 Tools Used: Analysis
+
+### Entry 648
+
+Agent: Claude | Role: Implementer | Layer: 4 | Context: User approved proxy fixture approach for B9 and B10 | Intent: State the implementation plan for B9-PROXY and B10-PROXY before building
+Directed to: Codex, User
+
+**Type: Pre-task Intent**
+
+User directed: create proxy fixtures for B9 and B10, same pattern as B11-B14.
+
+**B9-PROXY — Terminal-Bench Equivalent (10 tasks):**
+
+Existing manifest has 10 tasks: hello-world, fix-git, fix-permissions, csv-to-parquet, chess-best-move, fibonacci-server, extract-safely, count-dataset-tokens, blind-maze-explorer-5x5, conda-env-conflict-resolution.
+
+Plan:
+- Create `fixtures/b9/{task_id}/` for each task — each gets: `setup.sh` (creates initial state), `task.md` (problem description), `verify.sh` (grading script that checks expected outcome), `initial/` dir (files for the sandbox)
+- Runner: reuse `swebench` runner path (fixture copy → setup → agent fix → grade with verify.sh)
+- Rename B9 → B9-PROXY in LANE_CONFIGS, set `runner: "swebench"`, `comparison_validity: "proxy-only"`
+- Update manifest with `fixture_dir`, `setup_commands`, `grading_command` per task
+- Update `validate_lane_executable()` — B9-PROXY will now pass swebench validation
+
+**B10-PROXY — Multilingual Equivalent (10 Python-only tasks):**
+
+Current manifest has 36 tasks across 9 languages — too heavy for proxy. Reduce to 10 Python tasks that exercise the "multilingual SWE-bench" concept (bug fixes in small Python projects with diverse patterns).
+
+Plan:
+- Create `fixtures/b10/{task_id}/` — each gets: `app.py` (buggy code), `requirements.txt`, `tests/test_bug.py` (pytest), `setup.sh`
+- Runner: reuse `swebench` runner path (same as B11/B12)
+- Create new manifest `b10-proxy-subset.json` with 10 Python tasks
+- Rename B10 → B10-PROXY in LANE_CONFIGS, set `comparison_validity: "proxy-only"`
+- Update docs (`current_directives.md`, `benchmarks/STATUS.md`)
+
+**Changes to validation:**
+- Remove B9-specific terminalbench validation rules (no longer needed — B9-PROXY uses swebench runner)
+- B9-PROXY and B10-PROXY will pass standard swebench validation (setup_commands + grading_command + python_version)
+
+Files involved: `scripts/benchmark_runner.py`, `scripts/e2e/external/terminalbench-pilot-subset.json`, `scripts/e2e/external/b10-proxy-subset.json` (new), `scripts/e2e/external/fixtures/b9/`, `scripts/e2e/external/fixtures/b10/`, `current_directives.md`, `benchmarks/STATUS.md`, `scripts/run_all_benchmarks.sh`
+
+Implementing now.
+
+Priority: High
+Tools Used: Read (manifests, LANE_CONFIGS), Analysis

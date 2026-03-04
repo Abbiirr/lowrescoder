@@ -18,3 +18,5 @@ Artifact: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260304-06
 
 
 >>>>>>>>>> Starting B11 at Wed Mar  4 12:49:54 PM +06 2026 <<<<<<<<<<
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'

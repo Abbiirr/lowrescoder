@@ -166,23 +166,25 @@ LANE_CONFIGS: dict[str, dict] = {
         "tool_restriction": "bash-only",
         "description": "SWE-bench with bash tools only (control lane)",
     },
-    "B9": {
-        "name": "Terminal-Bench",
-        "manifest": "terminalbench-pilot-subset.json",
-        "budget": BudgetProfile(
-            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
-        ),
-        "runner": "terminalbench",
-        "description": "Terminal workflow tasks (10 tasks)",
-    },
-    "B10": {
-        "name": "SWE-bench Multilingual",
-        "manifest": "b10-multilingual-subset.json",
+    "B9-PROXY": {
+        "name": "Terminal-Bench Equivalent",
+        "manifest": "b9-proxy-subset.json",
         "budget": BudgetProfile(
             wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "swebench",
-        "description": "Multilingual bug fixes (36 tasks, 9 languages)",
+        "comparison_validity": "proxy-only",
+        "description": "Terminal workflow proxy tasks (10 tasks)",
+    },
+    "B10-PROXY": {
+        "name": "Multilingual Equivalent",
+        "manifest": "b10-proxy-subset.json",
+        "budget": BudgetProfile(
+            wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
+        ),
+        "runner": "swebench",
+        "comparison_validity": "proxy-only",
+        "description": "Multilingual bug fix proxy tasks (10 Python tasks)",
     },
     "B11": {
         "name": "BaxBench",

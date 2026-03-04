@@ -66,8 +66,8 @@ All manifests created, all lanes visible in unified harness.
 |------|----------|-------|--------|
 | B7 SWE-bench Verified | `swebench-pilot-subset.json` | 24 | R0 DONE (20%) |
 | B8 SWE-bench Bash-Only | `swebench-pilot-subset.json` | 24 | READY |
-| B9 Terminal-Bench | `terminalbench-pilot-subset.json` | 10 | NOT_EXECUTABLE |
-| B10 Multilingual | `b10-multilingual-subset.json` | 36 | NOT_EXECUTABLE |
+| B9-PROXY Terminal-Bench | `b9-proxy-subset.json` | 10 | READY (proxy-only) |
+| B10-PROXY Multilingual | `b10-proxy-subset.json` | 10 | READY (proxy-only) |
 | B11 BaxBench | `baxbench-pilot-subset.json` | 12 | READY |
 | B12-PROXY | `b12-proxy-subset.json` | 10 | READY |
 | B13-PROXY | `b13-proxy-subset.json` | 10 | READY |
