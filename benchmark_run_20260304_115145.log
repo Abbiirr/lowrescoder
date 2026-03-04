@@ -1,0 +1,56 @@
+==========================================
+Sequential Benchmark Run — Wed Mar  4 11:51:45 AM +06 2026
+Model: glm-4.7-flash | Host: http://10.112.30.10:11434
+Resume mode: enabled (skips completed tasks)
+==========================================
+
+>>>>>>>>>> Starting B7 at Wed Mar  4 11:51:45 AM +06 2026 <<<<<<<<<<
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+ollama_conn_retry
+agent_loop_max_iterations
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+<<<<<<<<<< B7 finished (rc=143) at Wed Mar  4 12:49:03 PM +06 2026 >>>>>>>>>>
+
+
+>>>>>>>>>> Starting B8 at Wed Mar  4 12:49:03 PM +06 2026 <<<<<<<<<<
+<<<<<<<<<< B8 finished (rc=143) at Wed Mar  4 12:49:13 PM +06 2026 >>>>>>>>>>
+
+
+>>>>>>>>>> Starting B9 at Wed Mar  4 12:49:13 PM +06 2026 <<<<<<<<<<
+
+NOT_EXECUTABLE: B9 manifest missing harbor_dataset/verifier_kind in _meta and no task has grading_command.
+Artifact: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260304-064913-B9-NOT_EXECUTABLE.json
+<<<<<<<<<< B9 finished (rc=0) at Wed Mar  4 12:49:13 PM +06 2026 >>>>>>>>>>
+
+
+>>>>>>>>>> Starting B10 at Wed Mar  4 12:49:13 PM +06 2026 <<<<<<<<<<
+
+NOT_EXECUTABLE: No task in B10 has setup_commands + grading_command + python_version/docker_image. Manifest is skeletal.
+Artifact: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260304-064913-B10-NOT_EXECUTABLE.json
+<<<<<<<<<< B10 finished (rc=0) at Wed Mar  4 12:49:13 PM +06 2026 >>>>>>>>>>
+
+
+>>>>>>>>>> Starting B11 at Wed Mar  4 12:49:13 PM +06 2026 <<<<<<<<<<
+<<<<<<<<<< B11 finished (rc=143) at Wed Mar  4 12:49:21 PM +06 2026 >>>>>>>>>>
+
+
+>>>>>>>>>> Starting B12-PROXY at Wed Mar  4 12:49:21 PM +06 2026 <<<<<<<<<<
+<<<<<<<<<< B12-PROXY finished (rc=143) at Wed Mar  4 12:49:38 PM +06 2026 >>>>>>>>>>
+
+
+>>>>>>>>>> Starting B13-PROXY at Wed Mar  4 12:49:38 PM +06 2026 <<<<<<<<<<

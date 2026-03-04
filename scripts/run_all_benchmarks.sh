@@ -8,7 +8,7 @@ echo "Model: $OLLAMA_MODEL | Host: $OLLAMA_HOST"
 echo "Resume mode: enabled (skips completed tasks)"
 echo "=========================================="
 
-LANES="B7 B8 B9 B10 B11 B12-PROXY B13-PROXY B14"
+LANES="B7 B8 B9 B10 B11 B12-PROXY B13-PROXY B14-PROXY"
 
 for lane in $LANES; do
     echo ""

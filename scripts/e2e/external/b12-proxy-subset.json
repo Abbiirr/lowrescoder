@@ -5,68 +5,108 @@
     "comparison_validity": "proxy-only",
     "parity_claim": "forbidden",
     "note": "PROXY lane — comparable to internal baselines only. NOT comparable to published SWE-Lancer numbers.",
-    "last_verified": "2026-02-19"
+    "last_verified": "2026-03-04"
   },
   "tasks": [
     {
       "task_id": "swl-001-add-pagination",
       "category": "feature",
       "difficulty": "medium",
-      "description": "Add cursor-based pagination to the /api/users endpoint with next/prev links"
+      "description": "Add cursor-based pagination to the /api/users endpoint with next/prev links",
+      "fixture_dir": "fixtures/b12/swl-001-add-pagination",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "swl-002-fix-search",
       "category": "bugfix",
       "difficulty": "easy",
-      "description": "Fix search endpoint returning 500 when query contains special characters"
+      "description": "Fix search endpoint returning 500 when query contains special characters",
+      "fixture_dir": "fixtures/b12/swl-002-fix-search",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "swl-003-add-export",
       "category": "feature",
       "difficulty": "hard",
-      "description": "Add CSV export functionality to the dashboard reports page"
+      "description": "Add CSV export functionality to the dashboard reports page",
+      "fixture_dir": "fixtures/b12/swl-003-add-export",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "swl-004-fix-timezone",
       "category": "bugfix",
       "difficulty": "medium",
-      "description": "Fix event scheduling showing wrong times for non-UTC timezones"
+      "description": "Fix event scheduling showing wrong times for non-UTC timezones",
+      "fixture_dir": "fixtures/b12/swl-004-fix-timezone",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "swl-005-add-webhook",
       "category": "feature",
       "difficulty": "hard",
-      "description": "Implement webhook notification system for order status changes"
+      "description": "Implement webhook notification system for order status changes",
+      "fixture_dir": "fixtures/b12/swl-005-add-webhook",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "swl-006-fix-upload",
       "category": "bugfix",
       "difficulty": "medium",
-      "description": "Fix file upload failing silently for files over 5MB"
+      "description": "Fix file upload failing silently for files over 5MB",
+      "fixture_dir": "fixtures/b12/swl-006-fix-upload",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "swl-007-add-caching",
       "category": "feature",
       "difficulty": "medium",
-      "description": "Add Redis-based caching layer for the product catalog API"
+      "description": "Add in-memory caching layer for the product catalog API",
+      "fixture_dir": "fixtures/b12/swl-007-add-caching",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "swl-008-fix-email",
       "category": "bugfix",
       "difficulty": "easy",
-      "description": "Fix email notification templates not rendering user names correctly"
+      "description": "Fix email notification templates not rendering user names correctly",
+      "fixture_dir": "fixtures/b12/swl-008-fix-email",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "swl-009-add-rbac",
       "category": "feature",
       "difficulty": "hard",
-      "description": "Implement role-based access control with admin/editor/viewer roles"
+      "description": "Implement role-based access control with admin/editor/viewer roles",
+      "fixture_dir": "fixtures/b12/swl-009-add-rbac",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "swl-010-fix-race",
       "category": "bugfix",
       "difficulty": "hard",
-      "description": "Fix race condition in inventory decrement causing overselling"
+      "description": "Fix race condition in inventory decrement causing overselling",
+      "fixture_dir": "fixtures/b12/swl-010-fix-race",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     }
   ]
 }

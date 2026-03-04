@@ -441,6 +441,9 @@ class AutoCodeAdapter:
                             docker_grading=bool(
                                 task.extra.get("_container_name"),
                             ),
+                            test_patch=task.extra.get(
+                                "test_patch", "",
+                            ),
                         )
                     else:
                         # No grading command — single attempt only
@@ -532,9 +535,14 @@ class AutoCodeAdapter:
             )
             if bash_only:
                 prompt += (
-                    "Step 4: Use run_command with sed, tee, or similar "
-                    "shell commands to edit the SOURCE code. Make the "
-                    "MINIMUM change needed.\n"
+                    "Step 4: Use run_command to make precise scripted "
+                    "edits to the SOURCE code. Prefer `python - <<'PY'` "
+                    "text-rewrite scripts for reliable search/replace. "
+                    "Do NOT rewrite whole files unless the file is "
+                    "tiny. Make the MINIMUM change needed.\n"
+                    "Step 4b: Immediately verify the edit by running "
+                    "`git diff -- <file>` or re-reading the edited "
+                    "region before running tests.\n"
                 )
             else:
                 prompt += (
@@ -555,7 +563,12 @@ class AutoCodeAdapter:
                 prompt += (
                     "- You only have run_command, read_file, and "
                     "run_tests available.\n"
-                    "- Use run_command with sed/tee/echo to edit files.\n"
+                    "- Prefer `python - <<'PY'` for multi-line edits; "
+                    "avoid brittle `sed -i` when the change spans "
+                    "multiple tokens or lines.\n"
+                    "- After every edit, inspect the diff before "
+                    "re-running tests.\n"
+                    "- Make one small change at a time, then verify.\n"
                 )
             else:
                 prompt += (
@@ -564,7 +577,11 @@ class AutoCodeAdapter:
                 )
             prompt += (
                 "- If you receive feedback that tests failed, read the "
-                "error output and adjust your fix."
+                "error output and adjust your fix.\n"
+                "- When tests fail, examine the test file's imports and "
+                "the test module name to identify which source files to "
+                "investigate. Do not limit yourself to files you have "
+                "already read."
             )
         elif bash_only:
             prompt += (
@@ -575,22 +592,36 @@ class AutoCodeAdapter:
                 "need fixing (NOT the test files).\n"
                 "Step 3: Understand what the tests expect and what the "
                 "source code does wrong.\n"
-                "Step 4: Use run_command with sed, tee, or similar shell "
-                "commands to edit the SOURCE code. Make the MINIMUM "
-                "change needed.\n"
-                "Step 5: Run the grading command again to verify tests "
+                "Step 4: Use run_command to make precise scripted edits "
+                "to the SOURCE code. Prefer `python - <<'PY'` "
+                "text-rewrite scripts for reliable search/replace. "
+                "Do NOT rewrite whole files unless the file is tiny. "
+                "Make the MINIMUM change needed.\n"
+                "Step 5: Immediately verify the edit by running "
+                "`git diff -- <file>` or re-reading the edited "
+                "region before running tests.\n"
+                "Step 6: Run the grading command again to verify tests "
                 "pass.\n"
-                "Step 6: If tests still fail, read the error output, "
+                "Step 7: If tests still fail, read the error output, "
                 "adjust your fix, and repeat from Step 4.\n\n"
                 "RULES:\n"
                 "- You MUST call tools. Do NOT just describe the fix.\n"
                 "- Do NOT modify test files — they are already correct.\n"
                 "- Fix the SOURCE code that the tests exercise.\n"
                 "- You only have run_command and read_file available.\n"
-                "- Use run_command with sed/tee/echo to edit files.\n"
+                "- Prefer `python - <<'PY'` for multi-line edits; "
+                "avoid brittle `sed -i` when the change spans "
+                "multiple tokens or lines.\n"
+                "- After every edit, inspect the diff before "
+                "re-running tests.\n"
+                "- Make one small change at a time, then verify.\n"
                 "- After writing your fix, ALWAYS run the grading "
                 "command to verify.\n"
-                "- If tests fail, read the error output and iterate."
+                "- If tests fail, read the error output and iterate.\n"
+                "- When tests fail, examine the test file's imports and "
+                "the test module name to identify which source files to "
+                "investigate. Do not limit yourself to files you have "
+                "already read."
             )
         else:
             prompt += (
@@ -616,7 +647,11 @@ class AutoCodeAdapter:
                 "files.\n"
                 "- After writing your fix, ALWAYS run the grading "
                 "command to verify.\n"
-                "- If tests fail, read the error output and iterate."
+                "- If tests fail, read the error output and iterate.\n"
+                "- When tests fail, examine the test file's imports and "
+                "the test module name to identify which source files to "
+                "investigate. Do not limit yourself to files you have "
+                "already read."
             )
 
         if initial_test_output:
@@ -648,6 +683,7 @@ class AutoCodeAdapter:
         test_files_changed: bool = False,
         stagnation_count: int = 0,
         docker_grading: bool = False,
+        test_patch: str = "",
     ) -> str:
         """Build a structured feedback prompt after a failed attempt."""
         parts: list[str] = []
@@ -689,6 +725,19 @@ class AutoCodeAdapter:
             parts.append(
                 "KEY ERRORS:\n"
                 + "\n".join(f"  - {a}" for a in assertions[:5])
+            )
+
+        # Source discovery: help agent find the right source files
+        source_candidates = self._discover_source_candidates(
+            grading_output, test_patch, failing_tests,
+        )
+        if source_candidates:
+            parts.append(
+                "SOURCE FILE CANDIDATES (investigate these):\n"
+                + "\n".join(f"  - {s}" for s in source_candidates[:8])
+                + "\n\nLook for source files that correspond to the "
+                "failing test module. If the failing test is "
+                "`test_X.py`, search for `X.py` in the source tree."
             )
 
         # Tail of raw output (reduced to leave room for structure)
@@ -753,6 +802,211 @@ class AutoCodeAdapter:
                 if len(stripped) < 200:
                     assertions.append(stripped)
         return assertions
+
+    # --- P0-3: Source file discovery ---
+
+    @staticmethod
+    def _extract_traceback_paths(output: str) -> list[str]:
+        """Extract file paths from Python traceback lines."""
+        import re
+        paths: list[str] = []
+        for m in re.finditer(r'File "([^"]+)", line \d+', output):
+            path = m.group(1)
+            # Skip standard library and site-packages
+            if "/site-packages/" in path or "/lib/python" in path:
+                continue
+            paths.append(path)
+        return paths
+
+    @staticmethod
+    def _extract_imports_from_patch(test_patch: str) -> list[str]:
+        """Extract imported module names from a test patch diff."""
+        import re
+        modules: list[str] = []
+        for line in test_patch.splitlines():
+            # Only look at added lines in the diff
+            if not line.startswith("+"):
+                continue
+            # from X.Y import Z
+            m = re.match(r"\+\s*from\s+([\w.]+)\s+import", line)
+            if m:
+                modules.append(m.group(1))
+                continue
+            # import X.Y
+            m = re.match(r"\+\s*import\s+([\w.]+)", line)
+            if m:
+                modules.append(m.group(1))
+        return modules
+
+    @staticmethod
+    def _extract_diff_file_paths(test_patch: str) -> list[str]:
+        """Extract file paths from diff headers in a test patch.
+
+        Parses 'diff --git a/path b/path' and '--- a/path' / '+++ b/path'
+        headers to find which test files were modified. Returns paths with
+        the leading a/ or b/ stripped.
+        """
+        import re
+        paths: list[str] = []
+        seen: set[str] = set()
+        for line in test_patch.splitlines():
+            # diff --git a/testing/test_foo.py b/testing/test_foo.py
+            m = re.match(r"diff --git a/(.+?) b/(.+)", line)
+            if m:
+                p = m.group(2)
+                if p not in seen:
+                    seen.add(p)
+                    paths.append(p)
+                continue
+            # +++ b/testing/test_foo.py
+            m = re.match(r"\+\+\+ b/(.+)", line)
+            if m:
+                p = m.group(1)
+                if p not in seen:
+                    seen.add(p)
+                    paths.append(p)
+        return paths
+
+    @staticmethod
+    def _test_path_to_source_candidates(test_path: str) -> list[str]:
+        """Map a test file path to candidate source file paths.
+
+        Given 'testing/test_unittest.py', produces candidates like:
+        - src/_pytest/unittest.py (framework-internal pattern)
+        - _pytest/unittest.py (package-internal pattern)
+        - unittest.py (bare module)
+        - src/unittest.py (src/ prefix)
+
+        This handles projects like pytest where 'testing/test_X.py'
+        corresponds to 'src/_pytest/X.py'.
+        """
+        parts = test_path.replace("\\", "/").rsplit("/", 1)
+        basename = parts[-1]
+        parent_dir = parts[0] if len(parts) > 1 else ""
+
+        # Strip test_ prefix or _test suffix
+        if basename.startswith("test_"):
+            source_base = basename[5:]  # test_unittest.py -> unittest.py
+        elif basename.endswith("_test.py"):
+            source_base = basename[:-8] + ".py"
+        else:
+            return []
+
+        source_stem = source_base.replace(".py", "")
+        candidates: list[str] = []
+
+        # Pattern 1: src/_<project>/X.py (pytest-style: testing/test_X -> src/_pytest/X)
+        # Detect project name from parent dir pattern
+        if parent_dir in ("testing", "tests", "test"):
+            # Try common framework-internal patterns
+            for prefix in ["src/_pytest", "_pytest", "src"]:
+                candidates.append(f"{prefix}/{source_base}")
+
+        # Pattern 2: direct source tree mirror
+        # testing/test_foo.py -> src/foo.py, lib/foo.py, <pkg>/foo.py
+        for prefix in ["src", "lib", ""]:
+            path = f"{prefix}/{source_base}" if prefix else source_base
+            if path not in candidates:
+                candidates.append(path)
+
+        # Pattern 3: nested package (e.g. mypackage/X.py)
+        # Look for any directory matching the stem with _ prefix
+        candidates.append(f"src/_{source_stem}/{source_stem}.py")
+
+        return candidates
+
+    @staticmethod
+    def _test_name_to_source_hints(
+        failing_tests: list[str],
+    ) -> list[str]:
+        """Map failing test file names to likely source module names.
+
+        e.g. test_unittest.py -> unittest.py, test_aggregates.py ->
+        aggregates.py
+        """
+        import re
+        hints: list[str] = []
+        seen: set[str] = set()
+        for test_line in failing_tests:
+            # Extract file part: FAILED testing/test_foo.py::TestBar
+            m = re.search(r"([\w/\\]+\.py)", test_line)
+            if not m:
+                continue
+            test_file = m.group(1).replace("\\", "/")
+            basename = test_file.rsplit("/", 1)[-1]
+            # Strip test_ prefix
+            if basename.startswith("test_"):
+                source_name = basename[5:]  # test_foo.py -> foo.py
+            elif basename.endswith("_test.py"):
+                source_name = basename[:-8] + ".py"
+            else:
+                continue
+            if source_name not in seen:
+                seen.add(source_name)
+                hints.append(source_name)
+        return hints
+
+    def _discover_source_candidates(
+        self,
+        grading_output: str,
+        test_patch: str,
+        failing_tests: list[str],
+    ) -> list[str]:
+        """Combine multiple signals to suggest source files to investigate.
+
+        Signals:
+        1. Traceback paths (filtered to non-test files)
+        2. Imports from test patch (added lines only)
+        3. Test name -> source name heuristic
+        4. Diff header file paths -> source path candidates
+        """
+        candidates: list[str] = []
+        seen: set[str] = set()
+
+        def _add(item: str) -> None:
+            if item not in seen:
+                seen.add(item)
+                candidates.append(item)
+
+        # Signal 1: traceback paths (non-test files)
+        for path in self._extract_traceback_paths(grading_output):
+            basename = path.rsplit("/", 1)[-1]
+            is_test = (
+                basename.startswith("test_")
+                or basename.endswith("_test.py")
+                or "/test_" in path
+                or "/tests/" in path
+                or "/testing/" in path
+            )
+            if not is_test:
+                _add(path)
+
+        # Signal 2: imports from test patch → module paths
+        if test_patch:
+            for mod in self._extract_imports_from_patch(test_patch):
+                # Convert dotted module to path hint
+                # e.g. _pytest.unittest -> _pytest/unittest.py
+                path_hint = mod.replace(".", "/") + ".py"
+                _add(f"(module) {path_hint}")
+
+        # Signal 3: test name -> source name heuristic
+        for hint in self._test_name_to_source_hints(failing_tests):
+            _add(
+                f"(search for) {hint} — likely source for "
+                f"failing test"
+            )
+
+        # Signal 4: diff header paths -> source path candidates
+        # Maps test file paths from the patch to likely source locations
+        # e.g. testing/test_unittest.py -> src/_pytest/unittest.py
+        if test_patch:
+            for test_path in self._extract_diff_file_paths(test_patch):
+                for src_candidate in self._test_path_to_source_candidates(
+                    test_path,
+                ):
+                    _add(f"(source candidate) {src_candidate}")
+
+        return candidates
 
     # --- P0-6: Git checkpoint helpers ---
 

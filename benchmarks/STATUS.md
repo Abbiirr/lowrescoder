@@ -9,22 +9,23 @@
 | B6 | React Calculator (external project) | OPEN | 0/100 (build fail = score 0 per policy) | `docs/qa/test-results/20260218-223425-e2e-react-calculator.md` (artifact not present — generated in prior session, not committed) | Score >= 90 + build pass + app runs |
 | B7 | SWE-bench Verified (24 tasks) | R0 DONE | 20% (1/5) | `docs/qa/test-results/20260219-113147-B7-autocode.json` (artifact not present — generated in prior session, not committed) | Baseline: 20% resolve rate |
 | B8 | SWE-bench Bash-Only (24 tasks) | READY | — | — | Awaiting R0 calibration run |
-| B9 | Terminal-Bench (10 tasks) | READY | — | — | Awaiting R0 calibration run |
-| B10 | SWE-bench Multilingual (36 tasks) | READY | — | — | Awaiting R0 calibration run |
+| B9 | Terminal-Bench (10 tasks) | NOT_EXECUTABLE | — | — | Requires Harbor CLI or official task packages |
+| B10 | SWE-bench Multilingual (36 tasks) | NOT_EXECUTABLE | — | — | Requires real task metadata + generalized container support |
 | B11 | BaxBench (12 tasks) | READY | — | — | Awaiting R0 calibration run |
 | B12-PROXY | SWE-Lancer Equivalent (10 tasks) | READY | — | — | Awaiting R0 (proxy-only) |
 | B12-OFFICIAL | SWE-Lancer | OPEN-EXTERNAL | — | — | Access-gated (OpenAI partnership) |
 | B13-PROXY | CodeClash Equivalent (10 tasks) | READY | — | — | Awaiting R0 (proxy-only) |
 | B13-OFFICIAL | CodeClash | OPEN-EXTERNAL | — | — | Access-gated (external platform) |
-| B14 | LiveCodeBench (15 tasks) | READY | — | — | Awaiting R0 calibration run |
+| B14-PROXY | LiveCodeBench Equivalent (15 tasks) | READY | — | — | Awaiting R0 (proxy-only) |
 
 ## Pass Criteria (per Entries 525-531)
 
 - **B6:** score >= 90 AND npm build passes AND app runs (build fail = score 0)
 - **B7:** >= 40% resolve rate (locked — double R0 baseline of 20%)
 - **B8-B14:** Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run. No lane may be gated without a locked threshold
-- **B12/B13-PROXY:** `comparison_validity: proxy-only` — NO published parity claims
+- **B12/B13/B14-PROXY:** `comparison_validity: proxy-only` — NO published parity claims
 - **B12/B13-OFFICIAL:** `comparison_validity: official` — requires official dataset access
+- **B9/B10:** NOT_EXECUTABLE — skipped cleanly until official task packages available
 
 ## Provider Policy (Entry 530)
 
@@ -117,17 +118,17 @@ Changes to `scripts/run_calculator_benchmark.py`:
 | Claude Code adapter | `scripts/adapters/claude_adapter.py` | WORKING |
 | External pilot runner (Harbor) | `scripts/e2e/external/run_external_pilot.py` | WORKING (legacy) |
 | B7 manifest (24 tasks) | `scripts/e2e/external/swebench-pilot-subset.json` | READY |
-| B9 manifest (10 tasks) | `scripts/e2e/external/terminalbench-pilot-subset.json` | READY |
-| B10 manifest (36 tasks) | `scripts/e2e/external/b10-multilingual-subset.json` | READY |
+| B9 manifest (10 tasks) | `scripts/e2e/external/terminalbench-pilot-subset.json` | NOT_EXECUTABLE |
+| B10 manifest (36 tasks) | `scripts/e2e/external/b10-multilingual-subset.json` | NOT_EXECUTABLE |
 | B11 manifest (12 tasks) | `scripts/e2e/external/baxbench-pilot-subset.json` | READY |
 | B12-PROXY manifest (10 tasks) | `scripts/e2e/external/b12-proxy-subset.json` | READY |
 | B13-PROXY manifest (10 tasks) | `scripts/e2e/external/b13-proxy-subset.json` | READY |
-| B14 manifest (15 tasks) | `scripts/e2e/external/livecodebench-pilot-subset.json` | READY |
+| B14-PROXY manifest (15 tasks) | `scripts/e2e/external/b14-proxy-subset.json` | READY |
 
 ### What's REMAINING
 
 1. **B7 R0 complete** — Baseline: 20% resolve rate (1/5 easy tasks)
-2. **R0 for other lanes** — B8, B9, B10, B11, B12-PROXY, B13-PROXY, B14
+2. **R0 for other lanes** — B8, B11, B12-PROXY, B13-PROXY, B14-PROXY (B9/B10 NOT_EXECUTABLE)
 3. **Parity runs** — Run Codex + Claude Code on same B7 subset (Sprint 4)
 4. **B6** — Parked (model ceiling at 64/100, not harness issue)
 

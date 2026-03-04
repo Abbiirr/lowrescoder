@@ -5,68 +5,98 @@
     "comparison_validity": "proxy-only",
     "parity_claim": "forbidden",
     "note": "PROXY lane — comparable to internal baselines only. NOT comparable to published CodeClash numbers.",
-    "last_verified": "2026-02-19"
+    "last_verified": "2026-03-04"
   },
   "tasks": [
     {
       "task_id": "cc-001-two-sum",
       "category": "arrays",
       "difficulty": "easy",
-      "description": "Given an array of integers and a target, return indices of two numbers that add up to target"
+      "description": "Given an array of integers and a target, return indices of two numbers that add up to target",
+      "fixture_dir": "fixtures/b13/cc-001-two-sum",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
     },
     {
       "task_id": "cc-002-lru-cache",
       "category": "design",
       "difficulty": "medium",
-      "description": "Implement an LRU cache with O(1) get and put operations"
+      "description": "Implement an LRU cache with O(1) get and put operations",
+      "fixture_dir": "fixtures/b13/cc-002-lru-cache",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
     },
     {
       "task_id": "cc-003-merge-intervals",
       "category": "sorting",
       "difficulty": "medium",
-      "description": "Given a collection of intervals, merge all overlapping intervals"
+      "description": "Given a collection of intervals, merge all overlapping intervals",
+      "fixture_dir": "fixtures/b13/cc-003-merge-intervals",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
     },
     {
       "task_id": "cc-004-word-break",
       "category": "dynamic_programming",
       "difficulty": "medium",
-      "description": "Determine if a string can be segmented into dictionary words"
+      "description": "Determine if a string can be segmented into dictionary words",
+      "fixture_dir": "fixtures/b13/cc-004-word-break",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
     },
     {
       "task_id": "cc-005-serialize-tree",
       "category": "trees",
       "difficulty": "hard",
-      "description": "Serialize and deserialize a binary tree"
+      "description": "Serialize and deserialize a binary tree",
+      "fixture_dir": "fixtures/b13/cc-005-serialize-tree",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
     },
     {
       "task_id": "cc-006-median-stream",
       "category": "heaps",
       "difficulty": "hard",
-      "description": "Find median from a data stream with O(log n) insertion"
+      "description": "Find median from a data stream with O(log n) insertion",
+      "fixture_dir": "fixtures/b13/cc-006-median-stream",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
     },
     {
       "task_id": "cc-007-course-schedule",
       "category": "graphs",
       "difficulty": "medium",
-      "description": "Determine if all courses can be completed given prerequisites (cycle detection)"
+      "description": "Determine if all courses can be completed given prerequisites (cycle detection)",
+      "fixture_dir": "fixtures/b13/cc-007-course-schedule",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
     },
     {
       "task_id": "cc-008-min-window-substring",
       "category": "sliding_window",
       "difficulty": "hard",
-      "description": "Find the minimum window substring containing all characters of target"
+      "description": "Find the minimum window substring containing all characters of target",
+      "fixture_dir": "fixtures/b13/cc-008-min-window-substring",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
     },
     {
       "task_id": "cc-009-valid-parentheses",
       "category": "stacks",
       "difficulty": "easy",
-      "description": "Determine if a string of brackets is valid"
+      "description": "Determine if a string of brackets is valid",
+      "fixture_dir": "fixtures/b13/cc-009-valid-parentheses",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
     },
     {
       "task_id": "cc-010-longest-palindrome",
       "category": "strings",
       "difficulty": "medium",
-      "description": "Find the longest palindromic substring in a given string"
+      "description": "Find the longest palindromic substring in a given string",
+      "fixture_dir": "fixtures/b13/cc-010-longest-palindrome",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
     }
   ]
 }

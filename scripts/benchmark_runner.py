@@ -28,10 +28,12 @@ import asyncio
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 # Ensure project root is on path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -211,14 +213,15 @@ LANE_CONFIGS: dict[str, dict] = {
         "comparison_validity": "proxy-only",
         "description": "Competitive coding tasks (proxy, no parity claims)",
     },
-    "B14": {
-        "name": "LiveCodeBench",
-        "manifest": "livecodebench-pilot-subset.json",
+    "B14-PROXY": {
+        "name": "LiveCodeBench Equivalent (PROXY)",
+        "manifest": "b14-proxy-subset.json",
         "budget": BudgetProfile(
             wall_time_s=7200, token_cap=50_000, max_tool_calls=100,
         ),
         "runner": "competitive",
-        "description": "LeetCode-style problems (15-20 tasks)",
+        "comparison_validity": "proxy-only",
+        "description": "LeetCode-style problems (proxy, no parity claims)",
     },
 }
 
@@ -239,6 +242,71 @@ def get_adapter(agent_name: str, model: str = "") -> AgentAdapter:
             f"Available: {', '.join(AGENT_REGISTRY)}"
         )
     return cls(model=model)
+
+
+# --- NOT_EXECUTABLE Validation ---
+
+def validate_lane_executable(
+    lane: str,
+    config: dict,
+    meta: dict[str, Any],
+    tasks: list[BenchmarkTask],
+) -> tuple[bool, str]:
+    """Check if a lane has enough manifest metadata to actually execute.
+
+    Returns (is_executable, reason).  When is_executable is False the
+    caller should skip the lane and record NOT_EXECUTABLE.
+    """
+    runner = config.get("runner", "")
+
+    if runner == "calculator":
+        return True, ""
+
+    if runner == "swebench":
+        # Need at least one task with setup + grading + runtime
+        for t in tasks:
+            has_setup = bool(t.setup_commands)
+            has_grading = bool(t.grading_command)
+            has_runtime = bool(
+                t.extra.get("python_version")
+                or t.extra.get("docker_image")
+            )
+            if has_setup and has_grading and has_runtime:
+                return True, ""
+        return False, (
+            f"No task in {lane} has setup_commands + grading_command "
+            f"+ python_version/docker_image. Manifest is skeletal."
+        )
+
+    if runner == "terminalbench":
+        # Need official dataset linkage or per-task grading
+        has_harbor = bool(
+            meta.get("harbor_dataset") or meta.get("verifier_kind")
+        )
+        if has_harbor:
+            return True, ""
+        for t in tasks:
+            if t.grading_command:
+                return True, ""
+        return False, (
+            f"{lane} manifest missing harbor_dataset/verifier_kind "
+            f"in _meta and no task has grading_command."
+        )
+
+    if runner == "competitive":
+        # Need fixture_dir + grading_command on at least one task
+        for t in tasks:
+            has_fixture = bool(t.extra.get("fixture_dir"))
+            has_grading = bool(t.grading_command)
+            if has_fixture and has_grading:
+                return True, ""
+        return False, (
+            f"No task in {lane} has fixture_dir + grading_command. "
+            f"Competitive runner requires fixture directories."
+        )
+
+    # Unknown runner — assume executable (will fail at runtime)
+    return True, ""
 
 
 def create_task_sandbox(lane: str, task_id: str) -> Path:
@@ -304,6 +372,130 @@ def build_run_contract(
     }
 
 
+# --- Competitive Task Runner ---
+
+async def _run_competitive_task(
+    agent: AgentAdapter,
+    task: BenchmarkTask,
+    sandbox: Path,
+    budget: BudgetProfile,
+) -> AgentResult:
+    """Run a competitive coding task using fixture files.
+
+    Flow: copy fixture → agent edits solution file → grade with grader.py
+    """
+    fixture_dir_rel = task.extra.get("fixture_dir", "")
+    if not fixture_dir_rel:
+        return AgentResult(
+            task_id=task.task_id,
+            resolved=False,
+            error="No fixture_dir in task manifest",
+        )
+
+    fixture_dir = MANIFEST_DIR / fixture_dir_rel
+    if not fixture_dir.exists():
+        return AgentResult(
+            task_id=task.task_id,
+            resolved=False,
+            error=f"Fixture dir not found: {fixture_dir}",
+        )
+
+    # Copy fixture contents to sandbox
+    for item in fixture_dir.iterdir():
+        dest = sandbox / item.name
+        if item.is_dir():
+            shutil.copytree(item, dest)
+        else:
+            shutil.copy2(item, dest)
+    print(f"  Fixture copied from {fixture_dir}")
+
+    # Read prompt.md for the problem description
+    prompt_file = sandbox / "prompt.md"
+    problem_prompt = ""
+    if prompt_file.exists():
+        problem_prompt = prompt_file.read_text(encoding="utf-8")
+
+    # Build a task with competitive-specific metadata
+    entry_file = task.extra.get("entry_file", "solution.py")
+    grading_cmd = task.grading_command or "python grader.py"
+
+    # Override task fields for the agent
+    competitive_task = BenchmarkTask(
+        task_id=task.task_id,
+        description=(
+            f"{problem_prompt}\n\n"
+            f"Edit ONLY the file `{entry_file}` to solve this problem. "
+            f"Do NOT modify test files."
+        ),
+        repo="",
+        difficulty=task.difficulty,
+        language=task.language or "python",
+        category=task.category,
+        setup_commands=[],
+        grading_command=grading_cmd,
+        extra={
+            **task.extra,
+            "_sandbox_dir": str(sandbox),
+            "_entry_file": entry_file,
+        },
+    )
+
+    result = await agent.solve_task(competitive_task, sandbox, budget)
+
+    # Grade: run grading command in sandbox
+    if not result.error:
+        try:
+            proc = subprocess.run(
+                grading_cmd,
+                shell=True,
+                cwd=str(sandbox),
+                capture_output=True,
+                text=True,
+                timeout=120,
+                executable="/bin/bash",
+            )
+            grading_passed = proc.returncode == 0
+            if grading_passed:
+                result = AgentResult(
+                    task_id=result.task_id,
+                    resolved=True,
+                    score=1.0,
+                    wall_time_s=result.wall_time_s,
+                    tool_calls=result.tool_calls,
+                    tokens_in=result.tokens_in,
+                    tokens_out=result.tokens_out,
+                    artifacts={
+                        **(result.artifacts or {}),
+                        "grading_stdout": proc.stdout[-2000:],
+                    },
+                )
+            else:
+                result = AgentResult(
+                    task_id=result.task_id,
+                    resolved=False,
+                    score=0.0,
+                    wall_time_s=result.wall_time_s,
+                    tool_calls=result.tool_calls,
+                    tokens_in=result.tokens_in,
+                    tokens_out=result.tokens_out,
+                    artifacts={
+                        **(result.artifacts or {}),
+                        "grading_stdout": proc.stdout[-2000:],
+                        "grading_stderr": proc.stderr[-1000:],
+                    },
+                )
+        except Exception as e:
+            result = AgentResult(
+                task_id=result.task_id,
+                resolved=False,
+                error=f"Grading failed: {e}",
+                wall_time_s=result.wall_time_s,
+                tool_calls=result.tool_calls,
+            )
+
+    return result
+
+
 # --- Task Runner ---
 
 async def run_lane(
@@ -363,6 +555,49 @@ async def run_lane(
 
         sandbox = create_task_sandbox(lane, task.task_id)
         print(f"  Sandbox: {sandbox}")
+
+        # Competitive runner: copy fixture dir, run on host
+        lane_runner = LANE_CONFIGS.get(lane, {}).get("runner", "")
+        if lane_runner == "competitive":
+            result = await _run_competitive_task(
+                agent, task, sandbox, budget,
+            )
+            status = "RESOLVED" if result.resolved else "FAILED"
+            if result.error:
+                status = f"ERROR: {result.error[:50]}"
+                infra_fails += 1
+            print(f"  Result: {status} ({result.wall_time_s}s)")
+            if result.resolved:
+                resolved_count += 1
+            total_time += result.wall_time_s
+            results.append({
+                "task_id": result.task_id,
+                "resolved": result.resolved,
+                "score": result.score,
+                "wall_time_s": result.wall_time_s,
+                "tool_calls": result.tool_calls,
+                "tokens_in": result.tokens_in,
+                "tokens_out": result.tokens_out,
+                "error": result.error,
+                "artifacts": dict(result.artifacts or {}),
+            })
+            _save_progress(lane, agent.name, results, image_digests)
+            continue
+
+        # Copy fixture directory if present (B11/B12 fixture-based tasks)
+        fixture_dir_rel = task.extra.get("fixture_dir", "")
+        if fixture_dir_rel:
+            fixture_dir = MANIFEST_DIR / fixture_dir_rel
+            if fixture_dir.exists():
+                for item in fixture_dir.iterdir():
+                    dest = sandbox / item.name
+                    if item.is_dir():
+                        shutil.copytree(item, dest)
+                    else:
+                        shutil.copy2(item, dest)
+                print(f"  Fixture copied from {fixture_dir}")
+            else:
+                print(f"  WARNING: fixture_dir not found: {fixture_dir}")
 
         # Determine if this task needs Docker isolation
         python_version = task.extra.get("python_version", "")
@@ -950,6 +1185,30 @@ async def main() -> int:
         return 1
 
     meta, tasks = load_manifest(manifest_path)
+
+    # Validate lane is executable before spending any compute
+    is_executable, not_exec_reason = validate_lane_executable(
+        lane, lane_cfg, meta, tasks,
+    )
+    if not is_executable:
+        print(f"\nNOT_EXECUTABLE: {not_exec_reason}")
+        # Write a minimal result artifact
+        ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+        report = {
+            "lane": lane,
+            "status": "NOT_EXECUTABLE",
+            "reason": not_exec_reason,
+            "total_tasks": len(tasks),
+            "timestamp": ts,
+        }
+        report_path = RESULTS_DIR / f"{ts}-{lane}-NOT_EXECUTABLE.json"
+        RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(
+            json.dumps(report, indent=2), encoding="utf-8",
+        )
+        print(f"Artifact: {report_path}")
+        return 0
+
     if args.max_tasks > 0:
         tasks = tasks[: args.max_tasks]
 

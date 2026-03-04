@@ -20,7 +20,7 @@ Does AutoCode produce correct, complete output?
 | B11 BaxBench | % tasks passing | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run |
 | B12-PROXY SWE-Lancer Equivalent | % tasks resolved | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run (proxy-only) |
 | B13-PROXY CodeClash Equivalent | % goals achieved | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run (proxy-only) |
-| B14 LiveCodeBench | % tasks passing | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run |
+| B14-PROXY LiveCodeBench Equivalent | % tasks passing | Pending R0 — threshold locked to `max(R0_baseline, floor)` after first calibration run (proxy-only) |
 
 **B6 special rule (Entry 526):** If `npm run build` fails, total score = 0.
 
@@ -74,7 +74,7 @@ Some lanes impose tool restrictions. Only adapters that can enforce the restrict
 |------|-------------|----------|-------|-------------|
 | B7 | None | Supported | Supported | Supported |
 | B8 | `bash-only` (`run_command`, `read_file` only) | **Supported** (enforced via `ToolRegistry.filter()`) | Blocked | Blocked |
-| B9-B14 | None | Supported | Supported | Supported |
+| B9-B13, B14-PROXY | None | Supported | Supported | Supported |
 
 When `tool_restriction=bash-only` is active, the prompt is adapted to instruct the agent to use `run_command` with shell editing commands (`sed`, `tee`) instead of `write_file`. The enforcement is recorded in `AgentResult.artifacts["enforced_policy"]`.
 

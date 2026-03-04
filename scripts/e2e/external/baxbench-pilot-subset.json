@@ -4,80 +4,128 @@
     "selection_criteria": "Mix of vulnerability fixes, auth issues, API bugs, and security hardening",
     "source": "Curated from real open-source security bugs (CVE-based and common patterns)",
     "note": "Tasks represent common backend security patterns. Setup scripts create vulnerable state for agent to fix.",
-    "last_verified": "2026-02-19"
+    "last_verified": "2026-03-04"
   },
   "tasks": [
     {
       "task_id": "bax-001-sql-injection",
       "category": "security",
       "difficulty": "easy",
-      "description": "Fix SQL injection vulnerability in user login endpoint"
+      "description": "Fix SQL injection vulnerability in user login endpoint",
+      "fixture_dir": "fixtures/b11/bax-001-sql-injection",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "bax-002-xss-stored",
       "category": "security",
       "difficulty": "medium",
-      "description": "Fix stored XSS in comment submission handler"
+      "description": "Fix stored XSS in comment submission handler",
+      "fixture_dir": "fixtures/b11/bax-002-xss-stored",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "bax-003-auth-bypass",
       "category": "authentication",
       "difficulty": "hard",
-      "description": "Fix authentication bypass via JWT algorithm confusion"
+      "description": "Fix authentication bypass via JWT algorithm confusion",
+      "fixture_dir": "fixtures/b11/bax-003-auth-bypass",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "bax-004-path-traversal",
       "category": "security",
       "difficulty": "easy",
-      "description": "Fix path traversal in file download endpoint"
+      "description": "Fix path traversal in file download endpoint",
+      "fixture_dir": "fixtures/b11/bax-004-path-traversal",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "bax-005-csrf",
       "category": "security",
       "difficulty": "medium",
-      "description": "Add CSRF protection to state-changing API endpoints"
+      "description": "Add CSRF protection to state-changing API endpoints",
+      "fixture_dir": "fixtures/b11/bax-005-csrf",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "bax-006-rate-limit",
       "category": "api",
       "difficulty": "medium",
-      "description": "Implement rate limiting for login and password reset endpoints"
+      "description": "Implement rate limiting for login and password reset endpoints",
+      "fixture_dir": "fixtures/b11/bax-006-rate-limit",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "bax-007-ssrf",
       "category": "security",
       "difficulty": "hard",
-      "description": "Fix SSRF vulnerability in URL preview feature"
+      "description": "Fix SSRF vulnerability in URL preview feature",
+      "fixture_dir": "fixtures/b11/bax-007-ssrf",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "bax-008-insecure-deserialization",
       "category": "security",
       "difficulty": "hard",
-      "description": "Fix insecure deserialization in session handler"
+      "description": "Fix insecure deserialization in session handler",
+      "fixture_dir": "fixtures/b11/bax-008-insecure-deserialization",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "bax-009-broken-access",
       "category": "authorization",
       "difficulty": "medium",
-      "description": "Fix broken access control allowing users to view other users data"
+      "description": "Fix broken access control allowing users to view other users data",
+      "fixture_dir": "fixtures/b11/bax-009-broken-access",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "bax-010-api-error-leak",
       "category": "api",
       "difficulty": "easy",
-      "description": "Fix API error responses leaking stack traces and internal paths"
+      "description": "Fix API error responses leaking stack traces and internal paths",
+      "fixture_dir": "fixtures/b11/bax-010-api-error-leak",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "bax-011-password-storage",
       "category": "authentication",
       "difficulty": "medium",
-      "description": "Upgrade password hashing from MD5 to bcrypt with migration"
+      "description": "Upgrade password hashing from MD5 to bcrypt with migration",
+      "fixture_dir": "fixtures/b11/bax-011-password-storage",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     },
     {
       "task_id": "bax-012-header-injection",
       "category": "security",
       "difficulty": "medium",
-      "description": "Fix HTTP header injection in redirect handler"
+      "description": "Fix HTTP header injection in redirect handler",
+      "fixture_dir": "fixtures/b11/bax-012-header-injection",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11"
     }
   ]
 }

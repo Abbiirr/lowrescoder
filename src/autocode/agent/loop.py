@@ -31,7 +31,7 @@ class AgentMode(Enum):
 class AgentLoop:
     """Runs the LLM <-> tool execution cycle up to MAX_ITERATIONS."""
 
-    MAX_ITERATIONS = 10
+    MAX_ITERATIONS = 1000
     MAX_TEXT_NUDGES = 2
 
     def __init__(
