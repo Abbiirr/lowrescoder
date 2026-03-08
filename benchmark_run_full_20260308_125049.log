@@ -222,3 +222,6 @@ Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260
 >>>>>>>>>> Starting B9-PROXY at Sun Mar  8 03:06:27 PM +06 2026 <<<<<<<<<<
 llm_tool_retry
 llm_tool_retry
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
