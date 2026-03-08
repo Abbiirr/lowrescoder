@@ -125,10 +125,16 @@ class AutoCodeAdapter:
                 ApprovalMode,
             )
             from autocode.agent.loop import AgentLoop
-            from autocode.agent.tools import create_default_registry
+            from autocode.agent.tools import (
+                clear_code_index_cache,
+                create_default_registry,
+            )
             from autocode.config import ShellConfig, load_config
             from autocode.layer4.llm import create_provider
             from autocode.session.store import SessionStore
+
+            # Clear search index cache to prevent cross-task contamination
+            clear_code_index_cache()
 
             # Determine working directory
             work_dir = self._find_work_dir(sandbox, task)
@@ -257,13 +263,19 @@ class AutoCodeAdapter:
                     session_id=session_id,
                 )
 
-                # Track tool calls
+                # Track tool calls + tool-mix telemetry
+                tool_mix: dict[str, int] = {}
+                tool_call_errors: int = 0
+
                 def on_tool_call(
                     name: str, status: str, result: str,
                 ) -> None:
-                    nonlocal tool_call_count
+                    nonlocal tool_call_count, tool_call_errors
                     if status == "running":
                         tool_call_count += 1
+                        tool_mix[name] = tool_mix.get(name, 0) + 1
+                    elif status == "error":
+                        tool_call_errors += 1
 
                 async def approval_callback(
                     tool_name: str, arguments: dict,
@@ -316,6 +328,7 @@ class AutoCodeAdapter:
                 # P0-4: Track previous attempt signatures
                 prev_changed: set[str] | None = None
                 stagnation_count = 0
+                consecutive_zero_diffs = 0
 
                 # --- Outer grading retry loop ---
                 for attempt in range(MAX_GRADE_ATTEMPTS):
@@ -406,9 +419,31 @@ class AutoCodeAdapter:
                             "test_files_changed": test_files_changed,
                             "diff_hash": diff_hash,
                             "grading_output_path": str(grading_path),
+                            "tool_mix": dict(tool_mix),
+                            "tool_call_errors": tool_call_errors,
                         })
 
+                        # Reset per-attempt counters
+                        tool_mix.clear()
+                        tool_call_errors = 0
+
                         if resolved:
+                            break
+
+                        # Zero-diff tracking
+                        if not changed_files:
+                            consecutive_zero_diffs += 1
+                        else:
+                            consecutive_zero_diffs = 0
+
+                        # Early-stop: 2 consecutive zero-diff attempts
+                        if consecutive_zero_diffs >= 2:
+                            output += (
+                                "\n\n--- No Effective Edits ---\n"
+                                "Agent produced ZERO file changes "
+                                "on 2 consecutive attempts. "
+                                "Stopping early."
+                            )
                             break
 
                         # P0-4: Stagnation detection
@@ -438,6 +473,7 @@ class AutoCodeAdapter:
                             changed_files=changed_files,
                             test_files_changed=test_files_changed,
                             stagnation_count=stagnation_count,
+                            consecutive_zero_diffs=consecutive_zero_diffs,
                             docker_grading=bool(
                                 task.extra.get("_container_name"),
                             ),
@@ -470,7 +506,27 @@ class AutoCodeAdapter:
 
         elapsed = time.monotonic() - start
 
-        artifacts: dict = {"grade_attempts": grade_attempts}
+        # Failure type classification
+        failure_type = "RESOLVED" if resolved else "UNKNOWN"
+        if not resolved:
+            if error:
+                if "XML" in error or "parse" in error.lower():
+                    failure_type = "MODEL_XML_FAIL"
+                else:
+                    failure_type = "INFRA_FAIL"
+            elif grade_attempts:
+                all_zero_diff = all(
+                    not a.get("changed_files") for a in grade_attempts
+                )
+                if all_zero_diff:
+                    failure_type = "NO_EFFECTIVE_EDITS"
+                else:
+                    failure_type = "WRONG_FIX"
+
+        artifacts: dict = {
+            "grade_attempts": grade_attempts,
+            "failure_type": failure_type,
+        }
         if enforced_policy is not None:
             artifacts["enforced_policy"] = enforced_policy
 
@@ -682,11 +738,23 @@ class AutoCodeAdapter:
         changed_files: list[str] | None = None,
         test_files_changed: bool = False,
         stagnation_count: int = 0,
+        consecutive_zero_diffs: int = 0,
         docker_grading: bool = False,
         test_patch: str = "",
     ) -> str:
         """Build a structured feedback prompt after a failed attempt."""
         parts: list[str] = []
+
+        # Zero-diff hard warning (highest priority)
+        if consecutive_zero_diffs >= 1:
+            parts.append(
+                "CRITICAL WARNING: Your previous attempt produced "
+                "ZERO file edits. The grading tests CANNOT pass "
+                "without source code modifications. You MUST use "
+                "edit_file or write_file tools to modify the "
+                "relevant source files. Do NOT just read and "
+                "analyze — you must WRITE code changes."
+            )
 
         # Policy violation warning
         if test_files_changed:
@@ -710,6 +778,10 @@ class AutoCodeAdapter:
             parts.append(
                 "Files you changed in previous attempt:\n"
                 + "\n".join(f"  - {f}" for f in changed_files)
+            )
+        elif changed_files is not None:
+            parts.append(
+                "Files you changed in previous attempt: NONE"
             )
 
         # Structured failure info

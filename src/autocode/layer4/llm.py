@@ -410,6 +410,12 @@ class OllamaProvider:
         self.temperature = config.llm.temperature
         self.max_tokens = config.llm.max_tokens
         self.context_length = config.llm.context_length
+        # Shorter per-request timeout in benchmark mode to avoid
+        # wasting time on hung model generations (5min vs 1hr)
+        if os.environ.get("BENCHMARK_NO_RETRY") == "1":
+            self.request_timeout = 300.0
+        else:
+            self.request_timeout = self.REQUEST_TIMEOUT
 
     def _build_options(self) -> dict[str, Any]:
         """Build Ollama options dict with context window cap."""
@@ -566,7 +572,7 @@ class OllamaProvider:
                         ),
                         label="generate_with_tools",
                     ),
-                    timeout=self.REQUEST_TIMEOUT,
+                    timeout=self.request_timeout,
                 )
                 break  # Success
             except TimeoutError:
@@ -595,7 +601,7 @@ class OllamaProvider:
                             ),
                             label="generate_with_tools_fallback",
                         ),
-                        timeout=self.REQUEST_TIMEOUT,
+                        timeout=self.request_timeout,
                     )
                 except Exception:
                     raise e  # Re-raise original tool error

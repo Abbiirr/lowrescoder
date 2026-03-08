@@ -1,0 +1,222 @@
+==========================================
+Sequential Benchmark Run — Sun Mar  8 12:50:49 PM +06 2026
+Model: glm-4.7-flash | Host: http://10.112.30.10:11434
+Resume mode: enabled (skips completed tasks)
+Ollama fail-fast: ON (halts on connection errors)
+==========================================
+
+>>>>>>>>>> Starting B7 at Sun Mar  8 12:50:49 PM +06 2026 <<<<<<<<<<
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+llm_tool_retry
+llm_tool_retry
+llm_tool_retry
+llm_tool_retry
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+llm_tool_retry
+tool_call_end
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+llm_tool_retry
+
+============================================================
+Lane: B7 | Agent: autocode | Model: glm-4.7-flash
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: django__django-10880 ---
+  Description: Query syntax error with condition and distinct combination
+Description
+	
+A Count
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_django__django-10880_20260308_065049
+  Docker: python:3.8-slim (bench-B7-django__django-10880)
+  Setup (docker): git init django...
+  Setup (docker): cd django && git remote add origin https://github.com/django/django.git...
+  Setup (docker): cd django && git fetch --depth=1 origin 838e432e3e5519c5383d12018e6c78f8ec7833c1...
+  Setup (docker): cd django && git checkout FETCH_HEAD...
+  Setup (docker): cd django && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_django__django-10880_20260308_065049/setup_log.txt
+  Result: ERROR: ResponseError: failed to parse XML: XML syntax err (191.5s)
+
+--- Task 2/5: sympy__sympy-12096 ---
+  Description: evalf does not call _imp_ recursively
+Example from https://stackoverflow.com/que
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_sympy__sympy-12096_20260308_065629
+  Docker: python:3.9-slim (bench-B7-sympy__sympy-12096)
+  Setup (docker): git init sympy...
+  Setup (docker): cd sympy && git remote add origin https://github.com/sympy/sympy.git...
+  Setup (docker): cd sympy && git fetch --depth=1 origin d7c3045115693e887bcd03599b7ca4650ac5f2cb...
+  Setup (docker): cd sympy && git checkout FETCH_HEAD...
+  Setup (docker): cd sympy && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_sympy__sympy-12096_20260308_065629/setup_log.txt
+  Result: RESOLVED (56.8s)
+
+--- Task 3/5: scikit-learn__scikit-learn-11310 ---
+  Description: Retrieving time to refit the estimator in BaseSearchCV
+Basically, I'm trying to 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_scikit-learn__scikit-learn-11310_20260308_065833
+  Docker: python:3.7-slim (bench-B7-scikit-learn__scikit-learn-11310)
+  Setup (docker): git init scikit-learn...
+  Setup (docker): cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-...
+  Setup (docker): cd scikit-learn && git fetch --depth=1 origin 553b5fb8f84ba05c8397f26dd079deece2...
+  Setup (docker): cd scikit-learn && git checkout FETCH_HEAD...
+  Setup (docker): cd scikit-learn && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_scikit-learn__scikit-learn-11310_20260308_065833/setup_log.txt
+  Result: RESOLVED (811.3s)
+
+--- Task 4/5: pytest-dev__pytest-10081 ---
+  Description: unittest.TestCase.tearDown executed for classes marked with `unittest.skip` when
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_pytest-dev__pytest-10081_20260308_071554
+  Docker: python:3.9-slim (bench-B7-pytest-dev__pytest-10081)
+  Setup (docker): git init pytest...
+  Setup (docker): cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git...
+  Setup (docker): cd pytest && git fetch --depth=1 origin da9a2b584eb7a6c7e924b2621ed0ddaeca0a7bea...
+  Setup (docker): cd pytest && git checkout FETCH_HEAD...
+  Setup (docker): cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0 pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_pytest-dev__pytest-10081_20260308_071554/setup_log.txt
+  Result: RESOLVED (659.3s)
+
+--- Task 5/5: matplotlib__matplotlib-13989 ---
+  Description: hist() no longer respects range=... when density=True
+<!--To help us understand 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_matplotlib__matplotlib-13989_20260308_072805
+  Docker: python:3.7-slim (bench-B7-matplotlib__matplotlib-13989)
+  Setup (docker): git init matplotlib...
+  Setup (docker): cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib....
+  Setup (docker): cd matplotlib && git fetch --depth=1 origin a3e2897bfaf9eaac1d6649da535c4e721c89...
+  Setup (docker): cd matplotlib && git checkout FETCH_HEAD...
+  Setup (docker): cd matplotlib && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_matplotlib__matplotlib-13989_20260308_072805/setup_log.txt
+  Result: RESOLVED (217.4s)
+
+============================================================
+LANE B7 COMPLETE
+  Resolved: 4/5 (80.0%)
+  Infra fails: 1
+  Total time: 1936.3s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260308-073336-B7-autocode.json
+<<<<<<<<<< B7 finished (rc=0) at Sun Mar  8 01:33:36 PM +06 2026 >>>>>>>>>>
+
+
+>>>>>>>>>> Starting B8 at Sun Mar  8 01:33:36 PM +06 2026 <<<<<<<<<<
+tool_call_end
+llm_tool_retry
+tool_call_end
+llm_tool_retry
+llm_tool_retry
+llm_tool_retry
+llm_tool_retry
+tool_call_end
+llm_tool_retry
+tool_call_end
+llm_tool_retry
+llm_tool_retry
+tool_call_end
+
+============================================================
+Lane: B8 | Agent: autocode | Model: glm-4.7-flash
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: django__django-10880 ---
+  Description: Query syntax error with condition and distinct combination
+Description
+	
+A Count
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_django__django-10880_20260308_073336
+  Docker: python:3.8-slim (bench-B8-django__django-10880)
+  Setup (docker): git init django...
+  Setup (docker): cd django && git remote add origin https://github.com/django/django.git...
+  Setup (docker): cd django && git fetch --depth=1 origin 838e432e3e5519c5383d12018e6c78f8ec7833c1...
+  Setup (docker): cd django && git checkout FETCH_HEAD...
+  Setup (docker): cd django && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_django__django-10880_20260308_073336/setup_log.txt
+  Result: RESOLVED (1606.4s)
+
+--- Task 2/5: sympy__sympy-12096 ---
+  Description: evalf does not call _imp_ recursively
+Example from https://stackoverflow.com/que
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_sympy__sympy-12096_20260308_080206
+  Docker: python:3.9-slim (bench-B8-sympy__sympy-12096)
+  Setup (docker): git init sympy...
+  Setup (docker): cd sympy && git remote add origin https://github.com/sympy/sympy.git...
+  Setup (docker): cd sympy && git fetch --depth=1 origin d7c3045115693e887bcd03599b7ca4650ac5f2cb...
+  Setup (docker): cd sympy && git checkout FETCH_HEAD...
+  Setup (docker): cd sympy && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_sympy__sympy-12096_20260308_080206/setup_log.txt
+  Result: RESOLVED (261.4s)
+
+--- Task 3/5: scikit-learn__scikit-learn-11310 ---
+  Description: Retrieving time to refit the estimator in BaseSearchCV
+Basically, I'm trying to 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_scikit-learn__scikit-learn-11310_20260308_080728
+  Docker: python:3.7-slim (bench-B8-scikit-learn__scikit-learn-11310)
+  Setup (docker): git init scikit-learn...
+  Setup (docker): cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-...
+  Setup (docker): cd scikit-learn && git fetch --depth=1 origin 553b5fb8f84ba05c8397f26dd079deece2...
+  Setup (docker): cd scikit-learn && git checkout FETCH_HEAD...
+  Setup (docker): cd scikit-learn && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_scikit-learn__scikit-learn-11310_20260308_080728/setup_log.txt
+  Result: RESOLVED (275.9s)
+
+--- Task 4/5: pytest-dev__pytest-10081 ---
+  Description: unittest.TestCase.tearDown executed for classes marked with `unittest.skip` when
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_pytest-dev__pytest-10081_20260308_081548
+  Docker: python:3.9-slim (bench-B8-pytest-dev__pytest-10081)
+  Setup (docker): git init pytest...
+  Setup (docker): cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git...
+  Setup (docker): cd pytest && git fetch --depth=1 origin da9a2b584eb7a6c7e924b2621ed0ddaeca0a7bea...
+  Setup (docker): cd pytest && git checkout FETCH_HEAD...
+  Setup (docker): cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0 pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_pytest-dev__pytest-10081_20260308_081548/setup_log.txt
+  Result: RESOLVED (199.6s)
+
+--- Task 5/5: matplotlib__matplotlib-13989 ---
+  Description: hist() no longer respects range=... when density=True
+<!--To help us understand 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_matplotlib__matplotlib-13989_20260308_082028
+  Docker: python:3.7-slim (bench-B8-matplotlib__matplotlib-13989)
+  Setup (docker): git init matplotlib...
+  Setup (docker): cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib....
+  Setup (docker): cd matplotlib && git fetch --depth=1 origin a3e2897bfaf9eaac1d6649da535c4e721c89...
+  Setup (docker): cd matplotlib && git checkout FETCH_HEAD...
+  Setup (docker): cd matplotlib && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_matplotlib__matplotlib-13989_20260308_082028/setup_log.txt
+  Result: ERROR: Timeout after 86400s (2633.4s)
+
+============================================================
+LANE B8 COMPLETE
+  Resolved: 4/5 (80.0%)
+  Infra fails: 1
+  Total time: 4976.7s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260308-090627-B8-autocode.json
+<<<<<<<<<< B8 finished (rc=0) at Sun Mar  8 03:06:27 PM +06 2026 >>>>>>>>>>
+
+
+>>>>>>>>>> Starting B9-PROXY at Sun Mar  8 03:06:27 PM +06 2026 <<<<<<<<<<

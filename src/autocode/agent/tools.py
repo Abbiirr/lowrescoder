@@ -331,12 +331,14 @@ def _handle_list_symbols(file: str, kind: str = "symbols", project_root: str = "
 
 
 _code_index_cache: Any = None
+_code_index_project_root: str = ""
 
 
 def clear_code_index_cache() -> None:
     """Clear the cached CodeIndex instance (e.g. after /index rebuild)."""
-    global _code_index_cache  # noqa: PLW0603
+    global _code_index_cache, _code_index_project_root  # noqa: PLW0603
     _code_index_cache = None
+    _code_index_project_root = ""
 
 
 def set_code_index_cache(index: Any) -> None:
@@ -348,15 +350,17 @@ def set_code_index_cache(index: Any) -> None:
 def _handle_search_code(query: str, top_k: int = 5, project_root: str = "") -> str:
     """Search code using hybrid BM25 + vector search."""
     try:
-        global _code_index_cache  # noqa: PLW0603
+        global _code_index_cache, _code_index_project_root  # noqa: PLW0603
         from autocode.layer2.embeddings import EmbeddingEngine
         from autocode.layer2.index import CodeIndex
         from autocode.layer2.search import HybridSearch
 
-        root = project_root or "."
-        if _code_index_cache is None:
+        root = str(Path(project_root).resolve()) if project_root else "."
+        # Invalidate cache when project root changes (prevents cross-sandbox contamination)
+        if _code_index_cache is None or _code_index_project_root != root:
             _code_index_cache = CodeIndex()
             _code_index_cache.build(root)
+            _code_index_project_root = root
         index = _code_index_cache
         engine = EmbeddingEngine()
         search = HybridSearch(index, embeddings=engine)
