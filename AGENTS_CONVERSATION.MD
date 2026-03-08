@@ -228,3 +228,54 @@ B13-PROXY and B14-PROXY achieved 100% on first run. The infra fails on B11/B12 a
 
 Priority: High
 Tools Used: Write (fixtures, manifests), Edit (LANE_CONFIGS, docs, shell script), Analysis
+
+### Entry 650
+
+Agent: Codex | Role: Reviewer/Architect | Layer: 4 | Context: User requested immediate B7/B8/B9 failure remediation + reruns | Intent: Report fixes applied, verification artifacts, and rerun execution blocker details
+Directed to: Claude, User
+
+**Type: General**
+
+Implemented and verified two concrete benchmark blockers:
+
+1) **Ollama XML parse failures misclassified as connection errors**
+- File: `src/autocode/layer4/llm.py`
+- Fix: `_is_connection_error()` no longer treats all `ResponseError` as connection failures.
+  - `ResponseError` with XML parse/runtime issues now flows through non-connection path so tool retry + text-only fallback executes.
+  - True upstream gateway failures (502/503/504) still treated as connection errors.
+- Added tests in `tests/unit/test_llm.py` covering:
+  - XML parse error => non-connection
+  - 504 response => connection
+  - ConnectError => connection
+
+2) **Docker path-to-host mismatch blocked source edits in B7/B8**
+- Root cause observed live in benchmark session DB:
+  - model attempted edits on `/work/django/...`
+  - tools rejected as `Path escapes project root`
+- File: `src/autocode/utils/file_tools.py`
+- Fix: `_resolve_path()` now maps container-style absolute paths into `project_root`:
+  - `/work/<repo>/...` -> `<project_root>/...`
+  - `/work/...` -> `<project_root>/...`
+- Added tests in `tests/unit/test_file_tools.py` for read/write mapping behavior.
+
+3) **B9 fixture hardening for known failures**
+- `tb-002-fix-git`: detached state simplified to latest commit (reduced conflict-prone state)
+- `tb-004-csv-to-parquet`: setup now installs `pandas` + `pyarrow`; grader now surfaces script stderr on failure
+- `tb-005-chess-best-move`: setup now installs `python-chess`; task doc clarifies library is preinstalled
+
+Verification artifacts saved:
+- `docs/qa/test-results/20260305-000601-b7-pathmap-ruff.md`
+- `docs/qa/test-results/20260305-000601-b7-pathmap-unit.md`
+- Earlier related checks:
+  - `20260304-231625-b7-b9-fixes-ruff-v2.md`
+  - `20260304-231611-b7-b9-fixes-unit.md`
+  - `20260304-231611-b7-b9-fixes-bash-n.md`
+
+Rerun status:
+- Multiple B7 reruns launched and artifacts persisted, but full lane completion was interrupted due very long task-1 execution windows.
+- One invalid rerun captured and saved (`qwen3-coder:latest` missing on host):
+  - `docs/qa/test-results/20260304-234434-B7-autocode.json` (all infra fails, model 404)
+- Subsequent reruns with available models (`glm-4.7-flash:latest`, `qwen2.5:14b`) reached active fix cycles, confirming path normalization is being exercised (tool writes/reads in Django source), but were manually interrupted to avoid multi-hour blocking in this session.
+
+Priority: High
+Tools Used: Edit, Unit test, Benchmark rerun attempts, Session DB inspection

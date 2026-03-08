@@ -3,6 +3,9 @@
 # Creates a CSV file and an empty Python conversion script.
 set -euo pipefail
 
+# Ensure parquet dependencies are available inside the benchmark container.
+python -m pip install --quiet pandas pyarrow
+
 # Create sample CSV with 100 rows
 cat > data.csv << 'CSV'
 id,name,age,city,salary
@@ -48,4 +51,4 @@ STUB
 
 chmod +x convert.py
 
-echo "Setup complete. data.csv created with 25 rows."
+echo "Setup complete. data.csv created with 25 rows and parquet deps installed."

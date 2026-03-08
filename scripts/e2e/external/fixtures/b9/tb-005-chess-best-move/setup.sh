@@ -4,6 +4,9 @@
 # The position is a well-known "mate in 1" puzzle.
 set -euo pipefail
 
+# Install helper library so the task can be solved via reliable board logic.
+python -m pip install --quiet python-chess
+
 # Position: White to move, mate in 1 with Qh7#
 # Board: Black king on g8, white queen on h5, white bishop on c2,
 # black pawns on f7, g6, h6. White can play Qh7# (checkmate).
@@ -27,4 +30,4 @@ STUB
 
 chmod +x find_move.py
 
-echo "Setup complete. Chess position created."
+echo "Setup complete. Chess position created and python-chess installed."

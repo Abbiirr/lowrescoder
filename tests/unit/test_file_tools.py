@@ -57,6 +57,15 @@ class TestReadFile:
         content = read_file("src/hello.txt", project_root=str(tmp_path))
         assert content == "content"
 
+    def test_container_style_work_path_maps_to_project_root(self, tmp_path: Path) -> None:
+        """Absolute /work/<repo>/... paths should map into project_root."""
+        repo = tmp_path / "django"
+        (repo / "django" / "db").mkdir(parents=True)
+        target = repo / "django" / "db" / "models.py"
+        target.write_text("value = 1")
+        content = read_file("/work/django/django/db/models.py", project_root=str(repo))
+        assert content == "value = 1"
+
 
 class TestWriteFile:
     """Test write_file function."""
@@ -79,6 +88,18 @@ class TestWriteFile:
         path = write_file("output.txt", "hello", project_root=str(tmp_path))
         assert path.read_text() == "hello"
         assert path.parent == tmp_path
+
+    def test_write_container_style_work_path_maps_to_project_root(self, tmp_path: Path) -> None:
+        """write_file should accept /work/<repo>/... paths in benchmark traces."""
+        repo = tmp_path / "django"
+        repo.mkdir()
+        path = write_file(
+            "/work/django/django/db/models.py",
+            "x = 1",
+            project_root=str(repo),
+        )
+        assert path.read_text() == "x = 1"
+        assert path == (repo / "django" / "db" / "models.py")
 
 
 class TestListFiles:

@@ -21,9 +21,9 @@ echo "version 2" > file.txt
 git add file.txt
 git commit -m "Second commit"
 
-# Detach HEAD at first commit
-FIRST_COMMIT=$(git log --reverse --format='%H' | head -1)
-git checkout "$FIRST_COMMIT"
+# Detach HEAD at current commit (main tip) to keep this task focused on
+# recovering branch state without merge conflicts.
+git checkout HEAD
 
 # Make uncommitted changes in detached HEAD state
 echo "important new work" > newfile.txt

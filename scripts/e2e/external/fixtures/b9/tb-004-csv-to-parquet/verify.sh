@@ -5,8 +5,9 @@ set -euo pipefail
 ERRORS=0
 
 # Step 1: Run the conversion script
-if ! python convert.py 2>/dev/null; then
+if ! python convert.py > convert_run.log 2>&1; then
     echo "FAIL: convert.py exited with non-zero status"
+    tail -n 40 convert_run.log || true
     exit 1
 fi
 

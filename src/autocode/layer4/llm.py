@@ -359,22 +359,37 @@ def _fix_ollama_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]
 
 def _is_connection_error(exc: Exception) -> bool:
     """Check if an exception is a connection/network error (retryable)."""
-    conn_types = (ConnectionError, OSError, ConnectionRefusedError)
+    conn_types = (ConnectionError, OSError, ConnectionRefusedError, TimeoutError)
     if isinstance(exc, conn_types):
         return True
-    # httpx and ollama wrap connection errors in their own types
+    # httpx and ollama wrap connection errors in their own types.
+    # Important: ollama.ResponseError also represents non-network model/runtime
+    # failures (e.g., malformed XML tool-call output), which should NOT be
+    # treated as connection errors.
     type_name = type(exc).__name__
-    if type_name in (
-        "ConnectError", "RemoteProtocolError", "ReadError",
-        "ResponseError", "RequestError",
-    ):
-        return True
-    # Check message for connection-related keywords
     msg = str(exc).lower()
-    return any(kw in msg for kw in (
+    network_keywords = (
         "connection", "connect", "refused", "unreachable",
         "network", "timed out", "eof", "reset by peer",
-    ))
+    )
+
+    if type_name in (
+        "ConnectError", "RemoteProtocolError", "ReadError",
+        "RequestError", "ReadTimeout", "ConnectTimeout",
+    ):
+        return True
+
+    if type_name == "ResponseError":
+        status_code = getattr(exc, "status_code", None)
+        # Retry true gateway/upstream availability failures.
+        if status_code in (502, 503, 504):
+            return True
+        # Parse/model errors (often status 500) should flow to caller as
+        # non-connection errors so tool-mode retry/fallback can run.
+        return any(kw in msg for kw in network_keywords)
+
+    # Fallback heuristic for unknown wrappers.
+    return any(kw in msg for kw in network_keywords)
 
 
 class OllamaProvider:

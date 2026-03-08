@@ -17,7 +17,7 @@ Given a chess position in FEN notation, find the best move.
 - The position is a well-known tactical pattern.
 - White is to move.
 - Look for forcing moves (checks, captures, threats).
-- You may use the `python-chess` library if available, or solve it analytically.
+- The `python-chess` library is preinstalled and can be used directly.
 
 ## Files
 

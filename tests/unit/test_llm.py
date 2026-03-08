@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from autocode.layer4.llm import ConversationHistory, _extract_tool_calls_from_text
+from autocode.layer4.llm import (
+    ConversationHistory,
+    _extract_tool_calls_from_text,
+    _is_connection_error,
+)
 
 
 class TestConversationHistory:
@@ -118,7 +122,12 @@ class TestExtractToolCallsFromText:
 
     def test_fuzzy_matches_hallucinated_tool_names(self) -> None:
         """Model outputs 'update_package_json' instead of 'write_file'."""
-        text = '```json\n{"name": "update_package_json", "arguments": {"path": "package.json", "content": "{}"}}\n```'
+        text = (
+            "```json\n"
+            '{"name": "update_package_json", "arguments": '
+            '{"path": "package.json", "content": "{}"}}\n'
+            "```"
+        )
         tools = [
             {"function": {"name": "write_file"}},
             {"function": {"name": "run_command"}},
@@ -177,3 +186,32 @@ class TestExtractToolCallsFromText:
         assert result[0].name == "write_file"
         assert result[0].arguments["path"] == "src/main.py"
         assert result[0].arguments["content"] == "print('hello')"
+
+
+class TestConnectionErrorClassification:
+    """Classify transient network failures vs model/runtime failures."""
+
+    def test_response_error_xml_parse_is_not_connection_error(self) -> None:
+        class ResponseError(Exception):
+            pass
+
+        exc = ResponseError(
+            "failed to parse XML: XML syntax error on line 1 (status code: 500)",
+        )
+        assert _is_connection_error(exc) is False
+
+    def test_response_error_gateway_timeout_is_connection_error(self) -> None:
+        class ResponseError(Exception):
+            def __init__(self, msg: str, status_code: int) -> None:
+                super().__init__(msg)
+                self.status_code = status_code
+
+        exc = ResponseError("upstream timeout", 504)
+        assert _is_connection_error(exc) is True
+
+    def test_named_connect_error_is_connection_error(self) -> None:
+        class ConnectError(Exception):
+            pass
+
+        exc = ConnectError("cannot connect to host")
+        assert _is_connection_error(exc) is True

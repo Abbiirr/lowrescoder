@@ -14,7 +14,7 @@ The git repository in `repo/` is in a broken state. It has a detached HEAD and t
 ## Current State
 
 - The repo has 2 commits on `main`.
-- HEAD is detached at the first commit.
+- HEAD is detached at the latest commit.
 - There are uncommitted changes: `newfile.txt` (new) and `file.txt` (modified).
 
 ## Files

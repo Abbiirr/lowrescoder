@@ -24,9 +24,22 @@ _DEFAULT_IGNORED_DIRS = {
 
 
 def _resolve_path(path: Path, project_root: Path) -> Path:
-    """Resolve path relative to project_root if not absolute."""
+    """Resolve path relative to project_root if not absolute.
+
+    For benchmark Docker traces, models often emit absolute paths like:
+    - /work/<repo>/sub/path.py
+    - /work/sub/path.py
+    When a project_root is provided, map these back into the local project
+    tree so tools can operate on mounted files safely.
+    """
     if not path.is_absolute():
         return (project_root / path).resolve()
+    posix = path.as_posix()
+    if posix.startswith("/work/"):
+        rel_parts = list(path.parts[2:])  # drop "/" + "work"
+        if rel_parts and rel_parts[0] == project_root.name:
+            rel_parts = rel_parts[1:]
+        return (project_root / Path(*rel_parts)).resolve()
     return path.resolve()
 
 
