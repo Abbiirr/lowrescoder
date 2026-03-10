@@ -1,11 +1,11 @@
 """Flask API for event scheduling — timezone handling is broken."""
 from datetime import datetime
+
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
 EVENTS = []
-_next_id = 1
 
 
 @app.route("/api/events", methods=["GET"])
@@ -15,15 +15,15 @@ def list_events():
 
 @app.route("/api/events", methods=["POST"])
 def create_event():
-    global _next_id
     data = request.get_json()
+    # Compute next ID from existing events (resets correctly when EVENTS cleared)
+    next_id = max((e["id"] for e in EVENTS), default=0) + 1
     # BUG: ignores timezone info, stores raw string then re-parses without tz
     event = {
-        "id": _next_id,
+        "id": next_id,
         "title": data["title"],
         "start_time": data["start_time"],  # stored as raw string
     }
-    _next_id += 1
     EVENTS.append(event)
     return jsonify(event), 201
 

@@ -1,0 +1,14 @@
+==========================================
+Sequential Benchmark Run — Mon Mar  9 11:31:02 AM +06 2026
+Model: glm-4.7-flash | Host: http://10.112.30.10:11434
+Resume mode: enabled (skips completed tasks)
+Ollama fail-fast: ON (halts on connection errors)
+==========================================
+
+>>>>>>>>>> Starting B7 at Mon Mar  9 11:31:02 AM +06 2026 <<<<<<<<<<
+<<<<<<<<<< B7 finished (rc=143) at Mon Mar  9 12:08:42 PM +06 2026 >>>>>>>>>>
+!!!! Lane B7 exited with rc=143 — stopping all lanes !!!!
+!!!! Fix the issue and re-run with --resume !!!!
+==========================================
+All benchmarks complete — Mon Mar  9 12:08:42 PM +06 2026
+==========================================

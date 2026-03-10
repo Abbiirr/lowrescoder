@@ -8,11 +8,12 @@ set -euo pipefail
 python -m pip install --quiet python-chess
 
 # Position: White to move, mate in 1 with Qh7#
-# Board: Black king on g8, white queen on h5, white bishop on c2,
-# black pawns on f7, g6, h6. White can play Qh7# (checkmate).
-# FEN: 6k1/5p2/6pp/7Q/8/8/2B5/6K1 w - - 0 1
+# Board: Black king on g8, black rook on f8, white queen on h5,
+# white bishop on c2, black pawns on f7 and g7.
+# White can play Qh7# (checkmate — king boxed in by own rook and pawns).
+# FEN: 5rk1/5pp1/8/7Q/8/8/2B5/6K1 w - - 0 1
 cat > position.fen << 'FEN'
-6k1/5p2/6pp/7Q/8/8/2B5/6K1 w - - 0 1
+5rk1/5pp1/8/7Q/8/8/2B5/6K1 w - - 0 1
 FEN
 
 # Create stub solution

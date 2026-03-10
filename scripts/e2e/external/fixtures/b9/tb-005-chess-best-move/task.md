@@ -14,10 +14,11 @@ Given a chess position in FEN notation, find the best move.
 
 ## Hints
 
-- The position is a well-known tactical pattern.
+- The position is a well-known tactical pattern (mate in 1).
 - White is to move.
 - Look for forcing moves (checks, captures, threats).
 - The `python-chess` library is preinstalled and can be used directly.
+- The expected answer is a single UCI move (4 characters, e.g., `h5h7`).
 
 ## Files
 

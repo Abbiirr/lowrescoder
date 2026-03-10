@@ -83,8 +83,18 @@ class AutoCodeAdapter:
         """Find the actual working directory for the agent.
 
         For SWE-bench tasks, the repo is cloned into sandbox/repo_name.
+        For fixture-based tasks (fixture_dir set), use sandbox directly —
+        the fixture may contain its own git repos with specific state
+        (e.g. detached HEAD with uncommitted changes) that must not be
+        touched by _git_create_baseline.
         For other tasks, use the sandbox directly.
         """
+        # Fixture-based tasks: sandbox IS the work dir.
+        # Do NOT descend into child git repos — they are part of
+        # the task state that the agent must work with as-is.
+        if task.extra.get("fixture_dir"):
+            return sandbox
+
         repo_name = task.extra.get("repo_name", "")
         if repo_name:
             repo_dir = sandbox / repo_name
@@ -1089,8 +1099,24 @@ class AutoCodeAdapter:
         Returns True if baseline was created successfully.
         Raises RuntimeError if commit fails — all downstream
         enforcement depends on a valid baseline.
+
+        If work_dir is not a git repo (e.g. fixture-based task sandbox),
+        initialises one first so that retry-loop diffing still works.
         """
         try:
+            # Init a git repo if one doesn't exist (fixture sandboxes)
+            if not (work_dir / ".git").exists():
+                init = subprocess.run(
+                    "git init && git config user.email bench@test "
+                    "&& git config user.name Bench",
+                    shell=True, cwd=str(work_dir),
+                    capture_output=True, text=True, timeout=30,
+                )
+                if init.returncode != 0:
+                    raise RuntimeError(
+                        f"Git init failed (rc={init.returncode})"
+                        f": {init.stderr[:200]}"
+                    )
             proc = subprocess.run(
                 "git add -A && git commit -m benchmark-baseline "
                 "--allow-empty --no-verify",

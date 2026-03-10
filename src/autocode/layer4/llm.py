@@ -410,12 +410,9 @@ class OllamaProvider:
         self.temperature = config.llm.temperature
         self.max_tokens = config.llm.max_tokens
         self.context_length = config.llm.context_length
-        # Shorter per-request timeout in benchmark mode to avoid
-        # wasting time on hung model generations (5min vs 1hr)
-        if os.environ.get("BENCHMARK_NO_RETRY") == "1":
-            self.request_timeout = 300.0
-        else:
-            self.request_timeout = self.REQUEST_TIMEOUT
+        # Use standard request timeout for all modes.
+        # Per-task wall-time budget in the benchmark runner is the real guard.
+        self.request_timeout = self.REQUEST_TIMEOUT
 
     def _build_options(self) -> dict[str, Any]:
         """Build Ollama options dict with context window cap."""
