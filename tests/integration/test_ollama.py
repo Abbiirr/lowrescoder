@@ -1,6 +1,6 @@
 """Integration tests for Ollama LLM provider.
 
-Requires Ollama running locally. Skipped by default.
+Requires Ollama running at the configured default host. Skipped by default.
 Run with: pytest -m integration tests/integration/test_ollama.py
 """
 
@@ -10,6 +10,8 @@ import asyncio
 
 import pytest
 
+from autocode.config import DEFAULT_OLLAMA_API_BASE
+
 pytestmark = pytest.mark.integration
 
 
@@ -18,7 +20,7 @@ def _ollama_running() -> bool:
     try:
         import httpx
 
-        r = httpx.get("http://localhost:11434/api/tags", timeout=2)
+        r = httpx.get(f"{DEFAULT_OLLAMA_API_BASE}/api/tags", timeout=2)
         return r.status_code == 200
     except Exception:
         return False

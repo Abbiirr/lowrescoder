@@ -48,6 +48,10 @@ class CodexAdapter:
     def model(self) -> str:
         return self._model
 
+    def pre_task_healthcheck(self) -> None:
+        """Codex CLI has no harness-level provider preflight requirement."""
+        return None
+
     async def solve_task(
         self,
         task: BenchmarkTask,

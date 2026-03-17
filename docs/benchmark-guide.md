@@ -9,7 +9,7 @@ How to run AutoCode benchmarks and interpret results.
 | Requirement | Details |
 |-------------|---------|
 | **Python 3.11+** | With `uv` package manager |
-| **Ollama** | Running at `$OLLAMA_HOST` with a model pulled |
+| **LLM Gateway** | Running at `http://localhost:4000/v1` ([docs](http://localhost:4001/docs)) |
 | **Docker** | Recommended for B7/B8 (Python version isolation) |
 | **Git** | For task setup and grading |
 
@@ -19,14 +19,14 @@ Ensure your `.env` file has:
 
 ```bash
 AUTOCODE_LLM_PROVIDER=ollama
-OLLAMA_HOST=http://localhost:11434   # or your remote Ollama URL
-OLLAMA_MODEL=glm-4.7-flash          # or any pulled model
+OLLAMA_HOST=http://localhost:4000
+OLLAMA_MODEL=coding
 ```
 
-Verify Ollama is reachable:
+Verify the LLM Gateway is reachable:
 
 ```bash
-curl $OLLAMA_HOST/api/tags
+curl http://localhost:4000/health/readiness
 ```
 
 ---
@@ -67,6 +67,7 @@ uv run python scripts/benchmark_runner.py \
   --agent autocode \
   --lane B7 \
   --model glm-4.7-flash \
+  --run-id <run-id> \
   --resume
 ```
 
@@ -90,7 +91,8 @@ uv run python scripts/benchmark_runner.py [OPTIONS]
 | `--lane` | *required* | Benchmark lane (B6-B14) |
 | `--model` | from `.env` | Override LLM model name |
 | `--max-tasks N` | `0` (all) | Limit tasks per lane (useful for testing) |
-| `--resume` | off | Skip already-completed tasks |
+| `--resume` | off | Resume a previously started run; requires `--run-id` |
+| `--run-id` | auto-generated | Explicit benchmark run identifier used for progress/locks |
 | `--strict` | off | Use strict mode (higher thresholds) |
 | `--list-lanes` | off | Print lane table and exit |
 
@@ -113,6 +115,8 @@ uv run python scripts/benchmark_runner.py [OPTIONS]
 **Budget per task:** 86,400s wall time (24hr), 50,000 tokens, 100 tool calls.
 
 **PROXY lanes** use self-contained fixtures with local grading scripts. They are internal baselines only (no published parity claims against the original benchmarks).
+
+Proxy fixture lanes that run in Docker can declare a lightweight `build_deps_profile` in the manifest. This skips the full SWE-bench compiler/bootstrap path unless a task explicitly needs it.
 
 ---
 
@@ -194,7 +198,8 @@ The result JSON contains per-task details:
 | `RESOLVED` | Task passed grading |
 | `WRONG_FIX` | Agent edited files but fix was incorrect |
 | `NO_EFFECTIVE_EDITS` | Agent made zero file changes across all attempts |
-| `MODEL_XML_FAIL` | LLM generated malformed output (model bug) |
+| `REQUEST_TIMEOUT` | Model/provider request timed out before a usable answer |
+| `MODEL_OUTPUT_FAIL` | Model produced unusable structured output |
 | `INFRA_FAIL` | Docker/network/setup error (not agent's fault) |
 
 ---
@@ -203,7 +208,7 @@ The result JSON contains per-task details:
 
 `run_all_benchmarks.sh` sets `BENCHMARK_NO_RETRY=1` which enables:
 
-- **Pre-task Ollama health check** — pings `/api/tags` before each task. If Ollama is down, the lane halts immediately (exit code 2).
+- **Provider pre-task health check** — the adapter performs a provider-specific health probe before each task. For LLM Gateway-backed AutoCode runs this pings `/health/readiness`; if the provider is down, the lane halts immediately (exit code 2).
 - **No LLM connection retries** — instead of 10 retries with exponential backoff, fails on first connection error.
 - **Shorter per-request timeout** — 5 minutes per LLM call (vs 1 hour in normal mode).
 - **Lane-level halt** — if any lane exits non-zero, the shell script stops all remaining lanes.
@@ -251,13 +256,13 @@ bash scripts/run_all_benchmarks.sh   # has --resume flag built in
 
 ## Troubleshooting
 
-### "Ollama unreachable" / halted run
+### "LLM Gateway unreachable" / halted run
 
-Ollama went down. Fix it, then re-run with `--resume`:
+The LLM Gateway went down. Fix it, then re-run with the same `--run-id` and `--resume`:
 
 ```bash
-# Verify Ollama is back
-curl $OLLAMA_HOST/api/tags
+# Verify the gateway is back
+curl http://localhost:4000/health/readiness
 
 # Resume
 bash scripts/run_all_benchmarks.sh
@@ -297,7 +302,7 @@ Per project policy (Entry 530):
 
 | Provider Type | Allowed? | Examples |
 |---------------|----------|----------|
-| `local_free` | Yes | Ollama, OpenRouter free-tier |
+| `local_free` | Yes | LLM Gateway (9 free providers), Ollama, OpenRouter free-tier |
 | `subscription` | Yes | Codex CLI, Claude Code CLI |
 | `paid_metered` | **No** | Any metered API billing |
 

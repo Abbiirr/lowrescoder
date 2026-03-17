@@ -44,6 +44,13 @@ class TestAutoCodeConfigClass:
     """Verify AutoCodeConfig is the primary config class."""
 
     def test_autocode_config_loads(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Isolate from global config which may set a non-default provider
+        empty_dir = tmp_path / "_no_global"
+        empty_dir.mkdir(exist_ok=True)
+        monkeypatch.setattr(
+            "autocode.config._resolve_global_config",
+            lambda: (empty_dir, empty_dir / "config.yaml"),
+        )
         monkeypatch.delenv("AUTOCODE_LLM_PROVIDER", raising=False)
         monkeypatch.delenv("HYBRIDCODER_LLM_PROVIDER", raising=False)
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)

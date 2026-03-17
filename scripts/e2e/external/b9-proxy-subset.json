@@ -3,7 +3,7 @@
     "description": "Terminal-Bench proxy subset: 10 terminal/system tasks",
     "comparison_validity": "proxy-only",
     "parity_claim": "forbidden",
-    "note": "PROXY lane — custom fixtures inspired by Terminal-Bench. NOT comparable to published Terminal-Bench numbers.",
+    "note": "PROXY lane — Terminal-Bench-inspired fixtures. No published parity claims.",
     "runner": "swebench",
     "last_verified": "2026-03-04"
   },
@@ -17,7 +17,8 @@
       "fixture_dir": "fixtures/b9/tb-001-hello-world",
       "setup_commands": ["bash setup.sh"],
       "grading_command": "bash verify.sh",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "tb-002-fix-git",
@@ -28,7 +29,8 @@
       "fixture_dir": "fixtures/b9/tb-002-fix-git",
       "setup_commands": ["bash setup.sh"],
       "grading_command": "bash verify.sh",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "git-only"
     },
     {
       "task_id": "tb-003-fix-permissions",
@@ -39,7 +41,8 @@
       "fixture_dir": "fixtures/b9/tb-003-fix-permissions",
       "setup_commands": ["bash setup.sh"],
       "grading_command": "bash verify.sh",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "tb-004-csv-to-parquet",
@@ -50,7 +53,8 @@
       "fixture_dir": "fixtures/b9/tb-004-csv-to-parquet",
       "setup_commands": ["bash setup.sh"],
       "grading_command": "bash verify.sh",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "tb-005-chess-best-move",
@@ -61,7 +65,8 @@
       "fixture_dir": "fixtures/b9/tb-005-chess-best-move",
       "setup_commands": ["bash setup.sh"],
       "grading_command": "bash verify.sh",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "tb-006-fibonacci-server",
@@ -72,7 +77,8 @@
       "fixture_dir": "fixtures/b9/tb-006-fibonacci-server",
       "setup_commands": ["bash setup.sh"],
       "grading_command": "bash verify.sh",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "tb-007-extract-safely",
@@ -83,7 +89,8 @@
       "fixture_dir": "fixtures/b9/tb-007-extract-safely",
       "setup_commands": ["bash setup.sh"],
       "grading_command": "bash verify.sh",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "tb-008-count-dataset-tokens",
@@ -94,7 +101,8 @@
       "fixture_dir": "fixtures/b9/tb-008-count-dataset-tokens",
       "setup_commands": ["bash setup.sh"],
       "grading_command": "bash verify.sh",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "tb-009-blind-maze-explorer-5x5",
@@ -105,7 +113,8 @@
       "fixture_dir": "fixtures/b9/tb-009-blind-maze-explorer-5x5",
       "setup_commands": ["bash setup.sh"],
       "grading_command": "bash verify.sh",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "tb-010-conda-env-conflict-resolution",
@@ -116,7 +125,8 @@
       "fixture_dir": "fixtures/b9/tb-010-conda-env-conflict-resolution",
       "setup_commands": ["bash setup.sh"],
       "grading_command": "bash verify.sh",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     }
   ]
 }

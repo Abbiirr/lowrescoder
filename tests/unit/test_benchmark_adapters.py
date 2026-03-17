@@ -62,6 +62,30 @@ def test_build_prompt_mentions_test_patch():
     assert "SOURCE" in prompt
 
 
+def test_build_prompt_includes_source_candidates():
+    """Initial prompt should surface likely source files early."""
+    adapter = AutoCodeAdapter(model="test-model")
+    task = BenchmarkTask(
+        task_id="test-source-candidates",
+        description="Fix a bug",
+        extra={
+            "FAIL_TO_PASS": ["FAILED testing/test_unittest.py::test_case"],
+            "test_patch": (
+                "diff --git a/testing/test_unittest.py "
+                "b/testing/test_unittest.py\n"
+                "+++ b/testing/test_unittest.py\n"
+            ),
+        },
+    )
+    prompt = adapter._build_prompt(
+        task,
+        initial_test_output='  File "/work/src/core.py", line 10, in handle\n',
+    )
+    assert "LIKELY SOURCE FILES TO CHECK FIRST" in prompt
+    assert "src/_pytest/unittest.py" in prompt
+    assert "core.py" in prompt
+
+
 def test_build_prompt_no_grading_command():
     """When no grading command, prompt omits the GRADING COMMAND section."""
     adapter = AutoCodeAdapter(model="test-model")
@@ -91,7 +115,7 @@ def test_build_prompt_bash_only_no_write_file():
 
 
 def test_build_prompt_normal_uses_write_file():
-    """Normal prompt (no restriction) uses write_file."""
+    """Normal prompt keeps edit_file primary and run_command as fallback."""
     adapter = AutoCodeAdapter(model="test-model")
     task = BenchmarkTask(
         task_id="test-normal",
@@ -100,7 +124,9 @@ def test_build_prompt_normal_uses_write_file():
     )
     prompt = adapter._build_prompt(task)
     assert "write_file" in prompt
-    assert "run_command" not in prompt.split("MANDATORY WORKFLOW")[1].split("RULES")[0]
+    workflow = prompt.split("MANDATORY WORKFLOW")[1].split("RULES")[0]
+    assert "edit_file" in workflow
+    assert "run_command" in workflow
 
 
 # --- A1: Feedback prompt ---
@@ -151,6 +177,34 @@ def test_build_feedback_prompt_stagnation_warning():
         stagnation_count=1,
     )
     assert "DIFFERENT approach" in feedback
+
+
+def test_build_feedback_prompt_repeated_failure_warning():
+    """Feedback prompt should call out repeated unchanged failures."""
+    adapter = AutoCodeAdapter(model="test-model")
+    feedback = adapter._build_feedback_prompt(
+        "FAILED test_bar", "pytest",
+        repeated_failure=True,
+    )
+    assert "SAME failure persisted" in feedback
+
+
+def test_build_feedback_prompt_zero_diff_points_to_candidate_files():
+    """Zero-diff retries should force a direct edit in candidate source files."""
+    adapter = AutoCodeAdapter(model="test-model")
+    feedback = adapter._build_feedback_prompt(
+        "FAILED testing/test_unittest.py::test_case\n"
+        '  File "/work/src/core.py", line 10, in handle\n',
+        "pytest",
+        consecutive_zero_diffs=1,
+        test_patch=(
+            "diff --git a/testing/test_unittest.py "
+            "b/testing/test_unittest.py\n"
+            "+++ b/testing/test_unittest.py\n"
+        ),
+    )
+    assert "MUST modify one of these source files directly" in feedback
+    assert "src/_pytest/unittest.py" in feedback
 
 
 # --- A2: Codex adapter grading behavior ---
@@ -308,11 +362,13 @@ def test_classify_openrouter_free_is_local_free():
     assert classify_provider_mode("openrouter", "z-ai/glm-4.5-air:free") == "local_free"
 
 
-def test_classify_openrouter_paid_is_paid_metered():
+def test_classify_openrouter_paid_is_paid_metered(monkeypatch):
+    monkeypatch.delenv("AUTOCODE_LLM_API_BASE", raising=False)
     assert classify_provider_mode("openrouter", "anthropic/claude-3.5-sonnet") == "paid_metered"
 
 
-def test_classify_unknown_fails_closed():
+def test_classify_unknown_fails_closed(monkeypatch):
+    monkeypatch.delenv("AUTOCODE_LLM_API_BASE", raising=False)
     assert classify_provider_mode("some-cloud", "gpt-4") == "paid_metered"
 
 
@@ -329,10 +385,30 @@ def test_autocode_adapter_openrouter_free_provider_mode():
     assert adapter.provider_mode == "local_free"
 
 
-def test_autocode_adapter_openrouter_paid_provider_mode():
+def test_autocode_adapter_openrouter_paid_provider_mode(monkeypatch):
+    monkeypatch.delenv("AUTOCODE_LLM_API_BASE", raising=False)
     adapter = AutoCodeAdapter(model="anthropic/claude-3.5-sonnet")
     adapter._provider = "openrouter"
     assert adapter.provider_mode == "paid_metered"
+
+
+def test_autocode_pre_task_healthcheck_ollama():
+    adapter = AutoCodeAdapter(model="test-model")
+    adapter._provider = "ollama"
+    response = MagicMock()
+    response.__enter__.return_value = response
+    response.__exit__.return_value = False
+    with patch("urllib.request.urlopen", return_value=response):
+        adapter.pre_task_healthcheck()
+
+
+def test_autocode_pre_task_healthcheck_non_ollama_noop(monkeypatch):
+    monkeypatch.delenv("AUTOCODE_LLM_API_BASE", raising=False)
+    adapter = AutoCodeAdapter(model="test-model")
+    adapter._provider = "openrouter"
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        adapter.pre_task_healthcheck()
+    mock_urlopen.assert_not_called()
 
 
 # --- B8: Tool filtering ---
@@ -435,3 +511,27 @@ def test_parse_assertions():
     assert len(assertions) == 2
     assert any("AssertionError" in a for a in assertions)
     assert any("TypeError" in a for a in assertions)
+
+
+def test_is_docker_exec_infra_output():
+    assert AutoCodeAdapter._is_docker_exec_infra_output(
+        "Error response from daemon: container abc is not running",
+    )
+    assert not AutoCodeAdapter._is_docker_exec_infra_output(
+        "FAILED test_foo.py::test_bar - AssertionError",
+    )
+
+
+def test_git_changed_files_filters_benchmark_bookkeeping(tmp_path: Path):
+    adapter = AutoCodeAdapter.__new__(AutoCodeAdapter)
+    proc = MagicMock(
+        returncode=0,
+        stdout="\n".join([
+            ".benchmark-sessions.db",
+            ".benchmark-sessions.db-wal",
+            "src/foo.py",
+        ]),
+    )
+    with patch("subprocess.run", return_value=proc):
+        changed = adapter._git_changed_files(tmp_path)
+    assert changed == ["src/foo.py"]

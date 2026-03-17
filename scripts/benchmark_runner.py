@@ -34,6 +34,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 # Ensure project root is on path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -46,6 +47,7 @@ from scripts.adapters.base import (  # noqa: E402
     AgentResult,
     BenchmarkTask,
     BudgetProfile,
+    ProviderHealthError,
     compute_manifest_hash,
     load_manifest,
 )
@@ -56,6 +58,7 @@ from scripts.docker_helpers import (  # noqa: E402
     docker_exec,
     fix_permissions,
     get_image_digest,
+    inspect_container_state,
     install_build_deps,
     make_container_name,
     start_container,
@@ -64,33 +67,6 @@ from scripts.docker_helpers import (  # noqa: E402
 
 # --- Version ---
 HARNESS_VERSION = "1.0.0"
-
-
-class OllamaUnavailableError(Exception):
-    """Raised when Ollama is unreachable — halts the entire benchmark run."""
-    pass
-
-
-def check_ollama_health(host: str | None = None, timeout: float = 10.0) -> None:
-    """Verify Ollama is reachable. Raises OllamaUnavailableError if not.
-
-    Called before each task. On failure, the benchmark run stops immediately
-    (no retries) per user directive.
-    """
-    import urllib.request
-    import urllib.error
-
-    host = host or os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-    url = f"{host.rstrip('/')}/api/tags"
-    try:
-        req = urllib.request.Request(url, method="GET")
-        with urllib.request.urlopen(req, timeout=timeout):
-            pass  # 200 OK — Ollama is alive
-    except (urllib.error.URLError, OSError, TimeoutError) as e:
-        raise OllamaUnavailableError(
-            f"Ollama unreachable at {host}: {e}\n"
-            "Benchmark HALTED. Fix Ollama/network and re-run with --resume."
-        ) from e
 
 # --- Paths ---
 MANIFEST_DIR = PROJECT_ROOT / "scripts" / "e2e" / "external"
@@ -101,15 +77,26 @@ PROGRESS_DIR = PROJECT_ROOT / "sandboxes" / "progress"
 
 # --- Progress Tracking (Resumability) ---
 
-def _progress_path(lane: str, agent_name: str) -> Path:
-    """Return path to the progress file for a lane+agent combination."""
+def generate_run_id() -> str:
+    """Generate a benchmark run identifier."""
+    return f"{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}-{uuid4().hex[:8]}"
+
+
+def _progress_path(lane: str, agent_name: str, run_id: str) -> Path:
+    """Return path to the progress file for a lane+agent+run_id combination."""
     PROGRESS_DIR.mkdir(parents=True, exist_ok=True)
-    return PROGRESS_DIR / f"{lane}_{agent_name}_progress.json"
+    return PROGRESS_DIR / f"{lane}_{agent_name}_{run_id}_progress.json"
 
 
-def _load_progress(lane: str, agent_name: str) -> dict:
-    """Load existing progress for a lane+agent. Returns empty dict if none."""
-    path = _progress_path(lane, agent_name)
+def _lock_path(lane: str, agent_name: str, run_id: str) -> Path:
+    """Return path to the run lock file for a lane+agent+run_id combination."""
+    PROGRESS_DIR.mkdir(parents=True, exist_ok=True)
+    return PROGRESS_DIR / f"{lane}_{agent_name}_{run_id}.lock"
+
+
+def _load_progress(lane: str, agent_name: str, run_id: str) -> dict:
+    """Load existing progress for a lane+agent+run_id. Returns empty dict if none."""
+    path = _progress_path(lane, agent_name, run_id)
     if path.exists():
         try:
             with open(path, encoding="utf-8") as f:
@@ -119,9 +106,68 @@ def _load_progress(lane: str, agent_name: str) -> dict:
     return {}
 
 
+def _pid_is_alive(pid: int) -> bool:
+    """Return True if a process is alive."""
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
+
+
+def _acquire_run_lock(
+    lane: str,
+    agent_name: str,
+    run_id: str,
+    model: str,
+    started_at: str,
+) -> Path:
+    """Acquire a run-scoped lock, rejecting concurrent owners of the same run."""
+    path = _lock_path(lane, agent_name, run_id)
+    if path.exists():
+        try:
+            existing = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            existing = {}
+        existing_pid = int(existing.get("pid", 0) or 0)
+        if existing_pid and existing_pid != os.getpid() and _pid_is_alive(existing_pid):
+            raise RuntimeError(
+                "Another live benchmark process already owns this run_id "
+                f"for {lane}/{agent_name}: pid={existing_pid}, run_id={run_id}"
+            )
+        try:
+            path.unlink()
+        except OSError:
+            pass
+
+    payload = {
+        "lane": lane,
+        "agent": agent_name,
+        "run_id": run_id,
+        "model": model,
+        "pid": os.getpid(),
+        "started_at": started_at,
+    }
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return path
+
+
+def _release_run_lock(path: Path) -> None:
+    """Best-effort removal of a run lock."""
+    try:
+        path.unlink()
+    except OSError:
+        pass
+
+
 def _save_progress(
     lane: str,
     agent_name: str,
+    run_id: str,
+    model: str,
+    started_at: str,
     completed_results: list[dict],
     image_digests: dict[str, str],
 ) -> None:
@@ -129,10 +175,14 @@ def _save_progress(
 
     Stores completed task results so a resumed run can skip them.
     """
-    path = _progress_path(lane, agent_name)
+    path = _progress_path(lane, agent_name, run_id)
     data = {
         "lane": lane,
         "agent": agent_name,
+        "run_id": run_id,
+        "model": model,
+        "pid": os.getpid(),
+        "started_at": started_at,
         "completed_task_ids": [r["task_id"] for r in completed_results],
         "results": completed_results,
         "image_digests": image_digests,
@@ -142,9 +192,9 @@ def _save_progress(
         json.dump(data, f, indent=2)
 
 
-def _clear_progress(lane: str, agent_name: str) -> None:
+def _clear_progress(lane: str, agent_name: str, run_id: str) -> None:
     """Remove progress file after a lane completes successfully."""
-    path = _progress_path(lane, agent_name)
+    path = _progress_path(lane, agent_name, run_id)
     if path.exists():
         path.unlink()
 
@@ -369,6 +419,7 @@ def build_run_contract(
     manifest_path: Path | None,
     budget: BudgetProfile,
     command_trace: str,
+    run_id: str,
     image_digests: dict[str, str] | None = None,
 ) -> dict:
     """Build the reproducibility contract for a run."""
@@ -380,6 +431,7 @@ def build_run_contract(
         "model": agent.model,
         "provider_mode": agent.provider_mode,
         "lane": lane,
+        "run_id": run_id,
         "manifest_hash": (
             compute_manifest_hash(manifest_path)
             if manifest_path and manifest_path.exists()
@@ -495,6 +547,17 @@ async def _run_competitive_task(
                     tokens_out=result.tokens_out,
                     artifacts={
                         **(result.artifacts or {}),
+                        "failure_type": "RESOLVED",
+                        "failure_evidence": {
+                            "timeout_source": None,
+                            "grading_launch": {
+                                "backend": "grading_subprocess",
+                                "returncode": proc.returncode,
+                                "exception_type": None,
+                                "exception_message": None,
+                            },
+                            "docker_state": None,
+                        },
                         "grading_stdout": proc.stdout[-2000:],
                     },
                 )
@@ -509,6 +572,17 @@ async def _run_competitive_task(
                     tokens_out=result.tokens_out,
                     artifacts={
                         **(result.artifacts or {}),
+                        "failure_type": "WRONG_FIX",
+                        "failure_evidence": {
+                            "timeout_source": None,
+                            "grading_launch": {
+                                "backend": "grading_subprocess",
+                                "returncode": proc.returncode,
+                                "exception_type": None,
+                                "exception_message": None,
+                            },
+                            "docker_state": None,
+                        },
                         "grading_stdout": proc.stdout[-2000:],
                         "grading_stderr": proc.stderr[-1000:],
                     },
@@ -520,6 +594,19 @@ async def _run_competitive_task(
                 error=f"Grading failed: {e}",
                 wall_time_s=result.wall_time_s,
                 tool_calls=result.tool_calls,
+                artifacts={
+                    "failure_type": "INFRA_FAIL",
+                    "failure_evidence": {
+                        "timeout_source": None,
+                        "grading_launch": {
+                            "backend": "grading_subprocess",
+                            "returncode": None,
+                            "exception_type": type(e).__name__,
+                            "exception_message": str(e),
+                        },
+                        "docker_state": None,
+                    },
+                },
             )
 
     return result
@@ -534,9 +621,13 @@ async def run_lane(
     budget: BudgetProfile,
     manifest_path: Path | None,
     *,
+    run_id: str = "",
+    started_at: str = "",
     resume: bool = False,
 ) -> dict:
     """Run all tasks in a lane sequentially and return aggregated results."""
+    run_id = run_id or "adhoc-run"
+    started_at = started_at or datetime.now(UTC).isoformat()
     results: list[dict] = []
     resolved_count = 0
     total_time = 0.0
@@ -547,7 +638,7 @@ async def run_lane(
     # Resume: load previously completed tasks
     skipped_ids: set[str] = set()
     if resume:
-        progress = _load_progress(lane, agent.name)
+        progress = _load_progress(lane, agent.name, run_id)
         prev_results = progress.get("results", [])
         prev_ids = set(progress.get("completed_task_ids", []))
         if prev_ids:
@@ -557,7 +648,7 @@ async def run_lane(
                 if r.get("resolved"):
                     resolved_count += 1
                 total_time += r.get("wall_time_s", 0.0)
-                if r.get("error"):
+                if r.get("artifacts", {}).get("failure_type") == "INFRA_FAIL":
                     infra_fails += 1
             skipped_ids = prev_ids
             # Restore image digests
@@ -569,6 +660,7 @@ async def run_lane(
 
     print(f"\n{'=' * 60}")
     print(f"Lane: {lane} | Agent: {agent.name} | Model: {agent.model}")
+    print(f"Run ID: {run_id}")
     remaining = len(tasks) - len(skipped_ids)
     print(
         f"Tasks: {len(tasks)} total, {remaining} remaining "
@@ -583,14 +675,16 @@ async def run_lane(
         print(f"\n--- Task {i}/{len(tasks)}: {task.task_id} ---")
         print(f"  Description: {task.description[:80]}")
 
-        # Pre-task Ollama health check — halt run on failure (no retries)
         try:
-            check_ollama_health()
-        except OllamaUnavailableError as e:
-            print(f"\n  OLLAMA UNAVAILABLE — HALTING BENCHMARK RUN")
+            agent.pre_task_healthcheck()
+        except ProviderHealthError as e:
+            print("\n  PROVIDER HEALTH CHECK FAILED — HALTING BENCHMARK RUN")
             print(f"  {e}")
             print(f"  Completed {resolved_count}/{i-1} tasks before halt.")
-            print(f"  Re-run with --resume to continue from here.")
+            print(
+                f"  Re-run with --resume --run-id {run_id} to continue "
+                "from here."
+            )
             ollama_halted = True
             break
 
@@ -606,6 +700,8 @@ async def run_lane(
             status = "RESOLVED" if result.resolved else "FAILED"
             if result.error:
                 status = f"ERROR: {result.error[:50]}"
+            task_artifacts = dict(result.artifacts or {})
+            if task_artifacts.get("failure_type") == "INFRA_FAIL":
                 infra_fails += 1
             print(f"  Result: {status} ({result.wall_time_s}s)")
             if result.resolved:
@@ -620,9 +716,12 @@ async def run_lane(
                 "tokens_in": result.tokens_in,
                 "tokens_out": result.tokens_out,
                 "error": result.error,
-                "artifacts": dict(result.artifacts or {}),
+                "artifacts": task_artifacts,
             })
-            _save_progress(lane, agent.name, results, image_digests)
+            _save_progress(
+                lane, agent.name, run_id, agent.model, started_at,
+                results, image_digests,
+            )
             continue
 
         # Copy fixture directory if present (B11/B12 fixture-based tasks)
@@ -650,7 +749,7 @@ async def run_lane(
             use_docker = False
 
         if use_docker:
-            container_name = make_container_name(task.task_id, lane)
+            container_name = make_container_name(task.task_id, lane, run_id)
             print(
                 f"  Docker: python:{python_version}-slim "
                 f"({container_name})"
@@ -666,6 +765,7 @@ async def run_lane(
 
         # Setup log collects full output for diagnostics
         setup_log_parts: list[str] = []
+        build_deps_profile = task.extra.get("build_deps_profile", "full")
 
         try:
             if use_docker:
@@ -691,9 +791,13 @@ async def run_lane(
                         )
                     # Install build deps (gcc, git, etc.)
                     try:
-                        dep_proc = install_build_deps(container_name)
+                        dep_proc = install_build_deps(
+                            container_name,
+                            profile=build_deps_profile,
+                        )
                         setup_log_parts.append(
-                            f"[build-deps] rc={dep_proc.returncode}\n"
+                            f"[build-deps:{build_deps_profile}] "
+                            f"rc={dep_proc.returncode}\n"
                             f"stdout: {dep_proc.stdout}\n"
                             f"stderr: {dep_proc.stderr}"
                         )
@@ -941,6 +1045,15 @@ async def run_lane(
                     resolved=False,
                     error="Setup failed",
                     artifacts={
+                        "failure_type": "INFRA_FAIL",
+                        "failure_evidence": {
+                            "timeout_source": None,
+                            "grading_launch": None,
+                            "docker_state": (
+                                inspect_container_state(container_name)
+                                if container_name else None
+                            ),
+                        },
                         "setup_log_path": task.extra.get(
                             "_setup_log_path", "",
                         ),
@@ -957,7 +1070,6 @@ async def run_lane(
         status = "RESOLVED" if result.resolved else "FAILED"
         if result.error:
             status = f"ERROR: {result.error[:50]}"
-            infra_fails += 1
 
         print(f"  Result: {status} ({result.wall_time_s}s)")
 
@@ -966,6 +1078,8 @@ async def run_lane(
         total_time += result.wall_time_s
 
         task_artifacts = dict(result.artifacts or {})
+        if task_artifacts.get("failure_type") == "INFRA_FAIL":
+            infra_fails += 1
         setup_log = task.extra.get("_setup_log_path", "")
         if setup_log:
             task_artifacts["setup_log_path"] = setup_log
@@ -983,10 +1097,13 @@ async def run_lane(
         })
 
         # Save progress after each task for resumability
-        _save_progress(lane, agent.name, results, image_digests)
+        _save_progress(
+            lane, agent.name, run_id, agent.model, started_at,
+            results, image_digests,
+        )
 
     # Lane complete — clear progress file
-    _clear_progress(lane, agent.name)
+    _clear_progress(lane, agent.name, run_id)
 
     # Aggregate
     resolve_rate = resolved_count / len(tasks) if tasks else 0
@@ -1177,6 +1294,11 @@ async def main() -> int:
         action="store_true",
         help="Resume from last checkpoint (skip already-completed tasks)",
     )
+    parser.add_argument(
+        "--run-id",
+        default="",
+        help="Run identifier for progress/locks (required with --resume)",
+    )
 
     args = parser.parse_args()
 
@@ -1202,9 +1324,13 @@ async def main() -> int:
 
     if not args.lane:
         parser.error("--lane is required (use --list-lanes to see options)")
+    if args.resume and not args.run_id:
+        parser.error("--resume requires --run-id")
 
     lane = args.lane
     lane_cfg = LANE_CONFIGS[lane]
+    run_id = args.run_id or generate_run_id()
+    started_at = datetime.now(UTC).isoformat()
 
     # B6 delegates to its own runner
     if lane == "B6":
@@ -1263,6 +1389,7 @@ async def main() -> int:
 
     reports = []
     command_trace = " ".join(sys.argv)
+    print(f"Benchmark run_id: {run_id}")
 
     for agent_name in agent_names:
         adapter = get_adapter(agent_name, model=args.model)
@@ -1284,13 +1411,22 @@ async def main() -> int:
             )
             continue
 
-        run_data = await run_lane(
-            adapter, lane, tasks, budget, manifest_path,
-            resume=args.resume,
+        lock_path = _acquire_run_lock(
+            lane, adapter.name, run_id, adapter.model, started_at,
         )
+        try:
+            run_data = await run_lane(
+                adapter, lane, tasks, budget, manifest_path,
+                run_id=run_id,
+                started_at=started_at,
+                resume=args.resume,
+            )
+        finally:
+            _release_run_lock(lock_path)
 
         contract = build_run_contract(
             adapter, lane, manifest_path, budget, command_trace,
+            run_id,
             image_digests=run_data.get("image_digests"),
         )
         run_data["contract"] = contract
@@ -1300,8 +1436,8 @@ async def main() -> int:
 
         # If Ollama went down, exit with error so the shell script stops
         if run_data.get("halted"):
-            print("\nBenchmark halted due to Ollama unavailability.")
-            print("Fix the issue and re-run with --resume.")
+            print("\nBenchmark halted due to provider health check failure.")
+            print(f"Fix the issue and re-run with --resume --run-id {run_id}.")
             return 2
 
     # Print comparison if multiple agents

@@ -1,0 +1,409 @@
+==========================================
+Sequential Benchmark Run — Tue Mar 17 10:33:13 AM +06 2026
+Model: tools | Host: http://localhost:4000/v1
+Provider: openrouter
+Run ID: 20260317-043313-1277211
+Gateway health: http://localhost:4000/health/readiness
+==========================================
+Pre-flight gateway check...
+Gateway OK
+
+>>>>>>>>>> Starting B7 at Tue Mar 17 10:33:13 AM +06 2026 <<<<<<<<<<
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 60s)
+llm_error
+Benchmark run_id: 20260317-043313-1277211
+
+============================================================
+Lane: B7 | Agent: autocode | Model: tools
+Run ID: 20260317-043313-1277211
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: django__django-10880 ---
+  Description: Query syntax error with condition and distinct combination
+Description
+	
+A Count
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_django__django-10880_20260317_043313
+  Docker: python:3.8-slim (bench-B7-django__django-10880-20260317-043313-1277211)
+  Setup (docker): git init django...
+  Setup (docker): cd django && git remote add origin https://github.com/django/django.git...
+  Setup (docker): cd django && git fetch --depth=1 origin 838e432e3e5519c5383d12018e6c78f8ec7833c1...
+  Setup (docker): cd django && git checkout FETCH_HEAD...
+  Setup (docker): cd django && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_django__django-10880_20260317_043313/setup_log.txt
+  Result: RESOLVED (19.9s)
+
+--- Task 2/5: sympy__sympy-12096 ---
+  Description: evalf does not call _imp_ recursively
+Example from https://stackoverflow.com/que
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_sympy__sympy-12096_20260317_043425
+  Docker: python:3.9-slim (bench-B7-sympy__sympy-12096-20260317-043313-1277211)
+  Setup (docker): git init sympy...
+  Setup (docker): cd sympy && git remote add origin https://github.com/sympy/sympy.git...
+  Setup (docker): cd sympy && git fetch --depth=1 origin d7c3045115693e887bcd03599b7ca4650ac5f2cb...
+  Setup (docker): cd sympy && git checkout FETCH_HEAD...
+  Setup (docker): cd sympy && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_sympy__sympy-12096_20260317_043425/setup_log.txt
+  Result: RESOLVED (28.2s)
+
+--- Task 3/5: scikit-learn__scikit-learn-11310 ---
+  Description: Retrieving time to refit the estimator in BaseSearchCV
+Basically, I'm trying to 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_scikit-learn__scikit-learn-11310_20260317_043543
+  Docker: python:3.7-slim (bench-B7-scikit-learn__scikit-learn-11310-20260317-043313-1277211)
+  Setup (docker): git init scikit-learn...
+  Setup (docker): cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-...
+  Setup (docker): cd scikit-learn && git fetch --depth=1 origin 553b5fb8f84ba05c8397f26dd079deece2...
+  Setup (docker): cd scikit-learn && git checkout FETCH_HEAD...
+  Setup (docker): cd scikit-learn && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_scikit-learn__scikit-learn-11310_20260317_043543/setup_log.txt
+  Result: RESOLVED (24.8s)
+
+--- Task 4/5: pytest-dev__pytest-10081 ---
+  Description: unittest.TestCase.tearDown executed for classes marked with `unittest.skip` when
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_pytest-dev__pytest-10081_20260317_043903
+  Docker: python:3.9-slim (bench-B7-pytest-dev__pytest-10081-20260317-043313-1277211)
+  Setup (docker): git init pytest...
+  Setup (docker): cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git...
+  Setup (docker): cd pytest && git fetch --depth=1 origin da9a2b584eb7a6c7e924b2621ed0ddaeca0a7bea...
+  Setup (docker): cd pytest && git checkout FETCH_HEAD...
+  Setup (docker): cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0 pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_pytest-dev__pytest-10081_20260317_043903/setup_log.txt
+  Result: RESOLVED (22.3s)
+
+--- Task 5/5: matplotlib__matplotlib-13989 ---
+  Description: hist() no longer respects range=... when density=True
+<!--To help us understand 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_matplotlib__matplotlib-13989_20260317_044015
+  Docker: python:3.7-slim (bench-B7-matplotlib__matplotlib-13989-20260317-043313-1277211)
+  Setup (docker): git init matplotlib...
+  Setup (docker): cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib....
+  Setup (docker): cd matplotlib && git fetch --depth=1 origin a3e2897bfaf9eaac1d6649da535c4e721c89...
+  Setup (docker): cd matplotlib && git checkout FETCH_HEAD...
+  Setup (docker): cd matplotlib && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_matplotlib__matplotlib-13989_20260317_044015/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (255.5s)
+
+============================================================
+LANE B7 COMPLETE
+  Resolved: 4/5 (80.0%)
+  Infra fails: 1
+  Total time: 350.7s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260317-044602-B7-autocode.json
+<<<<<<<<<< B7 finished (rc=0) at Tue Mar 17 10:46:03 AM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B8 at Tue Mar 17 10:46:18 AM +06 2026 <<<<<<<<<<
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 60s)
+llm_error
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5: Error code: 500 - {'error': {'message': "invalid literal for int() with base 10: 'tool_use_failed'", 'type': 'None', 'pa (waiting 5s)
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5: Connection error. (waiting 5s)
+OpenRouter retry 2/5: Connection error. (waiting 10s)
+OpenRouter retry 3/5: Connection error. (waiting 20s)
+OpenRouter retry 4/5: Connection error. (waiting 40s)
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5: Error code: 502 - {'error': {'message': 'LiteLLM backend unavailable', 'code': 502}} (waiting 5s)
+OpenRouter retry 2/5: Error code: 502 - {'error': {'message': 'LiteLLM backend unavailable', 'code': 502}} (waiting 10s)
+OpenRouter retry 3/5: Error code: 502 - {'error': {'message': 'LiteLLM backend unavailable', 'code': 502}} (waiting 20s)
+OpenRouter retry 4/5: Error code: 502 - {'error': {'message': 'LiteLLM backend unavailable', 'code': 502}} (waiting 40s)
+llm_error
+Benchmark run_id: 20260317-043313-1277211
+
+============================================================
+Lane: B8 | Agent: autocode | Model: tools
+Run ID: 20260317-043313-1277211
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: django__django-10880 ---
+  Description: Query syntax error with condition and distinct combination
+Description
+	
+A Count
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_django__django-10880_20260317_044618
+  Docker: python:3.8-slim (bench-B8-django__django-10880-20260317-043313-1277211)
+  Setup (docker): git init django...
+  Setup (docker): cd django && git remote add origin https://github.com/django/django.git...
+  Setup (docker): cd django && git fetch --depth=1 origin 838e432e3e5519c5383d12018e6c78f8ec7833c1...
+  Setup (docker): cd django && git checkout FETCH_HEAD...
+  Setup (docker): cd django && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_django__django-10880_20260317_044618/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (189.9s)
+
+--- Task 2/5: sympy__sympy-12096 ---
+  Description: evalf does not call _imp_ recursively
+Example from https://stackoverflow.com/que
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_sympy__sympy-12096_20260317_045020
+  Docker: python:3.9-slim (bench-B8-sympy__sympy-12096-20260317-043313-1277211)
+  Setup (docker): git init sympy...
+  Setup (docker): cd sympy && git remote add origin https://github.com/sympy/sympy.git...
+  Setup (docker): cd sympy && git fetch --depth=1 origin d7c3045115693e887bcd03599b7ca4650ac5f2cb...
+  Setup (docker): cd sympy && git checkout FETCH_HEAD...
+  Setup (docker): cd sympy && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_sympy__sympy-12096_20260317_045020/setup_log.txt
+  Result: ERROR: AttributeError: 'str' object has no attribute 'key (188.2s)
+
+--- Task 3/5: scikit-learn__scikit-learn-11310 ---
+  Description: Retrieving time to refit the estimator in BaseSearchCV
+Basically, I'm trying to 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_scikit-learn__scikit-learn-11310_20260317_045420
+  Docker: python:3.7-slim (bench-B8-scikit-learn__scikit-learn-11310-20260317-043313-1277211)
+  Setup (docker): git init scikit-learn...
+  Setup (docker): cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-...
+  Setup (docker): cd scikit-learn && git fetch --depth=1 origin 553b5fb8f84ba05c8397f26dd079deece2...
+  Setup (docker): cd scikit-learn && git checkout FETCH_HEAD...
+  Setup (docker): cd scikit-learn && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_scikit-learn__scikit-learn-11310_20260317_045420/setup_log.txt
+  Result: RESOLVED (152.3s)
+
+--- Task 4/5: pytest-dev__pytest-10081 ---
+  Description: unittest.TestCase.tearDown executed for classes marked with `unittest.skip` when
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_pytest-dev__pytest-10081_20260317_045952
+  Docker: python:3.9-slim (bench-B8-pytest-dev__pytest-10081-20260317-043313-1277211)
+  Setup (docker): git init pytest...
+  Setup (docker): cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git...
+  Setup (docker): cd pytest && git fetch --depth=1 origin da9a2b584eb7a6c7e924b2621ed0ddaeca0a7bea...
+  Setup (docker): cd pytest && git checkout FETCH_HEAD...
+  Setup (docker): cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0 pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_pytest-dev__pytest-10081_20260317_045952/setup_log.txt
+  Result: RESOLVED (107.6s)
+
+--- Task 5/5: matplotlib__matplotlib-13989 ---
+  Description: hist() no longer respects range=... when density=True
+<!--To help us understand 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_matplotlib__matplotlib-13989_20260317_050234
+  Docker: python:3.7-slim (bench-B8-matplotlib__matplotlib-13989-20260317-043313-1277211)
+  Setup (docker): git init matplotlib...
+  Setup (docker): cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib....
+  Setup (docker): cd matplotlib && git fetch --depth=1 origin a3e2897bfaf9eaac1d6649da535c4e721c89...
+  Setup (docker): cd matplotlib && git checkout FETCH_HEAD...
+  Setup (docker): cd matplotlib && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_matplotlib__matplotlib-13989_20260317_050234/setup_log.txt
+  Result: ERROR: InternalServerError: Error code: 502 - {'error': { (241.5s)
+
+============================================================
+LANE B8 COMPLETE
+  Resolved: 2/5 (40.0%)
+  Infra fails: 3
+  Total time: 879.5s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260317-050816-B8-autocode.json
+<<<<<<<<<< B8 finished (rc=0) at Tue Mar 17 11:08:16 AM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B9-PROXY at Tue Mar 17 11:08:31 AM +06 2026 <<<<<<<<<<
+  Gateway down (attempt 1/10), trying docker start...
+llm-gateway
+  Waiting 52s...
+tool_call_end

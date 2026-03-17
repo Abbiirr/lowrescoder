@@ -15,12 +15,14 @@ import time
 import pytest
 from dotenv import load_dotenv
 
+from autocode.config import DEFAULT_OLLAMA_API_BASE, DEFAULT_OLLAMA_MODEL
+
 load_dotenv()
 
-OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", DEFAULT_OLLAMA_API_BASE)
 
 MODELS_TO_TEST = [
-    "qwen3:8b",
+    os.environ.get("OLLAMA_MODEL", DEFAULT_OLLAMA_MODEL),
 ]
 
 TOOL_SCHEMA = [

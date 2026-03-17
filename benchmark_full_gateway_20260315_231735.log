@@ -1,0 +1,704 @@
+==========================================
+Sequential Benchmark Run — Sun Mar 15 11:17:35 PM +06 2026
+Model: tools | Host: http://localhost:4000/v1
+Provider: openrouter
+Run ID: 20260315-171735-1422351
+Gateway health: http://localhost:4000/health/readiness
+==========================================
+Pre-flight gateway check...
+Gateway OK
+
+>>>>>>>>>> Starting B7 at Sun Mar 15 11:17:35 PM +06 2026 <<<<<<<<<<
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 40s)
+llm_error
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 40s)
+llm_error
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 40s)
+llm_error
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 40s)
+llm_error
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': "{'error': '/chat/completions: Invalid model name passed in model=tools_large. C (waiting 40s)
+llm_error
+Benchmark run_id: 20260315-171735-1422351
+
+============================================================
+Lane: B7 | Agent: autocode | Model: tools
+Run ID: 20260315-171735-1422351
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: django__django-10880 ---
+  Description: Query syntax error with condition and distinct combination
+Description
+	
+A Count
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_django__django-10880_20260315_171736
+  Docker: python:3.8-slim (bench-B7-django__django-10880-20260315-171735-1422351)
+  Setup (docker): git init django...
+  Setup (docker): cd django && git remote add origin https://github.com/django/django.git...
+  Setup (docker): cd django && git fetch --depth=1 origin 838e432e3e5519c5383d12018e6c78f8ec7833c1...
+  Setup (docker): cd django && git checkout FETCH_HEAD...
+  Setup (docker): cd django && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_django__django-10880_20260315_171736/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (76.5s)
+
+--- Task 2/5: sympy__sympy-12096 ---
+  Description: evalf does not call _imp_ recursively
+Example from https://stackoverflow.com/que
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_sympy__sympy-12096_20260315_171947
+  Docker: python:3.9-slim (bench-B7-sympy__sympy-12096-20260315-171735-1422351)
+  Setup (docker): git init sympy...
+  Setup (docker): cd sympy && git remote add origin https://github.com/sympy/sympy.git...
+  Setup (docker): cd sympy && git fetch --depth=1 origin d7c3045115693e887bcd03599b7ca4650ac5f2cb...
+  Setup (docker): cd sympy && git checkout FETCH_HEAD...
+  Setup (docker): cd sympy && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_sympy__sympy-12096_20260315_171947/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (76.7s)
+
+--- Task 3/5: scikit-learn__scikit-learn-11310 ---
+  Description: Retrieving time to refit the estimator in BaseSearchCV
+Basically, I'm trying to 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_scikit-learn__scikit-learn-11310_20260315_172152
+  Docker: python:3.7-slim (bench-B7-scikit-learn__scikit-learn-11310-20260315-171735-1422351)
+  Setup (docker): git init scikit-learn...
+  Setup (docker): cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-...
+  Setup (docker): cd scikit-learn && git fetch --depth=1 origin 553b5fb8f84ba05c8397f26dd079deece2...
+  Setup (docker): cd scikit-learn && git checkout FETCH_HEAD...
+  Setup (docker): cd scikit-learn && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_scikit-learn__scikit-learn-11310_20260315_172152/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (75.9s)
+
+--- Task 4/5: pytest-dev__pytest-10081 ---
+  Description: unittest.TestCase.tearDown executed for classes marked with `unittest.skip` when
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_pytest-dev__pytest-10081_20260315_172605
+  Docker: python:3.9-slim (bench-B7-pytest-dev__pytest-10081-20260315-171735-1422351)
+  Setup (docker): git init pytest...
+  Setup (docker): cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git...
+  Setup (docker): cd pytest && git fetch --depth=1 origin da9a2b584eb7a6c7e924b2621ed0ddaeca0a7bea...
+  Setup (docker): cd pytest && git checkout FETCH_HEAD...
+  Setup (docker): cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0 pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_pytest-dev__pytest-10081_20260315_172605/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (75.5s)
+
+--- Task 5/5: matplotlib__matplotlib-13989 ---
+  Description: hist() no longer respects range=... when density=True
+<!--To help us understand 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_matplotlib__matplotlib-13989_20260315_172810
+  Docker: python:3.7-slim (bench-B7-matplotlib__matplotlib-13989-20260315-171735-1422351)
+  Setup (docker): git init matplotlib...
+  Setup (docker): cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib....
+  Setup (docker): cd matplotlib && git fetch --depth=1 origin a3e2897bfaf9eaac1d6649da535c4e721c89...
+  Setup (docker): cd matplotlib && git checkout FETCH_HEAD...
+  Setup (docker): cd matplotlib && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_matplotlib__matplotlib-13989_20260315_172810/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (76.5s)
+
+============================================================
+LANE B7 COMPLETE
+  Resolved: 0/5 (0.0%)
+  Infra fails: 5
+  Total time: 381.1s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260315-173056-B7-autocode.json
+<<<<<<<<<< B7 finished (rc=0) at Sun Mar 15 11:30:56 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B8 at Sun Mar 15 11:31:11 PM +06 2026 <<<<<<<<<<
+  Gateway down (attempt 1/10), trying docker start...
+llm-gateway
+  Waiting 44s...
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: RateLimitError: GroqException - {"error":{"message":"Re (waiting 30s)
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+agent_loop_max_iterations
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5: Error code: 500 - {'error': {'message': "'async for' requires an object with __aiter__ method, got NoneType", 'type': 'N (waiting 5s)
+OpenRouter retry 2/5: Internal Server Error (waiting 10s)
+OpenRouter retry 3/5: Internal Server Error (waiting 20s)
+OpenRouter retry 4/5: Internal Server Error (waiting 40s)
+llm_error
+agent_loop_max_iterations
+tool_call_end
+tool_call_end
+tool_call_end
+agent_loop_max_iterations
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"\'messages.3\' :  (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"\'messages.3\' :  (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"\'messages.3\' :  (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"\'messages.3\' :  (waiting 40s)
+llm_error
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+agent_loop_max_iterations
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"\'messages.3\' :  (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"\'messages.3\' :  (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"\'messages.3\' :  (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"\'messages.3\' :  (waiting 40s)
+llm_error
+OpenRouter retry 1/5: invalid literal for int() with base 10: 'tool_use_failed' (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': "litellm.ContextWindowExceededError: litellm.BadRequestError: litellm._pre_call_ (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': "litellm.ContextWindowExceededError: litellm.BadRequestError: litellm._pre_call_ (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': "litellm.ContextWindowExceededError: litellm.BadRequestError: litellm._pre_call_ (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': "litellm.ContextWindowExceededError: litellm.BadRequestError: litellm._pre_call_ (waiting 40s)
+llm_error
+Benchmark run_id: 20260315-171735-1422351
+
+============================================================
+Lane: B8 | Agent: autocode | Model: tools
+Run ID: 20260315-171735-1422351
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: django__django-10880 ---
+  Description: Query syntax error with condition and distinct combination
+Description
+	
+A Count
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_django__django-10880_20260315_173156
+  Docker: python:3.8-slim (bench-B8-django__django-10880-20260315-171735-1422351)
+  Setup (docker): git init django...
+  Setup (docker): cd django && git remote add origin https://github.com/django/django.git...
+  Setup (docker): cd django && git fetch --depth=1 origin 838e432e3e5519c5383d12018e6c78f8ec7833c1...
+  Setup (docker): cd django && git checkout FETCH_HEAD...
+  Setup (docker): cd django && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_django__django-10880_20260315_173156/setup_log.txt
+  Result: ERROR: InternalServerError: Internal Server Error (1252.7s)
+
+--- Task 2/5: sympy__sympy-12096 ---
+  Description: evalf does not call _imp_ recursively
+Example from https://stackoverflow.com/que
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_sympy__sympy-12096_20260315_175341
+  Docker: python:3.9-slim (bench-B8-sympy__sympy-12096-20260315-171735-1422351)
+  Setup (docker): git init sympy...
+  Setup (docker): cd sympy && git remote add origin https://github.com/sympy/sympy.git...
+  Setup (docker): cd sympy && git fetch --depth=1 origin d7c3045115693e887bcd03599b7ca4650ac5f2cb...
+  Setup (docker): cd sympy && git checkout FETCH_HEAD...
+  Setup (docker): cd sympy && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_sympy__sympy-12096_20260315_175341/setup_log.txt
+  Result: FAILED (516.0s)
+
+--- Task 3/5: scikit-learn__scikit-learn-11310 ---
+  Description: Retrieving time to refit the estimator in BaseSearchCV
+Basically, I'm trying to 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_scikit-learn__scikit-learn-11310_20260315_180321
+  Docker: python:3.7-slim (bench-B8-scikit-learn__scikit-learn-11310-20260315-171735-1422351)
+  Setup (docker): git init scikit-learn...
+  Setup (docker): cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-...
+  Setup (docker): cd scikit-learn && git fetch --depth=1 origin 553b5fb8f84ba05c8397f26dd079deece2...
+  Setup (docker): cd scikit-learn && git checkout FETCH_HEAD...
+  Setup (docker): cd scikit-learn && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_scikit-learn__scikit-learn-11310_20260315_180321/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (451.6s)
+
+--- Task 4/5: pytest-dev__pytest-10081 ---
+  Description: unittest.TestCase.tearDown executed for classes marked with `unittest.skip` when
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_pytest-dev__pytest-10081_20260315_181423
+  Docker: python:3.9-slim (bench-B8-pytest-dev__pytest-10081-20260315-171735-1422351)
+  Setup (docker): git init pytest...
+  Setup (docker): cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git...
+  Setup (docker): cd pytest && git fetch --depth=1 origin da9a2b584eb7a6c7e924b2621ed0ddaeca0a7bea...
+  Setup (docker): cd pytest && git checkout FETCH_HEAD...
+  Setup (docker): cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0 pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_pytest-dev__pytest-10081_20260315_181423/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (286.7s)
+
+--- Task 5/5: matplotlib__matplotlib-13989 ---
+  Description: hist() no longer respects range=... when density=True
+<!--To help us understand 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_matplotlib__matplotlib-13989_20260315_182015
+  Docker: python:3.7-slim (bench-B8-matplotlib__matplotlib-13989-20260315-171735-1422351)
+  Setup (docker): git init matplotlib...
+  Setup (docker): cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib....
+  Setup (docker): cd matplotlib && git fetch --depth=1 origin a3e2897bfaf9eaac1d6649da535c4e721c89...
+  Setup (docker): cd matplotlib && git checkout FETCH_HEAD...
+  Setup (docker): cd matplotlib && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_matplotlib__matplotlib-13989_20260315_182015/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (123.2s)
+
+============================================================
+LANE B8 COMPLETE
+  Resolved: 0/5 (0.0%)
+  Infra fails: 4
+  Total time: 2630.2s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260315-182400-B8-autocode.json
+<<<<<<<<<< B8 finished (rc=0) at Mon Mar 16 12:24:00 AM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B9-PROXY at Mon Mar 16 12:24:15 AM +06 2026 <<<<<<<<<<
+agent_loop_max_iterations
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+agent_loop_max_iterations
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': "litellm.BadRequestError: Nvidia_nimException - This model only supports single  (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': "litellm.BadRequestError: Nvidia_nimException - This model only supports single  (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': "litellm.BadRequestError: Nvidia_nimException - This model only supports single  (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': "litellm.BadRequestError: Nvidia_nimException - This model only supports single  (waiting 40s)
+llm_error
+Benchmark run_id: 20260315-171735-1422351
+
+============================================================
+Lane: B9-PROXY | Agent: autocode | Model: tools
+Run ID: 20260315-171735-1422351
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: tb-001-hello-world ---
+  Description: Write a script that outputs "Hello, World!"
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-001-hello-world_20260315_182415
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-001-hello-world
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-001-hello-world-20260315-171735-1422351)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-001-hello-world_20260315_182415/setup_log.txt
+  Result: RESOLVED (134.2s)
+
+--- Task 2/5: tb-002-fix-git ---
+  Description: Fix a repo with detached HEAD and uncommitted changes
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-002-fix-git_20260315_182640
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-002-fix-git
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-002-fix-git-20260315-171735-1422351)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-002-fix-git_20260315_182640/setup_log.txt
+  Result: FAILED (292.5s)
+
+--- Task 3/5: tb-003-fix-permissions ---
+  Description: Fix broken file permissions on a web app directory
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-003-fix-permissions_20260315_183152
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-003-fix-permissions
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-003-fix-permissions-20260315-171735-1422351)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-003-fix-permissions_20260315_183152/setup_log.txt
+  Result: RESOLVED (29.5s)
+
+--- Task 4/5: tb-004-csv-to-parquet ---
+  Description: Convert CSV to Parquet using Python
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-004-csv-to-parquet_20260315_183232
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-004-csv-to-parquet
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-004-csv-to-parquet-20260315-171735-1422351)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-004-csv-to-parquet_20260315_183232/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (159.1s)
+
+--- Task 5/5: tb-005-chess-best-move ---
+  Description: Find best chess move from FEN notation
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-005-chess-best-move_20260315_183537
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-005-chess-best-move
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-005-chess-best-move-20260315-171735-1422351)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-005-chess-best-move_20260315_183537/setup_log.txt
+  Result: RESOLVED (32.0s)
+
+============================================================
+LANE B9-PROXY COMPLETE
+  Resolved: 3/5 (60.0%)
+  Infra fails: 1
+  Total time: 647.3s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260315-183623-B9-PROXY-autocode.json
+<<<<<<<<<< B9-PROXY finished (rc=0) at Mon Mar 16 12:36:23 AM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B10-PROXY at Mon Mar 16 12:36:38 AM +06 2026 <<<<<<<<<<
+agent_loop_max_iterations
+OpenRouter retry 1/5: Error code: 500 - {'error': {'message': "'async for' requires an object with __aiter__ method, got NoneType", 'type': 'N (waiting 5s)
+OpenRouter retry 2/5: Internal Server Error (waiting 10s)
+OpenRouter retry 3/5: Internal Server Error (waiting 20s)
+OpenRouter retry 4/5: Internal Server Error (waiting 40s)
+llm_error
+Benchmark run_id: 20260315-171735-1422351
+
+============================================================
+Lane: B10-PROXY | Agent: autocode | Model: tools
+Run ID: 20260315-171735-1422351
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: ml-001-dtype-mismatch ---
+  Description: Fix floor division truncation in mean calculation
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-001-dtype-mismatch_20260315_183638
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-001-dtype-mismatch
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-001-dtype-mismatch-20260315-171735-1422351)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-001-dtype-mismatch_20260315_183638/setup_log.txt
+  Result: RESOLVED (45.6s)
+
+--- Task 2/5: ml-002-off-by-one ---
+  Description: Fix off-by-one in sliding window function
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-002-off-by-one_20260315_183738
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-002-off-by-one
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-002-off-by-one-20260315-171735-1422351)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-002-off-by-one_20260315_183738/setup_log.txt
+  Result: RESOLVED (48.8s)
+
+--- Task 3/5: ml-003-encoding-error ---
+  Description: Fix Unicode encoding error in CSV reader
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-003-encoding-error_20260315_183841
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-003-encoding-error
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-003-encoding-error-20260315-171735-1422351)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-003-encoding-error_20260315_183841/setup_log.txt
+  Result: RESOLVED (3.6s)
+
+--- Task 4/5: ml-004-null-handling ---
+  Description: Fix null value handling in data pipeline
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-004-null-handling_20260315_183859
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-004-null-handling
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-004-null-handling-20260315-171735-1422351)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-004-null-handling_20260315_183859/setup_log.txt
+  Result: ERROR: InternalServerError: Internal Server Error (313.7s)
+
+--- Task 5/5: ml-005-race-condition ---
+  Description: Fix race condition in threaded counter
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-005-race-condition_20260315_184427
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-005-race-condition
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-005-race-condition-20260315-171735-1422351)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-005-race-condition_20260315_184427/setup_log.txt
+  Result: RESOLVED (177.9s)
+
+============================================================
+LANE B10-PROXY COMPLETE
+  Resolved: 4/5 (80.0%)
+  Infra fails: 1
+  Total time: 589.6s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260315-184738-B10-PROXY-autocode.json
+<<<<<<<<<< B10-PROXY finished (rc=0) at Mon Mar 16 12:47:38 AM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B11 at Mon Mar 16 12:47:53 AM +06 2026 <<<<<<<<<<
+agent_loop_max_iterations
+tool_call_end
+agent_loop_max_iterations
+agent_loop_max_iterations
+agent_loop_max_iterations
+tool_call_end
+agent_loop_max_iterations
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"\'messages.3\' :  (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"\'messages.3\' :  (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"\'messages.3\' :  (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"\'messages.3\' :  (waiting 40s)
+llm_error
+agent_loop_max_iterations
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"\'messages.3\' :  (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"\'messages.3\' :  (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"\'messages.3\' :  (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"\'messages.3\' :  (waiting 40s)
+llm_error
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+Benchmark run_id: 20260315-171735-1422351
+
+============================================================
+Lane: B11 | Agent: autocode | Model: tools
+Run ID: 20260315-171735-1422351
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: bax-001-sql-injection ---
+  Description: Fix SQL injection vulnerability in user login endpoint
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-001-sql-injection_20260315_184753
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b11/bax-001-sql-injection
+  Docker: python:3.11-slim (bench-B11-bax-001-sql-injection-20260315-171735-1422351)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-001-sql-injection_20260315_184753/setup_log.txt
+  Result: FAILED (519.7s)
+
+--- Task 2/5: bax-002-xss-stored ---
+  Description: Fix stored XSS in comment submission handler
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-002-xss-stored_20260315_185720
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b11/bax-002-xss-stored
+  Docker: python:3.11-slim (bench-B11-bax-002-xss-stored-20260315-171735-1422351)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-002-xss-stored_20260315_185720/setup_log.txt
+  Result: FAILED (844.1s)
+
+--- Task 3/5: bax-003-auth-bypass ---
+  Description: Fix authentication bypass via JWT algorithm confusion
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-003-auth-bypass_20260315_191210
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b11/bax-003-auth-bypass
+  Docker: python:3.11-slim (bench-B11-bax-003-auth-bypass-20260315-171735-1422351)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-003-auth-bypass_20260315_191210/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (625.5s)
+
+--- Task 4/5: bax-004-path-traversal ---
+  Description: Fix path traversal in file download endpoint
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-004-path-traversal_20260315_192322
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b11/bax-004-path-traversal
+  Docker: python:3.11-slim (bench-B11-bax-004-path-traversal-20260315-171735-1422351)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-004-path-traversal_20260315_192322/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (475.6s)
+
+--- Task 5/5: bax-005-csrf ---
+  Description: Add CSRF protection to state-changing API endpoints
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-005-csrf_20260315_193204
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b11/bax-005-csrf
+  Docker: python:3.11-slim (bench-B11-bax-005-csrf-20260315-171735-1422351)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-005-csrf_20260315_193204/setup_log.txt
+  Result: RESOLVED (150.7s)
+
+============================================================
+LANE B11 COMPLETE
+  Resolved: 1/5 (20.0%)
+  Infra fails: 2
+  Total time: 2615.6s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260315-193602-B11-autocode.json
+<<<<<<<<<< B11 finished (rc=0) at Mon Mar 16 01:36:03 AM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B12-PROXY at Mon Mar 16 01:36:18 AM +06 2026 <<<<<<<<<<
+tool_call_end
+agent_loop_max_iterations
+agent_loop_max_iterations
+agent_loop_max_iterations
+Benchmark run_id: 20260315-171735-1422351
+
+============================================================
+Lane: B12-PROXY | Agent: autocode | Model: tools
+Run ID: 20260315-171735-1422351
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: swl-001-add-pagination ---
+  Description: Add cursor-based pagination to the /api/users endpoint with next/prev links
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-001-add-pagination_20260315_193618
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-001-add-pagination
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-001-add-pagination-20260315-171735-1422351)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-001-add-pagination_20260315_193618/setup_log.txt
+  Result: RESOLVED (1034.3s)
+
+--- Task 2/5: swl-002-fix-search ---
+  Description: Fix search endpoint returning 500 when query contains special characters
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-002-fix-search_20260315_195348
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-002-fix-search
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-002-fix-search-20260315-171735-1422351)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-002-fix-search_20260315_195348/setup_log.txt
+  Result: RESOLVED (9.4s)
+
+--- Task 3/5: swl-003-add-export ---
+  Description: Add CSV export functionality to the dashboard reports page
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-003-add-export_20260315_195413
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-003-add-export
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-003-add-export-20260315-171735-1422351)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-003-add-export_20260315_195413/setup_log.txt
+  Result: RESOLVED (119.6s)
+
+--- Task 4/5: swl-004-fix-timezone ---
+  Description: Fix event scheduling showing wrong times for non-UTC timezones
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-004-fix-timezone_20260315_195628
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-004-fix-timezone
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-004-fix-timezone-20260315-171735-1422351)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-004-fix-timezone_20260315_195628/setup_log.txt
+  Result: RESOLVED (35.0s)
+
+--- Task 5/5: swl-005-add-webhook ---
+  Description: Implement webhook notification system for order status changes
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-005-add-webhook_20260315_195720
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-005-add-webhook
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-005-add-webhook-20260315-171735-1422351)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-005-add-webhook_20260315_195720/setup_log.txt
+  Result: FAILED (1067.3s)
+
+============================================================
+LANE B12-PROXY COMPLETE
+  Resolved: 4/5 (80.0%)
+  Infra fails: 0
+  Total time: 2265.6s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260315-201524-B12-PROXY-autocode.json
+<<<<<<<<<< B12-PROXY finished (rc=0) at Mon Mar 16 02:15:24 AM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B13-PROXY at Mon Mar 16 02:15:39 AM +06 2026 <<<<<<<<<<
+agent_loop_max_iterations
+agent_loop_max_iterations
+agent_loop_max_iterations
+agent_loop_max_iterations
+OpenRouter retry 1/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 5s)
+OpenRouter retry 2/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 10s)
+OpenRouter retry 3/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 20s)
+OpenRouter retry 4/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 40s)
+llm_error
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+agent_loop_max_iterations
+agent_loop_max_iterations
+OpenRouter retry 1/5: Error code: 500 - {'error': {'message': "'async for' requires an object with __aiter__ method, got NoneType", 'type': 'N (waiting 5s)
+OpenRouter retry 2/5: Internal Server Error (waiting 10s)
+OpenRouter retry 3/5: Internal Server Error (waiting 20s)
+OpenRouter retry 4/5: Internal Server Error (waiting 40s)
+llm_error
+Benchmark run_id: 20260315-171735-1422351
+
+============================================================
+Lane: B13-PROXY | Agent: autocode | Model: tools
+Run ID: 20260315-171735-1422351
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: cc-001-two-sum ---
+  Description: Given an array of integers and a target, return indices of two numbers that add 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B13-PROXY_cc-001-two-sum_20260315_201540
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b13/cc-001-two-sum
+  Result: RESOLVED (26.9s)
+
+--- Task 2/5: cc-002-lru-cache ---
+  Description: Implement an LRU cache with O(1) get and put operations
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B13-PROXY_cc-002-lru-cache_20260315_201607
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b13/cc-002-lru-cache
+  Result: RESOLVED (35.6s)
+
+--- Task 3/5: cc-003-merge-intervals ---
+  Description: Given a collection of intervals, merge all overlapping intervals
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B13-PROXY_cc-003-merge-intervals_20260315_201643
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b13/cc-003-merge-intervals
+  Result: FAILED (861.4s)
+
+--- Task 4/5: cc-004-word-break ---
+  Description: Determine if a string can be segmented into dictionary words
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B13-PROXY_cc-004-word-break_20260315_203104
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b13/cc-004-word-break
+  Result: ERROR: InternalServerError: Error code: 500 - {'error': { (341.8s)
+
+--- Task 5/5: cc-005-serialize-tree ---
+  Description: Serialize and deserialize a binary tree
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B13-PROXY_cc-005-serialize-tree_20260315_203646
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b13/cc-005-serialize-tree
+  Result: ERROR: InternalServerError: Internal Server Error (454.5s)
+
+============================================================
+LANE B13-PROXY COMPLETE
+  Resolved: 2/5 (40.0%)
+  Infra fails: 2
+  Total time: 1720.2s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260315-204421-B13-PROXY-autocode.json
+<<<<<<<<<< B13-PROXY finished (rc=0) at Mon Mar 16 02:44:21 AM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B14-PROXY at Mon Mar 16 02:44:36 AM +06 2026 <<<<<<<<<<
+agent_loop_max_iterations
+OpenRouter retry 1/5: Error code: 500 - {'error': {'message': "'async for' requires an object with __aiter__ method, got NoneType", 'type': 'N (waiting 5s)
+OpenRouter retry 2/5: Internal Server Error (waiting 10s)
+OpenRouter retry 3/5: Internal Server Error (waiting 20s)
+OpenRouter retry 4/5: Internal Server Error (waiting 40s)
+llm_error
+agent_loop_max_iterations
+agent_loop_max_iterations
+agent_loop_max_iterations
+agent_loop_max_iterations
+agent_loop_max_iterations
+agent_loop_max_iterations
+Benchmark run_id: 20260315-171735-1422351
+
+============================================================
+Lane: B14-PROXY | Agent: autocode | Model: tools
+Run ID: 20260315-171735-1422351
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: lcb-001-reverse-integer ---
+  Description: Reverse digits of a 32-bit signed integer, return 0 on overflow
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B14-PROXY_lcb-001-reverse-integer_20260315_204436
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b14/lcb-001-reverse-integer
+  Result: ERROR: InternalServerError: Internal Server Error (397.7s)
+
+--- Task 2/5: lcb-002-valid-sudoku ---
+  Description: Determine if a 9x9 Sudoku board is valid
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B14-PROXY_lcb-002-valid-sudoku_20260315_205114
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b14/lcb-002-valid-sudoku
+  Result: RESOLVED (4.5s)
+
+--- Task 3/5: lcb-003-group-anagrams ---
+  Description: Group strings that are anagrams of each other
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B14-PROXY_lcb-003-group-anagrams_20260315_205119
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b14/lcb-003-group-anagrams
+  Result: RESOLVED (321.0s)
+
+--- Task 4/5: lcb-004-trapping-rain-water ---
+  Description: Calculate how much water can be trapped between bars
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B14-PROXY_lcb-004-trapping-rain-water_20260315_205640
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b14/lcb-004-trapping-rain-water
+  Result: FAILED (752.5s)
+
+--- Task 5/5: lcb-005-climbing-stairs ---
+  Description: Count distinct ways to climb n stairs taking 1 or 2 steps
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B14-PROXY_lcb-005-climbing-stairs_20260315_210913
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b14/lcb-005-climbing-stairs
+  Result: RESOLVED (576.9s)
+
+============================================================
+LANE B14-PROXY COMPLETE
+  Resolved: 3/5 (60.0%)
+  Infra fails: 1
+  Total time: 2052.6s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260315-211850-B14-PROXY-autocode.json
+<<<<<<<<<< B14-PROXY finished (rc=0) at Mon Mar 16 03:18:50 AM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+==========================================
+All benchmarks complete — Mon Mar 16 03:19:05 AM +06 2026
+Run ID: 20260315-171735-1422351
+==========================================

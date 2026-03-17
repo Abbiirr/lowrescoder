@@ -204,7 +204,7 @@ class TestRunCompetitiveTask:
         agent = _FakeAgent()
         budget = BudgetProfile()
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = asyncio.get_event_loop().run_until_complete(
+            result = asyncio.run(
                 _run_competitive_task(agent, task, Path(tmpdir), budget),
             )
         assert result.resolved is False
@@ -221,7 +221,7 @@ class TestRunCompetitiveTask:
         agent = _FakeAgent()
         budget = BudgetProfile()
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = asyncio.get_event_loop().run_until_complete(
+            result = asyncio.run(
                 _run_competitive_task(agent, task, Path(tmpdir), budget),
             )
         assert result.resolved is False
@@ -245,7 +245,7 @@ class TestRunCompetitiveTask:
             agent = _FakeAgent()
             budget = BudgetProfile()
             # Uses absolute fixture_dir path to bypass MANIFEST_DIR
-            asyncio.get_event_loop().run_until_complete(
+            asyncio.run(
                 _run_competitive_task(agent, task, sandbox, budget),
             )
             # Agent should have received the task
@@ -282,7 +282,7 @@ class TestRunCompetitiveTask:
             )
             agent = _FakeAgent(write_solution=correct_solution)
             budget = BudgetProfile()
-            result = asyncio.get_event_loop().run_until_complete(
+            result = asyncio.run(
                 _run_competitive_task(agent, task, sandbox, budget),
             )
             assert result.resolved is True
@@ -306,7 +306,7 @@ class TestRunCompetitiveTask:
             # Agent does NOT write a solution — stub remains
             agent = _FakeAgent()
             budget = BudgetProfile()
-            result = asyncio.get_event_loop().run_until_complete(
+            result = asyncio.run(
                 _run_competitive_task(agent, task, sandbox, budget),
             )
             assert result.resolved is False

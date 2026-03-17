@@ -13,7 +13,11 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from scripts.adapters.base import AgentResult, BenchmarkTask, BudgetProfile  # noqa: E402
 
-from scripts.benchmark_runner import LANE_CONFIGS, run_lane  # noqa: E402  # isort: skip
+from scripts.benchmark_runner import (  # noqa: E402  # isort: skip
+    LANE_CONFIGS,
+    build_run_contract,
+    run_lane,
+)
 
 
 def _make_agent(resolved: bool = True) -> MagicMock:
@@ -268,6 +272,179 @@ def test_extra_apt_failure_stops_setup(tmp_path: Path):
 
     agent.solve_task.assert_not_called()
     assert run_data["results"][0]["error"] == "Setup failed"
+
+
+def test_run_lane_passes_build_deps_profile_from_task_extra(tmp_path: Path):
+    """Docker setup should honor per-task build_deps_profile."""
+    agent = _make_agent(resolved=True)
+    task = _make_task()
+    task.extra["python_version"] = "3.11"
+    task.extra["build_deps_profile"] = "none"
+    budget = BudgetProfile(wall_time_s=60, token_cap=1000, max_tool_calls=10)
+
+    with patch("scripts.benchmark_runner.create_task_sandbox") as mock_sandbox, \
+         patch("scripts.benchmark_runner.docker_available", return_value=True), \
+         patch("scripts.benchmark_runner.start_container") as mock_start, \
+         patch("scripts.benchmark_runner.install_build_deps") as mock_deps, \
+         patch("scripts.benchmark_runner.get_image_digest", return_value="sha256:test"), \
+         patch("scripts.benchmark_runner.fix_permissions"), \
+         patch("scripts.benchmark_runner.stop_and_remove"):
+        mock_sandbox.return_value = tmp_path
+        mock_start.return_value = MagicMock(returncode=0, stdout="cid", stderr="")
+        mock_deps.return_value = MagicMock(returncode=0, stdout="skipped", stderr="")
+        asyncio.run(run_lane(agent, "B9-PROXY", [task], budget, None))
+
+    mock_deps.assert_called_once_with(
+        "bench-B9-PROXY-test-task-adhoc-run",
+        profile="none",
+    )
+
+
+def test_run_lane_counts_infra_from_failure_type_not_error():
+    """REQUEST_TIMEOUT should not increment infra_fails just because error is set."""
+    agent = _make_agent(resolved=False)
+    agent.solve_task = AsyncMock(return_value=AgentResult(
+        task_id="test-task",
+        resolved=False,
+        wall_time_s=1.0,
+        error="request timed out",
+        artifacts={
+            "failure_type": "REQUEST_TIMEOUT",
+            "failure_evidence": {"timeout_source": "request_timeout"},
+        },
+    ))
+    task = _make_task()
+    budget = BudgetProfile(wall_time_s=60, token_cap=1000, max_tool_calls=10)
+
+    with patch("scripts.benchmark_runner.create_task_sandbox") as mock_sandbox:
+        mock_sandbox.return_value = Path("/tmp/fake-sandbox")
+        run_data = asyncio.run(run_lane(agent, "B7", [task], budget, None))
+
+    assert run_data["aggregate"]["infra_fails"] == 0
+    assert run_data["results"][0]["artifacts"]["failure_type"] == "REQUEST_TIMEOUT"
+
+
+def test_run_lane_calls_adapter_pre_task_healthcheck():
+    """Runner should delegate provider preflight to the adapter."""
+    agent = _make_agent(resolved=True)
+    task = _make_task()
+    budget = BudgetProfile(wall_time_s=60, token_cap=1000, max_tool_calls=10)
+
+    with patch("scripts.benchmark_runner.create_task_sandbox") as mock_sandbox:
+        mock_sandbox.return_value = Path("/tmp/fake-sandbox")
+        asyncio.run(run_lane(agent, "B7", [task], budget, None))
+
+    agent.pre_task_healthcheck.assert_called_once()
+
+
+def test_run_lane_halts_on_provider_healthcheck_failure():
+    """A provider health failure should halt the run before solve_task."""
+    from scripts.adapters.base import ProviderHealthError
+
+    agent = _make_agent(resolved=True)
+    agent.pre_task_healthcheck.side_effect = ProviderHealthError("provider down")
+    task = _make_task()
+    budget = BudgetProfile(wall_time_s=60, token_cap=1000, max_tool_calls=10)
+
+    run_data = asyncio.run(run_lane(agent, "B7", [task], budget, None))
+
+    agent.solve_task.assert_not_called()
+    assert run_data["halted"] is True
+    assert run_data["results"] == []
+
+
+def test_run_lane_parallel_run_ids_keep_disjoint_containers_progress_and_cleanup(
+    tmp_path: Path,
+):
+    """Concurrent runs with different run_ids should not share names or progress."""
+    agent_a = _make_agent(resolved=True)
+    agent_b = _make_agent(resolved=True)
+    task_a = _make_task()
+    task_b = _make_task()
+    task_a.extra["python_version"] = "3.11"
+    task_b.extra["python_version"] = "3.11"
+    budget = BudgetProfile(wall_time_s=60, token_cap=1000, max_tool_calls=10)
+
+    save_calls: list[tuple[str, str, str]] = []
+    cleanup_names: list[str] = []
+
+    def _record_progress(
+        lane: str,
+        agent_name: str,
+        run_id: str,
+        model: str,
+        started_at: str,
+        results: list[dict],
+        image_digests: dict[str, str],
+    ) -> None:
+        del model, started_at, results, image_digests
+        save_calls.append((lane, agent_name, run_id))
+
+    async def _run_both() -> None:
+        with patch("scripts.benchmark_runner.create_task_sandbox") as mock_sandbox, \
+             patch("scripts.benchmark_runner.docker_available", return_value=True), \
+             patch("scripts.benchmark_runner.start_container") as mock_start, \
+             patch("scripts.benchmark_runner.install_build_deps") as mock_deps, \
+             patch("scripts.benchmark_runner.fix_permissions"), \
+             patch("scripts.benchmark_runner.stop_and_remove", side_effect=cleanup_names.append), \
+             patch(
+                 "scripts.benchmark_runner._save_progress",
+                 side_effect=_record_progress,
+             ):
+            (tmp_path / "run-a").mkdir()
+            (tmp_path / "run-b").mkdir()
+            mock_sandbox.side_effect = [tmp_path / "run-a", tmp_path / "run-b"]
+            mock_start.return_value = MagicMock(returncode=0, stdout="cid", stderr="")
+            mock_deps.return_value = MagicMock(returncode=0, stdout="ok", stderr="")
+            await asyncio.gather(
+                run_lane(
+                    agent_a,
+                    "B7",
+                    [task_a],
+                    budget,
+                    None,
+                    run_id="run-a",
+                    started_at="2026-03-10T00:00:00+00:00",
+                ),
+                run_lane(
+                    agent_b,
+                    "B7",
+                    [task_b],
+                    budget,
+                    None,
+                    run_id="run-b",
+                    started_at="2026-03-10T00:00:00+00:00",
+                ),
+            )
+            container_names = [
+                call.args[0] for call in mock_start.call_args_list
+            ]
+            assert len(container_names) == 2
+            assert container_names[0] != container_names[1]
+
+    asyncio.run(_run_both())
+
+    assert sorted(save_calls) == [
+        ("B7", "test-agent", "run-a"),
+        ("B7", "test-agent", "run-b"),
+    ]
+    assert sorted(cleanup_names) == sorted(set(cleanup_names))
+    assert len(cleanup_names) == 2
+
+
+def test_build_run_contract_includes_run_id():
+    """Artifacts should record run_id in the contract."""
+    agent = _make_agent()
+    budget = BudgetProfile(wall_time_s=60, token_cap=1000, max_tool_calls=10)
+    contract = build_run_contract(
+        agent,
+        "B7",
+        None,
+        budget,
+        "python scripts/benchmark_runner.py",
+        "run-123",
+    )
+    assert contract["run_id"] == "run-123"
 
 
 # --- Manifest validation ---

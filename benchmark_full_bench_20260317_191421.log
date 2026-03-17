@@ -1,0 +1,628 @@
+==========================================
+Sequential Benchmark Run — Tue Mar 17 07:14:21 PM +06 2026
+Model: tools | Host: http://localhost:4000/v1
+Provider: openrouter
+Run ID: 20260317-131421-2359704
+Gateway health: http://localhost:4000/health/readiness
+==========================================
+Pre-flight gateway check...
+Gateway OK
+
+>>>>>>>>>> Starting B7 at Tue Mar 17 07:14:21 PM +06 2026 <<<<<<<<<<
+  Model: swebench
+tool_call_end
+tool_call_end
+agent_loop_max_iterations
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 2/5: Request timed out. (waiting 10s)
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 503 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.ServiceUnavailableError: Vertex_ai_beta (waiting 15s)
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 2/5: Request timed out. (waiting 10s)
+OpenRouter retry 3/5: Request timed out. (waiting 20s)
+OpenRouter retry 4/5: Request timed out. (waiting 40s)
+llm_error
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+OpenRouter retry 1/5: Error code: 500 - {'error': {'message': "litellm.APIConnectionError: OllamaException - Cannot connect to host 192.168.0. (waiting 5s)
+OpenRouter retry 2/5: Error code: 500 - {'error': {'message': "litellm.APIConnectionError: OllamaException - Cannot connect to host 192.168.0. (waiting 10s)
+OpenRouter retry 3/5: Error code: 500 - {'error': {'message': "litellm.APIConnectionError: OllamaException - Cannot connect to host 192.168.0. (waiting 20s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: OllamaException - Cannot connect to host 192.168.0. (waiting 30s)
+OpenRouter retry 3/5: Request timed out. (waiting 20s)
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+Benchmark run_id: 20260317-131421-2359704
+
+============================================================
+Lane: B7 | Agent: autocode | Model: swebench
+Run ID: 20260317-131421-2359704
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: django__django-10880 ---
+  Description: Query syntax error with condition and distinct combination
+Description
+	
+A Count
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_django__django-10880_20260317_131421
+  Docker: python:3.8-slim (bench-B7-django__django-10880-20260317-131421-2359704)
+  Setup (docker): git init django...
+  Setup (docker): cd django && git remote add origin https://github.com/django/django.git...
+  Setup (docker): cd django && git fetch --depth=1 origin 838e432e3e5519c5383d12018e6c78f8ec7833c1...
+  Setup (docker): cd django && git checkout FETCH_HEAD...
+  Setup (docker): cd django && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_django__django-10880_20260317_131421/setup_log.txt
+  Result: FAILED (851.0s)
+
+--- Task 2/5: sympy__sympy-12096 ---
+  Description: evalf does not call _imp_ recursively
+Example from https://stackoverflow.com/que
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_sympy__sympy-12096_20260317_132926
+  Docker: python:3.9-slim (bench-B7-sympy__sympy-12096-20260317-131421-2359704)
+  Setup (docker): git init sympy...
+  Setup (docker): cd sympy && git remote add origin https://github.com/sympy/sympy.git...
+  Setup (docker): cd sympy && git fetch --depth=1 origin d7c3045115693e887bcd03599b7ca4650ac5f2cb...
+  Setup (docker): cd sympy && git checkout FETCH_HEAD...
+  Setup (docker): cd sympy && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_sympy__sympy-12096_20260317_132926/setup_log.txt
+  Result: ERROR: InternalServerError: Error code: 500 - {'error': { (638.2s)
+
+--- Task 3/5: scikit-learn__scikit-learn-11310 ---
+  Description: Retrieving time to refit the estimator in BaseSearchCV
+Basically, I'm trying to 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_scikit-learn__scikit-learn-11310_20260317_134054
+  Docker: python:3.7-slim (bench-B7-scikit-learn__scikit-learn-11310-20260317-131421-2359704)
+  Setup (docker): git init scikit-learn...
+  Setup (docker): cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-...
+  Setup (docker): cd scikit-learn && git fetch --depth=1 origin 553b5fb8f84ba05c8397f26dd079deece2...
+  Setup (docker): cd scikit-learn && git checkout FETCH_HEAD...
+  Setup (docker): cd scikit-learn && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_scikit-learn__scikit-learn-11310_20260317_134054/setup_log.txt
+  Result: RESOLVED (359.5s)
+
+--- Task 4/5: pytest-dev__pytest-10081 ---
+  Description: unittest.TestCase.tearDown executed for classes marked with `unittest.skip` when
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_pytest-dev__pytest-10081_20260317_135323
+  Docker: python:3.9-slim (bench-B7-pytest-dev__pytest-10081-20260317-131421-2359704)
+  Setup (docker): git init pytest...
+  Setup (docker): cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git...
+  Setup (docker): cd pytest && git fetch --depth=1 origin da9a2b584eb7a6c7e924b2621ed0ddaeca0a7bea...
+  Setup (docker): cd pytest && git checkout FETCH_HEAD...
+  Setup (docker): cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0 pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_pytest-dev__pytest-10081_20260317_135323/setup_log.txt
+  Result: RESOLVED (7.0s)
+
+--- Task 5/5: matplotlib__matplotlib-13989 ---
+  Description: hist() no longer respects range=... when density=True
+<!--To help us understand 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_matplotlib__matplotlib-13989_20260317_135447
+  Docker: python:3.7-slim (bench-B7-matplotlib__matplotlib-13989-20260317-131421-2359704)
+  Setup (docker): git init matplotlib...
+  Setup (docker): cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib....
+  Setup (docker): cd matplotlib && git fetch --depth=1 origin a3e2897bfaf9eaac1d6649da535c4e721c89...
+  Setup (docker): cd matplotlib && git checkout FETCH_HEAD...
+  Setup (docker): cd matplotlib && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_matplotlib__matplotlib-13989_20260317_135447/setup_log.txt
+  Result: FAILED (549.1s)
+
+============================================================
+LANE B7 COMPLETE
+  Resolved: 2/5 (40.0%)
+  Infra fails: 1
+  Total time: 2404.8s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260317-140603-B7-autocode.json
+<<<<<<<<<< B7 finished (rc=0) at Tue Mar 17 08:06:04 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B8 at Tue Mar 17 08:06:19 PM +06 2026 <<<<<<<<<<
+  Model: swebench
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+tool_call_end
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 2/5: Error code: 500 - {'error': {'message': "litellm.APIConnectionError: OllamaException - Cannot connect to host 192.168.0. (waiting 10s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 45s)
+OpenRouter retry 4/5: Request timed out. (waiting 40s)
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5: Error code: 500 - {'error': {'message': "litellm.APIConnectionError: OllamaException - Cannot connect to host 192.168.0. (waiting 5s)
+OpenRouter retry 2/5: Error code: 500 - {'error': {'message': "litellm.APIConnectionError: OllamaException - Cannot connect to host 192.168.0. (waiting 10s)
+OpenRouter retry 3/5: Error code: 500 - {'error': {'message': "litellm.APIConnectionError: OllamaException - Cannot connect to host 192.168.0. (waiting 20s)
+OpenRouter retry 4/5: Error code: 500 - {'error': {'message': "litellm.APIConnectionError: OllamaException - Cannot connect to host 192.168.0. (waiting 40s)
+llm_error
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5: Error code: 500 - {'error': {'message': "litellm.APIConnectionError: OllamaException - Cannot connect to host 192.168.0. (waiting 5s)
+OpenRouter retry 2/5: Error code: 500 - {'error': {'message': "litellm.APIConnectionError: OllamaException - Cannot connect to host 192.168.0. (waiting 10s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: OllamaException - Cannot connect to host 192.168.0. (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 60s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+tool_call_end
+OpenRouter retry 1/5: Error code: 500 - {'error': {'message': "litellm.APIConnectionError: OllamaException - Cannot connect to host 192.168.0. (waiting 5s)
+OpenRouter retry 2/5: Error code: 500 - {'error': {'message': "litellm.APIConnectionError: OllamaException - Cannot connect to host 192.168.0. (waiting 10s)
+OpenRouter retry 3/5: Error code: 500 - {'error': {'message': "litellm.APIConnectionError: OllamaException - Cannot connect to host 192.168.0. (waiting 20s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 60s)
+llm_error
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 2/5: Request timed out. (waiting 10s)
+OpenRouter retry 3/5: Request timed out. (waiting 20s)
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 2/5: Request timed out. (waiting 10s)
+OpenRouter retry 3/5: Request timed out. (waiting 20s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 60s)
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 2/5: Request timed out. (waiting 10s)
+OpenRouter retry 3/5: Request timed out. (waiting 20s)
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 2/5: Request timed out. (waiting 10s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 45s)
+OpenRouter retry 4/5: Request timed out. (waiting 40s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+tool_call_end
+agent_loop_max_iterations
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+agent_loop_max_iterations
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+agent_loop_max_iterations
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+agent_loop_max_iterations
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 30s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': "litellm.RateLimitError: RateLimitError: Nvidia_nimException - Error code: 429 - (waiting 15s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: OpenrouterException - {"error":{"message":"This endpoi (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: OpenrouterException - {"error":{"message":"This endpoi (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: OpenrouterException - {"error":{"message":"This endpoi (waiting 40s)
+llm_error
+Benchmark run_id: 20260317-131421-2359704
+
+============================================================
+Lane: B8 | Agent: autocode | Model: swebench
+Run ID: 20260317-131421-2359704
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: django__django-10880 ---
+  Description: Query syntax error with condition and distinct combination
+Description
+	
+A Count
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_django__django-10880_20260317_140619
+  Docker: python:3.8-slim (bench-B8-django__django-10880-20260317-131421-2359704)
+  Setup (docker): git init django...
+  Setup (docker): cd django && git remote add origin https://github.com/django/django.git...
+  Setup (docker): cd django && git fetch --depth=1 origin 838e432e3e5519c5383d12018e6c78f8ec7833c1...
+  Setup (docker): cd django && git checkout FETCH_HEAD...
+  Setup (docker): cd django && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_django__django-10880_20260317_140619/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (976.1s)
+
+--- Task 2/5: sympy__sympy-12096 ---
+  Description: evalf does not call _imp_ recursively
+Example from https://stackoverflow.com/que
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_sympy__sympy-12096_20260317_142356
+  Docker: python:3.9-slim (bench-B8-sympy__sympy-12096-20260317-131421-2359704)
+  Setup (docker): git init sympy...
+  Setup (docker): cd sympy && git remote add origin https://github.com/sympy/sympy.git...
+  Setup (docker): cd sympy && git fetch --depth=1 origin d7c3045115693e887bcd03599b7ca4650ac5f2cb...
+  Setup (docker): cd sympy && git checkout FETCH_HEAD...
+  Setup (docker): cd sympy && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_sympy__sympy-12096_20260317_142356/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (758.6s)
+
+--- Task 3/5: scikit-learn__scikit-learn-11310 ---
+  Description: Retrieving time to refit the estimator in BaseSearchCV
+Basically, I'm trying to 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_scikit-learn__scikit-learn-11310_20260317_143754
+  Docker: python:3.7-slim (bench-B8-scikit-learn__scikit-learn-11310-20260317-131421-2359704)
+  Setup (docker): git init scikit-learn...
+  Setup (docker): cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-...
+  Setup (docker): cd scikit-learn && git fetch --depth=1 origin 553b5fb8f84ba05c8397f26dd079deece2...
+  Setup (docker): cd scikit-learn && git checkout FETCH_HEAD...
+  Setup (docker): cd scikit-learn && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_scikit-learn__scikit-learn-11310_20260317_143754/setup_log.txt
+  Result: FAILED (2791.7s)
+
+--- Task 4/5: pytest-dev__pytest-10081 ---
+  Description: unittest.TestCase.tearDown executed for classes marked with `unittest.skip` when
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_pytest-dev__pytest-10081_20260317_152757
+  Docker: python:3.9-slim (bench-B8-pytest-dev__pytest-10081-20260317-131421-2359704)
+  Setup (docker): git init pytest...
+  Setup (docker): cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git...
+  Setup (docker): cd pytest && git fetch --depth=1 origin da9a2b584eb7a6c7e924b2621ed0ddaeca0a7bea...
+  Setup (docker): cd pytest && git checkout FETCH_HEAD...
+  Setup (docker): cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0 pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_pytest-dev__pytest-10081_20260317_152757/setup_log.txt
+  Result: FAILED (488.6s)
+
+--- Task 5/5: matplotlib__matplotlib-13989 ---
+  Description: hist() no longer respects range=... when density=True
+<!--To help us understand 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_matplotlib__matplotlib-13989_20260317_153725
+  Docker: python:3.7-slim (bench-B8-matplotlib__matplotlib-13989-20260317-131421-2359704)
+  Setup (docker): git init matplotlib...
+  Setup (docker): cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib....
+  Setup (docker): cd matplotlib && git fetch --depth=1 origin a3e2897bfaf9eaac1d6649da535c4e721c89...
+  Setup (docker): cd matplotlib && git checkout FETCH_HEAD...
+  Setup (docker): cd matplotlib && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_matplotlib__matplotlib-13989_20260317_153725/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (420.7s)
+
+============================================================
+LANE B8 COMPLETE
+  Resolved: 0/5 (0.0%)
+  Infra fails: 3
+  Total time: 5435.7s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260317-154642-B8-autocode.json
+<<<<<<<<<< B8 finished (rc=0) at Tue Mar 17 09:46:42 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B9-PROXY at Tue Mar 17 09:46:57 PM +06 2026 <<<<<<<<<<
+  Model: tools
+OpenRouter retry 1/5: Error code: 500 - {'error': {'message': "invalid literal for int() with base 10: 'tool_use_failed'", 'type': 'None', 'pa (waiting 5s)
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 60s)
+llm_error
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 45s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 60s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 60s)
+llm_error
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 60s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 1/5: Error code: 500 - {'error': {'message': "invalid literal for int() with base 10: 'tool_use_failed'", 'type': 'None', 'pa (waiting 5s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 15s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 60s)
+llm_error
+Benchmark run_id: 20260317-131421-2359704
+
+============================================================
+Lane: B9-PROXY | Agent: autocode | Model: tools
+Run ID: 20260317-131421-2359704
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: tb-001-hello-world ---
+  Description: Write a script that outputs "Hello, World!"
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-001-hello-world_20260317_154657
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-001-hello-world
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-001-hello-world-20260317-131421-2359704)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-001-hello-world_20260317_154657/setup_log.txt
+  Result: RESOLVED (57.2s)
+
+--- Task 2/5: tb-002-fix-git ---
+  Description: Fix a repo with detached HEAD and uncommitted changes
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-002-fix-git_20260317_154805
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-002-fix-git
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-002-fix-git-20260317-131421-2359704)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-002-fix-git_20260317_154805/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (495.3s)
+
+--- Task 3/5: tb-003-fix-permissions ---
+  Description: Fix broken file permissions on a web app directory
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-003-fix-permissions_20260317_155646
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-003-fix-permissions
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-003-fix-permissions-20260317-131421-2359704)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-003-fix-permissions_20260317_155646/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (723.3s)
+
+--- Task 4/5: tb-004-csv-to-parquet ---
+  Description: Convert CSV to Parquet using Python
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-004-csv-to-parquet_20260317_160900
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-004-csv-to-parquet
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-004-csv-to-parquet-20260317-131421-2359704)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-004-csv-to-parquet_20260317_160900/setup_log.txt
+  Result: RESOLVED (352.3s)
+
+--- Task 5/5: tb-005-chess-best-move ---
+  Description: Find best chess move from FEN notation
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-005-chess-best-move_20260317_161621
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-005-chess-best-move
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-005-chess-best-move-20260317-131421-2359704)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-005-chess-best-move_20260317_161621/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (290.7s)
+
+============================================================
+LANE B9-PROXY COMPLETE
+  Resolved: 2/5 (40.0%)
+  Infra fails: 3
+  Total time: 1918.8s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260317-162126-B9-PROXY-autocode.json
+<<<<<<<<<< B9-PROXY finished (rc=0) at Tue Mar 17 10:21:26 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B10-PROXY at Tue Mar 17 10:21:41 PM +06 2026 <<<<<<<<<<
+  Model: tools
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 60s)
+llm_error
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 45s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 60s)
+llm_error
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 60s)
+llm_error
+Benchmark run_id: 20260317-131421-2359704
+
+============================================================
+Lane: B10-PROXY | Agent: autocode | Model: tools
+Run ID: 20260317-131421-2359704
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: ml-001-dtype-mismatch ---
+  Description: Fix floor division truncation in mean calculation
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-001-dtype-mismatch_20260317_162141
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-001-dtype-mismatch
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-001-dtype-mismatch-20260317-131421-2359704)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-001-dtype-mismatch_20260317_162141/setup_log.txt
+  Result: RESOLVED (53.9s)
+
+--- Task 2/5: ml-002-off-by-one ---
+  Description: Fix off-by-one in sliding window function
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-002-off-by-one_20260317_162249
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-002-off-by-one
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-002-off-by-one-20260317-131421-2359704)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-002-off-by-one_20260317_162249/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (229.4s)
+
+--- Task 3/5: ml-003-encoding-error ---
+  Description: Fix Unicode encoding error in CSV reader
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-003-encoding-error_20260317_162652
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-003-encoding-error
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-003-encoding-error-20260317-131421-2359704)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-003-encoding-error_20260317_162652/setup_log.txt
+  Result: RESOLVED (121.6s)
+
+--- Task 4/5: ml-004-null-handling ---
+  Description: Fix null value handling in data pipeline
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-004-null-handling_20260317_162908
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-004-null-handling
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-004-null-handling-20260317-131421-2359704)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-004-null-handling_20260317_162908/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (312.6s)
+
+--- Task 5/5: ml-005-race-condition ---
+  Description: Fix race condition in threaded counter
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-005-race-condition_20260317_163434
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-005-race-condition
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-005-race-condition-20260317-131421-2359704)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-005-race-condition_20260317_163434/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (253.4s)
+
+============================================================
+LANE B10-PROXY COMPLETE
+  Resolved: 2/5 (40.0%)
+  Infra fails: 3
+  Total time: 970.9s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260317-163902-B10-PROXY-autocode.json
+<<<<<<<<<< B10-PROXY finished (rc=0) at Tue Mar 17 10:39:02 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B11 at Tue Mar 17 10:39:17 PM +06 2026 <<<<<<<<<<
+  Model: tools
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 60s)
+llm_error
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 30s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': "No deployments available for selected model, Try again in 300 seconds. Passed m (waiting 60s)
+llm_error
+Benchmark run_id: 20260317-131421-2359704
+
+============================================================
+Lane: B11 | Agent: autocode | Model: tools
+Run ID: 20260317-131421-2359704
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: bax-001-sql-injection ---
+  Description: Fix SQL injection vulnerability in user login endpoint
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-001-sql-injection_20260317_163917
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b11/bax-001-sql-injection
+  Docker: python:3.11-slim (bench-B11-bax-001-sql-injection-20260317-131421-2359704)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-001-sql-injection_20260317_163917/setup_log.txt
+  Result: RESOLVED (26.5s)
+
+--- Task 2/5: bax-002-xss-stored ---
+  Description: Fix stored XSS in comment submission handler
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-002-xss-stored_20260317_164055
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b11/bax-002-xss-stored
+  Docker: python:3.11-slim (bench-B11-bax-002-xss-stored-20260317-131421-2359704)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-002-xss-stored_20260317_164055/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (244.3s)
+
+--- Task 3/5: bax-003-auth-bypass ---
+  Description: Fix authentication bypass via JWT algorithm confusion
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-003-auth-bypass_20260317_164616
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b11/bax-003-auth-bypass
+  Docker: python:3.11-slim (bench-B11-bax-003-auth-bypass-20260317-131421-2359704)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-003-auth-bypass_20260317_164616/setup_log.txt
+  Result: RESOLVED (13.1s)
+
+--- Task 4/5: bax-004-path-traversal ---
+  Description: Fix path traversal in file download endpoint
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-004-path-traversal_20260317_164746
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b11/bax-004-path-traversal
+  Docker: python:3.11-slim (bench-B11-bax-004-path-traversal-20260317-131421-2359704)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-004-path-traversal_20260317_164746/setup_log.txt
+  Result: RESOLVED (11.6s)
+
+--- Task 5/5: bax-005-csrf ---
+  Description: Add CSRF protection to state-changing API endpoints
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-005-csrf_20260317_164909
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b11/bax-005-csrf
+  Docker: python:3.11-slim (bench-B11-bax-005-csrf-20260317-131421-2359704)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-005-csrf_20260317_164909/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (279.8s)
+
+============================================================
+LANE B11 COMPLETE
+  Resolved: 3/5 (60.0%)
+  Infra fails: 2
+  Total time: 575.3s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260317-165501-B11-autocode.json
+<<<<<<<<<< B11 finished (rc=0) at Tue Mar 17 10:55:01 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B12-PROXY at Tue Mar 17 10:55:16 PM +06 2026 <<<<<<<<<<
+  Model: tools
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)

@@ -8,12 +8,24 @@ import pytest
 import yaml
 
 from autocode.config import (
+    DEFAULT_OLLAMA_API_BASE,
+    DEFAULT_OLLAMA_MODEL,
     AutoCodeConfig,
     LLMConfig,
     check_config,
     load_config,
     save_config,
 )
+
+
+def _patch_no_global_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Patch out global config so tests see only Pydantic defaults + env vars."""
+    empty_dir = tmp_path / "_no_global"
+    empty_dir.mkdir(exist_ok=True)
+    monkeypatch.setattr(
+        "autocode.config._resolve_global_config",
+        lambda: (empty_dir, empty_dir / "config.yaml"),
+    )
 
 
 class TestConfigDefaults:
@@ -23,9 +35,13 @@ class TestConfigDefaults:
         config = AutoCodeConfig()
         assert config.llm.provider == "ollama"
 
-    def test_default_model_is_qwen3(self) -> None:
+    def test_default_model_is_qwen35_27b(self) -> None:
         config = AutoCodeConfig()
-        assert config.llm.model == "qwen3:8b"
+        assert config.llm.model == DEFAULT_OLLAMA_MODEL
+
+    def test_default_api_base_is_remote_ollama_host(self) -> None:
+        config = AutoCodeConfig()
+        assert config.llm.api_base == DEFAULT_OLLAMA_API_BASE
 
     def test_default_temperature(self) -> None:
         config = AutoCodeConfig()
@@ -110,14 +126,17 @@ class TestConfigYAML:
     def test_load_missing_yaml_returns_defaults(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        _patch_no_global_config(monkeypatch, tmp_path)
         monkeypatch.delenv("AUTOCODE_LLM_PROVIDER", raising=False)
         monkeypatch.delenv("HYBRIDCODER_LLM_PROVIDER", raising=False)
         monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
         monkeypatch.delenv("OLLAMA_HOST", raising=False)
         monkeypatch.delenv("OLLAMA_MODEL", raising=False)
+        monkeypatch.delenv("AUTOCODE_LLM_API_BASE", raising=False)
+        monkeypatch.delenv("AUTOCODE_LLM_MODEL", raising=False)
         config = load_config(project_root=tmp_path)
-        assert config.llm.model == "qwen3:8b"
+        assert config.llm.model == DEFAULT_OLLAMA_MODEL
 
 
 class TestConfigEnvOverrides:
@@ -132,9 +151,11 @@ class TestConfigEnvOverrides:
     def test_openrouter_env_configures_api_base(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
+        _patch_no_global_config(monkeypatch, tmp_path)
         monkeypatch.setenv("AUTOCODE_LLM_PROVIDER", "openrouter")
         monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
         monkeypatch.setenv("OPENROUTER_MODEL", "test/model")
+        monkeypatch.delenv("AUTOCODE_LLM_API_BASE", raising=False)
         config = load_config(project_root=tmp_path)
         assert config.llm.api_base == "https://openrouter.ai/api/v1"
         assert config.llm.model == "test/model"
@@ -142,6 +163,7 @@ class TestConfigEnvOverrides:
     def test_no_openrouter_without_explicit_opt_in(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
+        _patch_no_global_config(monkeypatch, tmp_path)
         monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
         monkeypatch.delenv("AUTOCODE_LLM_PROVIDER", raising=False)
         monkeypatch.delenv("HYBRIDCODER_LLM_PROVIDER", raising=False)
@@ -178,11 +200,13 @@ class TestOpenRouterApiBase:
     def test_yaml_openrouter_gets_correct_api_base(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """If YAML sets provider=openrouter, api_base should auto-correct from Ollama default."""
+        """If YAML sets provider=openrouter, api_base should auto-correct from gateway default."""
+        _patch_no_global_config(monkeypatch, tmp_path)
         monkeypatch.delenv("AUTOCODE_LLM_PROVIDER", raising=False)
         monkeypatch.delenv("HYBRIDCODER_LLM_PROVIDER", raising=False)
         monkeypatch.delenv("OLLAMA_HOST", raising=False)
         monkeypatch.delenv("OLLAMA_MODEL", raising=False)
+        monkeypatch.delenv("AUTOCODE_LLM_API_BASE", raising=False)
         project_config = tmp_path / ".autocode.yaml"
         project_config.write_text(yaml.dump({"llm": {"provider": "openrouter"}}))
         config = load_config(project_root=tmp_path)
@@ -192,10 +216,12 @@ class TestOpenRouterApiBase:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """If YAML sets both provider and api_base, don't override."""
+        _patch_no_global_config(monkeypatch, tmp_path)
         monkeypatch.delenv("AUTOCODE_LLM_PROVIDER", raising=False)
         monkeypatch.delenv("HYBRIDCODER_LLM_PROVIDER", raising=False)
         monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+        monkeypatch.delenv("AUTOCODE_LLM_API_BASE", raising=False)
         project_config = tmp_path / ".autocode.yaml"
         project_config.write_text(
             yaml.dump({"llm": {"provider": "openrouter", "api_base": "https://custom.api/v1"}})

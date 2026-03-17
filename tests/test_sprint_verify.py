@@ -52,8 +52,16 @@ class TestSprint1Config:
     def test_env_var_precedence(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         from autocode.config import load_config
 
+        # Isolate from global config and .env overrides
+        empty_dir = tmp_path / "_no_global"
+        empty_dir.mkdir(exist_ok=True)
+        monkeypatch.setattr(
+            "autocode.config._resolve_global_config",
+            lambda: (empty_dir, empty_dir / "config.yaml"),
+        )
         monkeypatch.setenv("AUTOCODE_LLM_PROVIDER", "openrouter")
         monkeypatch.setenv("OPENROUTER_API_KEY", "fake-key")
+        monkeypatch.delenv("AUTOCODE_LLM_API_BASE", raising=False)
         config = load_config(project_root=tmp_path)
         assert config.llm.provider == "openrouter"
         assert config.llm.api_base == "https://openrouter.ai/api/v1"
@@ -362,7 +370,7 @@ class TestSprint2Agent:
             session_store=store,
             session_id=sid,
         )
-        assert loop.MAX_ITERATIONS == 10
+        assert loop.MAX_ITERATIONS == 1000
         store.close()
 
 

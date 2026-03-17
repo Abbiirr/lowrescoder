@@ -240,7 +240,7 @@ Three databases:
 - Must use h2-mvstore 2.2.224 exactly (not 2.4.x — incompatible format version)
 - Entity classes from `core.jar` needed on classpath for proper deserialization
 
-### 3.6 Ollama — `http://10.112.30.10:11434` (unencrypted HTTP)
+### 3.6 LLM Gateway / Ollama — `http://localhost:4000/v1` (gateway) / `http://localhost:11434` (direct Ollama)
 
 Endpoints: `/api/chat`, `/api/generate`, `/api/tags`, `/api/show`
 - Request: `{model, messages, stream, options: {temperature, num_ctx, ...}}`
@@ -435,7 +435,7 @@ modules/ailogd/
 
 **4. Ollama Reverse Proxy** (inline async):
 - `httpx`-based async reverse proxy on `localhost:11435`
-- Forwards to configured Ollama host (from `config.yaml`, default `10.112.30.10:11434`)
+- Forwards to configured Ollama host (from `config.yaml`, default `localhost:4000`)
 - Logs full request body + full response body to `~/logs/ollama/traffic.jsonl`
 - Non-blocking — streams responses through while capturing
 
@@ -607,7 +607,7 @@ exit 0
 File: `modules/ailogd/capture/ollama_proxy.py`
 
 - Async `httpx`-based reverse proxy on `localhost:11435`
-- Forwards to configured Ollama host (default `10.112.30.10:11434`)
+- Forwards to configured Ollama host (default `localhost:4000`)
 - Captures full request JSON (model, messages, system, options) + full response JSON
 - Output: `~/logs/ollama/traffic.jsonl`
 - Automatically used via `OLLAMA_HOST` injected by wrappers and `~/.bashrc`

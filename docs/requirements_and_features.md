@@ -470,7 +470,7 @@ See `docs/archive/plan/go-bubble-tea-migration.md` for the full migration plan.
 | LSP Client | Deferred (Jedi preferred over multilspy) | Evaluating |
 | Vector DB | LanceDB | Active |
 | Embeddings | jina-v2-base-code | Active |
-| L4 LLM Runtime | Ollama | Active |
-| L4 Model | Qwen3-8B Q4_K_M | Active |
+| L4 LLM Runtime | LLM Gateway (`http://localhost:4000/v1`) | Active |
+| L4 Model | `coding` alias (auto-routed across 9 providers) | Active |
 | L3 LLM Runtime | llama-cpp-python + native grammar | Planned (Phase 5) |
 | L3 Model | Qwen2.5-Coder-1.5B Q4_K_M | Planned |

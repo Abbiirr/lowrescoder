@@ -9,7 +9,7 @@ AutoCode runs on consumer hardware (8GB VRAM, 16GB RAM) with no cloud dependency
 - Python 3.11+
 - [uv](https://docs.astral.sh/uv/) package manager
 - Go 1.22+ (for the TUI frontend)
-- [Ollama](https://ollama.com/) (for local LLM inference)
+- [LLM Gateway](http://localhost:4001/docs) running at `http://localhost:4000/v1` (OpenAI-compatible, 9 free providers with auto-failover)
 
 ## Quick Start
 
@@ -23,11 +23,8 @@ uv sync --all-extras
 make tui                  # Linux/macOS
 build.bat tui             # Windows
 
-# Pull the default model
-ollama pull qwen3:8b
-
-# Start Ollama
-ollama serve
+# Ensure the LLM Gateway is running at http://localhost:4000/v1
+# (see http://localhost:4001/docs for setup)
 
 # Start chatting
 uv run autocode chat
@@ -48,7 +45,7 @@ uv sync --all-extras
 uv sync --extra layer1   # tree-sitter parsing
 uv sync --extra layer2   # LanceDB + embeddings
 uv sync --extra layer3   # llama-cpp-python + Outlines (constrained generation)
-uv sync --extra layer4   # Ollama client
+uv sync --extra layer4   # LLM Gateway client (OpenAI-compatible)
 uv sync --extra dev      # pytest, ruff, mypy
 ```
 
@@ -136,44 +133,44 @@ AutoCode loads configuration with this precedence (highest wins):
 3. Global config (`~/.autocode/config.yaml`)
 4. Built-in defaults
 
-### Default backend: Ollama (local)
+### Default backend: LLM Gateway
 
-No configuration needed — just have Ollama running:
-
-```bash
-ollama serve
-```
-
-### Using OpenRouter (cloud, for development)
-
-Copy the example env file and add your API key:
+No configuration needed — just have the LLM Gateway running at `http://localhost:4000/v1`:
 
 ```bash
-cp .env.example .env
-# Edit .env with your OpenRouter key
+# Verify the gateway is up
+curl http://localhost:4000/health/readiness
+
+# See available model aliases
+curl http://localhost:4000/v1/models
 ```
 
-Then set the provider:
+The gateway aggregates 9 free providers (OpenRouter, Google AI Studio, Cerebras, Groq, Mistral, GitHub Models, NVIDIA NIM, Cloudflare, Cohere) with automatic failover and latency-based routing. See [gateway docs](http://localhost:4001/docs) for details.
 
-```bash
-# Via environment variable
-AUTOCODE_LLM_PROVIDER=openrouter uv run autocode chat
+### Model aliases
 
-# Or in .autocode.yaml
-# llm:
-#   provider: openrouter
-```
+Set `AUTOCODE_LLM_MODEL` to one of these aliases:
+
+| Alias | Best for |
+|-------|----------|
+| `coding` | Code generation, review, agentic coding (default for AutoCode) |
+| `default` | General purpose, tries all providers |
+| `fast` | Lowest latency (Cerebras, Groq) |
+| `thinking` | Deep reasoning (DeepSeek R1, Gemini 2.5 Pro) |
+| `vision` | Image/multimodal understanding |
+| `tools` | Function/tool calling |
+| `big` | Largest models (120B-405B) |
+| `local` | Ollama only, never leaves machine |
 
 ### Environment variables
 
 | Variable | Description |
 |----------|-------------|
-| `AUTOCODE_LLM_PROVIDER` | `ollama` (default) or `openrouter` |
-| `AUTOCODE_LLM_MODEL` | Model name override |
-| `AUTOCODE_LLM_API_BASE` | API base URL override |
+| `AUTOCODE_LLM_PROVIDER` | `ollama` (default, works with gateway's OpenAI-compatible API) |
+| `AUTOCODE_LLM_MODEL` | Model alias: `coding`, `default`, `fast`, `thinking`, etc. |
+| `AUTOCODE_LLM_API_BASE` | Gateway URL (default: `http://localhost:4000`) |
 | `AUTOCODE_LLM_TEMPERATURE` | Sampling temperature (0.0-2.0) |
-| `OPENROUTER_API_KEY` | OpenRouter API key (required if using OpenRouter) |
-| `OPENROUTER_MODEL` | OpenRouter model override |
+| `OLLAMA_HOST` | Legacy: gateway URL (default: `http://localhost:4000`) |
 
 ## Development
 
@@ -228,7 +225,7 @@ Integration tests are skipped by default. To run them:
 # OpenRouter (requires OPENROUTER_API_KEY in .env)
 uv run pytest -m integration tests/integration/test_openrouter.py
 
-# Ollama (requires ollama serve running)
+# LLM Gateway (requires gateway running at localhost:4000)
 uv run pytest -m integration tests/integration/test_ollama.py
 ```
 

@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from autocode.backend.server import BackendServer, _ServerAppContext
+from autocode.config import DEFAULT_OLLAMA_API_BASE, DEFAULT_OLLAMA_MODEL
 
 CaptureFixture = pytest.CaptureFixture[str]
 
@@ -26,9 +27,9 @@ def server(tmp_path: Path, temp_db: str) -> BackendServer:
     """Create a BackendServer with mocked config pointing to temp db."""
     with patch("autocode.backend.server.load_config") as mock_config:
         config = MagicMock()
-        config.llm.model = "qwen3:8b"
+        config.llm.model = DEFAULT_OLLAMA_MODEL
         config.llm.provider = "ollama"
-        config.llm.api_base = "http://localhost:11434"
+        config.llm.api_base = DEFAULT_OLLAMA_API_BASE
         config.llm.temperature = 0.2
         config.llm.max_tokens = 4096
         config.llm.context_length = 8192
@@ -47,7 +48,7 @@ def server(tmp_path: Path, temp_db: str) -> BackendServer:
         config.logging.log_dir = str(tmp_path / "logs")
         config.ui.verbose = False
         config.model_dump.return_value = {
-            "llm": {"model": "qwen3:8b", "provider": "ollama"},
+            "llm": {"model": DEFAULT_OLLAMA_MODEL, "provider": "ollama"},
             "tui": {"approval_mode": "suggest"},
         }
         mock_config.return_value = config
@@ -118,7 +119,7 @@ class TestWireProtocol:
         captured = capsys.readouterr()
         msg = json.loads(captured.out.strip())
         assert msg["method"] == "on_status"
-        assert msg["params"]["model"] == "qwen3:8b"
+        assert msg["params"]["model"] == DEFAULT_OLLAMA_MODEL
         assert msg["params"]["provider"] == "ollama"
 
     def test_write_message_newline_delimited(
@@ -759,7 +760,7 @@ class TestEmitStatusExtended:
         assert "provider" in params
         assert "mode" in params
         assert "session_id" in params
-        assert params["model"] == "qwen3:8b"
+        assert params["model"] == DEFAULT_OLLAMA_MODEL
         assert params["provider"] == "ollama"
         assert params["session_id"] == server.session_id
 

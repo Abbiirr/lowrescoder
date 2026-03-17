@@ -1,11 +1,16 @@
-# Ollama API
+# LLM Gateway API (formerly Ollama API)
 
-Source: https://docs.ollama.com/api/introduction
+Source: http://localhost:4001/docs
 
-Why this matters to HybridCoder:
-- Local LLM runtime used for Layer 4 generation only.
+Why this matters to AutoCode:
+- OpenAI-compatible API gateway used for Layer 4 generation.
+- Aggregates 9 free providers (OpenRouter, Google AI Studio, Cerebras, Groq, Mistral, GitHub Models, NVIDIA NIM, Cloudflare, Cohere).
+- Automatic failover, latency-based routing, 5-hour caching.
 - HTTP API with streaming token support.
 
 Notes from local docs:
-- Default base URL: http://localhost:11434/api
-- Layer 3 uses llama-cpp-python + Outlines (not Ollama).
+- Base URL: http://localhost:4000/v1
+- Docs URL: http://localhost:4001/docs
+- Model aliases: `coding` (default for AutoCode), `default`, `fast`, `thinking`, `vision`, `tools`, `big`, `local`.
+- Health check: `GET /health/readiness`
+- Layer 3 uses llama-cpp-python + native grammar (not the gateway).

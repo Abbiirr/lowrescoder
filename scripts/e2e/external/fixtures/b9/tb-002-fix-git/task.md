@@ -17,6 +17,17 @@ The git repository in `repo/` is in a broken state. It has a detached HEAD and t
 - HEAD is detached at the latest commit.
 - There are uncommitted changes: `newfile.txt` (new) and `file.txt` (modified).
 
+## Safe Recovery Hint
+
+One reliable sequence is:
+
+1. Stash tracked and untracked changes.
+2. Switch back to `main`.
+3. Restore the stash.
+4. Commit the restored changes.
+
+Do not lose `newfile.txt`, and do not leave the repo detached.
+
 ## Files
 
 - `repo/` — the git repository to fix

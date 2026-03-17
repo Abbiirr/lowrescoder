@@ -311,8 +311,8 @@ The unified benchmark runner (`scripts/benchmark_runner.py`) supersedes the Harb
 ```bash
 # Set environment
 export AUTOCODE_LLM_PROVIDER=ollama
-export OLLAMA_HOST=http://10.112.30.10:11434
-export OLLAMA_MODEL=glm-4.7-flash
+export OLLAMA_HOST=http://localhost:4000
+export OLLAMA_MODEL=coding
 
 # Run all lanes sequentially with resume (B7-B14)
 bash scripts/run_all_benchmarks.sh
@@ -323,11 +323,11 @@ tail -50 /tmp/claude-1000/-home-bs01763-projects-ai-lowrescoder/benchmark_full_r
 
 ### Resumability
 
-If the Ollama server crashes mid-run, simply re-run the same command. The `--resume` flag (enabled by default in the shell script) skips already-completed tasks by reading checkpoint files from `sandboxes/progress/`.
+If the LLM Gateway crashes mid-run, re-run with the same `BENCHMARK_RUN_ID`. The shell script enables `--resume` by default and now scopes checkpoints to `lane + agent + run_id`, so resuming one sweep does not collide with another clean rerun.
 
 ### Exponential Backoff
 
-Temporary Ollama outages are handled by the LLM layer with exponential backoff: 5s, 10s, 20s, 40s, 80s, 160s, 300s (capped), up to 10 retries. This means a brief server restart won't kill the entire benchmark run.
+Temporary LLM Gateway outages are handled by the LLM layer with exponential backoff: 5s, 10s, 20s, 40s, 80s, 160s, 300s (capped), up to 10 retries. This means a brief server restart won't kill the entire benchmark run.
 
 ---
 

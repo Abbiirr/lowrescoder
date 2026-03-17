@@ -1,10 +1,10 @@
 {
   "_meta": {
     "description": "B12-PROXY: SWE-Lancer Equivalent — 10 freelance-style SWE tasks",
-    "selection_criteria": "Feature additions and bug fixes with clear acceptance criteria, mimicking freelance task boards",
+    "selection_criteria": "Feature additions and bug fixes with clear acceptance criteria",
     "comparison_validity": "proxy-only",
     "parity_claim": "forbidden",
-    "note": "PROXY lane — comparable to internal baselines only. NOT comparable to published SWE-Lancer numbers.",
+    "note": "PROXY lane — internal baseline only. No published SWE-Lancer parity claims.",
     "last_verified": "2026-03-04"
   },
   "tasks": [
@@ -16,7 +16,8 @@
       "fixture_dir": "fixtures/b12/swl-001-add-pagination",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "swl-002-fix-search",
@@ -26,7 +27,8 @@
       "fixture_dir": "fixtures/b12/swl-002-fix-search",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "swl-003-add-export",
@@ -36,7 +38,8 @@
       "fixture_dir": "fixtures/b12/swl-003-add-export",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "swl-004-fix-timezone",
@@ -46,7 +49,8 @@
       "fixture_dir": "fixtures/b12/swl-004-fix-timezone",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "swl-005-add-webhook",
@@ -56,7 +60,8 @@
       "fixture_dir": "fixtures/b12/swl-005-add-webhook",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "swl-006-fix-upload",
@@ -66,7 +71,8 @@
       "fixture_dir": "fixtures/b12/swl-006-fix-upload",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "swl-007-add-caching",
@@ -76,7 +82,8 @@
       "fixture_dir": "fixtures/b12/swl-007-add-caching",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "swl-008-fix-email",
@@ -86,7 +93,8 @@
       "fixture_dir": "fixtures/b12/swl-008-fix-email",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "swl-009-add-rbac",
@@ -96,7 +104,8 @@
       "fixture_dir": "fixtures/b12/swl-009-add-rbac",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "swl-010-fix-race",
@@ -106,7 +115,8 @@
       "fixture_dir": "fixtures/b12/swl-010-fix-race",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     }
   ]
 }

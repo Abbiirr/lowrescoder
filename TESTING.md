@@ -63,8 +63,8 @@ If tree-sitter tests fail with `ImportError`, your environment is broken — do 
 | Variable | Purpose | Required? |
 |----------|---------|-----------|
 | `OPENROUTER_API_KEY` | OpenRouter integration tests | Optional (tests skip without it) |
-| `OLLAMA_HOST` | Ollama server URL (default: `http://localhost:11434`) | Optional (tests skip without Ollama running) |
-| `OLLAMA_MODEL` | Ollama model (default: `qwen3:8b`) | Optional |
+| `OLLAMA_HOST` | LLM Gateway URL (default: `http://localhost:4000`) | Optional (tests skip without gateway running) |
+| `OLLAMA_MODEL` | Model alias: `coding`, `default`, `fast`, etc. (default: `coding`) | Optional |
 | `AUTOCODE_BENCH_TARGET_DIR` | Path to completed React calculator project for external benchmark | Optional (test skips without it) |
 | `AUTOCODE_BENCH_MIN_SCORE` | Minimum benchmark score (default: 60) | Optional |
 | `AUTOCODE_BENCH_RUN_NODE` | Set to `1` to run npm build in benchmark | Optional |
@@ -79,7 +79,7 @@ If tree-sitter tests fail with `ImportError`, your environment is broken — do 
 |------|---------------|--------|
 | `test_non_tty_returns_false` | `sys.platform == "win32"` | Unix-only TTY test; cannot test non-TTY on Windows terminal |
 | `test_openrouter_*` | `OPENROUTER_API_KEY` not set | Needs API key for real API calls |
-| `test_ollama_tool_calling` | Ollama server not reachable | Needs Ollama running with `qwen3:8b` |
+| `test_ollama_tool_calling` | LLM Gateway not reachable | Needs LLM Gateway running at `http://localhost:4000` |
 | `test_project_creation_real_life_task_external_project` | `AUTOCODE_BENCH_TARGET_DIR` not set | Needs a completed React calculator project |
 
 **Where tests live:**
@@ -152,11 +152,11 @@ make go-test       # Run Go tests
 
 ## 3. Integration Tests
 
-**What they test:** Real connections to LLM providers (Ollama, OpenRouter).
+**What they test:** Real connections to LLM providers (LLM Gateway, OpenRouter).
 
 **How to run:**
 ```bash
-# Requires Ollama running locally
+# Requires LLM Gateway running at http://localhost:4000
 uv run pytest -m integration tests/integration/test_ollama.py
 
 # Requires OPENROUTER_API_KEY in .env
@@ -377,8 +377,8 @@ tail -50 /tmp/claude-1000/-home-bs01763-projects-ai-lowrescoder/benchmark_full_r
 | Variable | Purpose |
 |----------|---------|
 | `AUTOCODE_LLM_PROVIDER` | Must be `ollama` |
-| `OLLAMA_HOST` | Ollama server URL (e.g., `http://10.112.30.10:11434`) |
-| `OLLAMA_MODEL` | Model name (e.g., `glm-4.7-flash`) |
+| `OLLAMA_HOST` | LLM Gateway URL (default: `http://localhost:4000`) |
+| `OLLAMA_MODEL` | Model alias (e.g., `coding`, `default`, `thinking`) |
 
 **Artifacts:** Saved as `docs/qa/test-results/<timestamp>-<lane>-<agent>.json` with full run contract, per-task results, and aggregate metrics.
 

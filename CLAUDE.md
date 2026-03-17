@@ -57,12 +57,12 @@ These decisions are **locked** and do NOT change unless the user explicitly appr
 | LSP Client | Deferred (Jedi preferred over multilspy) | EVALUATING |
 | Vector DB | LanceDB | DONE |
 | Embeddings | jina-v2-base-code (768-dim, local) | DONE |
-| L4 LLM Runtime | Ollama | DONE |
-| L4 Model | Qwen3-8B Q4_K_M (~5 GB VRAM) | DONE |
+| L4 LLM Runtime | LLM Gateway (OpenAI-compatible, 9 providers, auto-failover) | DONE |
+| L4 Model | `coding` alias (GPT-4.1, DeepSeek-R1, Codestral, Qwen3, etc.) | DONE |
 | L3 LLM Runtime | llama-cpp-python + native grammar | PLANNED (Phase 5) |
 | L3 Model | Qwen2.5-Coder-1.5B Q4_K_M (~1 GB VRAM) | PLANNED |
 
-> L3 uses llama-cpp-python with native grammar constraints (Outlines replaced per Phase 5 plan). L4 uses Ollama. Sequential model loading only on 8GB VRAM — dual-model not feasible.
+> L3 uses llama-cpp-python with native grammar constraints (Outlines replaced per Phase 5 plan). L4 uses the LLM Gateway (`http://localhost:4000/v1`) — an OpenAI-compatible proxy aggregating 9 free providers (OpenRouter, Google AI Studio, Cerebras, Groq, Mistral, GitHub Models, NVIDIA NIM, Cloudflare, Cohere) with automatic failover, latency-based routing, and 5-hour caching. Model aliases: `coding`, `default`, `fast`, `thinking`, `vision`, `tools`, `big`, `local`. Gateway docs: `http://localhost:4001/docs`.
 
 ---
 

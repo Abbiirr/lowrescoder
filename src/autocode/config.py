@@ -18,6 +18,9 @@ from pydantic import BaseModel, Field
 # Load .env EARLY — before any config parsing so env vars participate in precedence
 load_dotenv()
 
+DEFAULT_OLLAMA_MODEL = "coding"
+DEFAULT_OLLAMA_API_BASE = "http://localhost:4000"
+
 
 # --- Sub-config models ---
 
@@ -28,8 +31,8 @@ class LLMConfig(BaseModel):
     provider: Literal["ollama", "openrouter"] = Field(
         default="ollama", description="L4 backend (local-first default)"
     )
-    model: str = Field(default="qwen3:8b", description="L4 model name")
-    api_base: str = Field(default="http://localhost:11434", description="Ollama API base URL")
+    model: str = Field(default=DEFAULT_OLLAMA_MODEL, description="L4 model name")
+    api_base: str = Field(default=DEFAULT_OLLAMA_API_BASE, description="Ollama API base URL")
     temperature: float = Field(default=0.2, ge=0.0, le=2.0)
     max_tokens: int = Field(default=4096, gt=0)
     context_length: int = Field(default=8192, gt=0, description="Max context window")
@@ -302,7 +305,7 @@ def _apply_openrouter_env(data: dict[str, object]) -> dict[str, object]:
         if isinstance(llm, dict):
             llm["provider"] = "openrouter"
             # Only set api_base if user hasn't specified a custom one
-            if "api_base" not in llm or llm["api_base"] == "http://localhost:11434":
+            if "api_base" not in llm or llm["api_base"] == DEFAULT_OLLAMA_API_BASE:
                 llm["api_base"] = "https://openrouter.ai/api/v1"
             if model:
                 llm["model"] = model
@@ -377,7 +380,7 @@ def load_config(
 
     # Fix #5: If provider is openrouter but api_base is still the Ollama default,
     # auto-correct to OpenRouter base URL
-    ollama_default = "http://localhost:11434"
+    ollama_default = DEFAULT_OLLAMA_API_BASE
     if config.llm.provider == "openrouter" and config.llm.api_base == ollama_default:
         config.llm.api_base = "https://openrouter.ai/api/v1"
 

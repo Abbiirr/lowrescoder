@@ -1,0 +1,771 @@
+==========================================
+Sequential Benchmark Run — Sun Mar 15 12:55:24 PM +06 2026
+Model: tools | Host: http://localhost:4000/v1
+Provider: openrouter
+Run ID: 20260315-065524-94493
+Gateway health: http://localhost:4000/health/readiness
+==========================================
+Pre-flight gateway check...
+Gateway OK
+
+>>>>>>>>>> Starting B7 at Sun Mar 15 12:55:24 PM +06 2026 <<<<<<<<<<
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 30s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"15e60149-7dac-4a82-ace3-2bf88 (waiting 20s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 403 - {'error': {'message': 'litellm.BadRequestError: GeminiException BadRequestError - {\n  "error": {\n    (waiting 60s)
+llm_error
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"3848a31b-b429-48f1-9c3d-51a8d (waiting 30s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"9867a25b-5026-4a4d-a4ca-5f7b5 (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"735df91c-821c-4d61-a70f-dbcc9 (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"a8f33303-395e-4cb4-a820-d5906 (waiting 20s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 60s)
+llm_error
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"f6db7899-5a19-47ba-951e-6f6c1 (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"6bdba074-722c-4721-9338-32aa0 (waiting 10s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 60s)
+llm_error
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"d9b80d27-66b3-4882-a7de-d7a10 (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"07520699-6aa3-47b2-8347-d5ab3 (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"bc440ddb-9d0e-4403-b3df-8e060 (waiting 40s)
+llm_error
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"6f89dc74-ba7c-4888-8032-334df (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"f5734aa1-8278-4989-a10f-be1a4 (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"5ad27987-6da0-4f84-a2c0-95865 (waiting 40s)
+llm_error
+Benchmark run_id: 20260315-065524-94493
+
+============================================================
+Lane: B7 | Agent: autocode | Model: tools
+Run ID: 20260315-065524-94493
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: django__django-10880 ---
+  Description: Query syntax error with condition and distinct combination
+Description
+	
+A Count
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_django__django-10880_20260315_065524
+  Docker: python:3.8-slim (bench-B7-django__django-10880-20260315-065524-94493)
+  Setup (docker): git init django...
+  Setup (docker): cd django && git remote add origin https://github.com/django/django.git...
+  Setup (docker): cd django && git fetch --depth=1 origin 838e432e3e5519c5383d12018e6c78f8ec7833c1...
+  Setup (docker): cd django && git checkout FETCH_HEAD...
+  Setup (docker): cd django && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_django__django-10880_20260315_065524/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (140.9s)
+
+--- Task 2/5: sympy__sympy-12096 ---
+  Description: evalf does not call _imp_ recursively
+Example from https://stackoverflow.com/que
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_sympy__sympy-12096_20260315_065845
+  Docker: python:3.9-slim (bench-B7-sympy__sympy-12096-20260315-065524-94493)
+  Setup (docker): git init sympy...
+  Setup (docker): cd sympy && git remote add origin https://github.com/sympy/sympy.git...
+  Setup (docker): cd sympy && git fetch --depth=1 origin d7c3045115693e887bcd03599b7ca4650ac5f2cb...
+  Setup (docker): cd sympy && git checkout FETCH_HEAD...
+  Setup (docker): cd sympy && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_sympy__sympy-12096_20260315_065845/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (152.7s)
+
+--- Task 3/5: scikit-learn__scikit-learn-11310 ---
+  Description: Retrieving time to refit the estimator in BaseSearchCV
+Basically, I'm trying to 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_scikit-learn__scikit-learn-11310_20260315_070207
+  Docker: python:3.7-slim (bench-B7-scikit-learn__scikit-learn-11310-20260315-065524-94493)
+  Setup (docker): git init scikit-learn...
+  Setup (docker): cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-...
+  Setup (docker): cd scikit-learn && git fetch --depth=1 origin 553b5fb8f84ba05c8397f26dd079deece2...
+  Setup (docker): cd scikit-learn && git checkout FETCH_HEAD...
+  Setup (docker): cd scikit-learn && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_scikit-learn__scikit-learn-11310_20260315_070207/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (129.8s)
+
+--- Task 4/5: pytest-dev__pytest-10081 ---
+  Description: unittest.TestCase.tearDown executed for classes marked with `unittest.skip` when
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_pytest-dev__pytest-10081_20260315_070714
+  Docker: python:3.9-slim (bench-B7-pytest-dev__pytest-10081-20260315-065524-94493)
+  Setup (docker): git init pytest...
+  Setup (docker): cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git...
+  Setup (docker): cd pytest && git fetch --depth=1 origin da9a2b584eb7a6c7e924b2621ed0ddaeca0a7bea...
+  Setup (docker): cd pytest && git checkout FETCH_HEAD...
+  Setup (docker): cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0 pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_pytest-dev__pytest-10081_20260315_070714/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (91.8s)
+
+--- Task 5/5: matplotlib__matplotlib-13989 ---
+  Description: hist() no longer respects range=... when density=True
+<!--To help us understand 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_matplotlib__matplotlib-13989_20260315_070941
+  Docker: python:3.7-slim (bench-B7-matplotlib__matplotlib-13989-20260315-065524-94493)
+  Setup (docker): git init matplotlib...
+  Setup (docker): cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib....
+  Setup (docker): cd matplotlib && git fetch --depth=1 origin a3e2897bfaf9eaac1d6649da535c4e721c89...
+  Setup (docker): cd matplotlib && git checkout FETCH_HEAD...
+  Setup (docker): cd matplotlib && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_matplotlib__matplotlib-13989_20260315_070941/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (92.2s)
+
+============================================================
+LANE B7 COMPLETE
+  Resolved: 0/5 (0.0%)
+  Infra fails: 5
+  Total time: 607.4s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260315-071249-B7-autocode.json
+<<<<<<<<<< B7 finished (rc=0) at Sun Mar 15 01:12:49 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B8 at Sun Mar 15 01:13:04 PM +06 2026 <<<<<<<<<<
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 1/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 5s)
+OpenRouter retry 2/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 10s)
+OpenRouter retry 3/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 20s)
+OpenRouter retry 4/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 40s)
+llm_error
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"Failed to call a  (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: GroqException - {"error":{"message":"Failed to call a  (waiting 20s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: MistralException - {"object":"error","message":"Tool c (waiting 5s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 30s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 60s)
+llm_error
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: RateLimitError: MistralException - {"object":"error","m (waiting 15s)
+OpenRouter retry 2/5: Error code: 413 - {'error': {'message': 'litellm.APIError: APIError: GithubException - Request body too large for gpt-4o (waiting 10s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 45s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: RateLimitError: MistralException - {"object":"error","m (waiting 15s)
+OpenRouter retry 2/5: Error code: 413 - {'error': {'message': 'litellm.APIError: APIError: GithubException - Request body too large for gpt-4o (waiting 10s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: RateLimitError: GroqException - {"error":{"message":"Re (waiting 45s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: RateLimitError: MistralException - {"object":"error","m (waiting 15s)
+OpenRouter retry 2/5: Error code: 413 - {'error': {'message': 'litellm.APIError: APIError: GithubException - Request body too large for gpt-4o (waiting 10s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: MistralException - {"object":"error","message":"Tool c (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: MistralException - {"object":"error","message":"Tool c (waiting 20s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 60s)
+llm_error
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: RateLimitError: GroqException - {"error":{"message":"Ra (waiting 15s)
+OpenRouter retry 2/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 30s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 60s)
+llm_error
+Benchmark run_id: 20260315-065524-94493
+
+============================================================
+Lane: B8 | Agent: autocode | Model: tools
+Run ID: 20260315-065524-94493
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: django__django-10880 ---
+  Description: Query syntax error with condition and distinct combination
+Description
+	
+A Count
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_django__django-10880_20260315_071304
+  Docker: python:3.8-slim (bench-B8-django__django-10880-20260315-065524-94493)
+  Setup (docker): git init django...
+  Setup (docker): cd django && git remote add origin https://github.com/django/django.git...
+  Setup (docker): cd django && git fetch --depth=1 origin 838e432e3e5519c5383d12018e6c78f8ec7833c1...
+  Setup (docker): cd django && git checkout FETCH_HEAD...
+  Setup (docker): cd django && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_django__django-10880_20260315_071304/setup_log.txt
+  Result: ERROR: InternalServerError: Error code: 500 - {'error': { (98.8s)
+
+--- Task 2/5: sympy__sympy-12096 ---
+  Description: evalf does not call _imp_ recursively
+Example from https://stackoverflow.com/que
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_sympy__sympy-12096_20260315_071536
+  Docker: python:3.9-slim (bench-B8-sympy__sympy-12096-20260315-065524-94493)
+  Setup (docker): git init sympy...
+  Setup (docker): cd sympy && git remote add origin https://github.com/sympy/sympy.git...
+  Setup (docker): cd sympy && git fetch --depth=1 origin d7c3045115693e887bcd03599b7ca4650ac5f2cb...
+  Setup (docker): cd sympy && git checkout FETCH_HEAD...
+  Setup (docker): cd sympy && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_sympy__sympy-12096_20260315_071536/setup_log.txt
+  Result: RESOLVED (88.0s)
+
+--- Task 3/5: scikit-learn__scikit-learn-11310 ---
+  Description: Retrieving time to refit the estimator in BaseSearchCV
+Basically, I'm trying to 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_scikit-learn__scikit-learn-11310_20260315_071752
+  Docker: python:3.7-slim (bench-B8-scikit-learn__scikit-learn-11310-20260315-065524-94493)
+  Setup (docker): git init scikit-learn...
+  Setup (docker): cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-...
+  Setup (docker): cd scikit-learn && git fetch --depth=1 origin 553b5fb8f84ba05c8397f26dd079deece2...
+  Setup (docker): cd scikit-learn && git checkout FETCH_HEAD...
+  Setup (docker): cd scikit-learn && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_scikit-learn__scikit-learn-11310_20260315_071752/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (228.0s)
+
+--- Task 4/5: pytest-dev__pytest-10081 ---
+  Description: unittest.TestCase.tearDown executed for classes marked with `unittest.skip` when
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_pytest-dev__pytest-10081_20260315_072435
+  Docker: python:3.9-slim (bench-B8-pytest-dev__pytest-10081-20260315-065524-94493)
+  Setup (docker): git init pytest...
+  Setup (docker): cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git...
+  Setup (docker): cd pytest && git fetch --depth=1 origin da9a2b584eb7a6c7e924b2621ed0ddaeca0a7bea...
+  Setup (docker): cd pytest && git checkout FETCH_HEAD...
+  Setup (docker): cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0 pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_pytest-dev__pytest-10081_20260315_072435/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (403.3s)
+
+--- Task 5/5: matplotlib__matplotlib-13989 ---
+  Description: hist() no longer respects range=... when density=True
+<!--To help us understand 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_matplotlib__matplotlib-13989_20260315_073209
+  Docker: python:3.7-slim (bench-B8-matplotlib__matplotlib-13989-20260315-065524-94493)
+  Setup (docker): git init matplotlib...
+  Setup (docker): cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib....
+  Setup (docker): cd matplotlib && git fetch --depth=1 origin a3e2897bfaf9eaac1d6649da535c4e721c89...
+  Setup (docker): cd matplotlib && git checkout FETCH_HEAD...
+  Setup (docker): cd matplotlib && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_matplotlib__matplotlib-13989_20260315_073209/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (195.8s)
+
+============================================================
+LANE B8 COMPLETE
+  Resolved: 1/5 (20.0%)
+  Infra fails: 4
+  Total time: 1013.9s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260315-073657-B8-autocode.json
+<<<<<<<<<< B8 finished (rc=0) at Sun Mar 15 01:36:57 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B9-PROXY at Sun Mar 15 01:37:12 PM +06 2026 <<<<<<<<<<
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: MistralException - {"object":"error","message":"Tool c (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: MistralException - {"object":"error","message":"Tool c (waiting 10s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 45s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 60s)
+llm_error
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"8096b763-0a34-42b0-b899-0e5cd (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: MistralException - {"object":"error","message":"Not th (waiting 10s)
+OpenRouter retry 3/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 20s)
+OpenRouter retry 4/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 40s)
+llm_error
+OpenRouter retry 1/5 [rate-limit]: Error code: 403 - {'error': {'message': 'litellm.BadRequestError: Vertex_ai_betaException BadRequestError - b\'{\\n  "er (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"c130a517-09e6-411d-a400-a9258 (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: MistralException - {"object":"error","message":"Not th (waiting 10s)
+OpenRouter retry 3/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 20s)
+OpenRouter retry 4/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 40s)
+llm_error
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"496a061a-99df-4c89-b848-421d2 (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: MistralException - {"object":"error","message":"Not th (waiting 10s)
+OpenRouter retry 3/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 20s)
+OpenRouter retry 4/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 40s)
+llm_error
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"daa14ec1-967f-4758-8db1-b2dfc (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: MistralException - {"object":"error","message":"Not th (waiting 10s)
+OpenRouter retry 3/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 20s)
+OpenRouter retry 4/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 40s)
+llm_error
+Benchmark run_id: 20260315-065524-94493
+
+============================================================
+Lane: B9-PROXY | Agent: autocode | Model: tools
+Run ID: 20260315-065524-94493
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: tb-001-hello-world ---
+  Description: Write a script that outputs "Hello, World!"
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-001-hello-world_20260315_073712
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-001-hello-world
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-001-hello-world-20260315-065524-94493)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-001-hello-world_20260315_073712/setup_log.txt
+  Result: ERROR: RateLimitError: Error code: 429 - {'error': {'mess (143.7s)
+
+--- Task 2/5: tb-002-fix-git ---
+  Description: Fix a repo with detached HEAD and uncommitted changes
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-002-fix-git_20260315_073947
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-002-fix-git
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-002-fix-git-20260315-065524-94493)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-002-fix-git_20260315_073947/setup_log.txt
+  Result: ERROR: InternalServerError: Error code: 500 - {'error': { (79.0s)
+
+--- Task 3/5: tb-003-fix-permissions ---
+  Description: Fix broken file permissions on a web app directory
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-003-fix-permissions_20260315_074125
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-003-fix-permissions
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-003-fix-permissions-20260315-065524-94493)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-003-fix-permissions_20260315_074125/setup_log.txt
+  Result: ERROR: InternalServerError: Error code: 500 - {'error': { (94.2s)
+
+--- Task 4/5: tb-004-csv-to-parquet ---
+  Description: Convert CSV to Parquet using Python
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-004-csv-to-parquet_20260315_074310
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-004-csv-to-parquet
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-004-csv-to-parquet-20260315-065524-94493)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-004-csv-to-parquet_20260315_074310/setup_log.txt
+  Result: ERROR: InternalServerError: Error code: 500 - {'error': { (94.7s)
+
+--- Task 5/5: tb-005-chess-best-move ---
+  Description: Find best chess move from FEN notation
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-005-chess-best-move_20260315_074509
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-005-chess-best-move
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-005-chess-best-move-20260315-065524-94493)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-005-chess-best-move_20260315_074509/setup_log.txt
+  Result: ERROR: InternalServerError: Error code: 500 - {'error': { (93.4s)
+
+============================================================
+LANE B9-PROXY COMPLETE
+  Resolved: 0/5 (0.0%)
+  Infra fails: 5
+  Total time: 505.0s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260315-074656-B9-PROXY-autocode.json
+<<<<<<<<<< B9-PROXY finished (rc=0) at Sun Mar 15 01:46:56 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B10-PROXY at Sun Mar 15 01:47:11 PM +06 2026 <<<<<<<<<<
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"79ca9c13-711b-4176-9e48-48008 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"31712daf-d979-49f8-b659-b62df (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"f6f57137-9422-404a-9604-ff023 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"a9bbccbb-f6ce-4be2-ad8f-b7af7 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"2e849a19-241e-4d35-9b05-a49ba (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"a7e7e3ff-f39a-4575-9d93-3d4e7 (waiting 5s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"cbd54dad-4776-4107-bb9c-d036a (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"e62199a1-5bf4-4ed9-943d-67965 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"5ac92e3b-fbd3-4201-8479-39b58 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"76a0673f-ecfd-4808-b74d-a2d6f (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"9b9216a7-7374-440f-82f3-78dc0 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"e15232be-bd05-47d1-ae63-f06f7 (waiting 5s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"34926286-6bc1-4f77-afc1-8b375 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"783f779a-df35-4ada-872f-34821 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"f6323b0d-fda2-48e2-aca0-94f55 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"a9790388-87e3-4be1-be30-a91fa (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"d63ca367-9360-47f4-991e-29f88 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"05201370-0fa7-452e-86b8-43354 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"7e94ecb5-6f6d-410b-8f0d-b506c (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"c98e0ac0-56fc-4cf7-806d-f5352 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"fec76811-68b5-4143-871f-205ab (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"0d9e921e-5e8e-4fc6-89f7-93295 (waiting 5s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"37ae1e46-0ba7-4d5c-a259-bb449 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"19b15290-f2f5-400d-9846-0b795 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"c23439e4-3df1-4b28-884e-32109 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"46c9b757-e70d-4b0d-8554-d00e0 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"c0b4a045-8021-4726-9727-ef143 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"fd54a6ac-dec3-4a1f-92d7-9dbdd (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"1fda517f-a871-4e5d-80f8-37d27 (waiting 5s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"e8e0678f-7f3d-47f2-9f48-b8b7d (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"bbc8bea8-dacd-416d-b785-9354f (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"884b850d-b69d-4901-a3f0-f08b5 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"8693a2f9-f21c-480d-821c-004e3 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"0516d0bf-43a9-4b08-be74-b5c41 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"70ea3988-f35d-4b89-9d0c-d39e6 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"fc245c79-b4c2-4855-b7b8-9bda4 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"dc1d0444-1f27-491c-b6a5-b9b5f (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"3944b41c-ab4f-42d5-8dd2-790fa (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"5a98fbbf-7bb1-48da-a890-14f8e (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"f6f07b63-ddb3-4e77-83e8-38be8 (waiting 5s)
+Benchmark run_id: 20260315-065524-94493
+
+============================================================
+Lane: B10-PROXY | Agent: autocode | Model: tools
+Run ID: 20260315-065524-94493
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: ml-001-dtype-mismatch ---
+  Description: Fix floor division truncation in mean calculation
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-001-dtype-mismatch_20260315_074711
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-001-dtype-mismatch
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-001-dtype-mismatch-20260315-065524-94493)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-001-dtype-mismatch_20260315_074711/setup_log.txt
+  Result: RESOLVED (54.4s)
+
+--- Task 2/5: ml-002-off-by-one ---
+  Description: Fix off-by-one in sliding window function
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-002-off-by-one_20260315_074819
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-002-off-by-one
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-002-off-by-one-20260315-065524-94493)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-002-off-by-one_20260315_074819/setup_log.txt
+  Result: RESOLVED (54.0s)
+
+--- Task 3/5: ml-003-encoding-error ---
+  Description: Fix Unicode encoding error in CSV reader
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-003-encoding-error_20260315_074927
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-003-encoding-error
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-003-encoding-error-20260315-065524-94493)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-003-encoding-error_20260315_074927/setup_log.txt
+  Result: RESOLVED (78.6s)
+
+--- Task 4/5: ml-004-null-handling ---
+  Description: Fix null value handling in data pipeline
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-004-null-handling_20260315_075059
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-004-null-handling
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-004-null-handling-20260315-065524-94493)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-004-null-handling_20260315_075059/setup_log.txt
+  Result: RESOLVED (66.1s)
+
+--- Task 5/5: ml-005-race-condition ---
+  Description: Fix race condition in threaded counter
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-005-race-condition_20260315_075222
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-005-race-condition
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-005-race-condition-20260315-065524-94493)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-005-race-condition_20260315_075222/setup_log.txt
+  Result: RESOLVED (86.6s)
+
+============================================================
+LANE B10-PROXY COMPLETE
+  Resolved: 5/5 (100.0%)
+  Infra fails: 0
+  Total time: 339.7s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260315-075402-B10-PROXY-autocode.json
+<<<<<<<<<< B10-PROXY finished (rc=0) at Sun Mar 15 01:54:02 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B11 at Sun Mar 15 01:54:17 PM +06 2026 <<<<<<<<<<
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: vertex_ai_betaException - b\'{\ (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"b94435d4-7c48-439c-bc3a-151b1 (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: MistralException - {"object":"error","message":"Not th (waiting 10s)
+OpenRouter retry 3/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 20s)
+OpenRouter retry 4/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 40s)
+llm_error
+Benchmark run_id: 20260315-065524-94493
+
+============================================================
+Lane: B11 | Agent: autocode | Model: tools
+Run ID: 20260315-065524-94493
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: bax-001-sql-injection ---
+  Description: Fix SQL injection vulnerability in user login endpoint
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-001-sql-injection_20260315_075417
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b11/bax-001-sql-injection
+  Docker: python:3.11-slim (bench-B11-bax-001-sql-injection-20260315-065524-94493)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-001-sql-injection_20260315_075417/setup_log.txt
+  Result: ERROR: APIConnectionError: Connection error. (97.4s)
+
+--- Task 2/5: bax-002-xss-stored ---
+  Description: Fix stored XSS in comment submission handler
+
+  PROVIDER HEALTH CHECK FAILED — HALTING BENCHMARK RUN
+  LLM Gateway unreachable at http://localhost:4000: <urlopen error [Errno 111] Connection refused>
+Benchmark HALTED. Fix gateway and re-run with --resume --run-id <existing-run-id>.
+  Completed 0/1 tasks before halt.
+  Re-run with --resume --run-id 20260315-065524-94493 to continue from here.
+
+============================================================
+LANE B11 COMPLETE
+  Resolved: 0/5 (0.0%)
+  Infra fails: 1
+  Total time: 97.4s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260315-075640-B11-autocode.json
+
+Benchmark halted due to provider health check failure.
+Fix the issue and re-run with --resume --run-id 20260315-065524-94493.
+<<<<<<<<<< B11 finished (rc=2) at Sun Mar 15 01:56:40 PM +06 2026 >>>>>>>>>>
+  Lane B11 exited rc=2, checking gateway...
+  Gateway down (attempt 1/10), trying docker start...
+  Waiting 33s...
+  Gateway down (attempt 2/10), trying docker start...
+  Waiting 58s...
+  Gateway down (attempt 3/10), trying docker start...
+  Waiting 44s...
+  Gateway down (attempt 4/10), trying docker start...
+  Waiting 58s...
+  Gateway down (attempt 5/10), trying docker start...
+  Waiting 38s...
+  Gateway OK — lane failure was not infra. Continuing to next lane.
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B12-PROXY at Sun Mar 15 02:00:46 PM +06 2026 <<<<<<<<<<
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': "litellm.BadRequestError: GithubException - Invalid 'messages[2].tool_calls[0].i (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': "litellm.BadRequestError: GithubException - Invalid 'messages[2].tool_calls[0].i (waiting 10s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"84e9c4a1-04fe-4d7a-b52c-1bf92 (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': "litellm.BadRequestError: GithubException - Invalid parameter: messages with rol (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': "litellm.BadRequestError: GithubException - Invalid parameter: messages with rol (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"5d7de71a-73be-4ffb-be34-67d15 (waiting 40s)
+llm_error
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"64b006d1-4618-4ce5-9194-4939f (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"35578e92-776a-46b2-8a4e-99995 (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"5faa971b-fe05-474a-ba25-1f7a1 (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"5e4c125c-7b07-47f7-a8ec-963ad (waiting 40s)
+llm_error
+OpenRouter retry 1/5: Connection error. (waiting 5s)
+OpenRouter retry 2/5: Connection error. (waiting 10s)
+OpenRouter retry 3/5: Connection error. (waiting 20s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"c27473d7-c8ab-41c4-a98c-3523e (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"086b6141-6e64-4f7f-b590-eecd4 (waiting 10s)
+OpenRouter retry 3/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 20s)
+OpenRouter retry 4/5: Error code: 500 - {'error': {'message': 'litellm.APIConnectionError: Missing corresponding tool call for tool response m (waiting 40s)
+llm_error
+Benchmark run_id: 20260315-065524-94493
+
+============================================================
+Lane: B12-PROXY | Agent: autocode | Model: tools
+Run ID: 20260315-065524-94493
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: swl-001-add-pagination ---
+  Description: Add cursor-based pagination to the /api/users endpoint with next/prev links
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-001-add-pagination_20260315_080046
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-001-add-pagination
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-001-add-pagination-20260315-065524-94493)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-001-add-pagination_20260315_080046/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (105.9s)
+
+--- Task 2/5: swl-002-fix-search ---
+  Description: Fix search endpoint returning 500 when query contains special characters
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-002-fix-search_20260315_080248
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-002-fix-search
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-002-fix-search-20260315-065524-94493)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-002-fix-search_20260315_080248/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (96.5s)
+
+--- Task 3/5: swl-003-add-export ---
+  Description: Add CSV export functionality to the dashboard reports page
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-003-add-export_20260315_080440
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-003-add-export
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-003-add-export-20260315-065524-94493)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-003-add-export_20260315_080440/setup_log.txt
+  Result: RESOLVED (66.0s)
+
+--- Task 4/5: swl-004-fix-timezone ---
+  Description: Fix event scheduling showing wrong times for non-UTC timezones
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-004-fix-timezone_20260315_080602
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-004-fix-timezone
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-004-fix-timezone-20260315-065524-94493)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-004-fix-timezone_20260315_080602/setup_log.txt
+  Result: ERROR: APIConnectionError: Connection error. (123.6s)
+
+--- Task 5/5: swl-005-add-webhook ---
+  Description: Implement webhook notification system for order status changes
+
+  PROVIDER HEALTH CHECK FAILED — HALTING BENCHMARK RUN
+  LLM Gateway unreachable at http://localhost:4000: <urlopen error [Errno 111] Connection refused>
+Benchmark HALTED. Fix gateway and re-run with --resume --run-id <existing-run-id>.
+  Completed 1/4 tasks before halt.
+  Re-run with --resume --run-id 20260315-065524-94493 to continue from here.
+
+============================================================
+LANE B12-PROXY COMPLETE
+  Resolved: 1/5 (20.0%)
+  Infra fails: 3
+  Total time: 392.0s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260315-080821-B12-PROXY-autocode.json
+
+Benchmark halted due to provider health check failure.
+Fix the issue and re-run with --resume --run-id 20260315-065524-94493.
+<<<<<<<<<< B12-PROXY finished (rc=2) at Sun Mar 15 02:08:21 PM +06 2026 >>>>>>>>>>
+  Lane B12-PROXY exited rc=2, checking gateway...
+  Gateway down (attempt 1/10), trying docker start...
+  Waiting 51s...
+  Gateway OK — lane failure was not infra. Continuing to next lane.
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B13-PROXY at Sun Mar 15 02:09:27 PM +06 2026 <<<<<<<<<<
+  Gateway down (attempt 1/10), trying docker start...
+  Waiting 40s...
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"6544026b-4dd7-469c-ac66-c614b (waiting 10s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"470ac64d-2c4b-46a1-ba55-63d13 (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"9bfbfe20-fb82-4e9c-a5f4-8e9c7 (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"57d791ec-0b87-4e0b-a780-200ec (waiting 20s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"3b7f69bf-e440-414c-9251-c940e (waiting 40s)
+llm_error
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"5083f159-620b-450b-b76e-3056a (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"b431abc6-b1d1-4cb8-8d6c-b0eca (waiting 10s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"4b08e2d9-aaa5-4951-bf6e-cc1b2 (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"165c5c7f-144c-403d-ad15-a9ccf (waiting 10s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"979dbe9a-519d-4ee1-8ec4-45f1d (waiting 5s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"ad7418f5-95ef-4d30-bedc-89ba8 (waiting 10s)
+OpenRouter retry 3/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"754a4f91-79e2-479f-b375-10139 (waiting 20s)
+OpenRouter retry 4/5 [rate-limit]: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"73e148e9-c5d1-424b-bb02-1160c (waiting 60s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 2/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"3c80a8d1-0182-42c7-a76e-74ce7 (waiting 10s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 45s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"cb7a94ff-800d-458c-8127-87d0c (waiting 5s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"60ed62df-db8e-4cca-804f-5908e (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"b9884b6f-5ade-47e2-b025-6d9b6 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"d9b23d6a-ef48-413c-b470-1edc6 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"67ceb5c5-a6ac-439d-a86b-a6e36 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"9777d678-5c0f-453b-9b37-f2b6f (waiting 5s)
+Benchmark run_id: 20260315-065524-94493
+
+============================================================
+Lane: B13-PROXY | Agent: autocode | Model: tools
+Run ID: 20260315-065524-94493
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: cc-001-two-sum ---
+  Description: Given an array of integers and a target, return indices of two numbers that add 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B13-PROXY_cc-001-two-sum_20260315_081007
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b13/cc-001-two-sum
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (158.9s)
+
+--- Task 2/5: cc-002-lru-cache ---
+  Description: Implement an LRU cache with O(1) get and put operations
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B13-PROXY_cc-002-lru-cache_20260315_081246
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b13/cc-002-lru-cache
+  Result: RESOLVED (284.6s)
+
+--- Task 3/5: cc-003-merge-intervals ---
+  Description: Given a collection of intervals, merge all overlapping intervals
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B13-PROXY_cc-003-merge-intervals_20260315_081731
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b13/cc-003-merge-intervals
+  Result: RESOLVED (28.7s)
+
+--- Task 4/5: cc-004-word-break ---
+  Description: Determine if a string can be segmented into dictionary words
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B13-PROXY_cc-004-word-break_20260315_081800
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b13/cc-004-word-break
+  Result: RESOLVED (35.7s)
+
+--- Task 5/5: cc-005-serialize-tree ---
+  Description: Serialize and deserialize a binary tree
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B13-PROXY_cc-005-serialize-tree_20260315_081836
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b13/cc-005-serialize-tree
+  Result: RESOLVED (56.5s)
+
+============================================================
+LANE B13-PROXY COMPLETE
+  Resolved: 4/5 (80.0%)
+  Infra fails: 1
+  Total time: 564.4s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260315-081933-B13-PROXY-autocode.json
+<<<<<<<<<< B13-PROXY finished (rc=0) at Sun Mar 15 02:19:33 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B14-PROXY at Sun Mar 15 02:19:48 PM +06 2026 <<<<<<<<<<
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"acbc0855-96d6-456b-9097-da0ab (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"e79816d8-5fab-4563-9a7b-b1f69 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"979c089e-8e2f-441d-be5e-5311e (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"c84ba592-383c-4974-b234-5c472 (waiting 5s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"31e9789c-33da-4fa0-bd79-925b4 (waiting 5s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"d2ebff42-b82b-4ff0-9e95-f369b (waiting 5s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 1/5: Error code: 400 - {'error': {'message': 'litellm.BadRequestError: CohereException - {"id":"c69e0427-4190-478c-996d-c7785 (waiting 5s)
+Benchmark run_id: 20260315-065524-94493
+
+============================================================
+Lane: B14-PROXY | Agent: autocode | Model: tools
+Run ID: 20260315-065524-94493
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: lcb-001-reverse-integer ---
+  Description: Reverse digits of a 32-bit signed integer, return 0 on overflow
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B14-PROXY_lcb-001-reverse-integer_20260315_081948
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b14/lcb-001-reverse-integer
+  Result: RESOLVED (29.1s)
+
+--- Task 2/5: lcb-002-valid-sudoku ---
+  Description: Determine if a 9x9 Sudoku board is valid
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B14-PROXY_lcb-002-valid-sudoku_20260315_082017
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b14/lcb-002-valid-sudoku
+  Result: RESOLVED (85.6s)
+
+--- Task 3/5: lcb-003-group-anagrams ---
+  Description: Group strings that are anagrams of each other
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B14-PROXY_lcb-003-group-anagrams_20260315_082143
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b14/lcb-003-group-anagrams
+  Result: RESOLVED (23.5s)
+
+--- Task 4/5: lcb-004-trapping-rain-water ---
+  Description: Calculate how much water can be trapped between bars
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B14-PROXY_lcb-004-trapping-rain-water_20260315_082207
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b14/lcb-004-trapping-rain-water
+  Result: RESOLVED (33.7s)
+
+--- Task 5/5: lcb-005-climbing-stairs ---
+  Description: Count distinct ways to climb n stairs taking 1 or 2 steps
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B14-PROXY_lcb-005-climbing-stairs_20260315_082241
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b14/lcb-005-climbing-stairs
+  Result: RESOLVED (34.3s)
+
+============================================================
+LANE B14-PROXY COMPLETE
+  Resolved: 5/5 (100.0%)
+  Infra fails: 0
+  Total time: 206.2s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260315-082315-B14-PROXY-autocode.json
+<<<<<<<<<< B14-PROXY finished (rc=0) at Sun Mar 15 02:23:15 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+==========================================
+All benchmarks complete — Sun Mar 15 02:23:30 PM +06 2026
+Run ID: 20260315-065524-94493
+==========================================

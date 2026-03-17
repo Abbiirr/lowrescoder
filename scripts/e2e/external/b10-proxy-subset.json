@@ -18,7 +18,8 @@
       "fixture_dir": "fixtures/b10/ml-001-dtype-mismatch",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "ml-002-off-by-one",
@@ -30,7 +31,8 @@
       "fixture_dir": "fixtures/b10/ml-002-off-by-one",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "ml-003-encoding-error",
@@ -42,7 +44,8 @@
       "fixture_dir": "fixtures/b10/ml-003-encoding-error",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "ml-004-null-handling",
@@ -54,7 +57,8 @@
       "fixture_dir": "fixtures/b10/ml-004-null-handling",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "ml-005-race-condition",
@@ -66,7 +70,8 @@
       "fixture_dir": "fixtures/b10/ml-005-race-condition",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "ml-006-float-precision",
@@ -78,7 +83,8 @@
       "fixture_dir": "fixtures/b10/ml-006-float-precision",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "ml-007-import-cycle",
@@ -90,7 +96,8 @@
       "fixture_dir": "fixtures/b10/ml-007-import-cycle",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "ml-008-memory-leak",
@@ -102,7 +109,8 @@
       "fixture_dir": "fixtures/b10/ml-008-memory-leak",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "ml-009-timezone-bug",
@@ -114,7 +122,8 @@
       "fixture_dir": "fixtures/b10/ml-009-timezone-bug",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     },
     {
       "task_id": "ml-010-regex-catastrophic",
@@ -126,7 +135,8 @@
       "fixture_dir": "fixtures/b10/ml-010-regex-catastrophic",
       "setup_commands": ["cd /work && bash setup.sh"],
       "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
-      "python_version": "3.11"
+      "python_version": "3.11",
+      "build_deps_profile": "none"
     }
   ]
 }

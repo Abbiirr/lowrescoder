@@ -1,0 +1,843 @@
+==========================================
+Sequential Benchmark Run — Tue Mar 17 05:14:50 PM +06 2026
+Model: tools | Host: http://localhost:4000/v1
+Provider: openrouter
+Run ID: 20260317-111450-2136378
+Gateway health: http://localhost:4000/health/readiness
+==========================================
+Pre-flight gateway check...
+Gateway OK
+
+>>>>>>>>>> Starting B7 at Tue Mar 17 05:14:50 PM +06 2026 <<<<<<<<<<
+  Model: swebench
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 2/5: Request timed out. (waiting 10s)
+OpenRouter retry 3/5: Request timed out. (waiting 20s)
+OpenRouter retry 4/5: Request timed out. (waiting 40s)
+llm_error
+Benchmark run_id: 20260317-111450-2136378
+
+============================================================
+Lane: B7 | Agent: autocode | Model: swebench
+Run ID: 20260317-111450-2136378
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: django__django-10880 ---
+  Description: Query syntax error with condition and distinct combination
+Description
+	
+A Count
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_django__django-10880_20260317_111450
+  Docker: python:3.8-slim (bench-B7-django__django-10880-20260317-111450-2136378)
+  Setup (docker): git init django...
+  Setup (docker): cd django && git remote add origin https://github.com/django/django.git...
+  Setup (docker): cd django && git fetch --depth=1 origin 838e432e3e5519c5383d12018e6c78f8ec7833c1...
+  Setup (docker): cd django && git checkout FETCH_HEAD...
+  Setup (docker): cd django && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_django__django-10880_20260317_111450/setup_log.txt
+  Result: RESOLVED (43.2s)
+
+--- Task 2/5: sympy__sympy-12096 ---
+  Description: evalf does not call _imp_ recursively
+Example from https://stackoverflow.com/que
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_sympy__sympy-12096_20260317_111627
+  Docker: python:3.9-slim (bench-B7-sympy__sympy-12096-20260317-111450-2136378)
+  Setup (docker): git init sympy...
+  Setup (docker): cd sympy && git remote add origin https://github.com/sympy/sympy.git...
+  Setup (docker): cd sympy && git fetch --depth=1 origin d7c3045115693e887bcd03599b7ca4650ac5f2cb...
+  Setup (docker): cd sympy && git checkout FETCH_HEAD...
+  Setup (docker): cd sympy && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_sympy__sympy-12096_20260317_111627/setup_log.txt
+  Result: RESOLVED (24.4s)
+
+--- Task 3/5: scikit-learn__scikit-learn-11310 ---
+  Description: Retrieving time to refit the estimator in BaseSearchCV
+Basically, I'm trying to 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_scikit-learn__scikit-learn-11310_20260317_111740
+  Docker: python:3.7-slim (bench-B7-scikit-learn__scikit-learn-11310-20260317-111450-2136378)
+  Setup (docker): git init scikit-learn...
+  Setup (docker): cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-...
+  Setup (docker): cd scikit-learn && git fetch --depth=1 origin 553b5fb8f84ba05c8397f26dd079deece2...
+  Setup (docker): cd scikit-learn && git checkout FETCH_HEAD...
+  Setup (docker): cd scikit-learn && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_scikit-learn__scikit-learn-11310_20260317_111740/setup_log.txt
+  Result: RESOLVED (80.3s)
+
+--- Task 4/5: pytest-dev__pytest-10081 ---
+  Description: unittest.TestCase.tearDown executed for classes marked with `unittest.skip` when
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_pytest-dev__pytest-10081_20260317_112204
+  Docker: python:3.9-slim (bench-B7-pytest-dev__pytest-10081-20260317-111450-2136378)
+  Setup (docker): git init pytest...
+  Setup (docker): cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git...
+  Setup (docker): cd pytest && git fetch --depth=1 origin da9a2b584eb7a6c7e924b2621ed0ddaeca0a7bea...
+  Setup (docker): cd pytest && git checkout FETCH_HEAD...
+  Setup (docker): cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0 pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_pytest-dev__pytest-10081_20260317_112204/setup_log.txt
+  Result: RESOLVED (16.8s)
+
+--- Task 5/5: matplotlib__matplotlib-13989 ---
+  Description: hist() no longer respects range=... when density=True
+<!--To help us understand 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_matplotlib__matplotlib-13989_20260317_112311
+  Docker: python:3.7-slim (bench-B7-matplotlib__matplotlib-13989-20260317-111450-2136378)
+  Setup (docker): git init matplotlib...
+  Setup (docker): cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib....
+  Setup (docker): cd matplotlib && git fetch --depth=1 origin a3e2897bfaf9eaac1d6649da535c4e721c89...
+  Setup (docker): cd matplotlib && git checkout FETCH_HEAD...
+  Setup (docker): cd matplotlib && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B7_matplotlib__matplotlib-13989_20260317_112311/setup_log.txt
+  Result: ERROR: APITimeoutError: Request timed out. (1009.0s)
+
+============================================================
+LANE B7 COMPLETE
+  Resolved: 4/5 (80.0%)
+  Infra fails: 1
+  Total time: 1173.7s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260317-114133-B7-autocode.json
+<<<<<<<<<< B7 finished (rc=0) at Tue Mar 17 05:41:33 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B8 at Tue Mar 17 05:41:48 PM +06 2026 <<<<<<<<<<
+  Model: swebench
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 2/5: Request timed out. (waiting 10s)
+OpenRouter retry 3/5: Request timed out. (waiting 20s)
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+agent_loop_max_iterations
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+agent_loop_max_iterations
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+tool_call_end
+tool_call_end
+OpenRouter retry 1/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.MidStreamFallbackError: litellm.RateLimitError: litellm.RateLimitError: (waiting 15s)
+OpenRouter retry 2/5: Request timed out. (waiting 10s)
+OpenRouter retry 3/5 [rate-limit]: Error code: 429 - {'error': {'message': 'litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  "error": (waiting 45s)
+OpenRouter retry 4/5: Error code: 400 - {'error': {'message': "litellm.BadRequestError: Nvidia_nimException - max_tokens must be at least 1, g (waiting 40s)
+llm_error
+Benchmark run_id: 20260317-111450-2136378
+
+============================================================
+Lane: B8 | Agent: autocode | Model: swebench
+Run ID: 20260317-111450-2136378
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: django__django-10880 ---
+  Description: Query syntax error with condition and distinct combination
+Description
+	
+A Count
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_django__django-10880_20260317_114148
+  Docker: python:3.8-slim (bench-B8-django__django-10880-20260317-111450-2136378)
+  Setup (docker): git init django...
+  Setup (docker): cd django && git remote add origin https://github.com/django/django.git...
+  Setup (docker): cd django && git fetch --depth=1 origin 838e432e3e5519c5383d12018e6c78f8ec7833c1...
+  Setup (docker): cd django && git checkout FETCH_HEAD...
+  Setup (docker): cd django && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_django__django-10880_20260317_114148/setup_log.txt
+  Result: FAILED (679.8s)
+
+--- Task 2/5: sympy__sympy-12096 ---
+  Description: evalf does not call _imp_ recursively
+Example from https://stackoverflow.com/que
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_sympy__sympy-12096_20260317_115359
+  Docker: python:3.9-slim (bench-B8-sympy__sympy-12096-20260317-111450-2136378)
+  Setup (docker): git init sympy...
+  Setup (docker): cd sympy && git remote add origin https://github.com/sympy/sympy.git...
+  Setup (docker): cd sympy && git fetch --depth=1 origin d7c3045115693e887bcd03599b7ca4650ac5f2cb...
+  Setup (docker): cd sympy && git checkout FETCH_HEAD...
+  Setup (docker): cd sympy && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_sympy__sympy-12096_20260317_115359/setup_log.txt
+  Result: FAILED (747.1s)
+
+--- Task 3/5: scikit-learn__scikit-learn-11310 ---
+  Description: Retrieving time to refit the estimator in BaseSearchCV
+Basically, I'm trying to 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_scikit-learn__scikit-learn-11310_20260317_120721
+  Docker: python:3.7-slim (bench-B8-scikit-learn__scikit-learn-11310-20260317-111450-2136378)
+  Setup (docker): git init scikit-learn...
+  Setup (docker): cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-...
+  Setup (docker): cd scikit-learn && git fetch --depth=1 origin 553b5fb8f84ba05c8397f26dd079deece2...
+  Setup (docker): cd scikit-learn && git checkout FETCH_HEAD...
+  Setup (docker): cd scikit-learn && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_scikit-learn__scikit-learn-11310_20260317_120721/setup_log.txt
+  Result: FAILED (259.3s)
+
+--- Task 4/5: pytest-dev__pytest-10081 ---
+  Description: unittest.TestCase.tearDown executed for classes marked with `unittest.skip` when
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_pytest-dev__pytest-10081_20260317_121436
+  Docker: python:3.9-slim (bench-B8-pytest-dev__pytest-10081-20260317-111450-2136378)
+  Setup (docker): git init pytest...
+  Setup (docker): cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git...
+  Setup (docker): cd pytest && git fetch --depth=1 origin da9a2b584eb7a6c7e924b2621ed0ddaeca0a7bea...
+  Setup (docker): cd pytest && git checkout FETCH_HEAD...
+  Setup (docker): cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0 pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_pytest-dev__pytest-10081_20260317_121436/setup_log.txt
+  Result: RESOLVED (207.9s)
+
+--- Task 5/5: matplotlib__matplotlib-13989 ---
+  Description: hist() no longer respects range=... when density=True
+<!--To help us understand 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_matplotlib__matplotlib-13989_20260317_121854
+  Docker: python:3.7-slim (bench-B8-matplotlib__matplotlib-13989-20260317-111450-2136378)
+  Setup (docker): git init matplotlib...
+  Setup (docker): cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib....
+  Setup (docker): cd matplotlib && git fetch --depth=1 origin a3e2897bfaf9eaac1d6649da535c4e721c89...
+  Setup (docker): cd matplotlib && git checkout FETCH_HEAD...
+  Setup (docker): cd matplotlib && pip install -e ....
+  Test patch applied successfully (docker)
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B8_matplotlib__matplotlib-13989_20260317_121854/setup_log.txt
+  Result: ERROR: BadRequestError: Error code: 400 - {'error': {'mes (302.2s)
+
+============================================================
+LANE B8 COMPLETE
+  Resolved: 1/5 (20.0%)
+  Infra fails: 1
+  Total time: 2196.3s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260317-122529-B8-autocode.json
+<<<<<<<<<< B8 finished (rc=0) at Tue Mar 17 06:25:29 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B9-PROXY at Tue Mar 17 06:25:44 PM +06 2026 <<<<<<<<<<
+  Model: tools
+OpenRouter retry 1/5: Request timed out. (waiting 5s)
+OpenRouter retry 2/5: Request timed out. (waiting 10s)
+OpenRouter retry 3/5: Request timed out. (waiting 20s)
+OpenRouter retry 4/5: Request timed out. (waiting 40s)
+tool_call_end
+tool_blocked
+tool_call_end
+tool_call_end
+tool_call_end
+Benchmark run_id: 20260317-111450-2136378
+
+============================================================
+Lane: B9-PROXY | Agent: autocode | Model: tools
+Run ID: 20260317-111450-2136378
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: tb-001-hello-world ---
+  Description: Write a script that outputs "Hello, World!"
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-001-hello-world_20260317_122544
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-001-hello-world
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-001-hello-world-20260317-111450-2136378)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-001-hello-world_20260317_122544/setup_log.txt
+  Result: RESOLVED (557.2s)
+
+--- Task 2/5: tb-002-fix-git ---
+  Description: Fix a repo with detached HEAD and uncommitted changes
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-002-fix-git_20260317_123511
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-002-fix-git
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-002-fix-git-20260317-111450-2136378)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-002-fix-git_20260317_123511/setup_log.txt
+  Result: FAILED (117.0s)
+
+--- Task 3/5: tb-003-fix-permissions ---
+  Description: Fix broken file permissions on a web app directory
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-003-fix-permissions_20260317_123728
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-003-fix-permissions
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-003-fix-permissions-20260317-111450-2136378)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-003-fix-permissions_20260317_123728/setup_log.txt
+  Result: FAILED (90.9s)
+
+--- Task 4/5: tb-004-csv-to-parquet ---
+  Description: Convert CSV to Parquet using Python
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-004-csv-to-parquet_20260317_123909
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-004-csv-to-parquet
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-004-csv-to-parquet-20260317-111450-2136378)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-004-csv-to-parquet_20260317_123909/setup_log.txt
+  Result: RESOLVED (54.2s)
+
+--- Task 5/5: tb-005-chess-best-move ---
+  Description: Find best chess move from FEN notation
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-005-chess-best-move_20260317_124028
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b9/tb-005-chess-best-move
+  Docker: python:3.11-slim (bench-B9-PROXY-tb-005-chess-best-move-20260317-111450-2136378)
+  Setup (docker): bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B9-PROXY_tb-005-chess-best-move_20260317_124028/setup_log.txt
+  Result: RESOLVED (5.6s)
+
+============================================================
+LANE B9-PROXY COMPLETE
+  Resolved: 3/5 (60.0%)
+  Infra fails: 0
+  Total time: 824.9s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260317-124047-B9-PROXY-autocode.json
+<<<<<<<<<< B9-PROXY finished (rc=0) at Tue Mar 17 06:40:47 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B10-PROXY at Tue Mar 17 06:41:02 PM +06 2026 <<<<<<<<<<
+  Model: tools
+tool_call_end
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Benchmark run_id: 20260317-111450-2136378
+
+============================================================
+Lane: B10-PROXY | Agent: autocode | Model: tools
+Run ID: 20260317-111450-2136378
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: ml-001-dtype-mismatch ---
+  Description: Fix floor division truncation in mean calculation
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-001-dtype-mismatch_20260317_124102
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-001-dtype-mismatch
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-001-dtype-mismatch-20260317-111450-2136378)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-001-dtype-mismatch_20260317_124102/setup_log.txt
+  Result: RESOLVED (5.8s)
+
+--- Task 2/5: ml-002-off-by-one ---
+  Description: Fix off-by-one in sliding window function
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-002-off-by-one_20260317_124122
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-002-off-by-one
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-002-off-by-one-20260317-111450-2136378)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-002-off-by-one_20260317_124122/setup_log.txt
+  Result: RESOLVED (45.5s)
+
+--- Task 3/5: ml-003-encoding-error ---
+  Description: Fix Unicode encoding error in CSV reader
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-003-encoding-error_20260317_124221
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-003-encoding-error
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-003-encoding-error-20260317-111450-2136378)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-003-encoding-error_20260317_124221/setup_log.txt
+  Result: RESOLVED (39.8s)
+
+--- Task 4/5: ml-004-null-handling ---
+  Description: Fix null value handling in data pipeline
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-004-null-handling_20260317_124315
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-004-null-handling
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-004-null-handling-20260317-111450-2136378)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-004-null-handling_20260317_124315/setup_log.txt
+  Result: RESOLVED (24.7s)
+
+--- Task 5/5: ml-005-race-condition ---
+  Description: Fix race condition in threaded counter
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-005-race-condition_20260317_124356
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b10/ml-005-race-condition
+  Docker: python:3.11-slim (bench-B10-PROXY-ml-005-race-condition-20260317-111450-2136378)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B10-PROXY_ml-005-race-condition_20260317_124356/setup_log.txt
+  Result: RESOLVED (20.3s)
+
+============================================================
+LANE B10-PROXY COMPLETE
+  Resolved: 5/5 (100.0%)
+  Infra fails: 0
+  Total time: 136.1s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260317-124430-B10-PROXY-autocode.json
+<<<<<<<<<< B10-PROXY finished (rc=0) at Tue Mar 17 06:44:30 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B11 at Tue Mar 17 06:44:45 PM +06 2026 <<<<<<<<<<
+  Model: tools
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+Benchmark run_id: 20260317-111450-2136378
+
+============================================================
+Lane: B11 | Agent: autocode | Model: tools
+Run ID: 20260317-111450-2136378
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: bax-001-sql-injection ---
+  Description: Fix SQL injection vulnerability in user login endpoint
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-001-sql-injection_20260317_124446
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b11/bax-001-sql-injection
+  Docker: python:3.11-slim (bench-B11-bax-001-sql-injection-20260317-111450-2136378)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-001-sql-injection_20260317_124446/setup_log.txt
+  Result: RESOLVED (9.2s)
+
+--- Task 2/5: bax-002-xss-stored ---
+  Description: Fix stored XSS in comment submission handler
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-002-xss-stored_20260317_124540
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b11/bax-002-xss-stored
+  Docker: python:3.11-slim (bench-B11-bax-002-xss-stored-20260317-111450-2136378)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-002-xss-stored_20260317_124540/setup_log.txt
+  Result: RESOLVED (28.1s)
+
+--- Task 3/5: bax-003-auth-bypass ---
+  Description: Fix authentication bypass via JWT algorithm confusion
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-003-auth-bypass_20260317_124652
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b11/bax-003-auth-bypass
+  Docker: python:3.11-slim (bench-B11-bax-003-auth-bypass-20260317-111450-2136378)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-003-auth-bypass_20260317_124652/setup_log.txt
+  Result: RESOLVED (8.1s)
+
+--- Task 4/5: bax-004-path-traversal ---
+  Description: Fix path traversal in file download endpoint
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-004-path-traversal_20260317_124746
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b11/bax-004-path-traversal
+  Docker: python:3.11-slim (bench-B11-bax-004-path-traversal-20260317-111450-2136378)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-004-path-traversal_20260317_124746/setup_log.txt
+  Result: RESOLVED (62.5s)
+
+--- Task 5/5: bax-005-csrf ---
+  Description: Add CSRF protection to state-changing API endpoints
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-005-csrf_20260317_124934
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b11/bax-005-csrf
+  Docker: python:3.11-slim (bench-B11-bax-005-csrf-20260317-111450-2136378)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B11_bax-005-csrf_20260317_124934/setup_log.txt
+  Result: RESOLVED (19.4s)
+
+============================================================
+LANE B11 COMPLETE
+  Resolved: 5/5 (100.0%)
+  Infra fails: 0
+  Total time: 127.3s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260317-125038-B11-autocode.json
+<<<<<<<<<< B11 finished (rc=0) at Tue Mar 17 06:50:38 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B12-PROXY at Tue Mar 17 06:50:53 PM +06 2026 <<<<<<<<<<
+  Model: tools
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Benchmark run_id: 20260317-111450-2136378
+
+============================================================
+Lane: B12-PROXY | Agent: autocode | Model: tools
+Run ID: 20260317-111450-2136378
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: swl-001-add-pagination ---
+  Description: Add cursor-based pagination to the /api/users endpoint with next/prev links
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-001-add-pagination_20260317_125053
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-001-add-pagination
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-001-add-pagination-20260317-111450-2136378)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-001-add-pagination_20260317_125053/setup_log.txt
+  Result: FAILED (34.9s)
+
+--- Task 2/5: swl-002-fix-search ---
+  Description: Fix search endpoint returning 500 when query contains special characters
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-002-fix-search_20260317_125143
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-002-fix-search
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-002-fix-search-20260317-111450-2136378)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-002-fix-search_20260317_125143/setup_log.txt
+  Result: RESOLVED (13.4s)
+
+--- Task 3/5: swl-003-add-export ---
+  Description: Add CSV export functionality to the dashboard reports page
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-003-add-export_20260317_125211
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-003-add-export
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-003-add-export-20260317-111450-2136378)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-003-add-export_20260317_125211/setup_log.txt
+  Result: RESOLVED (178.2s)
+
+--- Task 4/5: swl-004-fix-timezone ---
+  Description: Fix event scheduling showing wrong times for non-UTC timezones
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-004-fix-timezone_20260317_125524
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-004-fix-timezone
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-004-fix-timezone-20260317-111450-2136378)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-004-fix-timezone_20260317_125524/setup_log.txt
+  Result: FAILED (102.4s)
+
+--- Task 5/5: swl-005-add-webhook ---
+  Description: Implement webhook notification system for order status changes
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-005-add-webhook_20260317_125723
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b12/swl-005-add-webhook
+  Docker: python:3.11-slim (bench-B12-PROXY-swl-005-add-webhook-20260317-111450-2136378)
+  Setup (docker): cd /work && bash setup.sh...
+  Setup log: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B12-PROXY_swl-005-add-webhook_20260317_125723/setup_log.txt
+  Result: FAILED (42.9s)
+
+============================================================
+LANE B12-PROXY COMPLETE
+  Resolved: 2/5 (40.0%)
+  Infra fails: 0
+  Total time: 371.8s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260317-125823-B12-PROXY-autocode.json
+<<<<<<<<<< B12-PROXY finished (rc=0) at Tue Mar 17 06:58:23 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B13-PROXY at Tue Mar 17 06:58:38 PM +06 2026 <<<<<<<<<<
+  Model: tools
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+Embedding model unavailable (jinaai/jina-embeddings-v2-base-code), falling back to BM25-only: No module named 'sentence_transformers'
+tool_call_end
+Benchmark run_id: 20260317-111450-2136378
+
+============================================================
+Lane: B13-PROXY | Agent: autocode | Model: tools
+Run ID: 20260317-111450-2136378
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: cc-001-two-sum ---
+  Description: Given an array of integers and a target, return indices of two numbers that add 
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B13-PROXY_cc-001-two-sum_20260317_125838
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b13/cc-001-two-sum
+  Result: FAILED (29.5s)
+
+--- Task 2/5: cc-002-lru-cache ---
+  Description: Implement an LRU cache with O(1) get and put operations
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B13-PROXY_cc-002-lru-cache_20260317_125908
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b13/cc-002-lru-cache
+  Result: FAILED (45.1s)
+
+--- Task 3/5: cc-003-merge-intervals ---
+  Description: Given a collection of intervals, merge all overlapping intervals
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B13-PROXY_cc-003-merge-intervals_20260317_125953
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b13/cc-003-merge-intervals
+  Result: FAILED (30.1s)
+
+--- Task 4/5: cc-004-word-break ---
+  Description: Determine if a string can be segmented into dictionary words
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B13-PROXY_cc-004-word-break_20260317_130023
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b13/cc-004-word-break
+  Result: RESOLVED (56.5s)
+
+--- Task 5/5: cc-005-serialize-tree ---
+  Description: Serialize and deserialize a binary tree
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B13-PROXY_cc-005-serialize-tree_20260317_130120
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b13/cc-005-serialize-tree
+  Result: FAILED (35.3s)
+
+============================================================
+LANE B13-PROXY COMPLETE
+  Resolved: 1/5 (20.0%)
+  Infra fails: 0
+  Total time: 196.5s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260317-130156-B13-PROXY-autocode.json
+<<<<<<<<<< B13-PROXY finished (rc=0) at Tue Mar 17 07:01:56 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+
+>>>>>>>>>> Starting B14-PROXY at Tue Mar 17 07:02:11 PM +06 2026 <<<<<<<<<<
+  Model: tools
+tool_call_end
+tool_call_end
+Benchmark run_id: 20260317-111450-2136378
+
+============================================================
+Lane: B14-PROXY | Agent: autocode | Model: tools
+Run ID: 20260317-111450-2136378
+Tasks: 5 total, 5 remaining | Budget: wt86400_tc50000_mc100
+============================================================
+
+--- Task 1/5: lcb-001-reverse-integer ---
+  Description: Reverse digits of a 32-bit signed integer, return 0 on overflow
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B14-PROXY_lcb-001-reverse-integer_20260317_130211
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b14/lcb-001-reverse-integer
+  Result: FAILED (84.9s)
+
+--- Task 2/5: lcb-002-valid-sudoku ---
+  Description: Determine if a 9x9 Sudoku board is valid
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B14-PROXY_lcb-002-valid-sudoku_20260317_130336
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b14/lcb-002-valid-sudoku
+  Result: RESOLVED (33.3s)
+
+--- Task 3/5: lcb-003-group-anagrams ---
+  Description: Group strings that are anagrams of each other
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B14-PROXY_lcb-003-group-anagrams_20260317_130410
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b14/lcb-003-group-anagrams
+  Result: FAILED (30.3s)
+
+--- Task 4/5: lcb-004-trapping-rain-water ---
+  Description: Calculate how much water can be trapped between bars
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B14-PROXY_lcb-004-trapping-rain-water_20260317_130440
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b14/lcb-004-trapping-rain-water
+  Result: FAILED (34.6s)
+
+--- Task 5/5: lcb-005-climbing-stairs ---
+  Description: Count distinct ways to climb n stairs taking 1 or 2 steps
+  Sandbox: /home/bs01763/projects/ai/lowrescoder/sandboxes/bench_B14-PROXY_lcb-005-climbing-stairs_20260317_130515
+  Fixture copied from /home/bs01763/projects/ai/lowrescoder/scripts/e2e/external/fixtures/b14/lcb-005-climbing-stairs
+  Result: FAILED (66.5s)
+
+============================================================
+LANE B14-PROXY COMPLETE
+  Resolved: 1/5 (20.0%)
+  Infra fails: 0
+  Total time: 249.6s
+============================================================
+
+Artifact saved: /home/bs01763/projects/ai/lowrescoder/docs/qa/test-results/20260317-130622-B14-PROXY-autocode.json
+<<<<<<<<<< B14-PROXY finished (rc=0) at Tue Mar 17 07:06:22 PM +06 2026 >>>>>>>>>>
+  Cooling down 15s between lanes...
+
+==========================================
+All benchmarks complete — Tue Mar 17 07:06:37 PM +06 2026
+Run ID: 20260317-111450-2136378
+==========================================

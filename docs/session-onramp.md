@@ -165,6 +165,7 @@ Implemented 2026-02-14. All tests passing, ruff clean.
 - **Unified benchmark runner (parity harness):**
   - `uv run python scripts/benchmark_runner.py --list-lanes` — Show all lanes
   - `uv run python scripts/benchmark_runner.py --agent autocode --lane B7` — Run AutoCode on B7
+  - `uv run python scripts/benchmark_runner.py --agent autocode --lane B7 --run-id <run-id> --resume` — Resume a specific interrupted run
   - `uv run python scripts/benchmark_runner.py --agent codex --lane B7` — Run Codex on B7 (parity)
   - `uv run python scripts/benchmark_runner.py --agent claude-code --lane B7` — Run Claude Code on B7 (parity)
   - `uv run python scripts/benchmark_runner.py --agent all --lane B7` — All agents on B7 (comparison)
@@ -203,14 +204,14 @@ ls sandboxes/bench_*
 ### If sandbox has files (package.json, src/):
 The agent finished generating. Re-score without re-running the agent:
 ```bash
-AUTOCODE_LLM_PROVIDER=ollama uv run python scripts/run_calculator_benchmark.py \
+uv run python scripts/run_calculator_benchmark.py \
   --replay sandboxes/bench_<timestamp> --score-only
 ```
 
 ### If sandbox is empty or incomplete:
 Re-run the benchmark from scratch:
 ```bash
-AUTOCODE_LLM_PROVIDER=ollama uv run python scripts/run_calculator_benchmark.py \
+uv run python scripts/run_calculator_benchmark.py \
   --runs 1 --min-score 30
 ```
 

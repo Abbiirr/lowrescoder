@@ -213,7 +213,7 @@ uv run python scripts/benchmark_runner.py --agent autocode --lane B7 --model glm
 bash scripts/run_all_benchmarks.sh
 
 # Resume after a crash (skips completed tasks)
-uv run python scripts/benchmark_runner.py --agent autocode --lane B7 --resume --model glm-4.7-flash
+uv run python scripts/benchmark_runner.py --agent autocode --lane B7 --resume --run-id <run-id> --model glm-4.7-flash
 
 # List available lanes
 uv run python scripts/benchmark_runner.py --list-lanes
@@ -228,18 +228,18 @@ tail -50 /tmp/claude-1000/-home-bs01763-projects-ai-lowrescoder/benchmark_full_r
 
 ### Resumability
 
-Progress is saved to `sandboxes/progress/{lane}_{agent}_progress.json` after each task. Pass `--resume` to skip completed tasks. The shell script `run_all_benchmarks.sh` enables resume by default.
+Progress is saved to `sandboxes/progress/{lane}_{agent}_{run_id}_progress.json` after each task. `--resume` now requires `--run-id`, so resuming always targets one explicit interrupted run. The shell script `run_all_benchmarks.sh` generates one `BENCHMARK_RUN_ID` per sweep and prints it at startup; reuse that same value to resume the sweep safely.
 
 ### Exponential Backoff
 
-If the remote Ollama server goes down temporarily, the LLM layer retries with exponential backoff (5s, 10s, 20s, ... up to 5 minutes, 10 retries) before failing the task.
+If the LLM Gateway goes down temporarily, the LLM layer retries with exponential backoff (5s, 10s, 20s, ... up to 5 minutes, 10 retries) before failing the task.
 
 ### Environment
 
 ```bash
 AUTOCODE_LLM_PROVIDER=ollama
-OLLAMA_HOST=http://10.112.30.10:11434
-OLLAMA_MODEL=glm-4.7-flash
+OLLAMA_HOST=http://localhost:4000
+OLLAMA_MODEL=coding
 ```
 
 ## Adding New E2E Benchmarks

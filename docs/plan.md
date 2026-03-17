@@ -74,7 +74,7 @@ The following 12 criteria must ALL pass for MVP release:
 | # | Criterion | Pass Condition |
 |---|-----------|----------------|
 | 1 | CLI operational | `autocode chat`, `ask`, `edit`, `config`, `--help` commands work |
-| 2 | Local LLM integration | Ollama provider streams responses with <2s to first token |
+| 2 | Local LLM integration | LLM Gateway provider streams responses with <2s to first token |
 | 3 | Edit success rate | >40% pass@1 on 50-task Aider benchmark subset |
 | 4 | Edit with retry | >75% success after up to 3 retries |
 | 5 | No data loss | 0 file corruptions across 100 edit operations |
@@ -115,9 +115,9 @@ The following 12 criteria must ALL pass for MVP release:
 
 **Resolved (Feb 2026):**
 - Embedding model: jina-v2-base-code (768-dim, local, proven quality)
-- L4 model: Qwen3-8B Q4_K_M (supersedes Qwen2.5-Coder-7B)
+- L4 model: `coding` alias via LLM Gateway (supersedes direct Ollama qwen3:8b)
 - L3 model: Qwen2.5-Coder-1.5B Q4_K_M (constrained generation)
-- Two-tier LLM: Ollama (L4) + llama-cpp-python with native grammar (L3)
+- Two-tier LLM: LLM Gateway (L4, OpenAI-compatible, 9 providers) + llama-cpp-python with native grammar (L3)
 - Python semantic intelligence: Jedi (preferred over multilspy LSP)
 - Package manager: uv
 - TUI Frontend: Go + Bubble Tea (inline mode, JSON-RPC over stdin/stdout to Python backend). See `docs/archive/plan/go-bubble-tea-migration.md` for full plan.
@@ -259,9 +259,9 @@ Phase 5 transforms AutoCode from a single-agent assistant into a feature-complet
 | Semgrep | Open-source, pattern-based static analysis rules |
 | LanceDB | Local/embedded vector database with vector search and optional full-text (BM25) search |
 | Embeddings | jina-embeddings-v2-base-code (768-dim, 8192 tokens, ~300MB model size) |
-| LLM Runtime (L4) | Ollama local server (HTTP API at http://localhost:11434/api by default) |
+| LLM Runtime (L4) | LLM Gateway (OpenAI-compatible API at http://localhost:4000/v1, [docs](http://localhost:4001/docs)) |
 | LLM Runtime (L3) | llama-cpp-python + native grammar (direct model access for constrained decoding) |
-| LLM Model (L4) | Qwen3-8B Q4_K_M (~5 GB VRAM, thinking mode) |
+| LLM Model (L4) | `coding` alias (auto-routed: GPT-4.1, DeepSeek-R1, Codestral, Qwen3-Coder, etc.) |
 | LLM Model (L3) | Qwen2.5-Coder-1.5B Q4_K_M (~1 GB VRAM, 72% HumanEval) |
 | Constrained Decoding | llama-cpp-python native grammar (Outlines replaced — segfaults, perf penalty) |
 | Python Semantics | Jedi library (cross-file goto, refs, types — preferred over multilspy LSP) |
@@ -280,8 +280,8 @@ Phase 5 transforms AutoCode from a single-agent assistant into a feature-complet
 | Java LSP | JDT-LS | Most complete |
 | Vector DB | LanceDB | Embedded, hybrid search |
 | Embeddings | jina-v2-base-code | Local, good quality |
-| L4 LLM Runtime | Ollama | Easy setup, streaming |
-| L4 Model | Qwen3-8B Q4_K_M | Best 8B, thinking mode, ~5 GB VRAM |
+| L4 LLM Runtime | LLM Gateway (`http://localhost:4000/v1`) | OpenAI-compatible, 9 providers, auto-failover |
+| L4 Model | `coding` alias (auto-routed across providers) | Best available coding model |
 | L3 LLM Runtime | llama-cpp-python + native grammar | Outlines replaced — segfaults, 2-5x perf penalty |
 | L3 Model | Qwen2.5-Coder-1.5B Q4_K_M | 72% HumanEval, 1GB VRAM |
 | Python Semantics | Jedi | Cross-file goto/refs/types, pure Python, <100ms |
@@ -380,10 +380,10 @@ autocode/
 
 # LLM Configuration
 llm:
-  provider: ollama          # ollama | openai | anthropic | llama_cpp
-  model: qwen3:8b-q4_K_M           # Layer 4 model
+  provider: ollama          # ollama (works with LLM Gateway) | openai | anthropic | llama_cpp
+  model: coding                    # Layer 4 model alias (coding, default, fast, thinking, etc.)
   l3_model: qwen2.5-coder:1.5b-instruct-q4_K_M  # Layer 3 model
-  api_base: http://localhost:11434  # For Ollama (L4)
+  api_base: http://localhost:4000  # LLM Gateway (L4)
   api_key: null             # For cloud providers
   temperature: 0.2
   max_tokens: 4096
@@ -607,8 +607,8 @@ Each phase must pass before proceeding:
 5. Semgrep: https://github.com/semgrep/semgrep
 6. LanceDB docs: https://lancedb.com/documentation/overview/
 7. Jina embeddings v2 base code: https://aws.amazon.com/marketplace/pp/prodview-tk7t7bz6fp5ng
-8. Ollama API: https://docs.ollama.com/api/introduction
-9. Qwen3-8B model card: https://huggingface.co/Qwen/Qwen3-8B
+8. LLM Gateway API docs: http://localhost:4001/docs (local), Ollama API: https://docs.ollama.com/api/introduction
+9. LLM Gateway model aliases: `coding`, `default`, `fast`, `thinking`, `vision`, `tools`, `big`, `local`
 9a. Qwen2.5-Coder-1.5B model card: https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct
 10. llama-cpp-python native grammar (replaced Outlines): https://llama-cpp-python.readthedocs.io/
 11. Typer docs: https://typer.tiangolo.com/
@@ -650,7 +650,7 @@ AutoCode aims to match the utility of frontier AI coding assistants while runnin
 **Benchmark Execution Protocol:**
 
 1. **Aider Polyglot Subset (50 tasks)**
-   - Run each task with default config (Qwen3-8B, whole-file edit)
+   - Run each task with default config (qwen3:8b, whole-file edit)
    - Record: pass/fail, retries needed, tokens used, latency
    - Success = code compiles and passes provided tests
    - Calculate: pass@1, pass@3 (with retries), avg tokens per task
@@ -682,7 +682,7 @@ This appendix organizes the same work as Phases 0-6 but by engineering lifecycle
 #### Phase A: Tech Stack Finalization
 1. Confirm supported languages (Python-only vs Python+Java) using scope and resource criteria.
 2. Select package/tooling stack (uv or pip/poetry, pytest, lint/format tools) and document exact commands.
-3. Validate LLM runtime defaults (Ollama vs llama.cpp server) on target hardware; set baseline model and quantization.
+3. Validate LLM runtime defaults (LLM Gateway vs llama.cpp server) on target hardware; set baseline model alias and routing.
 4. Validate deterministic stack (tree-sitter, Pyright, JDT LS, Semgrep) install steps and performance budgets.
 5. Validate retrieval stack (LanceDB, embedding model) for disk and RAM usage; set index size limits.
 6. Define minimum hardware baseline and resource budgets per layer; document thresholds.

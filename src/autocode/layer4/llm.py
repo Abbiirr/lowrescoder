@@ -784,6 +784,34 @@ class OpenRouterProvider:
         msg = "unreachable"
         raise RuntimeError(msg)
 
+    @staticmethod
+    def _sanitize_tool_call_ids(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Sanitize tool_call_ids to be alphanumeric only.
+
+        Some providers (Mistral) reject IDs with underscores/hyphens.
+        When routing through a multi-provider gateway, the ID format from
+        one provider may be rejected by the next. Strip non-alphanumeric
+        chars to ensure universal compatibility.
+        """
+        import re
+        sanitized = []
+        for msg in messages:
+            msg = dict(msg)  # shallow copy
+            # Sanitize tool_call_id in tool result messages
+            if msg.get("role") == "tool" and "tool_call_id" in msg:
+                msg["tool_call_id"] = re.sub(r"[^a-zA-Z0-9]", "", msg["tool_call_id"])
+            # Sanitize tool_calls in assistant messages
+            if msg.get("tool_calls"):
+                new_tcs = []
+                for tc in msg["tool_calls"]:
+                    tc = dict(tc)
+                    if "id" in tc:
+                        tc["id"] = re.sub(r"[^a-zA-Z0-9]", "", tc["id"])
+                    new_tcs.append(tc)
+                msg["tool_calls"] = new_tcs
+            sanitized.append(msg)
+        return sanitized
+
     async def generate_with_tools(
         self,
         messages: list[dict[str, Any]],
@@ -798,8 +826,12 @@ class OpenRouterProvider:
 
         client = self._make_client()
 
+        # Sanitize tool_call_ids for multi-provider gateway compatibility
+        messages = self._sanitize_tool_call_ids(messages)
+
         extra_body: dict[str, Any] = {}
-        if reasoning_enabled:
+        # Only send reasoning extension for actual OpenRouter, not LLM Gateway
+        if reasoning_enabled and "openrouter.ai" in self.api_base:
             extra_body["reasoning"] = {"enabled": True}
 
         log_event(

@@ -63,6 +63,10 @@ class AgentResult:
     artifacts: dict[str, Any] = field(default_factory=dict)
 
 
+class ProviderHealthError(RuntimeError):
+    """Raised when an adapter-specific pre-task health check fails."""
+
+
 @runtime_checkable
 class AgentAdapter(Protocol):
     """Interface for agent adapters."""
@@ -85,6 +89,10 @@ class AgentAdapter(Protocol):
     @property
     def model(self) -> str:
         """Model identifier used by this agent."""
+        ...
+
+    def pre_task_healthcheck(self) -> None:
+        """Run any provider-specific pre-task health checks."""
         ...
 
     async def solve_task(
