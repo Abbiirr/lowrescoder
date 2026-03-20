@@ -1,27 +1,33 @@
-.PHONY: setup test lint format clean tui tui-spike go-test
+.PHONY: setup test lint format clean tui go-test bench
 
 setup:
-	uv sync --all-extras
+	cd autocode && uv sync --all-extras
 
 test:
-	uv run pytest tests/ -v --cov=src/autocode
+	cd autocode && uv run pytest tests/ -v --cov=src/autocode
+
+test-bench:
+	cd benchmarks && uv run pytest tests/ -v
+
+test-all:
+	cd autocode && uv run pytest tests/ -v --cov=src/autocode
+	cd benchmarks && uv run pytest tests/ -v
 
 lint:
-	uv run ruff check src/ tests/
-	uv run mypy src/autocode/
+	cd autocode && uv run ruff check src/ tests/
+	cd autocode && uv run mypy src/autocode/
 
 format:
-	uv run ruff format src/ tests/
+	cd autocode && uv run ruff format src/ tests/
 
 clean:
-	rm -rf .venv __pycache__ .pytest_cache .mypy_cache .ruff_cache dist build
+	cd autocode && $(MAKE) clean
 
-# Go TUI targets
 tui:
-	cd cmd/autocode-tui && go build -o ../../build/autocode-tui$(if $(filter Windows_NT,$(OS)),.exe,) .
-
-tui-spike:
-	cd cmd/hybridcoder-tui-spike && go build -o ../../build/hybridcoder-tui-spike$(if $(filter Windows_NT,$(OS)),.exe,) .
+	cd autocode && $(MAKE) tui
 
 go-test:
-	cd cmd/autocode-tui && go test ./... -v
+	cd autocode && $(MAKE) go-test
+
+bench:
+	cd benchmarks && bash run_all_benchmarks.sh
