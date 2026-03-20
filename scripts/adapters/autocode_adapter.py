@@ -28,14 +28,83 @@ from .base import AgentResult, BenchmarkTask, BudgetProfile  # noqa: E402
 MAX_GRADE_ATTEMPTS = 3
 MIN_ATTEMPT_BUDGET_S = 60
 
+# --- Shell task categories (get sysadmin framing, not test-fixing) ---
+SHELL_CATEGORIES: frozenset[str] = frozenset({
+    "version_control", "permissions", "scripting",
+    "package_management", "file_operations", "networking",
+    "data_processing", "algorithmic",
+})
+
+
+# --- P2-A: Deterministic syntax gate ---
+
+def _syntax_check_python(filepath: str) -> str | None:
+    """Run py_compile on a Python file. Returns error string or None."""
+    if not filepath.endswith(".py"):
+        return None
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "py_compile", filepath],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode != 0:
+            err = (result.stderr or result.stdout).strip()
+            return f"SYNTAX ERROR in {filepath}: {err}"
+    except (subprocess.TimeoutExpired, OSError):
+        pass
+    return None
+
+
+# --- Traceback frame extraction ---
+
+def _extract_traceback_frames(output: str) -> list[str]:
+    """Extract File/line/function from Python tracebacks.
+
+    Returns deduplicated list of 'File "path", line N, in func' strings,
+    filtered to exclude stdlib, site-packages, and test infrastructure.
+    """
+    import re
+    frames: list[str] = []
+    seen: set[tuple[str, str]] = set()
+    skip_patterns = (
+        "/site-packages/", "/lib/python", "/unittest/",
+        "/multiprocessing/", "/pluggy/", "/_pytest/",
+        "<frozen ", "/importlib/",
+    )
+    for m in re.finditer(
+        r'File "([^"]+)", line (\d+), in (\w+)', output,
+    ):
+        path, line, func = m.group(1), m.group(2), m.group(3)
+        if any(p in path for p in skip_patterns):
+            continue
+        key = (path, line)
+        if key not in seen:
+            seen.add(key)
+            frames.append(f'File "{path}", line {line}, in {func}')
+    return frames
+
 # --- Provider classification ---
+
+# Gateway model aliases — these are all free-tier routed by the gateway
+GATEWAY_ALIASES: frozenset[str] = frozenset({
+    "default", "tools", "tools_stable", "tools_large",
+    "bench", "bench_stable", "bench_large",
+    "swebench", "coding", "thinking", "vision",
+    "fast", "big", "local",
+})
+
 
 def classify_provider_mode(provider: str, model: str) -> str:
     """Classify a provider+model pair into a cost mode.
 
     Returns 'local_free', or 'paid_metered'.  Fails closed to paid_metered
     for unknown providers so the runner can block them by policy.
+
+    Gateway aliases are always local_free — the gateway is a black box
+    that manages provider selection internally.
     """
+    if model in GATEWAY_ALIASES:
+        return "local_free"
     if provider == "ollama":
         return "local_free"
     if provider == "openrouter":
@@ -45,6 +114,11 @@ def classify_provider_mode(provider: str, model: str) -> str:
 
 # --- Tool restriction ---
 BASH_ONLY_TOOLS: frozenset[str] = frozenset({"run_command", "read_file"})
+BENCHMARK_BOOKKEEPING_FILES: frozenset[str] = frozenset({
+    ".benchmark-sessions.db",
+    ".benchmark-sessions.db-shm",
+    ".benchmark-sessions.db-wal",
+})
 
 
 class AutoCodeAdapter:
@@ -78,6 +152,10 @@ class AutoCodeAdapter:
     @property
     def model(self) -> str:
         return self._model
+
+    def pre_task_healthcheck(self) -> None:
+        """Check that the LLM provider is reachable before starting a task."""
+        pass  # Gateway health is checked by run_all_benchmarks.sh
 
     def _find_work_dir(self, sandbox: Path, task: BenchmarkTask) -> Path:
         """Find the actual working directory for the agent.
@@ -120,6 +198,10 @@ class AutoCodeAdapter:
         resolved = False
         grade_attempts: list[dict] = []
         enforced_policy: dict | None = None
+        task_md_content = ""
+        index_build_ms = 0
+        syntax_gate_checks = 0
+        syntax_gate_rejections = 0
 
         # Ensure venv bin is on PATH for grading subprocesses
         self._bench_env = os.environ.copy()
@@ -149,11 +231,32 @@ class AutoCodeAdapter:
             # Determine working directory
             work_dir = self._find_work_dir(sandbox, task)
 
+            # P2-B: Index warmup — pre-build L2 index
+            index_build_ms = 0
+            try:
+                from autocode.layer2.index import CodeIndex
+                _idx_start = time.monotonic()
+                idx = CodeIndex()
+                idx.build(str(work_dir))
+                index_build_ms = int(
+                    (time.monotonic() - _idx_start) * 1000,
+                )
+            except Exception:
+                pass  # Non-critical — search_code works via BM25
+
+            # P2-A: Syntax gate telemetry
+            syntax_gate_checks = 0
+            syntax_gate_rejections = 0
+
             # Load config, override for benchmark
             config = load_config(project_root=PROJECT_ROOT)
             config.llm.model = self._model
             config.llm.provider = self._provider
-            if self._provider == "openrouter":
+            # Gateway-first: use AUTOCODE_LLM_API_BASE if set
+            gateway_base = os.environ.get("AUTOCODE_LLM_API_BASE", "")
+            if gateway_base:
+                config.llm.api_base = gateway_base
+            elif self._provider == "openrouter":
                 config.llm.api_base = "https://openrouter.ai/api/v1"
             else:
                 config.llm.api_base = os.environ.get(
@@ -321,10 +424,23 @@ class AutoCodeAdapter:
                     except Exception:
                         pass  # Non-critical: agent can still run_tests
 
-                # Build initial prompt
+                # Read task.md if it exists in sandbox
+                task_md_content = ""
+                task_md_path = sandbox / "task.md"
+                if task_md_path.is_file():
+                    try:
+                        task_md_content = task_md_path.read_text(
+                            encoding="utf-8",
+                        )[:3000]
+                    except Exception:
+                        pass
+
+                # Build initial prompt (category-aware)
                 prompt = self._build_prompt(
                     task,
                     initial_test_output=initial_test_output,
+                    task_md=task_md_content,
+                    work_dir_str=str(work_dir),
                 )
 
                 # P0-1: Snapshot test file paths for enforcement
@@ -536,6 +652,16 @@ class AutoCodeAdapter:
         artifacts: dict = {
             "grade_attempts": grade_attempts,
             "failure_type": failure_type,
+            "harness_features": {
+                "syntax_gate": False,
+                "task_md_prompt": bool(task_md_content),
+                "category_prompt": task.category in SHELL_CATEGORIES,
+                "traceback_extraction": True,
+                "index_warmup": index_build_ms > 0,
+            },
+            "index_build_ms": index_build_ms,
+            "syntax_gate_checks": syntax_gate_checks,
+            "syntax_gate_rejections": syntax_gate_rejections,
         }
         if enforced_policy is not None:
             artifacts["enforced_policy"] = enforced_policy
@@ -554,25 +680,78 @@ class AutoCodeAdapter:
         self,
         task: BenchmarkTask,
         initial_test_output: str = "",
+        task_md: str = "",
+        work_dir_str: str = "",
     ) -> str:
-        """Build the agent prompt from the task."""
+        """Build the agent prompt from the task.
+
+        Uses category-aware framing: shell tasks (git, permissions)
+        get sysadmin framing; code tasks get test-fixing framing.
+        Includes task.md content when available.
+        """
         fail_tests = task.extra.get("FAIL_TO_PASS", [])
         test_list = (
             "\n".join(f"  - {t}" for t in fail_tests) if fail_tests else ""
         )
-        # Docker tasks: agent should NOT run grading command on host
-        # because grading runs in the container via the harness retry loop.
         docker_grading = bool(task.extra.get("_container_name"))
+        is_shell_task = task.category in SHELL_CATEGORIES
 
+        # Category-aware framing (driven by manifest metadata)
+        if is_shell_task and task_md:
+            # Shell/sysadmin task with task.md — use task.md as primary
+            prompt = (
+                f"You are a system administration agent.\n\n"
+                f"WORKING DIRECTORY: {work_dir_str}\n\n"
+                f"TASK:\n{task_md}\n\n"
+                "RULES:\n"
+                "- You MUST call tools to complete the task.\n"
+                "- Use run_command to execute shell commands.\n"
+                "- Use read_file to inspect files.\n"
+                "- Complete ALL requirements listed in the task.\n"
+            )
+            if task.grading_command and not docker_grading:
+                prompt += (
+                    f"\nVERIFICATION COMMAND: {task.grading_command}\n"
+                    "Run this after completing the task to verify.\n"
+                )
+            return prompt
+
+        if task_md and not fail_tests:
+            # Non-shell task with task.md but no failing tests
+            # (e.g. algorithmic tasks like chess)
+            prompt = (
+                f"You are a coding agent.\n\n"
+                f"WORKING DIRECTORY: {work_dir_str}\n\n"
+                f"TASK:\n{task_md}\n\n"
+                "RULES:\n"
+                "- You MUST call tools to complete the task.\n"
+                "- Use read_file, edit_file, write_file, and "
+                "run_command as needed.\n"
+            )
+            if task.grading_command and not docker_grading:
+                prompt += (
+                    f"\nVERIFICATION: {task.grading_command}\n"
+                )
+            return prompt
+
+        # Standard code-fixing framing (SWE-bench style)
         prompt = (
             f"You are a coding agent working in a "
             f"{task.repo or 'Python'} repository.\n\n"
+        )
+        if work_dir_str:
+            prompt += f"WORKING DIRECTORY: {work_dir_str}\n\n"
+        prompt += (
             "IMPORTANT: The test patch has already been pre-applied. "
             "The failing tests are already in the codebase. "
             "You MUST fix the SOURCE CODE only — do NOT modify any test "
             "files.\n\n"
             f"BUG REPORT:\n{task.description}\n\n"
         )
+
+        # Include task.md if available (additional context)
+        if task_md:
+            prompt += f"TASK DETAILS:\n{task_md}\n\n"
 
         if test_list:
             prompt += (
@@ -807,6 +986,14 @@ class AutoCodeAdapter:
             parts.append(
                 "KEY ERRORS:\n"
                 + "\n".join(f"  - {a}" for a in assertions[:5])
+            )
+
+        # Deterministic traceback frame extraction
+        tb_frames = _extract_traceback_frames(grading_output)
+        if tb_frames:
+            parts.append(
+                "TRACEBACK FRAMES (from test output):\n"
+                + "\n".join(f"  {f}" for f in tb_frames[:10])
             )
 
         # Source discovery: help agent find the right source files
@@ -1166,11 +1353,26 @@ class AutoCodeAdapter:
             )
             if proc.returncode == 0:
                 return [
-                    f for f in proc.stdout.strip().splitlines() if f
+                    f
+                    for f in proc.stdout.strip().splitlines()
+                    if f and not AutoCodeAdapter._is_benchmark_bookkeeping_path(f)
                 ]
         except Exception:
             pass
         return []
+
+    @staticmethod
+    def _is_benchmark_bookkeeping_path(path: str) -> bool:
+        """Return True for generated benchmark/runtime files, not source edits."""
+        if path in BENCHMARK_BOOKKEEPING_FILES:
+            return True
+        if path.endswith((".pyc", ".pyo")):
+            return True
+        if path.startswith("__pycache__/") or "/__pycache__/" in path:
+            return True
+        if path.startswith(".pytest_cache/") or "/.pytest_cache/" in path:
+            return True
+        return False
 
     @staticmethod
     def _git_restore_files(

@@ -302,6 +302,156 @@ LANE_CONFIGS: dict[str, dict] = {
         "comparison_validity": "proxy-only",
         "description": "LeetCode-style problems (proxy, no parity claims)",
     },
+    "B15": {
+        "name": "Realistic Intake Mutation",
+        "manifest": "b15-intake-mutation-subset.json",
+        "budget": BudgetProfile(
+            wall_time_s=1800, token_cap=40_000, max_tool_calls=80,
+        ),
+        "runner": "swebench",
+        "comparison_validity": "prototype-only",
+        "description": "Natural-request variants of coding tasks",
+    },
+    "B16": {
+        "name": "Requirement-Driven Feature Delivery",
+        "manifest": "b16-requirements-feature-subset.json",
+        "budget": BudgetProfile(
+            wall_time_s=2400, token_cap=50_000, max_tool_calls=120,
+        ),
+        "runner": "swebench",
+        "comparison_validity": "prototype-only",
+        "description": "Feature work from natural-language requirements",
+    },
+    "B17": {
+        "name": "Long-Horizon Multi-File Maintenance",
+        "manifest": "b17-long-horizon-subset.json",
+        "budget": BudgetProfile(
+            wall_time_s=3600, token_cap=60_000, max_tool_calls=160,
+        ),
+        "runner": "swebench",
+        "comparison_validity": "prototype-only",
+        "description": "Longer multi-file maintenance tasks",
+    },
+    "B18": {
+        "name": "Fresh Held-Out Issue Resolution (Prototype)",
+        "manifest": "b18-heldout-prototype-subset.json",
+        "budget": BudgetProfile(
+            wall_time_s=1200, token_cap=30_000, max_tool_calls=60,
+        ),
+        "runner": "competitive",
+        "comparison_validity": "prototype-only",
+        "description": "Prototype fresh/public task lane using recent-style public tasks",
+    },
+    "B19": {
+        "name": "Multilingual Repository Work",
+        "manifest": "b19-multilingual-subset.json",
+        "budget": BudgetProfile(
+            wall_time_s=1800, token_cap=40_000, max_tool_calls=90,
+        ),
+        "runner": "swebench",
+        "comparison_validity": "prototype-only",
+        "description": "Mixed-language repository tasks (prototype)",
+    },
+    "B20": {
+        "name": "Terminal, Git, and Ops Recovery",
+        "manifest": "b20-terminal-ops-subset.json",
+        "budget": BudgetProfile(
+            wall_time_s=1800, token_cap=35_000, max_tool_calls=100,
+        ),
+        "runner": "swebench",
+        "comparison_validity": "prototype-only",
+        "description": "Terminal-native ops and git recovery tasks",
+    },
+    "B21": {
+        "name": "Regression and Contract Preservation",
+        "manifest": "b21-regression-contract-subset.json",
+        "budget": BudgetProfile(
+            wall_time_s=2400, token_cap=45_000, max_tool_calls=110,
+        ),
+        "runner": "swebench",
+        "comparison_validity": "prototype-only",
+        "description": "Feature tasks with explicit regression preservation focus",
+    },
+    "B22": {
+        "name": "Corrupted State Recovery",
+        "manifest": "b22-corruption-subset.json",
+        "budget": BudgetProfile(
+            wall_time_s=1800, token_cap=35_000, max_tool_calls=90,
+        ),
+        "runner": "swebench",
+        "comparison_validity": "prototype-only",
+        "description": "Recover from half-applied or broken repo state",
+    },
+    "B23": {
+        "name": "Collaborative Out-of-Sync Recovery",
+        "manifest": "b23-sync-subset.json",
+        "budget": BudgetProfile(
+            wall_time_s=1800, token_cap=35_000, max_tool_calls=90,
+        ),
+        "runner": "swebench",
+        "comparison_validity": "prototype-only",
+        "description": "Recover from stale collaborator instructions and drift",
+    },
+    "B24": {
+        "name": "Security Audit and Safe Patching",
+        "manifest": "b24-security-subset.json",
+        "budget": BudgetProfile(
+            wall_time_s=2400, token_cap=45_000, max_tool_calls=110,
+        ),
+        "runner": "swebench",
+        "comparison_validity": "prototype-only",
+        "description": "Patch vulnerabilities while preserving behavior",
+    },
+    "B25": {
+        "name": "Managerial Review and Proposal Selection",
+        "manifest": "b25-managerial-subset.json",
+        "budget": BudgetProfile(
+            wall_time_s=1200, token_cap=25_000, max_tool_calls=50,
+        ),
+        "runner": "swebench",
+        "comparison_validity": "prototype-only",
+        "description": "Choose and justify the best implementation proposal",
+    },
+    "B26": {
+        "name": "Economic-Value Freelance Tasks",
+        "manifest": "b26-economic-value-subset.json",
+        "budget": BudgetProfile(
+            wall_time_s=2400, token_cap=50_000, max_tool_calls=120,
+        ),
+        "runner": "swebench",
+        "comparison_validity": "prototype-only",
+        "description": "Freelance-style tasks with value metadata",
+    },
+    "B27": {
+        "name": "Efficiency Under Budget",
+        "manifest": "b27-efficiency-subset.json",
+        "budget": BudgetProfile(
+            wall_time_s=900, token_cap=20_000, max_tool_calls=35,
+        ),
+        "runner": "swebench",
+        "comparison_validity": "prototype-only",
+        "description": "Budget-constrained task execution",
+    },
+    "B28": {
+        "name": "Reliability and Repeatability",
+        "manifest": "b28-repeatability-subset.json",
+        "budget": BudgetProfile(
+            wall_time_s=1200, token_cap=25_000, max_tool_calls=60,
+        ),
+        "runner": "swebench",
+        "comparison_validity": "prototype-only",
+        "description": "Repeat-run stability lane (prototype task set)",
+    },
+    "B29": {
+        "name": "Fault Injection and Infra Resilience",
+        "manifest": "b29-fault-resilience-subset.json",
+        "budget": BudgetProfile(
+            wall_time_s=1200, token_cap=25_000, max_tool_calls=60,
+        ),
+        "runner": "swebench",
+        "comparison_validity": "prototype-only",
+        "description": "Prototype resilience lane with transient task-local faults",
+    },
 }
 
 # --- Agent Registry ---

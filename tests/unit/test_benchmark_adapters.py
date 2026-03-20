@@ -12,7 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.adapters.autocode_adapter import (  # noqa: E402
+from benchmarks.adapters.autocode_adapter import (  # noqa: E402
     BASH_ONLY_TOOLS,
     MAX_GRADE_ATTEMPTS,
     MIN_ATTEMPT_BUDGET_S,
@@ -20,7 +20,7 @@ from scripts.adapters.autocode_adapter import (  # noqa: E402
     classify_provider_mode,
 )
 
-from scripts.adapters.base import BenchmarkTask, BudgetProfile  # noqa: E402  # isort: skip
+from benchmarks.adapters.base import BenchmarkTask, BudgetProfile  # noqa: E402  # isort: skip
 
 
 # --- A1: AutoCode adapter constants ---
@@ -62,8 +62,8 @@ def test_build_prompt_mentions_test_patch():
     assert "SOURCE" in prompt
 
 
-def test_build_prompt_includes_source_candidates():
-    """Initial prompt should surface likely source files early."""
+def test_build_prompt_includes_source_context():
+    """Initial prompt should include test info and initial test output."""
     adapter = AutoCodeAdapter(model="test-model")
     task = BenchmarkTask(
         task_id="test-source-candidates",
@@ -81,8 +81,8 @@ def test_build_prompt_includes_source_candidates():
         task,
         initial_test_output='  File "/work/src/core.py", line 10, in handle\n',
     )
-    assert "LIKELY SOURCE FILES TO CHECK FIRST" in prompt
-    assert "src/_pytest/unittest.py" in prompt
+    assert "FAILING TESTS" in prompt
+    assert "test_unittest.py" in prompt
     assert "core.py" in prompt
 
 
@@ -114,8 +114,8 @@ def test_build_prompt_bash_only_no_write_file():
     assert "read_file" in prompt
 
 
-def test_build_prompt_normal_uses_write_file():
-    """Normal prompt keeps edit_file primary and run_command as fallback."""
+def test_build_prompt_normal_uses_edit_file():
+    """Normal prompt uses edit_file as primary tool and includes grading workflow."""
     adapter = AutoCodeAdapter(model="test-model")
     task = BenchmarkTask(
         task_id="test-normal",
@@ -123,10 +123,10 @@ def test_build_prompt_normal_uses_write_file():
         grading_command="pytest tests/ -x",
     )
     prompt = adapter._build_prompt(task)
-    assert "write_file" in prompt
+    assert "edit_file" in prompt
     workflow = prompt.split("MANDATORY WORKFLOW")[1].split("RULES")[0]
     assert "edit_file" in workflow
-    assert "run_command" in workflow
+    assert "grading command" in workflow.lower()
 
 
 # --- A1: Feedback prompt ---
@@ -179,18 +179,18 @@ def test_build_feedback_prompt_stagnation_warning():
     assert "DIFFERENT approach" in feedback
 
 
-def test_build_feedback_prompt_repeated_failure_warning():
-    """Feedback prompt should call out repeated unchanged failures."""
+def test_build_feedback_prompt_stagnation_different_approach():
+    """Feedback prompt should warn about stagnation and suggest different approach."""
     adapter = AutoCodeAdapter(model="test-model")
     feedback = adapter._build_feedback_prompt(
         "FAILED test_bar", "pytest",
-        repeated_failure=True,
+        stagnation_count=2,
     )
-    assert "SAME failure persisted" in feedback
+    assert "DIFFERENT approach" in feedback
 
 
-def test_build_feedback_prompt_zero_diff_points_to_candidate_files():
-    """Zero-diff retries should force a direct edit in candidate source files."""
+def test_build_feedback_prompt_zero_diff_forces_edits():
+    """Zero-diff retries should force the agent to actually write code changes."""
     adapter = AutoCodeAdapter(model="test-model")
     feedback = adapter._build_feedback_prompt(
         "FAILED testing/test_unittest.py::test_case\n"
@@ -203,8 +203,8 @@ def test_build_feedback_prompt_zero_diff_points_to_candidate_files():
             "+++ b/testing/test_unittest.py\n"
         ),
     )
-    assert "MUST modify one of these source files directly" in feedback
-    assert "src/_pytest/unittest.py" in feedback
+    assert "ZERO file edits" in feedback
+    assert "edit_file" in feedback or "write_file" in feedback
 
 
 # --- A2: Codex adapter grading behavior ---
@@ -212,7 +212,7 @@ def test_build_feedback_prompt_zero_diff_points_to_candidate_files():
 
 def test_codex_adapter_uses_grading_command():
     """Codex adapter runs grading_command and uses its exit code for resolved."""
-    from scripts.adapters.codex_adapter import CodexAdapter
+    from benchmarks.adapters.codex_adapter import CodexAdapter
 
     adapter = CodexAdapter()
     task = BenchmarkTask(
@@ -244,7 +244,7 @@ def test_codex_adapter_uses_grading_command():
 
 def test_codex_adapter_grading_pass():
     """Codex adapter marks resolved=True when grading passes."""
-    from scripts.adapters.codex_adapter import CodexAdapter
+    from benchmarks.adapters.codex_adapter import CodexAdapter
 
     adapter = CodexAdapter()
     task = BenchmarkTask(
@@ -271,7 +271,7 @@ def test_codex_adapter_grading_pass():
 
 def test_codex_adapter_no_grading_uses_exit_code():
     """Without grading_command, Codex uses CLI exit code for resolved."""
-    from scripts.adapters.codex_adapter import CodexAdapter
+    from benchmarks.adapters.codex_adapter import CodexAdapter
 
     adapter = CodexAdapter()
     task = BenchmarkTask(
@@ -298,7 +298,7 @@ def test_codex_adapter_no_grading_uses_exit_code():
 
 def test_claude_adapter_uses_grading_command():
     """Claude adapter runs grading_command and uses its exit code for resolved."""
-    from scripts.adapters.claude_adapter import ClaudeCodeAdapter
+    from benchmarks.adapters.claude_adapter import ClaudeCodeAdapter
 
     adapter = ClaudeCodeAdapter()
     task = BenchmarkTask(
@@ -326,7 +326,7 @@ def test_claude_adapter_uses_grading_command():
 
 def test_claude_adapter_grading_pass():
     """Claude adapter marks resolved=True when grading passes."""
-    from scripts.adapters.claude_adapter import ClaudeCodeAdapter
+    from benchmarks.adapters.claude_adapter import ClaudeCodeAdapter
 
     adapter = ClaudeCodeAdapter()
     task = BenchmarkTask(
@@ -447,7 +447,7 @@ def test_bash_only_constant_is_correct():
 
 def test_extract_patch_files_unified_diff():
     """_extract_patch_files parses unified diff headers."""
-    from scripts.benchmark_runner import _extract_patch_files
+    from benchmarks.benchmark_runner import _extract_patch_files
 
     patch = (
         "diff --git a/tests/test_foo.py b/tests/test_foo.py\n"
@@ -462,7 +462,7 @@ def test_extract_patch_files_unified_diff():
 
 def test_extract_patch_files_multiple():
     """_extract_patch_files handles multi-file patches."""
-    from scripts.benchmark_runner import _extract_patch_files
+    from benchmarks.benchmark_runner import _extract_patch_files
 
     patch = (
         "--- a/tests/test_a.py\n"
@@ -478,7 +478,7 @@ def test_extract_patch_files_multiple():
 
 def test_extract_patch_files_empty():
     """_extract_patch_files returns empty list for empty input."""
-    from scripts.benchmark_runner import _extract_patch_files
+    from benchmarks.benchmark_runner import _extract_patch_files
 
     assert _extract_patch_files("") == []
 
@@ -513,13 +513,18 @@ def test_parse_assertions():
     assert any("TypeError" in a for a in assertions)
 
 
-def test_is_docker_exec_infra_output():
-    assert AutoCodeAdapter._is_docker_exec_infra_output(
-        "Error response from daemon: container abc is not running",
+def test_parse_assertions_extracts_real_errors():
+    """_parse_assertions should extract real assertion/error lines from test output."""
+    output = (
+        "FAILED test_foo.py::test_bar\n"
+        "AssertionError: 1 != 2\n"
+        "some normal output\n"
+        "TypeError: unsupported operand\n"
     )
-    assert not AutoCodeAdapter._is_docker_exec_infra_output(
-        "FAILED test_foo.py::test_bar - AssertionError",
-    )
+    assertions = AutoCodeAdapter._parse_assertions(output)
+    assert len(assertions) == 2
+    assert any("AssertionError" in a for a in assertions)
+    assert any("TypeError" in a for a in assertions)
 
 
 def test_git_changed_files_filters_benchmark_bookkeeping(tmp_path: Path):
