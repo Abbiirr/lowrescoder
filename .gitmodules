@@ -1,0 +1,12 @@
+[submodule "autocode"]
+	path = autocode
+	url = /home/bs01763/projects/ai/lowrescoder-modules/autocode
+[submodule "benchmarks"]
+	path = benchmarks
+	url = /home/bs01763/projects/ai/lowrescoder-modules/benchmarks
+[submodule "docs"]
+	path = docs
+	url = /home/bs01763/projects/ai/lowrescoder-modules/docs
+[submodule "training-data"]
+	path = training-data
+	url = /home/bs01763/projects/ai/lowrescoder-modules/training-data
