@@ -3,14 +3,17 @@ name = "autocode-workspace"
 version = "0.1.0"
 description = "AutoCode workspace — superproject for submodule-based development"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "autocode",
+    "autocode-benchmarks",
+]
 
 [tool.uv.workspace]
 members = ["autocode", "benchmarks"]
 
 [tool.uv.sources]
-autocode = { path = "autocode", editable = true }
-autocode-benchmarks = { path = "benchmarks", editable = true }
+autocode = { workspace = true }
+autocode-benchmarks = { workspace = true }
 
 [tool.pytest.ini_options]
 testpaths = ["autocode/tests", "benchmarks/tests"]
