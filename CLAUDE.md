@@ -90,19 +90,23 @@ Phases 0-4 complete. **Phase 5 (Universal Orchestrator)** — roadmap `PROVISION
 **Always run tests after any code change.** No code is considered working until tests pass.
 
 ```bash
-# Unit tests (fast, run after every change)
-make test
-# Or directly:
-uv run pytest tests/ -v --cov=src/autocode
+# Unit tests — autocode (fast, run after every change)
+uv run pytest autocode/tests/unit/ -v --cov=src/autocode
+
+# Unit tests — benchmarks
+uv run pytest benchmarks/tests/ -v
+
+# All tests (both submodules)
+uv run pytest autocode/tests/unit/ benchmarks/tests/ -v
 
 # Sprint verification (run after completing a sprint)
-uv run pytest tests/test_sprint_verify.py -v
+uv run pytest autocode/tests/test_sprint_verify.py -v
 
 # Linting + type checking (run before any review)
 make lint
 
 # Integration tests (only when testing LLM connections)
-uv run pytest -m integration tests/integration/
+uv run pytest -m integration autocode/tests/integration/
 ```
 
 **Rules:**
@@ -114,6 +118,29 @@ uv run pytest -m integration tests/integration/
 
 ---
 
+## Repository Structure (Submodules)
+
+This is a **git submodule superproject**. Code lives in child repos:
+
+| Submodule | Contents | Path |
+|-----------|----------|------|
+| `autocode/` | Python backend (`src/autocode/`), Go TUI (`cmd/autocode-tui/`), product tests | `autocode/` |
+| `benchmarks/` | Benchmark harness, adapters, e2e fixtures, benchmark tests | `benchmarks/` |
+| `docs/` | All documentation | `docs/` |
+| `training-data/` | Training data for models | `training-data/` |
+
+Root keeps: `CLAUDE.md`, `AGENTS_CONVERSATION.MD`, `pyproject.toml` (workspace), `Makefile` (delegator), `.gitmodules`
+
+**Cross-module imports:** `uv` workspace with editable deps. `autocode` is importable from `benchmarks/` via workspace wiring.
+
+```bash
+# After cloning, initialize submodules:
+git submodule update --init --recursive
+uv sync
+```
+
+---
+
 ## Where to Find What (Session Index)
 
 | What you need | Where to find it |
@@ -121,7 +148,7 @@ uv run pytest -m integration tests/integration/
 | **Active sprint / what to do next** | **`current_directives.md`** |
 | Sprint tracking (all sub-sprints) | `docs/plan/sprints/_index.md` |
 | Fast session startup | `docs/session-onramp.md` |
-| Testing & evaluation guide | `TESTING.md` |
+| Testing & evaluation guide | `autocode/TESTING.md` |
 | Full product roadmap | `docs/plan.md` |
 | MVP acceptance checklist | `docs/plan.md` Section 1.6 |
 | Feature catalog (built vs planned) | `docs/requirements_and_features.md` |
