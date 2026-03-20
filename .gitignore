@@ -46,11 +46,12 @@ nul
 .claude/
 sandboxes/
 logs/
-docs/qa/test-results/
-docs/qa/e2e-test-results/
-docs/qa/phase3-benchmarks/
+benchmark_*.log
 
+# Stale legacy paths (content is in submodules now)
+src/
+scripts/
+tests/
+training_data/
 
 toolsharbor-cli/
-
-benchmarks/*/node_modules/
