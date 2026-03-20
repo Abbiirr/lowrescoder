@@ -1,0 +1,23 @@
+{
+  "_meta": {
+    "description": "B23: Collaborative Out-of-Sync Recovery — stale handoff vs real source of truth",
+    "comparison_validity": "prototype-only",
+    "parity_claim": "forbidden",
+    "note": "Restored prototype lane. Includes misleading collaborator notes that should not override tests and code reality.",
+    "last_verified": "2026-03-20"
+  },
+  "tasks": [
+    {
+      "task_id": "b23-stale-auth-path",
+      "category": "maintenance",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "A collaborator handoff is stale. Fix the auth flow by following the actual tests and current route contract.",
+      "fixture_dir": "fixtures/b23/b23-stale-auth-path",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    }
+  ]
+}

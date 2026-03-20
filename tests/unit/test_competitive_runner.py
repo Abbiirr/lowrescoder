@@ -14,12 +14,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.adapters.base import (  # noqa: E402
+from benchmarks.adapters.base import (  # noqa: E402
     AgentResult,
     BenchmarkTask,
     BudgetProfile,
 )
-from scripts.benchmark_runner import (  # noqa: E402
+from benchmarks.benchmark_runner import (  # noqa: E402
     MANIFEST_DIR,
     _run_competitive_task,
     validate_lane_executable,

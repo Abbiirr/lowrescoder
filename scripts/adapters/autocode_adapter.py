@@ -1304,6 +1304,13 @@ class AutoCodeAdapter:
                         f"Git init failed (rc={init.returncode})"
                         f": {init.stderr[:200]}"
                     )
+            # Always set git config — Docker containers may lack identity
+            subprocess.run(
+                "git config user.email bench@test "
+                "&& git config user.name Bench",
+                shell=True, cwd=str(work_dir),
+                capture_output=True, text=True, timeout=10,
+            )
             proc = subprocess.run(
                 "git add -A && git commit -m benchmark-baseline "
                 "--allow-empty --no-verify",

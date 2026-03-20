@@ -1,0 +1,23 @@
+{
+  "_meta": {
+    "description": "B25: Managerial Review and Proposal Selection — choose the safest implementation plan",
+    "comparison_validity": "prototype-only",
+    "parity_claim": "forbidden",
+    "note": "Restored prototype lane. This is a stand-in managerial evaluation task, not a canonical labeled review corpus.",
+    "last_verified": "2026-03-20"
+  },
+  "tasks": [
+    {
+      "task_id": "b25-proposal-selection",
+      "category": "analysis",
+      "difficulty": "medium",
+      "language": "markdown",
+      "description": "Read the three implementation proposals and write a decision selecting the best one with concrete rationale.",
+      "fixture_dir": "fixtures/b25/b25-proposal-selection",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python verify_decision.py",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    }
+  ]
+}

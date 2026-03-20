@@ -21,6 +21,13 @@ On SWE-bench Verified, switching only the scaffold (agent layer) causes up to **
 | [scoring-framework.md](scoring-framework.md) | How to score agent quality across dimensions |
 | [implementation-roadmap.md](implementation-roadmap.md) | Phased rollout plan with priorities |
 | [research-references.md](research-references.md) | All external benchmarks and papers referenced |
+| [portfolio-b15-b29.md](portfolio-b15-b29.md) | Restored 15-lane extended benchmark portfolio overview |
+| [b15-b29-execution-plan.md](b15-b29-execution-plan.md) | Per-lane execution plan for the restored portfolio |
+| [b15-b29-feasibility.md](b15-b29-feasibility.md) | Honest feasibility split and blockers |
+| [b15-b29-first-run-findings.md](b15-b29-first-run-findings.md) | First full run findings |
+| [b15-b29-sentinel-rerun-findings.md](b15-b29-sentinel-rerun-findings.md) | Sentinel rerun after harness fixes |
+| [b15-b29-second-pass-findings.md](b15-b29-second-pass-findings.md) | Broad second-pass findings |
+| [b15-b29-swebench-alias-findings.md](b15-b29-swebench-alias-findings.md) | Strongest full-pass results on the `swebench` alias |
 
 ## Quick Summary: The 12 Test Dimensions
 
@@ -62,3 +69,25 @@ The 17-item benchmark hardening plan (Entries 207/209/214/219) built the **infra
 | Calculator scenario | 100-point rubric, 7 categories | (already done) |
 | BugFix/CLI scenarios | Manifests defined, runner stubbed | Seed fixtures, scoring, wiring |
 | Agent-specific tests | Nothing | 12 dimensions, 20+ scenario types |
+
+## Restored B15-B29 Portfolio
+
+The runner still defines `B15`-`B29`, and this folder now again carries the
+supporting portfolio docs for those lanes. The manifests live under
+`scripts/e2e/external/` and cover a restored `17` task prototype batch:
+
+- `B15` realistic intake mutation
+- `B16` requirement-driven feature delivery
+- `B17` long-horizon maintenance
+- `B18` held-out freshness proxy
+- `B19` multilingual/mixed-domain work
+- `B20` terminal and git recovery
+- `B21` regression preservation
+- `B22` corrupted-state recovery
+- `B23` collaborative drift recovery
+- `B24` security patching
+- `B25` managerial proposal selection
+- `B26` economic-value feature work
+- `B27` efficiency under budget
+- `B28` repeatability
+- `B29` transient fault resilience

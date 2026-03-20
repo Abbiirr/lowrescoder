@@ -56,12 +56,8 @@ for lane in $LANES; do
         break
     fi
 
-    # Use swebench alias for B7/B8 (large SWE-bench contexts need bigger providers)
-    if [[ "$lane" == "B7" || "$lane" == "B8" ]]; then
-        LANE_MODEL="swebench"
-    else
-        LANE_MODEL="$BENCH_MODEL"
-    fi
+    # Use swebench alias for ALL lanes — tools alias unreliable for multi-turn
+    LANE_MODEL="swebench"
     echo "  Model: $LANE_MODEL"
 
     uv run python scripts/benchmark_runner.py \

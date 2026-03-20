@@ -1,0 +1,47 @@
+{
+  "_meta": {
+    "description": "B19: Multilingual Repository Work — three mixed-domain bugfix seeds",
+    "comparison_validity": "prototype-only",
+    "parity_claim": "forbidden",
+    "note": "Restored prototype lane. Uses the existing multilingual-inspired fixture family as a lightweight stand-in.",
+    "last_verified": "2026-03-20"
+  },
+  "tasks": [
+    {
+      "task_id": "b19-dtype-mismatch-seed",
+      "category": "maintenance",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Fix a data-shape mismatch in a mixed-repo style seed task.",
+      "fixture_dir": "fixtures/b10/ml-001-dtype-mismatch",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "b19-null-handling-seed",
+      "category": "maintenance",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Fix null-handling behavior in a mixed-repo style seed task.",
+      "fixture_dir": "fixtures/b10/ml-004-null-handling",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "b19-timezone-seed",
+      "category": "maintenance",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Fix timezone handling in a mixed-repo style seed task.",
+      "fixture_dir": "fixtures/b10/ml-009-timezone-bug",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    }
+  ]
+}

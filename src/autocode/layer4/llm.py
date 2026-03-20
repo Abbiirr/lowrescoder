@@ -672,7 +672,7 @@ class OpenRouterProvider:
     MAX_RETRIES = 5
     RETRY_BASE_DELAY = 5.0  # seconds, doubles each retry
     RATE_LIMIT_DELAY = 15.0  # extra delay on 429
-    REQUEST_TIMEOUT = 120.0  # seconds
+    REQUEST_TIMEOUT = 600.0  # seconds (match gateway timeout)
 
     def __init__(self, config: AutoCodeConfig) -> None:
         self.model = config.llm.model

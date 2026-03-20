@@ -9,8 +9,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.adapters.base import BenchmarkTask  # noqa: E402
-from scripts.benchmark_runner import validate_lane_executable  # noqa: E402
+from benchmarks.adapters.base import BenchmarkTask  # noqa: E402
+from benchmarks.benchmark_runner import validate_lane_executable  # noqa: E402
 
 
 def _make_task(

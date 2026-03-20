@@ -1,0 +1,11 @@
+{
+  "name": "bugfix-seed",
+  "version": "1.0.0",
+  "description": "Seed project with intentional bugs for E2E-BugFix benchmark",
+  "scripts": {
+    "test": "jest --verbose"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

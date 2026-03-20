@@ -1,0 +1,23 @@
+{
+  "_meta": {
+    "description": "B29: Fault Injection and Infra Resilience — recover from transient failures",
+    "comparison_validity": "prototype-only",
+    "parity_claim": "forbidden",
+    "note": "Restored prototype lane. Encodes transient upstream failures into deterministic retry tests.",
+    "last_verified": "2026-03-20"
+  },
+  "tasks": [
+    {
+      "task_id": "b29-transient-verify",
+      "category": "resilience",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Add retry logic for a transient upstream failure without swallowing permanent errors.",
+      "fixture_dir": "fixtures/b29/b29-transient-verify",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    }
+  ]
+}

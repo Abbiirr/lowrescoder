@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.docker_helpers import (  # noqa: E402
+from benchmarks.docker_helpers import (  # noqa: E402
     docker_available,
     docker_exec,
     ensure_container_name_available,
@@ -61,23 +61,23 @@ class TestMakeContainerName:
 
 
 class TestDockerAvailable:
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_true_when_daemon_up(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
         assert docker_available() is True
         mock_run.assert_called_once()
 
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_false_when_daemon_down(self, mock_run):
         mock_run.return_value = MagicMock(returncode=1)
         assert docker_available() is False
 
-    @patch("scripts.docker_helpers.subprocess.run", side_effect=FileNotFoundError)
+    @patch("benchmarks.docker_helpers.subprocess.run", side_effect=FileNotFoundError)
     def test_false_when_no_cli(self, mock_run):
         assert docker_available() is False
 
     @patch(
-        "scripts.docker_helpers.subprocess.run",
+        "benchmarks.docker_helpers.subprocess.run",
         side_effect=subprocess.TimeoutExpired("docker", 10),
     )
     def test_false_on_timeout(self, mock_run):
@@ -88,8 +88,8 @@ class TestDockerAvailable:
 
 
 class TestStartContainer:
-    @patch("scripts.docker_helpers.ensure_container_name_available")
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.ensure_container_name_available")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_clears_stale_same_name_container_first(
         self,
         mock_run,
@@ -99,10 +99,10 @@ class TestStartContainer:
         start_container("mycontainer", "3.9", "/tmp/sandbox")
         mock_ensure_available.assert_called_once_with("mycontainer")
 
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_correct_command(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0, stdout="abc123\n")
-        with patch("scripts.docker_helpers.ensure_container_name_available"):
+        with patch("benchmarks.docker_helpers.ensure_container_name_available"):
             result = start_container("mycontainer", "3.9", "/tmp/sandbox")
         assert result.returncode == 0
         cmd = mock_run.call_args[0][0]
@@ -115,17 +115,17 @@ class TestStartContainer:
         assert "/tmp/sandbox:/work" in cmd
         assert "python:3.9-slim" in cmd
 
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_uses_correct_python_version(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
-        with patch("scripts.docker_helpers.ensure_container_name_available"):
+        with patch("benchmarks.docker_helpers.ensure_container_name_available"):
             start_container("c", "3.7", "/s")
         cmd = mock_run.call_args[0][0]
         assert "python:3.7-slim" in cmd
 
 
 class TestEnsureContainerNameAvailable:
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_force_removes_existing_name(self, mock_run):
         ensure_container_name_available("myc")
         mock_run.assert_called_once_with(
@@ -135,7 +135,7 @@ class TestEnsureContainerNameAvailable:
             timeout=30,
         )
 
-    @patch("scripts.docker_helpers.subprocess.run", side_effect=Exception("boom"))
+    @patch("benchmarks.docker_helpers.subprocess.run", side_effect=Exception("boom"))
     def test_swallows_cleanup_errors(self, mock_run):
         ensure_container_name_available("myc")
 
@@ -144,7 +144,7 @@ class TestEnsureContainerNameAvailable:
 
 
 class TestDockerExec:
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_wraps_with_pipefail(self, mock_run):
         mock_run.return_value = MagicMock(
             returncode=0, stdout="ok", stderr="",
@@ -159,7 +159,7 @@ class TestDockerExec:
         assert "set -o pipefail" in bash_cmd
         assert "echo hello" in bash_cmd
 
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_custom_workdir(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
         docker_exec("myc", "ls", workdir="/work/repo")
@@ -167,7 +167,7 @@ class TestDockerExec:
         assert "-w" in cmd
         assert "/work/repo" in cmd
 
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_timeout_forwarded(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
         docker_exec("myc", "pip install -e .", timeout=600)
@@ -178,7 +178,7 @@ class TestDockerExec:
 
 
 class TestInstallBuildDeps:
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_installs_packages(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
         result = install_build_deps("myc")
@@ -188,7 +188,7 @@ class TestInstallBuildDeps:
         assert "apt-get" in bash_cmd
         assert "gcc" in bash_cmd
 
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_installs_pytest(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
         install_build_deps("myc")
@@ -196,7 +196,7 @@ class TestInstallBuildDeps:
         bash_cmd = cmd[-1]
         assert "pytest" in bash_cmd
 
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_no_output_suppression(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
         install_build_deps("myc")
@@ -204,13 +204,13 @@ class TestInstallBuildDeps:
         bash_cmd = cmd[-1]
         assert ">/dev/null" not in bash_cmd
 
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_full_profile_uses_longer_timeout(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
         install_build_deps("myc", profile="full")
         assert mock_run.call_args[1]["timeout"] == 900
 
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_git_only_profile_installs_git(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
         install_build_deps("myc", profile="git-only")
@@ -219,7 +219,7 @@ class TestInstallBuildDeps:
         assert "python3-dev" not in bash_cmd
         assert "pytest" not in bash_cmd
 
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_none_profile_skips_subprocess(self, mock_run):
         result = install_build_deps("myc", profile="none")
         assert result.returncode == 0
@@ -231,7 +231,7 @@ class TestInstallBuildDeps:
 
 
 class TestStopAndRemove:
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_calls_stop_and_rm(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
         stop_and_remove("myc")
@@ -240,12 +240,12 @@ class TestStopAndRemove:
         assert calls[0][0][0] == ["docker", "stop", "myc"]
         assert calls[1][0][0] == ["docker", "rm", "myc"]
 
-    @patch("scripts.docker_helpers.subprocess.run", side_effect=Exception("boom"))
+    @patch("benchmarks.docker_helpers.subprocess.run", side_effect=Exception("boom"))
     def test_never_raises(self, mock_run):
         # Should not raise even if subprocess fails
         stop_and_remove("myc")
 
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_continues_after_stop_fails(self, mock_run):
         mock_run.side_effect = [Exception("stop failed"), MagicMock(returncode=0)]
         stop_and_remove("myc")  # Should not raise
@@ -255,7 +255,7 @@ class TestStopAndRemove:
 
 
 class TestGetImageDigest:
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_returns_digest(self, mock_run):
         mock_run.return_value = MagicMock(
             returncode=0, stdout="sha256:abc123\n",
@@ -265,18 +265,18 @@ class TestGetImageDigest:
         cmd = mock_run.call_args[0][0]
         assert "python:3.9-slim" in cmd
 
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_returns_unknown_on_failure(self, mock_run):
         mock_run.return_value = MagicMock(returncode=1)
         assert get_image_digest("3.9") == "unknown"
 
-    @patch("scripts.docker_helpers.subprocess.run", side_effect=Exception("x"))
+    @patch("benchmarks.docker_helpers.subprocess.run", side_effect=Exception("x"))
     def test_returns_unknown_on_exception(self, mock_run):
         assert get_image_digest("3.9") == "unknown"
 
 
 class TestInspectContainerState:
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_returns_state_fields(self, mock_run):
         mock_run.return_value = MagicMock(
             returncode=0,
@@ -289,7 +289,7 @@ class TestInspectContainerState:
         assert state["exit_code"] == 137
         assert state["oom_killed"] is False
 
-    @patch("scripts.docker_helpers.subprocess.run")
+    @patch("benchmarks.docker_helpers.subprocess.run")
     def test_returns_inspect_error_on_failure(self, mock_run):
         mock_run.return_value = MagicMock(
             returncode=1,

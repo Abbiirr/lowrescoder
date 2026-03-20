@@ -11,9 +11,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.adapters.base import AgentResult, BenchmarkTask, BudgetProfile  # noqa: E402
+from benchmarks.adapters.base import AgentResult, BenchmarkTask, BudgetProfile  # noqa: E402
 
-from scripts.benchmark_runner import (  # noqa: E402  # isort: skip
+from benchmarks.benchmark_runner import (  # noqa: E402  # isort: skip
     LANE_CONFIGS,
     build_run_contract,
     run_lane,
@@ -61,7 +61,7 @@ def test_setup_nonzero_rc_is_infra_fail():
     # Mock subprocess.run to return non-zero for setup
     setup_result = MagicMock(returncode=1, stderr="setup error", stdout="")
 
-    with patch("scripts.benchmark_runner.create_task_sandbox") as mock_sandbox, \
+    with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox, \
          patch("subprocess.run", return_value=setup_result):
         mock_sandbox.return_value = Path("/tmp/fake-sandbox")
         run_data = asyncio.run(
@@ -81,7 +81,7 @@ def test_setup_exception_is_infra_fail():
     task = _make_task(setup_commands=["will-fail"])
     budget = BudgetProfile(wall_time_s=60, token_cap=1000, max_tool_calls=10)
 
-    with patch("scripts.benchmark_runner.create_task_sandbox") as mock_sandbox, \
+    with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox, \
          patch("subprocess.run", side_effect=OSError("cmd not found")):
         mock_sandbox.return_value = Path("/tmp/fake-sandbox")
         run_data = asyncio.run(
@@ -112,7 +112,7 @@ def test_patch_apply_failure_is_infra_fail(tmp_path: Path):
     # Setup succeeds (no setup commands), but patch fails
     patch_result = MagicMock(returncode=1, stderr="patch error", stdout="")
 
-    with patch("scripts.benchmark_runner.create_task_sandbox") as mock_sandbox, \
+    with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox, \
          patch("subprocess.run", return_value=patch_result):
         mock_sandbox.return_value = tmp_path
         run_data = asyncio.run(
@@ -132,7 +132,7 @@ def test_artifacts_persisted_in_results():
     task = _make_task()
     budget = BudgetProfile(wall_time_s=60, token_cap=1000, max_tool_calls=10)
 
-    with patch("scripts.benchmark_runner.create_task_sandbox") as mock_sandbox:
+    with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox:
         mock_sandbox.return_value = Path("/tmp/fake-sandbox")
         run_data = asyncio.run(
             run_lane(agent, "B7", [task], budget, None),
@@ -164,7 +164,7 @@ def test_tool_restriction_injected_into_task_extra():
 
     agent.solve_task = AsyncMock(side_effect=capture_solve)
 
-    with patch("scripts.benchmark_runner.create_task_sandbox") as mock_sandbox:
+    with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox:
         mock_sandbox.return_value = Path("/tmp/fake-sandbox")
         asyncio.run(run_lane(agent, "B8", [task], budget, None))
 
@@ -189,14 +189,14 @@ def test_extra_apt_deps_installed_in_docker(tmp_path: Path):
         docker_exec_calls.append(cmd)
         return MagicMock(returncode=0, stdout="ok", stderr="")
 
-    with patch("scripts.benchmark_runner.create_task_sandbox") as mock_sandbox, \
-         patch("scripts.benchmark_runner.docker_available", return_value=True), \
-         patch("scripts.benchmark_runner.start_container") as mock_start, \
-         patch("scripts.benchmark_runner.docker_exec", side_effect=mock_docker_exec), \
-         patch("scripts.benchmark_runner.install_build_deps") as mock_deps, \
-         patch("scripts.benchmark_runner.get_image_digest", return_value="sha256:test"), \
-         patch("scripts.benchmark_runner.fix_permissions"), \
-         patch("scripts.benchmark_runner.stop_and_remove"):
+    with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox, \
+         patch("benchmarks.benchmark_runner.docker_available", return_value=True), \
+         patch("benchmarks.benchmark_runner.start_container") as mock_start, \
+         patch("benchmarks.benchmark_runner.docker_exec", side_effect=mock_docker_exec), \
+         patch("benchmarks.benchmark_runner.install_build_deps") as mock_deps, \
+         patch("benchmarks.benchmark_runner.get_image_digest", return_value="sha256:test"), \
+         patch("benchmarks.benchmark_runner.fix_permissions"), \
+         patch("benchmarks.benchmark_runner.stop_and_remove"):
         mock_sandbox.return_value = tmp_path
         mock_start.return_value = MagicMock(returncode=0, stdout="cid", stderr="")
         mock_deps.return_value = MagicMock(returncode=0, stdout="ok", stderr="")
@@ -222,14 +222,14 @@ def test_extra_pip_deps_installed_in_docker(tmp_path: Path):
         docker_exec_calls.append(cmd)
         return MagicMock(returncode=0, stdout="ok", stderr="")
 
-    with patch("scripts.benchmark_runner.create_task_sandbox") as mock_sandbox, \
-         patch("scripts.benchmark_runner.docker_available", return_value=True), \
-         patch("scripts.benchmark_runner.start_container") as mock_start, \
-         patch("scripts.benchmark_runner.docker_exec", side_effect=mock_docker_exec), \
-         patch("scripts.benchmark_runner.install_build_deps") as mock_deps, \
-         patch("scripts.benchmark_runner.get_image_digest", return_value="sha256:test"), \
-         patch("scripts.benchmark_runner.fix_permissions"), \
-         patch("scripts.benchmark_runner.stop_and_remove"):
+    with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox, \
+         patch("benchmarks.benchmark_runner.docker_available", return_value=True), \
+         patch("benchmarks.benchmark_runner.start_container") as mock_start, \
+         patch("benchmarks.benchmark_runner.docker_exec", side_effect=mock_docker_exec), \
+         patch("benchmarks.benchmark_runner.install_build_deps") as mock_deps, \
+         patch("benchmarks.benchmark_runner.get_image_digest", return_value="sha256:test"), \
+         patch("benchmarks.benchmark_runner.fix_permissions"), \
+         patch("benchmarks.benchmark_runner.stop_and_remove"):
         mock_sandbox.return_value = tmp_path
         mock_start.return_value = MagicMock(returncode=0, stdout="cid", stderr="")
         mock_deps.return_value = MagicMock(returncode=0, stdout="ok", stderr="")
@@ -258,13 +258,13 @@ def test_extra_apt_failure_stops_setup(tmp_path: Path):
             return MagicMock(returncode=1, stdout="", stderr="package not found")
         return MagicMock(returncode=0, stdout="ok", stderr="")
 
-    with patch("scripts.benchmark_runner.create_task_sandbox") as mock_sandbox, \
-         patch("scripts.benchmark_runner.docker_available", return_value=True), \
-         patch("scripts.benchmark_runner.start_container") as mock_start, \
-         patch("scripts.benchmark_runner.docker_exec", side_effect=mock_docker_exec), \
-         patch("scripts.benchmark_runner.install_build_deps") as mock_deps, \
-         patch("scripts.benchmark_runner.get_image_digest", return_value="sha256:test"), \
-         patch("scripts.benchmark_runner.stop_and_remove"):
+    with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox, \
+         patch("benchmarks.benchmark_runner.docker_available", return_value=True), \
+         patch("benchmarks.benchmark_runner.start_container") as mock_start, \
+         patch("benchmarks.benchmark_runner.docker_exec", side_effect=mock_docker_exec), \
+         patch("benchmarks.benchmark_runner.install_build_deps") as mock_deps, \
+         patch("benchmarks.benchmark_runner.get_image_digest", return_value="sha256:test"), \
+         patch("benchmarks.benchmark_runner.stop_and_remove"):
         mock_sandbox.return_value = tmp_path
         mock_start.return_value = MagicMock(returncode=0, stdout="cid", stderr="")
         mock_deps.return_value = MagicMock(returncode=0, stdout="ok", stderr="")
@@ -282,13 +282,13 @@ def test_run_lane_passes_build_deps_profile_from_task_extra(tmp_path: Path):
     task.extra["build_deps_profile"] = "none"
     budget = BudgetProfile(wall_time_s=60, token_cap=1000, max_tool_calls=10)
 
-    with patch("scripts.benchmark_runner.create_task_sandbox") as mock_sandbox, \
-         patch("scripts.benchmark_runner.docker_available", return_value=True), \
-         patch("scripts.benchmark_runner.start_container") as mock_start, \
-         patch("scripts.benchmark_runner.install_build_deps") as mock_deps, \
-         patch("scripts.benchmark_runner.get_image_digest", return_value="sha256:test"), \
-         patch("scripts.benchmark_runner.fix_permissions"), \
-         patch("scripts.benchmark_runner.stop_and_remove"):
+    with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox, \
+         patch("benchmarks.benchmark_runner.docker_available", return_value=True), \
+         patch("benchmarks.benchmark_runner.start_container") as mock_start, \
+         patch("benchmarks.benchmark_runner.install_build_deps") as mock_deps, \
+         patch("benchmarks.benchmark_runner.get_image_digest", return_value="sha256:test"), \
+         patch("benchmarks.benchmark_runner.fix_permissions"), \
+         patch("benchmarks.benchmark_runner.stop_and_remove"):
         mock_sandbox.return_value = tmp_path
         mock_start.return_value = MagicMock(returncode=0, stdout="cid", stderr="")
         mock_deps.return_value = MagicMock(returncode=0, stdout="skipped", stderr="")
@@ -316,7 +316,7 @@ def test_run_lane_counts_infra_from_failure_type_not_error():
     task = _make_task()
     budget = BudgetProfile(wall_time_s=60, token_cap=1000, max_tool_calls=10)
 
-    with patch("scripts.benchmark_runner.create_task_sandbox") as mock_sandbox:
+    with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox:
         mock_sandbox.return_value = Path("/tmp/fake-sandbox")
         run_data = asyncio.run(run_lane(agent, "B7", [task], budget, None))
 
@@ -330,7 +330,7 @@ def test_run_lane_calls_adapter_pre_task_healthcheck():
     task = _make_task()
     budget = BudgetProfile(wall_time_s=60, token_cap=1000, max_tool_calls=10)
 
-    with patch("scripts.benchmark_runner.create_task_sandbox") as mock_sandbox:
+    with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox:
         mock_sandbox.return_value = Path("/tmp/fake-sandbox")
         asyncio.run(run_lane(agent, "B7", [task], budget, None))
 
@@ -339,7 +339,7 @@ def test_run_lane_calls_adapter_pre_task_healthcheck():
 
 def test_run_lane_halts_on_provider_healthcheck_failure():
     """A provider health failure should halt the run before solve_task."""
-    from scripts.adapters.base import ProviderHealthError
+    from benchmarks.adapters.base import ProviderHealthError
 
     agent = _make_agent(resolved=True)
     agent.pre_task_healthcheck.side_effect = ProviderHealthError("provider down")
@@ -381,14 +381,14 @@ def test_run_lane_parallel_run_ids_keep_disjoint_containers_progress_and_cleanup
         save_calls.append((lane, agent_name, run_id))
 
     async def _run_both() -> None:
-        with patch("scripts.benchmark_runner.create_task_sandbox") as mock_sandbox, \
-             patch("scripts.benchmark_runner.docker_available", return_value=True), \
-             patch("scripts.benchmark_runner.start_container") as mock_start, \
-             patch("scripts.benchmark_runner.install_build_deps") as mock_deps, \
-             patch("scripts.benchmark_runner.fix_permissions"), \
-             patch("scripts.benchmark_runner.stop_and_remove", side_effect=cleanup_names.append), \
+        with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox, \
+             patch("benchmarks.benchmark_runner.docker_available", return_value=True), \
+             patch("benchmarks.benchmark_runner.start_container") as mock_start, \
+             patch("benchmarks.benchmark_runner.install_build_deps") as mock_deps, \
+             patch("benchmarks.benchmark_runner.fix_permissions"), \
+             patch("benchmarks.benchmark_runner.stop_and_remove", side_effect=cleanup_names.append), \
              patch(
-                 "scripts.benchmark_runner._save_progress",
+                 "benchmarks.benchmark_runner._save_progress",
                  side_effect=_record_progress,
              ):
             (tmp_path / "run-a").mkdir()
@@ -452,7 +452,7 @@ def test_build_run_contract_includes_run_id():
 
 def test_manifest_no_tail_truncation():
     """No setup commands should have '| tail' output truncation."""
-    from scripts.adapters.base import load_manifest
+    from benchmarks.adapters.base import load_manifest
     manifest = PROJECT_ROOT / "scripts" / "e2e" / "external" / "swebench-pilot-subset.json"
     if not manifest.exists():
         return  # skip if no manifest
@@ -466,7 +466,7 @@ def test_manifest_no_tail_truncation():
 
 def test_manifest_sklearn_has_extra_pip_deps():
     """scikit-learn tasks should have extra_pip_deps with Cython<3."""
-    from scripts.adapters.base import load_manifest
+    from benchmarks.adapters.base import load_manifest
     manifest = PROJECT_ROOT / "scripts" / "e2e" / "external" / "swebench-pilot-subset.json"
     if not manifest.exists():
         return
@@ -482,7 +482,7 @@ def test_manifest_sklearn_has_extra_pip_deps():
 
 def test_manifest_matplotlib_has_extra_apt_deps():
     """matplotlib tasks should have extra_apt_deps with freetype/png."""
-    from scripts.adapters.base import load_manifest
+    from benchmarks.adapters.base import load_manifest
     manifest = PROJECT_ROOT / "scripts" / "e2e" / "external" / "swebench-pilot-subset.json"
     if not manifest.exists():
         return
