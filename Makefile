@@ -1,4 +1,4 @@
-.PHONY: setup test lint format clean tui go-test bench
+.PHONY: setup test lint format clean clean-runtime tui go-test bench
 
 setup:
 	cd autocode && uv sync --all-extras
@@ -22,6 +22,10 @@ format:
 
 clean:
 	cd autocode && $(MAKE) clean
+
+clean-runtime:
+	rm -rf sandboxes/ logs/
+	@echo "Runtime directories removed (sandboxes/, logs/)"
 
 tui:
 	cd autocode && $(MAKE) tui
