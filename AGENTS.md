@@ -22,15 +22,15 @@ For fast session startup and current-state context, read in this order:
 - `docs/archive/plan/phase3-execution-brief.md` — Phase 3 completion summary (archived)
 
 ## Build, Test, and Development Commands
-Current commands:
-- `uv sync --all-extras`
-- `uv run pytest tests/ -v --cov=src/autocode`
-- `uv run ruff check src/ tests/`
-- `uv run ruff format src/ tests/`
-- `uv run mypy src/autocode/`
-- `uv run python -m autocode` or `uv run autocode chat`
-- `make test` and `make lint`
-- `uv run python scripts/bench_tui.py --cmd autocode --args "chat"`
+Current commands (run from superproject root):
+- `uv sync` — install workspace deps
+- `uv run pytest autocode/tests/unit/ benchmarks/tests/ -v` — all tests
+- `uv run pytest autocode/tests/unit/ -v --cov=src/autocode` — autocode tests
+- `uv run pytest benchmarks/tests/ -v` — benchmark tests
+- `cd autocode && uv run ruff check src/ tests/` — lint
+- `cd autocode && uv run mypy src/autocode/` — type check
+- `uv run python -m autocode` or `uv run autocode chat` — run autocode
+- `make test` and `make lint` — via Makefile delegator
 
 ## Coding Style & Naming Conventions
 - Python 3.11+.

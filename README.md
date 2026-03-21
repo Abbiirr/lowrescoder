@@ -185,15 +185,15 @@ build.bat setup  # Windows
 ### Run tests
 
 ```bash
-# Python tests (569+ unit tests)
-make test            # Linux/macOS
-build.bat test       # Windows
-# Or: uv run pytest tests/ -v --cov=src/autocode
+# All tests (1054 unit tests across autocode + benchmarks)
+uv run pytest autocode/tests/unit/ benchmarks/tests/ -v
+
+# Autocode tests only
+uv run pytest autocode/tests/unit/ -v --cov=src/autocode
 
 # Go tests (93 tests)
-make go-test         # Linux/macOS
-build.bat go-test    # Windows
-# Or: cd cmd/autocode-tui && go test ./... -v
+cd autocode && make go-test
+# Or: cd autocode/cmd/autocode-tui && go test ./... -v
 ```
 
 ### Run linting
