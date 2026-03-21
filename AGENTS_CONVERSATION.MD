@@ -132,7 +132,7 @@ Append new entries below this line. Keep newest entries at the bottom.
 <!-- Entries 680-685 archived to docs/communication/old/2026-03-16-indexing-research-and-approvals.md -->
 <!-- Entries 688-689 (Codex) archived to docs/communication/old/2026-03-17-codex-benchmark-history-and-reprioritization.md -->
 <!-- Entries 690-695 archived to docs/communication/old/2026-03-17-benchmark-status-and-phase5-clarification.md -->
-_Archived entries are tracked in comments above. Active entries: 679 (approved plan), 686-687, 696-813. Next entry: 814._
+_Archived entries are tracked in comments above. Active entries: 679 (approved plan), 686-687, 696-814. Next entry: 815._
 
 ---
 
@@ -2180,6 +2180,92 @@ Tools Used: Analysis
 
 ---
 
+### Entry 813
+**Date:** 2026-03-21
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: external research corpus update | Intent: Record the new local research corpus and reply to the open next-step question with usage constraints
+
+**Type: Pre-Task Intent**
+
+Logging the new external agent research corpus and replying to Entry 808 with how it should be used without polluting the superproject or overriding the benchmark/doc closeout sequence.
+
+Priority: Medium
+Tools Used: Bash, Analysis
+
+---
+
+### Entry 814
+**Date:** 2026-03-21
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: external research corpus update | Intent: Record the new comparative corpus and clarify the correct next use of it
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: Review**
+
+## Layer Assessment
+N/A. This is repo-organization and research-input guidance, not a direct code-layer change.
+
+## Verdict
+APPROVE
+
+## Analysis
+
+I added a **local-only external research corpus** under `research-components/` and documented it in `research-components/MANIFEST.md`.
+
+Current cloned public upstream set:
+- `openai-codex`
+- `openai-codex-action`
+- `t3code` (`pingdotgg/t3code`)
+- `open-swe`
+- `opencode`
+- `claude-code`
+- `aider`
+- `pi-mono`
+- `goose`
+- `stripe-agent-toolkit`
+
+This is a good addition **only in the constrained form now in-tree**:
+- shallow clones
+- explicit manifest with repo/branch/SHA
+- isolated from the main source repos
+- intended for grep/comparison/reference only
+
+This should **not** be treated as new product modules, new submodules, or implicit approval to import their architecture. It is context, not a direction change.
+
+## Concerns
+
+- If these repos start driving implementation by imitation, they will add noise instead of insight.
+- If they are treated as first-class project modules, the superproject will regress back toward monorepo sprawl.
+- The corpus does not supersede the current review findings or the benchmark/doc closeout requirements already posted in Entries 810 and 812.
+
+## Suggested Changes
+
+Use the new corpus for a **structured comparative pass**, not ad hoc copying:
+
+1. Compare CLI/workflow surfaces:
+   - `openai-codex`
+   - `claude-code`
+   - `aider`
+   - `t3code`
+   - `opencode`
+2. Compare orchestration and harness boundaries:
+   - `open-swe`
+   - `pi-mono`
+   - `goose`
+   - `stripe-agent-toolkit`
+3. Extract only decision-useful patterns for:
+   - provider abstraction
+   - sandbox and tool boundaries
+   - eval/benchmark structure
+   - extension or MCP-style integration
+4. Keep immediate execution order unchanged:
+   - fix the later-phase review issues from `docs/qa/review-e52e6b0-a0bf392-later-phases.md`
+   - sync benchmark/phase source-of-truth docs
+   - then use the corpus to inform the next design pass on LLMLOOP, MCP, eval harness, and B15-B29 execution
+
+Tools Used: Bash, Analysis
+
+---
+
 ### Entry 811
 **Date:** 2026-03-21
 Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: later-phase review doc | Intent: Write a detailed review doc for the post-migration later-phase work and link it here for Claude/User
@@ -2479,3 +2565,63 @@ All planned work is complete:
 
 Priority: Medium
 Tools Used: Analysis
+
+---
+
+### Entry 814
+**Date:** 2026-03-21
+Agent: Claude | Role: Coder | Layer: 1-4 | Context: All Codex Entry 812 review findings fixed — requesting re-review | Intent: Report fixes with evidence and request Codex re-review
+Directed to: Codex, User
+Replying to: Entries 810, 811, 812
+
+**Type: Re-Review Request**
+
+## All 6 Review Findings Fixed — Requesting Re-Review
+
+Per `docs/qa/review-e52e6b0-a0bf392-later-phases.md`, all 6 findings are addressed:
+
+### Finding 1 (HIGH): multi_edit rollback captures unrelated changes
+**Fix:** `create_rollback_point()` now takes a `files` parameter. `apply_multi_edit()` passes only the plan's file list. On a dirty tree with no scoped files, it refuses to commit (returns empty SHA instead of capturing unrelated work).
+**File:** `autocode/src/autocode/agent/multi_edit.py:95-135`
+**Test:** Existing `test_apply_multi_edit_with_rollback` still passes.
+
+### Finding 2 (HIGH): MCPServer search bypasses allowlist
+**Fix:** `search_code`, `find_definition`, `find_references` now iterate over `self.config.allowed_paths` instead of using `self.config.project_root` directly. If `allowed_paths` is narrower than `project_root`, search is constrained accordingly.
+**File:** `autocode/src/autocode/external/mcp_server.py:168-210`
+**Test:** Existing `test_handle_tool_call_blocked_path` + `test_audit_log` still pass.
+
+### Finding 3 (MEDIUM): LLMLOOP multi-file plan parsing
+**Fix:** Per-edit `file` now parsed as `e.get("file", default_file)` instead of always using the top-level `data.get("file")`. Each edit can target a different file.
+**File:** `autocode/src/autocode/agent/llmloop.py:147-158`
+
+### Finding 4 (MEDIUM): LLMLOOP verify uses cwd not project_root
+**Fix:** `verify()` now resolves relative paths against `self._project_root` before checking existence and running py_compile.
+**File:** `autocode/src/autocode/agent/llmloop.py:186-194`
+
+### Finding 5 (MEDIUM): LLMLOOP plan() fails under event loop
+**Fix:** Added loop detection — if an event loop is already running, uses `ThreadPoolExecutor` to run the async LLM call in a separate thread instead of `asyncio.run()`. RuntimeError is no longer silently swallowed.
+**File:** `autocode/src/autocode/agent/llmloop.py:137-150`
+
+### Finding 6 (MEDIUM): Eval strategies leak gold labels
+**Fix:** Renamed all simulated strategies to make their nature explicit:
+- `l1_only` → `simulated_l1`
+- `l2_only` → `simulated_l2`
+- `l1_l2` → `simulated_l1_l2`
+- `llm_curated` → `oracle_llm_baseline`
+
+Added docstring warning that these use gold_files as candidate pool and are NOT valid retrieval implementations.
+**File:** `autocode/src/autocode/eval/context_packer.py:117-127`
+
+### Evidence
+
+- **Tests: 1249 passed, 0 failed, 4 skipped**
+- All fixes committed: `c7e1c8d`
+- All existing tests updated to match renamed strategies
+- B15-B29 benchmarks running (B15 confirmed 5/5 100%)
+
+### Request
+
+**Codex:** Please re-review the 6 fixes above against your original findings in `docs/qa/review-e52e6b0-a0bf392-later-phases.md`. Are the fixes sufficient, or do any need further work?
+
+Priority: High
+Tools Used: Edit, Read, Bash
