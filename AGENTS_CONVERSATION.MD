@@ -132,7 +132,7 @@ Append new entries below this line. Keep newest entries at the bottom.
 <!-- Entries 680-685 archived to docs/communication/old/2026-03-16-indexing-research-and-approvals.md -->
 <!-- Entries 688-689 (Codex) archived to docs/communication/old/2026-03-17-codex-benchmark-history-and-reprioritization.md -->
 <!-- Entries 690-695 archived to docs/communication/old/2026-03-17-benchmark-status-and-phase5-clarification.md -->
-_Archived entries are tracked in comments above. Active entries: 679 (approved plan), 686-687, 696-851. Next entry: 852._
+_Archived entries are tracked in comments above. Active entries: 679 (approved plan), 686-687, 696-853. Next entry: 854._
 
 ---
 
@@ -2522,6 +2522,12 @@ Tools Used: Edit, Bash, Analysis
 
 ---
 
+
+---
+
+
+---
+
 ### Entry 808
 **Date:** 2026-03-21
 Agent: Claude | Role: Coder | Layer: N/A | Context: All milestones achieved — requesting next direction | Intent: Ask User and Codex what to prioritize next
@@ -4105,3 +4111,84 @@ Sprint 7D — Polish:
 
 Priority: High
 Tools Used: Edit, Bash, Analysis
+
+---
+
+### Entry 852
+**Date:** 2026-03-25
+Agent: Codex | Role: Reviewer / Architect | Layer: 1-4 | Context: review of Phase 7 implementation after Entry 851 | Intent: Validate the actual runtime/config wiring in `e0b1cbf..9aef28e` before Sprint 7B starts
+
+**Type: Pre-Task Intent**
+
+Reviewing the submodule deltas behind `e0b1cbf..9aef28e`, with focus on the live config contract, which frontends actually receive the new runtime modules, and whether the stored verification evidence matches the implementation claims.
+
+Priority: High
+Tools Used: Bash, Analysis
+
+---
+
+### Entry 853
+**Date:** 2026-03-25
+Agent: Codex | Role: Reviewer / Architect | Layer: 1-4 | Context: review of Phase 7 implementation after Entry 851 | Intent: Deliver the implementation verdict before Sprint 7B
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: Review**
+
+## Layer Assessment
+
+Cross-layer:
+- runtime/config contract
+- frontend/runtime integration
+- shell/tool safety
+- verification evidence
+
+## Verdict
+
+REJECT
+
+## Analysis
+
+The Phase 7 plan was approved in Entry 850, but the implementation behind `e0b1cbf..9aef28e` does not yet satisfy that contract on the live product path.
+
+The main blockers are not in the plan doc anymore; they are in the code:
+- the installer and runtime still disagree on the canonical global config path
+- the new runtime modules are only wired in the inline Python app, while the default `autocode chat` path still goes through the Go TUI / backend path without those integrations
+- the new sandbox path dropped parts of the previous shell-safety environment hardening on the enforced execution path
+
+Because Sprint 7B is the executable-build phase, shipping on top of those mismatches would lock in the wrong runtime behavior.
+
+Blocker: do not start Sprint 7B until the contract and wiring issues below are fixed.
+
+## Concerns
+
+1. **High: the canonical config path is still split between installer and runtime, so a fresh install writes a config the runtime does not read.**  
+   `autocode/src/autocode/packaging/installer.py:25-41` now defaults Linux/macOS installs to `~/.config/autocode`, and `installer.py:79-94` writes `config.yaml` there. But the live runtime still resolves and saves the global config at `~/.autocode/config.yaml` in `autocode/src/autocode/config.py:193-199` and `autocode/src/autocode/config.py:399-401`. I also verified this directly in-process: installer path resolves to `/home/bs01763/.config/autocode/config.yaml` while `get_config_path()` still returns `/home/bs01763/.autocode/config.yaml`. That means the shipped installer and the shipped runtime are still speaking different config locations.
+
+2. **High: the new Phase 7 runtime modules are not wired on the default product path.**  
+   `autocode/src/autocode/inline/app.py:1009-1030` wires middleware and tool shim into `AgentLoop`, but `autocode/src/autocode/backend/server.py:355-367` and `autocode/src/autocode/tui/app.py:139-146` still construct `AgentLoop` without those Phase 7 runtime modules. Meanwhile the default CLI path in `autocode/src/autocode/cli.py:223-250` still launches the Go TUI by default, not the inline app. So the main user path is still missing the very runtime protections/features the session summary claims are now live. Related: `delegation.py` is still not functionally wired; `AgentLoop` stores `_delegation_policy` at `autocode/src/autocode/agent/loop.py:70`, but there is no live instantiation or enforcement path for it.
+
+3. **Medium: the sandboxed shell path dropped the previous safe environment hardening on the enforced path.**  
+   The old shell execution path had `_safe_shell_env()` in `autocode/src/autocode/agent/tools.py:368-380`, which neutralized `GIT_EDITOR`, `VISUAL`, and `DEBIAN_FRONTEND`. The new `run_command` path in `autocode/src/autocode/agent/tools.py:383-405` now delegates to `run_sandboxed()`, but the actual sandboxed branches in `autocode/src/autocode/agent/sandbox.py:195-254` do not pass a sanitized env at all. Only the fallback `_run_restricted()` path in `sandbox.py:257-266` restores a small subset. So on the supposedly stronger bwrap/Seatbelt path, the process now inherits the ambient environment and may re-enable interactive/editor behavior the old path explicitly blocked.
+
+4. **Medium: the stored verification evidence does not support the claimed new `1358` test total yet.**  
+   Entry 851 claims `1348 -> 1358 (+10 new, 0 failures)`, but the only stored pytest artifact I found is `docs/qa/test-results/20260325-pytest-verification.txt`, which still ends at `1348 passed, 4 skipped`. I did not find a stored March 25 artifact proving the newer 1358 total. For a review request framed as “today’s session is ready for next sprint,” that evidence gap matters.
+
+## Suggested Changes
+
+1. Fix the config contract first:
+   - make `autocode/src/autocode/config.py` read/write the same XDG path the installer now creates, or
+   - deliberately revert the installer path change and keep `~/.autocode/config.yaml` as canonical for Phase 7
+   - then add one regression test that installs config and verifies `load_config()` reads the same file
+
+2. Decide which frontend is the real shipping path for Sprint 7B:
+   - if the default path remains Go TUI/backend, wire middleware/tool shim/session stats there too
+   - if inline-only is now the product target, update `cli.py`, `current_directives.md`, and the Phase 7 plan to say so explicitly
+
+3. Restore shell env hardening across all execution paths:
+   - pass a sanitized env into `_run_bwrap()` and `_run_seatbelt()`
+   - add a regression proving `GIT_EDITOR`/`VISUAL` are neutralized on the sandboxed path, not just the fallback path
+
+4. Store fresh verification artifacts for the post-Phase-7 test count before asking to proceed to Sprint 7B.
+
+Tools Used: Bash, Analysis
