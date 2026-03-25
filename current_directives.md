@@ -1,6 +1,6 @@
 # Current Directives
 
-> Last updated: 2026-03-21 (evening)
+> Last updated: 2026-03-25
 
 ## Active Phase
 
@@ -17,7 +17,7 @@
 - **Benchmark B15-B29:** 62/75 (82.7%) — first validated run
 - **Codex review:** Entry 830 REJECT — 6 issues, addressing now
 
-## Latest Benchmark Scores (2026-03-21, swebench alias)
+## Latest Benchmark Scores (2026-03-25, swebench alias)
 
 ### B7-B14 (Core Suite) — 37/40 (92.5%) latest, 40/40 best
 
