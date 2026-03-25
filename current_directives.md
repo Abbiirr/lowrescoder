@@ -15,7 +15,7 @@
 - **Benchmark B7-B14:** 37/40 (92.5%) — latest verification run 2026-03-25 (2 infra fails)
 - **Benchmark B7-B14 best:** 40/40 (100%) — achieved 2026-03-21
 - **Benchmark B15-B29:** 62/75 (82.7%) — first validated run
-- **Codex review:** Entry 839 APPROVE (doc-sync thread closed). Entry 841 NEEDS_WORK on Phase 7 plan → rev 2 submitted.
+- **Codex review:** Entry 850 APPROVE (Phase 7 plan). Entry 856 NEEDS_WORK on implementation → fixing.
 
 ## Latest Benchmark Scores (2026-03-25, swebench alias)
 
@@ -63,7 +63,7 @@
 | `docs/` | All documentation | — |
 | `training-data/` | Training data | — |
 
-Total: **1348 tests, 0 failures** (verified 2026-03-25, artifact: `docs/qa/test-results/20260325-pytest-verification.txt`)
+Total: **1358 tests, 0 failures** (verified 2026-03-25, artifact: `docs/qa/test-results/20260325-phase7-pytest-verification.txt`)
 
 ## Where to Look
 
