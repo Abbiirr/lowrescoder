@@ -10,25 +10,27 @@
 
 - **Phase 5 (5A0-5D):** COMPLETE — 19 modules, 200+ tests
 - **Phase 6 (6A-6D):** COMPLETE — packaging, bootstrap, installer, multi-edit, teams
+- **Research-derived:** 7 prototype modules landed with unit tests, runtime integration pending
 - **Migration:** COMPLETE — 4 submodules, workspace wiring
-- **Benchmark B7-B14:** 40/40 (100%) — CLOSED
+- **Benchmark B7-B14:** 37/40 (92.5%) — latest verification run 2026-03-25 (2 infra fails)
+- **Benchmark B7-B14 best:** 40/40 (100%) — achieved 2026-03-21
 - **Benchmark B15-B29:** 62/75 (82.7%) — first validated run
-- **Codex review:** Entry 821 NEEDS_WORK → Entry 822 regression tests added → awaiting verdict
+- **Codex review:** Entry 830 REJECT — 6 issues, addressing now
 
 ## Latest Benchmark Scores (2026-03-21, swebench alias)
 
-### B7-B14 (Core Suite) — 40/40 (100%)
+### B7-B14 (Core Suite) — 37/40 (92.5%) latest, 40/40 best
 
-| Lane | Score | Status |
-|------|-------|--------|
-| B7 | **5/5 (100%)** | django-10880 RESOLVED |
-| B8 | **5/5 (100%)** | django-10880 bash-only RESOLVED |
-| B9-PROXY | **5/5 (100%)** | tb-002-fix-git RESOLVED |
-| B10-PROXY | **5/5 (100%)** | |
-| B11 | **5/5 (100%)** | |
-| B12-PROXY | **5/5 (100%)** | |
-| B13-PROXY | **5/5 (100%)** | |
-| B14-PROXY | **5/5 (100%)** | |
+| Lane | Latest (Mar 25) | Best | Notes |
+|------|----------------|------|-------|
+| B7 | **5/5 (100%)** | 5/5 | |
+| B8 | 3/5 (60%) | 5/5 | 1 infra fail (provider 429) |
+| B9-PROXY | **5/5 (100%)** | 5/5 | |
+| B10-PROXY | **5/5 (100%)** | 5/5 | |
+| B11 | 4/5 (80%) | 5/5 | 1 infra fail |
+| B12-PROXY | **5/5 (100%)** | 5/5 | |
+| B13-PROXY | **5/5 (100%)** | 5/5 | |
+| B14-PROXY | **5/5 (100%)** | 5/5 | |
 
 ### B15-B29 (Expanded Suite) — 62/75 (82.7%)
 
