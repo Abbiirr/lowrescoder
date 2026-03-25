@@ -63,7 +63,7 @@
 | `docs/` | All documentation | — |
 | `training-data/` | Training data | — |
 
-Total: **1256 tests, 0 failures**
+Total: **1348 tests, 0 failures** (verified 2026-03-25, artifact: `docs/qa/test-results/20260325-pytest-verification.txt`)
 
 ## Where to Look
 
