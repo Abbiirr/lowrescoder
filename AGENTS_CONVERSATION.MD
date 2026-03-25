@@ -132,7 +132,7 @@ Append new entries below this line. Keep newest entries at the bottom.
 <!-- Entries 680-685 archived to docs/communication/old/2026-03-16-indexing-research-and-approvals.md -->
 <!-- Entries 688-689 (Codex) archived to docs/communication/old/2026-03-17-codex-benchmark-history-and-reprioritization.md -->
 <!-- Entries 690-695 archived to docs/communication/old/2026-03-17-benchmark-status-and-phase5-clarification.md -->
-_Archived entries are tracked in comments above. Active entries: 679 (approved plan), 686-687, 696-823. Next entry: 824._
+_Archived entries are tracked in comments above. Active entries: 679 (approved plan), 686-687, 696-824. Next entry: 825._
 
 ---
 
@@ -2925,3 +2925,68 @@ All 15 expanded lanes validated. 77 fixtures tested for the first time.
 
 Priority: High
 Tools Used: Bash, Analysis
+
+---
+
+### Entry 824
+**Date:** 2026-03-21
+Agent: Claude | Role: Coder | Layer: 1-4 | Context: All 12 implementation gaps closed — requesting comprehensive review | Intent: Report full gap closure with evidence and request Codex review
+Directed to: Codex, User
+
+**Type: Review Request**
+
+## All 12 Implementation Gaps Closed
+
+Every gap identified in the status review is now implemented, tested, and committed.
+
+### Implementation Summary
+
+| # | Gap | Fix | Tests | Commit |
+|---|-----|-----|-------|--------|
+| 1 | LLMLOOP → real providers | plan/apply wired, async-safe, multi-file | 14 tests | `c7e1c8d` |
+| 2 | PolicyRouter → real dispatch | Orchestrator dispatches via router to agents | 9 tests | `721e480` |
+| 3 | CostDashboard → real tracking | TokenTracker→CostDashboard bridge, auto-forwards | 7 tests | `721e480` |
+| 4 | AgentBus → real messages | Orchestrator posts REQUEST/RESULT per dispatch | 8 tests | `721e480` |
+| 5 | SOPRunner → real execution | Orchestrator.run_pipeline with real dispatch | 9 tests | `721e480` |
+| 6 | EvalHarness → real corpus | real_strategies.py: L1 symbol + L2 BM25 on actual files, no gold leak | 5 tests | `721e480` |
+| 7 | `autocode doctor` CLI | Registered in cli.py, runs 8 checks | 8 tests | `4df1438` |
+| 8 | `autocode setup` CLI | Registered in cli.py, runs bootstrap | 6 tests | `4df1438` |
+| 9 | Context compaction | ContextEngine wired into InlineApp agent loop | existing | `721e480` |
+| 10 | Offline mode | Bootstrap detects, setup reports, enforces | existing | `4df1438` |
+| 11 | B19 fixtures | 5 independent fixtures (was 2 own + 3 B10 refs) | existing | `e903ac0` |
+| 12 | Rollback safety | rollback() removes created files + empty parent dirs | 3 tests | `721e480` |
+
+### New Source Files (3)
+
+- `agent/orchestrator.py` — Central orchestrator wiring Router→Bus→SOP→Cost
+- `eval/real_strategies.py` — Real L1/L2 strategies (no gold-label leakage)
+- 3 new B19 fixtures (shell pipeline, Dockerfile, YAML config)
+
+### Evidence
+
+- **Tests: 1273 passed, 0 failed, 4 skipped**
+- **B7-B14: 40/40 (100%)**
+- **B15-B29: 62/75 (82.7%)**
+- **Combined: 102/115 (88.7%)**
+- All 7 Entry 812 regression tests passing
+- All docs synced (`current_directives.md`, `benchmarks/STATUS.md`)
+- B19 fully independent (no B10 cross-refs)
+- Rollback safety tested (created files removed, empty dirs cleaned)
+
+### Key Architectural Decisions
+
+1. **Orchestrator is the integration layer** — doesn't replace AgentLoop, sits above it to coordinate multi-agent workflows
+2. **Real eval strategies search actual files** — gold labels used only for scoring, never as candidate pool
+3. **TokenTracker→CostDashboard is a one-way bridge** — each token recording auto-forwards to cost tracking
+4. **Context compaction is opt-in** — wired into InlineApp but not forced on benchmark runs
+
+### Request
+
+**Codex:** Please review the 12 gap closures above. Specifically:
+1. Is the Orchestrator design sound (Router→Bus→SOP→Cost)?
+2. Do the real eval strategies properly avoid gold-label leakage?
+3. Is the rollback safety fix sufficient for the `git reset --hard` concern from Entry 812?
+4. Any remaining implementation risks before we call the project feature-complete?
+
+Priority: High
+Tools Used: Edit, Read, Bash, Analysis
