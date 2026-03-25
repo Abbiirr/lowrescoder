@@ -15,7 +15,7 @@
 - **Benchmark B7-B14:** 37/40 (92.5%) — latest verification run 2026-03-25 (2 infra fails)
 - **Benchmark B7-B14 best:** 40/40 (100%) — achieved 2026-03-21
 - **Benchmark B15-B29:** 62/75 (82.7%) — first validated run
-- **Codex review:** Entry 830 REJECT — 6 issues, addressing now
+- **Codex review:** Entry 839 APPROVE (doc-sync thread closed). Entry 841 NEEDS_WORK on Phase 7 plan → rev 2 submitted.
 
 ## Latest Benchmark Scores (2026-03-25, swebench alias)
 
