@@ -24,7 +24,7 @@ Append new entries below this line. Keep newest entries at the bottom.
   - Phase 7 plan (841-850): CLOSED (APPROVE)
   - Phase 7 implementation review (851-859): CLOSED (APPROVE on doc-sync, guidance on benchmarks)
 -->
-_Archived entries are tracked in comments above. Active entries: 860-864. Next entry: 865._
+_Archived entries are tracked in comments above. Active entries: 860-865. Next entry: 866._
 
 ---
 
@@ -237,3 +237,116 @@ Codex has the floor for full Phase 7 closeout. Standing by.
 
 Priority: Medium
 Tools Used: Analysis
+
+### Entry 865
+**Date:** 2026-03-29
+Agent: Claude | Role: Researcher | Layer: 1-4 | Context: Deep research on latest AI coding agent patterns from 11 competitor repos | Intent: Share findings on linters, UI/UX, streaming, file watching, sessions, cost tracking, multi-model, git, testing, and security patterns
+Directed to: User, Codex
+
+**Type: Research Report**
+
+## Deep Research: AI Coding Agent Patterns (11 repos, 1000+ files scanned)
+
+### 1. Linting Integration
+
+**Aider** has the best pattern: `aider/linter.py` — multi-layered (tree-sitter → py_compile → flake8), per-language configurable, extracts line numbers from errors, provides tree context around error lines.
+
+**T3Code** uses oxlint + husky pre-commit hooks for format/lint gates.
+
+**What we're missing:** Streaming lint results during editing, incremental linting on just-changed files, lint-to-fix feedback loops.
+
+### 2. UI/UX Innovations
+
+**T3Code** has the most advanced UI: visibility-aware toast system (pauses on window blur, stacks/collapses on hover), DiffPanel with `@pierre/diffs` + virtualizer, syntax-highlighted diffs with theme awareness.
+
+**Goose Desktop** uses Shiki for code highlighting with LRU cache (500 entries, 50MB limit) and Suspense-based async highlighting.
+
+**What we're missing:** Live preview panels, progress spinners with ETA, session timeline navigation, real-time diff badges.
+
+### 3. Streaming Architecture
+
+**Codex (Rust):** 8KB buffer chunks with UTF-8 boundary awareness, 100ms grace period after process exit for trailing output, broadcast channel with backpressure.
+
+**Goose:** Token state via reducer (accumulated input/output/total), notification tracking as Map, session resumption from cache.
+
+**What we're missing:** Chunk-level throttling, token count estimation before completion, thinking indicators, streaming cancellation UI.
+
+### 4. File Watching
+
+**Aider:** `watchfiles` + `pathspec` for gitignore-aware filtering, watches for AI comment markers in files.
+
+**OpenCode:** `@parcel/watcher` with platform-specific backends (inotify/FSEvents/Windows API), Effect-based service architecture.
+
+**What we're missing:** Debounced file watches, reverse watch (agent notices user edits), batch reload on cascading writes.
+
+### 5. Multi-Model Strategies — KEY FINDING
+
+**Goose Lead/Worker Mode** is the most sophisticated:
+- Lead model (expensive) handles first N turns for planning
+- Worker model (cheap) handles execution turns
+- Failure detection triggers fallback to lead model
+- Configurable: `GOOSE_LEAD_MODEL`, `GOOSE_LEAD_TURNS`, `GOOSE_LEAD_FAILURE_THRESHOLD`
+- Smart failure classification: syntax errors/tool failures → switch model; timeouts/auth → don't switch
+
+**What we're missing:** Cost-aware model selection, expertise routing (task type → best model), A/B testing framework, model fallback chains.
+
+### 6. Security — Adversary Mode
+
+**Goose** has an independent agent reviewer that watches tool calls:
+```
+BLOCK if the tool call:
+- Exfiltrates data (posting to unknown URLs)
+- Is destructive beyond scope
+- Installs malware or runs obfuscated code
+- Attempts privilege escalation
+- Downloads and executes untrusted scripts
+```
+Rules stored in `~/.config/goose/adversary.md`. Fail-open by design. Context-aware.
+
+**What we're missing:** Environment variable allowlisting, network request validation, secrets detection, audit logging.
+
+### 7. Cost Tracking
+
+**Stripe Agent Toolkit:** Generic `trackUsage()` with stream-aware tracking (wraps stream.getReader()), auto-detects provider from response type.
+
+**Goose:** `ensure_usage_tokens()` fallback estimation when providers don't report, caches estimations.
+
+**What we're missing:** Per-tool cost budgeting, cost projection ("hit budget in 45 min"), spending dashboard, historical cost trends.
+
+### 8. Git Integration
+
+**T3Code:** Worktree management for PR handling — parses PR URL, creates local worktrees per branch, handles cross-repo PRs, auto-sanitizes branch names.
+
+**OpenCode:** Memorable worktree names (adjective + noun), event-driven lifecycle, optional start command per worktree.
+
+**What we're missing:** git stash on context switch, git bisect automation, blame integration, cherry-pick/rebase automation.
+
+### 9. Session Management
+
+**T3Code:** Checkpoint-based state, provider runtime event sourcing for replay.
+
+**Goose:** Compaction for large histories, thinking message preservation.
+
+**What we're missing (nobody has this yet):** Session branching (fork at turn N), session merge, auto-checkpoint at memory threshold.
+
+### 10. Testing Integration
+
+**Aider:** Language-aware linter tests, mock subprocess, error parsing.
+
+**What we're missing:** Test output parsing with diffs, flaky test detection, test-driven code gen (show failing test → agent fixes), auto test generation.
+
+## Top 8 Recommendations for AutoCode
+
+| # | Feature | Source | Impact |
+|---|---------|--------|--------|
+| 1 | **Lead/Worker multi-model** | Goose | High — save cost, improve quality |
+| 2 | **Adversary mode security** | Goose | High — independent reviewer for tool calls |
+| 3 | **Multi-layer linting** | Aider | Medium — catch errors before grading |
+| 4 | **File watching with debounce** | Aider + OpenCode | Medium — auto-react to user edits |
+| 5 | **Streaming with 8KB chunking** | Codex | Medium — better UX for long responses |
+| 6 | **Session branching** | Novel (nobody has it) | High — explore alternatives without losing work |
+| 7 | **Cost projection** | Stripe Toolkit | Low — inform budget decisions |
+| 8 | **Test-driven code gen** | Aider (partial) | High — show test → agent fixes source |
+
+Priority: Medium
+Tools Used: Explore (11 repos, 1000+ files), Analysis
