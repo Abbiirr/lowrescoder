@@ -24,6 +24,119 @@ Append new entries below this line. Keep newest entries at the bottom.
   - Phase 7 plan (841-850): CLOSED (APPROVE)
   - Phase 7 implementation review (851-859): CLOSED (APPROVE on doc-sync, guidance on benchmarks)
 -->
-_Archived entries are tracked in comments above. No active entries. Next entry: 860._
+_Archived entries are tracked in comments above. Active entries: 860. Next entry: 861._
 
 ---
+
+### Entry 860
+**Date:** 2026-03-29
+Agent: Claude | Role: Coder | Layer: 1-4 | Context: Phase 7 implementation handoff — remaining work for Codex review and guidance | Intent: Full task handoff with implementation plan for completing Phase 7
+Directed to: Codex, User
+
+**Type: Task Handoff**
+
+## Phase 7 Ship-Ready — Implementation Handoff
+
+Plan: `docs/plan/phase7-ship-ready.md` (rev 4, approved Entry 850)
+
+### Current State
+
+Tests: **1358 passed, 0 failed, 4 skipped**
+Benchmarks best: B7-B14 40/40 (100%), B15-B29 62/75 (82.7%)
+16/23 lanes at 100%. 7 lanes stuck below 100%.
+
+### Sprint Status
+
+| Sprint | Status | Details |
+|--------|--------|---------|
+| 7A0 | **DONE** | Config YAML, path `~/.autocode/`, endpoint `localhost:11434`, legacy path fix |
+| 7A | **PARTIAL** | See gaps below |
+| 7B | **NOT DONE** | PyInstaller spec exists, never built |
+| 7C | **NOT DONE** | conflict.py exists but unwired, accept/reject UI missing |
+| 7D | **PARTIAL** | routing_benchmark + shell completions exist; profiler unwired, user guides missing |
+| 7E | **NOT DONE** | Depends on 7A-7D |
+
+### Sprint 7A Gaps (most critical)
+
+| Gap | File | Issue |
+|-----|------|-------|
+| Factory only in inline | `backend/server.py:355`, `tui/app.py:139` | Both still construct AgentLoop directly without middleware/tool_shim/token_tracker. `factory.py` exists but only inline uses it. |
+| 3 middleware hooks unwired | `loop.py` | `after_model`, `before_compaction`, `after_compaction` defined in middleware.py but never invoked in loop.py |
+| Delegation unenforced | `loop.py:70` | `_delegation_policy` stored but no `can_spawn()` check before subagent creation |
+| Middleware state bug | `loop.py:571,587` | `tool_error_handler` on `on_error` is correct now, but `repetition_detector` needs shared_state to persist — partially fixed (shared_state exists but needs verification) |
+
+### Sprint 7B Plan
+
+1. `uv pip install pyinstaller`
+2. `cd autocode && pyinstaller autocode.spec`
+3. Linux x86_64 only
+4. Smoke test: `./dist/autocode --version`, `./dist/autocode doctor`
+5. Fix hidden imports iteratively
+6. onefile first, onedir fallback if noexec issues
+
+### Sprint 7C Plan
+
+1. **Wire conflict detection**: before `write_file`/`edit_file` in `tools.py`, call `check_file_conflict()` with stored mtime. Warn if file changed externally.
+2. **Accept/reject edit UI**: in `inline/app.py`, after diff preview output, prompt `"Apply? [y/n]"`. On `n`, revert the write. Narrow scope: edit-specific only.
+
+### Sprint 7D Plan
+
+1. **Wire profiler**: add `Profiler` to AgentLoop (via factory). `start()`/`stop()` around LLM calls and tool calls. Show `p50`/`p95` in completion summary.
+2. **User guide**: `docs/guide/getting-started.md` (install, configure, first chat, doctor) + `docs/guide/commands.md` (all CLI commands with examples)
+
+### Sprint 7E Plan
+
+1. All tests pass (target 1370+)
+2. Full B7-B29 benchmark run (23 lanes)
+3. PyInstaller binary smoke test
+4. Gateway health check
+5. Docs consistency check
+6. Codex final approval
+
+### Benchmark Lanes Still Below 100%
+
+| Lane | Best | Root Cause | Fix Approach (per Entry 859) |
+|------|------|------------|------------------------------|
+| B16 | 4/5 | 1 WRONG_FIX | Investigate per-task, stronger retry feedback |
+| B17 | 4/5 | 1 WRONG_FIX | Investigate per-task |
+| B19 | 4/5 | 1 infra | Re-run when providers healthy |
+| B24 | 3/5 | 2 infra (setup fixed) | Re-run when providers healthy |
+| B27 | 0/5 | Agent over-edits | Protected-path enforcement active. Needs model that respects minimal-edit constraint |
+| B28 | 4/5 | 1 WRONG_FIX | Investigate per-task |
+| B29 | 0/5 | Agent modifies tests | Protected-path enforcement active + auto-restore. Needs model discipline |
+
+### Key Files
+
+| What | Path |
+|------|------|
+| Phase 7 plan | `docs/plan/phase7-ship-ready.md` |
+| Shared factory | `autocode/src/autocode/agent/factory.py` |
+| Middleware | `autocode/src/autocode/agent/middleware.py` |
+| Agent loop | `autocode/src/autocode/agent/loop.py` |
+| Conflict detection | `autocode/src/autocode/agent/conflict.py` |
+| PyInstaller spec | `autocode/autocode.spec` |
+| Inline app | `autocode/src/autocode/inline/app.py` |
+| Backend server | `autocode/src/autocode/backend/server.py` |
+| TUI app | `autocode/src/autocode/tui/app.py` |
+| Protected paths | `benchmarks/adapters/autocode_adapter.py` |
+
+### Implementation Order
+
+```
+1. Finish 7A (factory everywhere, wire remaining hooks, enforce delegation)
+2. Finish 7C (wire conflict.py, add accept/reject UI)
+3. Finish 7B (build executable)
+4. Finish 7D (wire profiler, write user guides)
+5. Run 7E (full verification)
+6. Re-run stuck benchmark lanes
+```
+
+### Questions for Codex
+
+1. Should the backend/TUI paths use `factory.py` directly, or should the factory accept extra params (task_store, subagent_manager, memory_context) that inline doesn't use?
+2. For accept/reject UI: should rejected edits be silently discarded, or should the agent be told "user rejected your edit"?
+3. Should delegation enforcement block the agent loop entirely, or just warn and continue?
+4. For the 7 stuck benchmark lanes: should we target 100% before Sprint 7E, or accept best-effort and close Phase 7?
+
+Priority: High
+Tools Used: Analysis
