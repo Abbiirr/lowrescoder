@@ -24,7 +24,7 @@ Append new entries below this line. Keep newest entries at the bottom.
   - Phase 7 plan (841-850): CLOSED (APPROVE)
   - Phase 7 implementation review (851-859): CLOSED (APPROVE on doc-sync, guidance on benchmarks)
 -->
-_Archived entries are tracked in comments above. Active entries: 860-865. Next entry: 866._
+_Archived entries are tracked in comments above. Active entries: 860-866. Next entry: 867._
 
 ---
 
@@ -350,3 +350,56 @@ Rules stored in `~/.config/goose/adversary.md`. Fail-open by design. Context-awa
 
 Priority: Medium
 Tools Used: Explore (11 repos, 1000+ files), Analysis
+
+### Entry 866
+**Date:** 2026-03-29
+Agent: Claude | Role: Researcher | Layer: 1-4 | Context: Deep research on context window management and auto-compaction | Intent: Share detailed findings on how competitors handle the most critical long-session problem
+Directed to: User, Codex
+
+**Type: Research Report**
+
+## Context Window Management & Auto-Compaction — Deep Research
+
+Full report: `docs/research/context-window-management.md`
+
+### Key Findings
+
+**Goose** has the most sophisticated compaction (2100+ lines in `context_mgmt/mod.rs`):
+- 80% threshold, progressive tool removal (0→10→20→50→100% of middle tool results)
+- Background async tool pair summarization in batches of 10
+- Message visibility: summary agent-only, originals user-only
+- Continuation messages ("don't mention compaction happened")
+- Tiktoken BPE tokenizer with 10k-entry LRU cache
+
+**Pi-mono** has the best budget allocation:
+- Three-way split: response reserve (16k) + recent context (20k) + compactable
+- Structured summary format: Goal, Constraints, Progress, Key Decisions, Next Steps, file lists
+- Cumulative file tracking across multiple compactions
+
+**Codex** has two-stage compaction:
+- Pre-sampling (before context updates) + post-turn (after response)
+- Model-specific `auto_compact_token_limit`
+- Remote compaction endpoint
+
+### What AutoCode Currently Has vs What We Need
+
+| Feature | Us Now | Best Practice |
+|---------|--------|---------------|
+| Threshold | 75% flat | 80% + 3-way budget (Pi-mono) |
+| Token counting | `len//4` | Tiktoken + LRU cache (Goose) |
+| Tool results | Fixed truncation | Progressive removal (Goose) |
+| Summary prompt | "Summarize concisely" | Structured format with file lists (Pi-mono) |
+| Background compaction | No | Async tool pair summarization (Goose) |
+| Message visibility | No | Agent-only/user-only split (Goose) |
+
+### Top Recommendations
+
+1. **P0: Three-way budget** — reserve 16k for response, 20k for recent, rest compactable
+2. **P0: Progressive tool removal** — try 0→10→20→50→100% before summarizing conversation
+3. **P1: Structured summary** — Goal/Progress/Decisions/NextSteps/Files format
+4. **P1: Background tool summarization** — batch 10 old tool pairs, async
+5. **P2: Tiktoken counting** — accurate tokens with LRU cache
+6. **P2: Message visibility** — summary for agent, originals for user display
+
+Priority: High
+Tools Used: Explore (11 repos), Analysis
