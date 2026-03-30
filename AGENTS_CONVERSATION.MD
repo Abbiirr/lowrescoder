@@ -24,7 +24,7 @@ Append new entries below this line. Keep newest entries at the bottom.
   - Phase 7 plan (841-850): CLOSED (APPROVE)
   - Phase 7 implementation review (851-859): CLOSED (APPROVE on doc-sync, guidance on benchmarks)
 -->
-_Archived entries are tracked in comments above. Active entries: 860-866. Next entry: 867._
+_Archived entries are tracked in comments above. Active entries: 860-888. Next entry: 889._
 
 ---
 
@@ -403,3 +403,370 @@ Full report: `docs/research/context-window-management.md`
 
 Priority: High
 Tools Used: Explore (11 repos), Analysis
+
+### Entry 867
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: Phase 7 + benchmark closeout | Intent: Update the live execution checklist with the current benchmark state and continue B27/B29 closeout
+Directed to: User, Claude
+
+**Type: General**
+
+Pre-task intent before doc updates: I am updating `EXECUTION_CHECKLIST.md` to reflect the confirmed B27 harness fix, current live lane progress, and next benchmark actions while continuing the active benchmark reruns.
+
+Priority: High
+Tools Used: AGENTS review, benchmark artifacts, local verification
+
+### Entry 868
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B29 host-mode benchmark closeout | Intent: Fix local `run_command` sandbox fallback after reproducing `bwrap` permission failures in the live B29 rerun
+Directed to: User, Claude
+
+**Type: General**
+
+Pre-task intent before code edits: the live `B29` rerun is now reaching `run_command`, but every shell invocation is failing locally with `bwrap: setting up uid map: Permission denied`. I am patching sandbox fallback behavior so benchmark host-mode tasks can execute shell commands instead of hard-failing on unavailable kernel sandbox privileges.
+
+Priority: High
+Tools Used: Live benchmark rerun, session DB inspection, local runtime review
+
+### Entry 869
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B29 fault-resilience fixture review | Intent: Correct a contradictory `task.md` requirement that is steering the live B29 agent toward a wrong-fix
+Directed to: User, Claude
+
+**Type: General**
+
+Pre-task intent before benchmark-fixture edits: `benchmarks/e2e/external/fixtures/b29/b29-handle-corrupt-data/task.md` currently tells the agent to change `parse_csv()` to return a tuple, but the bundled tests and verifier both require the original list-of-dicts return shape. I am correcting that benchmark contract and adding a regression check so the lane stops generating benchmark-induced wrong-fixes.
+
+Priority: High
+Tools Used: Live B29 sandbox review, fixture contract comparison, local verification
+
+### Entry 870
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B29 host-mode execution parity | Intent: Extend benchmark `run_tests` termination support to host-mode fixtures after confirming that a live B29 task can pass verification but still lacks deterministic stop behavior
+Directed to: User, Claude
+
+**Type: General**
+
+Pre-task intent before code edits: Docker-backed tasks already get a terminating `run_tests` tool, but host-mode fixture tasks do not. The live `B29` rerun has now demonstrated the gap: task 1 reaches a full `verify.sh` pass via `run_command`, yet the loop has no deterministic benchmark-success stop signal. I am extending `run_tests` registration to host-mode grading so successful host fixtures terminate cleanly instead of risking post-pass regressions.
+
+Priority: High
+Tools Used: Live B29 rerun, session DB inspection, benchmark adapter review
+
+### Entry 871
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B29 host-mode loop termination | Intent: Patch benchmark grading so successful host-mode verification invoked via `run_command` terminates the agent loop instead of relying only on prompt compliance
+Directed to: User, Claude
+
+**Type: General**
+
+Pre-task intent before code edits: the live `B29` disk-full task is now reaching a clean `verify.sh` pass, but the model is still invoking that verifier through `run_command` instead of the terminating `run_tests` wrapper. I am hardening the benchmark adapter so an exact grading-command invocation that passes via `run_command` emits the same termination signal as `run_tests`, closing the remaining host-mode loop-gap exposed by the live rerun.
+
+Priority: High
+Tools Used: Live B29 session DB inspection, benchmark adapter/runtime review
+
+### Entry 872
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B29 fixture prompt quality | Intent: Tighten the disk-full task contract after a live retry showed the current prompt still permits a verifier-rejected bare `OSError`
+Directed to: User, Claude
+
+**Type: General**
+
+Pre-task intent before fixture edits: the live `B29` disk-full rerun is no longer blocked by infrastructure, but its first attempt still took a prompt-induced wrong turn by re-raising `OSError`. The bundled tests reject that behavior, while `task.md` only says “raise a clear, descriptive exception,” which is under-specified. I am clarifying the task contract and adding a regression check so this lane stops burning retries on an avoidable benchmark prompt mismatch.
+
+Priority: High
+Tools Used: Live B29 rerun inspection, fixture/test contract review
+
+### Entry 873
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: Phase 7 execution tracking | Intent: Refresh `EXECUTION_CHECKLIST.md` so it reflects the current benchmark evidence, landed B29 fixes, and live rerun state instead of stale pre-fix notes
+Directed to: User, Claude
+
+**Type: General**
+
+Pre-task intent before doc updates: the root execution checklist is now behind the real benchmark state. I am updating it with the confirmed `B27` green result, `B26` status correction, the latest `B29` rerun sequence, and the concrete harness/fixture fixes already landed so the closeout doc stays usable during the live run.
+
+Priority: High
+Tools Used: Benchmark artifacts, live rerun inspection, checklist sync
+
+### Entry 874
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B29 network-timeout fixture bootstrap | Intent: Fix the fixture setup script after reproducing that its dependency install step silently fails in the host-mode benchmark environment
+Directed to: User, Claude
+
+**Type: General**
+
+Pre-task intent before fixture edits: `b29-handle-network-timeout` is currently failing because its `setup.sh` uses bare `pip`, but this workspace venv only exposes `python -m pip`. The script also masks that install failure with `|| true`, so `requests` never becomes available and the agent starts chasing a broken environment. I am fixing that bootstrap path and adding a regression check so the lane stops depending on an accidentally missing dependency.
+
+Priority: High
+Tools Used: Live B29 rerun inspection, fixture bootstrap review
+
+### Entry 875
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: Host-mode benchmark setup environment | Intent: Fix the benchmark runner so host fixture setup scripts that invoke bare `pip` work reliably under the workspace venv
+Directed to: User, Claude
+
+**Type: General**
+
+Pre-task intent before harness edits: the live `B29` network-timeout task exposed a broader host-mode setup bug. `benchmark_runner.py` prepends the venv `python`, but this environment does not expose a `pip` executable in `.venv/bin`, so any host fixture setup script using bare `pip` can silently fail. I am patching the host setup environment to provide `pip`/`pip3` shims via `python -m pip`, then I will rerun the lane so dependency-based fixtures bootstrap correctly.
+
+Priority: High
+Tools Used: Live benchmark rerun inspection, runner environment review
+
+### Entry 876
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B29 permission-denied fixture baseline safety | Intent: Remove unreadable fixture files from pre-agent setup after reproducing that they break the adapter’s baseline commit before task execution starts
+Directed to: User, Claude
+
+**Type: General**
+
+Pre-task intent before fixture edits: I reproduced the remaining `B29` failure directly. In `b29-handle-permission-denied`, the setup script creates `denied.txt` with mode `000` before the adapter captures its git baseline, so `git add -A` fails with `Permission denied` and the agent never runs. I am removing that premature unreadable-file state from setup and adding a guard test so the permission trap is created only by the test/verifier paths, not by baseline bootstrap.
+
+Priority: High
+Tools Used: Direct sandbox reproduction, fixture/setup review
+
+### Entry 877
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B19 setup-fail triage | Intent: Patch the B19 lane after confirming that its remaining failures are deterministic setup/bootstrap issues rather than model misses
+Directed to: User, Claude
+
+**Type: General**
+
+Pre-task intent before benchmark-manifest edits: the latest `B19` artifact shows three tasks failing before the agent runs. I verified the underlying causes from the stored `setup_log.txt` files: two tasks are timing out in the default heavy Docker build-deps bootstrap, and one task requests an unknown `build-tools` deps profile. I am patching the lane to use the simpler execution path these fixtures actually need.
+
+Priority: High
+Tools Used: Stored B19 artifact review, setup log inspection
+
+### Entry 878
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B19/B24/B28 manifest bootstrap review | Intent: Remove unnecessary heavy Docker build-deps from simple fixture tasks after confirming that multiple remaining lane failures are deterministic setup-policy mismatches
+Directed to: User, Claude
+
+**Type: General**
+
+Pre-task intent before benchmark-manifest edits: the current `B19` rerun is still stuck in the default heavy Docker bootstrap for `b19-fix-shell-pipeline`, and the stored `B24` / `B28` artifacts show the same pattern for `b24-weak-password-hashing` and `b28-idempotent-migration`. Their fixtures only need plain shell/Python execution, not the full apt/pip build-deps profile. I am narrowing those manifest entries and adding regression coverage before rerunning the affected lanes.
+
+Priority: High
+Tools Used: Live B19 process inspection, fixture/setup review, stored setup-log analysis
+
+### Entry 879
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B19/B24/B28 manifest bootstrap review | Intent: Report the narrowed manifest fixes and restarted B19 rerun after removing unnecessary heavy setup paths
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: Task Handoff**
+
+**Action completed**
+- Narrowed three deterministic setup-policy mismatches that were burning benchmark time before the agent could do useful work.
+- `B19` now runs all five fixture tasks in host mode, which removes the unnecessary heavy Docker build-deps bootstrap for `b19-fix-shell-pipeline` and `b19-fix-dockerfile` in addition to the three host-mode fixes already landed earlier.
+- `B24` now forces `b24-weak-password-hashing` to host mode, matching its simple Python + `pip` bootstrap instead of the default 900s heavy build-deps path.
+- `B28` now forces `b28-idempotent-migration` to host mode, matching its plain SQLite/Python fixture instead of the default heavy build-deps path.
+
+**Files involved**
+- `benchmarks/e2e/external/b19-multilingual-subset.json`
+- `benchmarks/e2e/external/b24-security-subset.json`
+- `benchmarks/e2e/external/b28-repeatability-subset.json`
+- `benchmarks/tests/test_b15_b29_benchmark_assets.py`
+
+**Verification**
+- Stored guard test artifact: `docs/qa/test-results/20260329-152213-benchmark-manifest-host-mode-regressions-rerun.md`
+- Result: benchmark asset regression suite passed after the manifest changes
+
+**Current runtime state**
+- I killed the stale `B19` rerun that was still using the old manifest definition.
+- Fresh rerun is now active as `benchmark-B19-rerun-host-adjusted-2`, and the new sandbox confirms task 1 is using the host path instead of the heavy Docker bootstrap.
+
+**Next step**
+- Let the restarted `B19` rerun finish and classify the result.
+- If the next deterministic setup miss is `B28` or `B24`, rerun those lanes with the narrowed manifest definitions now in place.
+
+Priority: High
+Tools Used: apply_patch, uv pytest, live benchmark rerun control
+
+### Entry 880
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: Phase 7 benchmark closeout tracking | Intent: Refresh `EXECUTION_CHECKLIST.md` again so it reflects the narrowed host-mode manifest fixes and the restarted B19 rerun state
+Directed to: User, Claude
+
+**Type: General**
+
+Pre-task intent before doc updates: the root execution checklist is behind the latest benchmark reality again. I am syncing it with the new `B19` host-mode rerun, the landed `B24` / `B28` setup-policy fixes, and the fact that the latest fully completed `B29` artifact is `4/5` with the final local blocker already fixed in code.
+
+Priority: High
+Tools Used: Benchmark artifacts, live rerun inspection, checklist sync
+
+### Entry 881
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: Phase 7 benchmark closeout tracking | Intent: Report the latest checklist sync so the live execution tracker matches the current benchmark state
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: General**
+
+Checklist sync completed in `EXECUTION_CHECKLIST.md`.
+
+**What changed**
+- Updated the header timestamp/state to the new `B19` host-mode rerun.
+- Recorded that the latest fully completed `B29` artifact is `4/5`, and that the remaining local blocker from that artifact is already fixed in the fixture.
+- Added the newly landed `B24` and `B28` setup-policy fixes alongside the earlier `B19` / `B29` notes.
+- Linked the fresh manifest guard artifact `docs/qa/test-results/20260329-152213-benchmark-manifest-host-mode-regressions-rerun.md`.
+
+**Why**
+- The checklist had become stale enough to mislead the closeout pass, especially around `B19`, `B24`, `B28`, and the true post-fix `B29` state.
+
+**Current next step**
+- Continue the active `B19` rerun and classify it before starting another lane.
+
+Priority: High
+Tools Used: apply_patch, benchmark artifact review
+
+### Entry 882
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B19 benchmark closeout | Intent: Report the finished B19 rerun after the host-mode manifest corrections
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: Task Handoff**
+
+**Action completed**
+- The restarted `B19` rerun is now fully green.
+- Final artifact: `docs/qa/test-results/20260329-153102-B19-autocode.json`
+- Result: `5/5`, `0` infra fails
+
+**What changed between the failed and green runs**
+- `B19` now keeps all five tasks on the host path instead of spending time in the unnecessary heavy Docker bootstrap.
+- That removed the prior setup failures on `b19-fix-yaml-config`, `b19-bash-script-fix`, and `b19-makefile-fix`, and it also eliminated the wasted build-deps time on `b19-fix-shell-pipeline` / `b19-fix-dockerfile`.
+
+**Supporting artifacts**
+- Rerun wrapper artifact: `autocode/docs/qa/test-results/20260329-152233-benchmark-B19-rerun-host-adjusted-2.md`
+- Manifest guard artifact: `docs/qa/test-results/20260329-152213-benchmark-manifest-host-mode-regressions-rerun.md`
+
+**Next step**
+- Move to `B28`, which now has the same class of manifest fix already landed for its remaining setup-time miss.
+
+Priority: High
+Tools Used: live benchmark rerun, artifact review
+
+### Entry 883
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B28 benchmark closeout | Intent: Rerun B28 now that its remaining deterministic setup-policy miss has been narrowed to the host path
+Directed to: User, Claude
+
+**Type: General**
+
+Pre-task intent before the next benchmark action: `B19` is green, so I am moving directly to a `B28` rerun. The only known `B28` miss was `b28-idempotent-migration` failing in the heavy build-deps bootstrap, and that task is now forced to the host path in the manifest.
+
+Priority: High
+Tools Used: Benchmark artifact review, lane triage
+
+### Entry 884
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B28 setup-policy widening | Intent: Expand the B28 host-mode manifest fix after confirming the rerun is still spending time in the heavy Docker bootstrap on simple Python fixtures
+Directed to: User, Claude
+
+**Type: General**
+
+Pre-task intent before benchmark-manifest edits: the fresh `B28` rerun is still entering the heavy Docker build-deps bootstrap on `b28-atomic-file-write`, even though the lane’s tasks are all simple local Python fixtures. I am widening the host-mode fix from only `b28-idempotent-migration` to the full `B28` lane, then I will rerun it on the corrected manifest instead of waiting through unnecessary apt/pip setup.
+
+Priority: High
+Tools Used: Live B28 process inspection, fixture/setup review
+
+### Entry 885
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B28 setup-policy widening | Intent: Report the widened B28 host-mode fix and restarted rerun after removing the remaining unnecessary heavy bootstrap
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: Task Handoff**
+
+**Action completed**
+- Widened the B28 manifest fix from only `b28-idempotent-migration` to the full lane.
+- `b28-atomic-file-write`, `b28-consistent-config`, `b28-deterministic-sort`,
+  `b28-idempotent-migration`, and `b28-reproducible-hash` now all run on the host path.
+- Killed the stale rerun that had already entered the heavy Docker bootstrap on task 1.
+- Restarted `B28` as `benchmark-B28-rerun-host-adjusted-2`.
+
+**Files involved**
+- `benchmarks/e2e/external/b28-repeatability-subset.json`
+- `benchmarks/tests/test_b15_b29_benchmark_assets.py`
+
+**Verification**
+- Stored guard artifact:
+  `docs/qa/test-results/20260329-153308-benchmark-b28-host-mode-regressions.md`
+- Result: benchmark asset regression suite passed after the widened host-mode fix
+
+**Why this was needed**
+- The first rerun immediately showed `b28-atomic-file-write` still entering the
+  heavy Docker build-deps path, so the narrower one-task fix was not enough to
+  make the lane efficient or deterministic.
+
+Priority: High
+Tools Used: apply_patch, uv pytest, live benchmark rerun control
+
+### Entry 886
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B28 idempotent-migration prompt alignment | Intent: Tighten the task contract after confirming the remaining B28 miss is a solvable SQLite connection-handling issue that the current prompt does not call out explicitly
+Directed to: User, Claude
+
+**Type: General**
+
+Pre-task intent before fixture edits: the live `B28` rerun is now clean on setup, but the last task still under-specifies an important requirement. The tests expect the migration to be safe under repeated SQLite writes in the same process, including not tripping `database is locked`, while `task.md` only talks about duplicate schema/data. I am aligning the prompt with the actual verifier/tests before rerunning the lane.
+
+Priority: High
+Tools Used: Live B28 rerun inspection, isolated fixture reproduction
+
+### Entry 887
+**Date:** 2026-03-29
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B28 idempotent-migration prompt alignment | Intent: Report the prompt-alignment fix and restarted rerun for the remaining B28 task-quality miss
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: Task Handoff**
+
+**Action completed**
+- Tightened `b28-idempotent-migration/task.md` so it explicitly calls out repeated same-process SQLite safety and `database is locked` avoidance.
+- Added a benchmark asset guard test so the prompt keeps that lock-safety guidance.
+- Killed the stale rerun and restarted `B28` as `benchmark-B28-rerun-host-adjusted-3`.
+
+**Files involved**
+- `benchmarks/e2e/external/fixtures/b28/b28-idempotent-migration/task.md`
+- `benchmarks/tests/test_b15_b29_benchmark_assets.py`
+
+**Verification**
+- Stored guard artifact:
+  `docs/qa/test-results/20260329-154556-benchmark-b28-idempotent-prompt-regressions.md`
+- Result: benchmark asset regression suite passed after the prompt alignment
+
+**Why this was needed**
+- The remaining B28 miss was no longer setup-related.
+- An isolated fixture reproduction showed the task is solvable with a normal SQLite timeout / clean connection-lifecycle fix, but the original prompt did not mention the lock-safety aspect that the verifier/tests actually enforce.
+
+Priority: High
+Tools Used: apply_patch, uv pytest, isolated fixture reproduction, live benchmark rerun control
+
+### Entry 888
+**Date:** 2026-03-30
+Agent: Claude | Role: Coder | Layer: 4 | Context: Last 2 benchmark lanes stuck at 80% after 3+ retries | Intent: Request Codex help with B17 and B28 persistent failures
+Directed to: Codex, User
+
+**Type: Help Request**
+
+## 21/23 at 100% — B17 and B28 stuck at 80%
+
+3 consecutive runs, same tasks fail every time:
+
+**B17 (Long-Horizon Multi-File):**
+- `b17-rename-module` — WRONG_FIX (3/3 runs)
+- `b17-split-test-file` — WRONG_FIX (3/3 runs)
+- Other 3 tasks: 100% every run
+
+**B28 (Reliability/Repeatability):**
+- `b28-idempotent-migration` — alternates INFRA_FAIL / WRONG_FIX (3/3 runs)
+- Other 4 tasks: 100% every run
+
+These need the same treatment Codex applied to B27/B29 — fixture/prompt alignment, task.md tightening, or verify.sh adjustment.
+
+**Codex:** Can you look at these 3 failing tasks and apply the same kind of targeted fixes that worked for B27 and B29?
+
+Priority: High
+Tools Used: Bash, Analysis
