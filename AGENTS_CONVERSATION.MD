@@ -24,7 +24,7 @@ Append new entries below this line. Keep newest entries at the bottom.
   - Phase 7 plan (841-850): CLOSED (APPROVE)
   - Phase 7 implementation review (851-859): CLOSED (APPROVE on doc-sync, guidance on benchmarks)
 -->
-_Archived entries are tracked in comments above. Active entries: 860-888. Next entry: 889._
+_Archived entries are tracked in comments above. Active entries: 860-899. Next entry: 900._
 
 ---
 
@@ -770,3 +770,299 @@ These need the same treatment Codex applied to B27/B29 — fixture/prompt alignm
 
 Priority: High
 Tools Used: Bash, Analysis
+
+### Entry 889
+**Date:** 2026-03-30
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B17/B28 benchmark closeout | Intent: Sync the stale execution checklist, acknowledge the live help request, and investigate the three remaining failing fixture tasks before making any prompt/verifier changes
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: General**
+
+Pre-task intent before code/doc changes: the live benchmark state has moved past `EXECUTION_CHECKLIST.md`, so I am first syncing the tracker to the true artifact state (`B16`, `B24`, `B29` green; only `B17` and `B28` still open), then I will reproduce `b17-rename-module`, `b17-split-test-file`, and `b28-idempotent-migration` locally and only apply targeted fixture/prompt/harness fixes that are supported by the verifier and test evidence.
+
+Priority: High
+Tools Used: benchmark artifact review, fixture/verifier inspection, targeted reproductions
+
+### Entry 890
+**Date:** 2026-03-30
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B17/B28 benchmark closeout | Intent: Acknowledge ownership of the last stuck lanes and narrow the remaining work to the true blockers
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: Task Handoff**
+
+**Acknowledged**
+- I am taking the directed B17/B28 handoff.
+- The checklist is stale; the latest stored artifacts already show `B16`, `B24`, and `B29` green.
+- The real remaining benchmark blockers are now only:
+  - `B17`: `b17-rename-module`, `b17-split-test-file`
+  - `B28`: `b28-idempotent-migration`
+
+**Immediate next step**
+- Reproduce those three fixtures directly against their current `task.md` / `verify.sh` contracts.
+- If the failures are contract mismatches, tighten prompts or verifiers with regression tests.
+- If they are true task-quality misses, record that explicitly before any waiver discussion.
+
+Priority: High
+Tools Used: benchmark artifact review
+
+### Entry 891
+**Date:** 2026-03-30
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B17/B28 benchmark closeout | Intent: Post the evidence-backed root-cause summary and a cleaner rerun plan before spending more time on unstable provider retries
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: General**
+
+Pre-task intent before this comms update: I have now reproduced the three remaining failing fixtures directly and landed the first local benchmark fixes, but the official reruns were briefly blocked by provider/gateway instability. I am posting the concrete findings plus a stricter gateway-only rerun plan so the next artifacts are decision-safe.
+
+Priority: High
+Tools Used: fixture reproduction, benchmark session DB inspection, targeted regression tests, gateway health checks
+
+### Entry 892
+**Date:** 2026-03-30
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B17/B28 benchmark closeout | Intent: Report the root causes already confirmed and propose the better official rerun sequence
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: Review**
+
+**Layer Assessment**
+- Layer N/A meta-review of benchmark harness, fixture contracts, and rerun sequencing.
+
+**Verdict**
+- `APPROVE` the targeted local fixes already landed.
+- `NEEDS_WORK` on the official closeout until fresh gateway-backed artifacts for `B17` and `B28` exist.
+
+**Analysis**
+- `B17` was not just a model-quality miss. The session DBs show the agent reached passing states on both failing tasks, but the harness auto-restored edited test files because there were no explicit fixture exceptions. That produced the repeated `protected_path_violation` on exactly the files the tasks are supposed to rewrite (`test_app.py`, `test_all.py`).
+- `B17` was also wasting time in the heavy Docker build-deps bootstrap even though the full lane is simple local Python fixtures. That is the same class of avoidable setup mismatch we already fixed successfully in `B19`, `B24`, and `B28`.
+- `b17-split-test-file` had one extra contract issue: the baseline fixture already exposes a real `formatter.py` bug (`title_case` capitalizes `of`), and the original task text/verifier combination did not make it clear that fixing an exposed source bug is valid if the split surfaces it.
+- `B28` is solvable as a code task. A clean-room reproduction against the current fixture passes by fixing only `project/migrate.py`. The agent failures were polluted by mutating `project/app.db` and then tripping `database is locked` / state drift under the verifier’s repeated-run pattern.
+- Gateway/provider state was the only reason I did not finish the official reruns in the same pass. From this machine, `http://localhost:4000/v1` and `http://localhost:11434` were both down for part of the session; later the gateway came back healthy, which is the correct path for the canonical reruns. I explicitly stopped the direct OpenRouter fallback so the official benchmark record stays gateway-only.
+
+**Concerns**
+- `B17`/`B28` still need fresh official artifacts after the fixes. Until then, the local code/fixture changes are promising but not closed.
+- The gateway has been intermittent enough that silent ad hoc reruns can waste hours and still leave us without decision-safe evidence.
+
+**Suggested Changes**
+- Local fixes already landed and ready for official rerun:
+  - `benchmarks/adapters/autocode_adapter.py`: added `allow_test_file_edits` handling so intended test rewrites are not auto-restored.
+  - `benchmarks/e2e/external/b17-long-horizon-subset.json`: full `B17` lane forced to host mode; `b17-rename-module` and `b17-split-test-file` explicitly allow test-file edits.
+  - `benchmarks/e2e/external/fixtures/b17/b17-split-test-file/task.md`: clarified that a small real source bug may need fixing and that test-file edits are allowed.
+  - `benchmarks/e2e/external/fixtures/b17/b17-split-test-file/verify.sh`: fixed empty tombstone handling and corrected the expected original test count to `34`.
+  - `benchmarks/e2e/external/b28-repeatability-subset.json`: `b28-idempotent-migration` now protects `project/app.db`.
+  - `benchmarks/e2e/external/fixtures/b28/b28-idempotent-migration/task.md`: clarified that the fix must live in `migrate.py`, not in manual DB mutation.
+  - Regression coverage stored in `autocode/docs/qa/test-results/20260330-030644-b17-b28-contract-regressions-root-2.md`.
+- Better official rerun plan:
+  1. Verify gateway health first: `curl http://localhost:4000/health/readiness`
+  2. Run `B17` on the gateway only with `.env` loaded and model alias `swebench`
+  3. Inspect the new `B17` artifact immediately; if it is green, move directly to `B28`
+  4. Run `B28` on the gateway only with the same canonical setup
+  5. If the gateway drops mid-run, stop and record it as infra instead of silently swapping to direct OpenRouter
+  6. Only after fresh artifacts exist: update `EXECUTION_CHECKLIST.md`, `current_directives.md`, and close the thread
+
+Priority: High
+Tools Used: apply_patch, benchmark artifacts, benchmark session DB inspection, targeted reproductions, focused pytest, gateway health checks
+
+### Entry 893
+**Date:** 2026-03-30
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B17/B28 benchmark closeout | Intent: Record the return of the gateway path and the canonical rerun order before spending more time on benchmark execution
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: General**
+
+Pre-task intent before continuing the benchmark closeout: the gateway is back healthy at `http://localhost:4000/health/readiness`, so I am resuming the official canonical path exactly as proposed in Entry 892. I will keep the reruns gateway-only, finish `B17` first, inspect that artifact immediately, then run `B28` second if the gateway remains stable.
+
+Priority: High
+Tools Used: gateway health check, live benchmark control
+
+### Entry 894
+**Date:** 2026-03-30
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B17/B28 benchmark closeout | Intent: Report the live gateway-backed rerun state and the evidence-backed next step order
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: Review**
+
+**Layer Assessment**
+- Layer N/A benchmark execution update; no new policy disagreement since Entry 892.
+
+**Verdict**
+- `APPROVE` continuing on the gateway-only path.
+- `IN_PROGRESS` on benchmark closeout until fresh `B17` / `B28` artifacts land.
+
+**Analysis**
+- Gateway health is currently good: `curl http://localhost:4000/health/readiness` returned `status=healthy`.
+- The official `B17` rerun is now live on the canonical command path:
+  - `uv run python benchmarks/benchmark_runner.py --agent autocode --lane B17 --model swebench --max-tasks 5`
+- The first task sandbox (`b17-add-type-hints`) is actively progressing rather than dead-ending. The live session DB is still growing, and the sandbox test log already shows `16 passed`; the agent is still finishing the task-quality work on the typed modules rather than exiting early.
+- I do not have a fresh lane artifact yet, so I am not calling `B17` fixed early. The right move is to let the lane finish, inspect the resulting JSON immediately, and only then decide whether any remaining intervention is needed.
+
+**Suggested Next Step**
+1. Let the live `B17` gateway rerun finish.
+2. Read the fresh `B17` JSON as soon as it lands.
+3. If `B17` is green, run `B28` immediately on the same gateway-only path.
+4. If either run dies because the gateway drops again, record it as infra in the artifact/comms instead of silently switching providers.
+
+Priority: High
+Tools Used: gateway health check, live session DB inspection, live sandbox log inspection
+
+### Entry 895
+**Date:** 2026-03-30
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B17/B28 benchmark closeout | Intent: Record the first hard checkpoint from the live canonical B17 rerun before moving deeper into the lane
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: General**
+
+Pre-task intent before this status update: the live gateway-only `B17` rerun has now advanced far enough that there is a real resumable checkpoint, so I am recording the run id and current progress in comms/checklist before continuing to the historically bad later tasks.
+
+Priority: High
+Tools Used: progress file inspection, live benchmark monitoring
+
+### Entry 896
+**Date:** 2026-03-30
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B17/B28 benchmark closeout | Intent: Report the live B17 progress checkpoint and the still-open closeout risk
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: Review**
+
+**Layer Assessment**
+- Layer N/A benchmark execution update; still no new disagreement with Entry 892 policy.
+
+**Verdict**
+- `APPROVE` continuing the live `B17` gateway rerun.
+- `IN_PROGRESS` until the full lane artifact lands and then `B28` is rerun.
+
+**Analysis**
+- The canonical run is now definitely healthy enough to keep:
+  - run id: `20260330-031406-643ed13c`
+  - progress file: `sandboxes/progress/B17_autocode_20260330-031406-643ed13c_progress.json`
+- Fresh progress inspection shows the first two tasks are already resolved:
+  - `b17-add-type-hints`
+  - `b17-extract-class`
+- `b17-extract-class` is important evidence because it shows the lane is not blocked on a broad fixture regression; the live task-2 sandbox reached a correct extracted-module state and completed despite intermittent gateway retries.
+- The gateway is still somewhat noisy on tool-calling turns (`OpenRouter retry ... incomplete chunked read / connection error`), but the lane is recovering and moving forward rather than hard-failing. That means the better strategy is still to keep the canonical rerun alive and use its progress file for recovery if needed, not to restart ad hoc.
+
+**Suggested Next Step**
+1. Let the current `B17` run continue into the remaining three tasks.
+2. Pay special attention to the historically bad pair:
+   - `b17-rename-module`
+   - `b17-split-test-file`
+3. As soon as the `B17` JSON lands, inspect it immediately and either:
+   - run `B28` next if green, or
+   - apply a new targeted fix only to the task that still fails.
+
+Priority: High
+Tools Used: progress file inspection, live session DB inspection, live benchmark monitoring
+
+### Entry 897
+**Date:** 2026-03-30
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B17/B28 benchmark closeout | Intent: Record the completed B17 closeout and the prompt-contract cleanup before moving to the final remaining lane
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: General**
+
+Pre-task intent before starting `B28`: the official gateway-only `B17` rerun has completed cleanly, and I also landed one additional prompt-contract clarification for `b17-rename-module` so future reruns do not waste time rediscovering that `test_app.py` imports must be updated. I am recording that now, then moving directly to the canonical `B28` rerun.
+
+Priority: High
+Tools Used: live benchmark artifact review, apply_patch, focused pytest
+
+### Entry 898
+**Date:** 2026-03-30
+Agent: Codex | Role: Reviewer / Architect | Layer: N/A | Context: B17/B28 benchmark closeout | Intent: Report that B17 is fully green and narrow the remaining work to B28 only
+Replying to: Claude
+Directed to: Claude, User
+
+**Type: Review**
+
+**Layer Assessment**
+- Layer N/A benchmark closeout update; B17 is now closed with a fresh canonical artifact.
+
+**Verdict**
+- `APPROVE` B17 as resolved.
+- Remaining closeout work is now only `B28`.
+
+**Analysis**
+- Fresh official artifact: `docs/qa/test-results/20260330-034741-B17-autocode.json`
+- Result: `5/5`, `0` infra fails, canonical run id `20260330-031406-643ed13c`
+- The two historically bad tasks now resolved on the official gateway-only path:
+  - `b17-rename-module`
+  - `b17-split-test-file`
+- That is strong evidence that the targeted harness/fixture fixes were the right ones:
+  - test-file auto-restore exceptions are now working end-to-end
+  - the `split-test-file` contract fix was necessary and sufficient
+  - the lane-wide host-mode correction removed the heavy Docker bootstrap noise
+- I also tightened `benchmarks/e2e/external/fixtures/b17/b17-rename-module/task.md` so it explicitly says `test_app.py` import rewrites are required and allowed. The live task still recovered without that prompt change, but the session DB showed the ambiguity was real, so keeping the clarification is the right preventive fix.
+- Fresh stored regression for that prompt change:
+  - `autocode/docs/qa/test-results/20260330-034357-b17-rename-module-task-contract-root.md`
+
+**Suggested Next Step**
+1. Verify gateway health again.
+2. Run the official canonical `B28` rerun on the gateway only.
+3. Inspect the new `B28` JSON immediately; if it is green, update checklist/docs and close the benchmark thread.
+
+Priority: High
+Tools Used: live benchmark artifact review, progress file inspection, apply_patch, focused pytest
+
+### Entry 899
+**Date:** 2026-03-30
+Agent: Claude | Role: Coder | Layer: N/A | Context: Remaining EXECUTION_CHECKLIST items after B17 green | Intent: Suggest implementation plan for remaining checklist items
+Directed to: Codex, User
+
+**Type: Proposal**
+
+## Remaining Checklist Items — Implementation Suggestions
+
+B17 is green (Entry 898). B28 canonical rerun in progress. Here's how to close the remaining items:
+
+### 1. B28 Rerun (Codex owns — in progress)
+- Canonical run `20260330-034838-77c1537a` has 3/5 resolved
+- `b28-idempotent-migration` is the blocker — Codex's fixes landed
+- **Action:** Wait for current run. If it fails, use `--resume --run-id` per checklist
+
+### 2. Ruff/Mypy Debt Decision
+- **Suggestion:** Defer to post-Phase 7. The touched Phase 7 files are already clean (stored artifacts). Broader repo debt is legacy — not a Phase 7 gate.
+- **Action:** Add one line to checklist: "Deferred to Phase 8 — not blocking ship-ready"
+
+### 3. Update `current_directives.md`
+- Once B28 is green, update:
+  - Test count to latest (currently 1401)
+  - Benchmark state: "22/23 at 100%, B28 pending" → "23/23 at 100%"
+  - Codex review status to latest entry
+- **Action:** I can do this immediately after B28 artifact lands
+
+### 4. Update `docs/plan/phase7-ship-ready.md`
+- Change status from "IN PROGRESS" to "COMPLETE"
+- Update all sprint statuses to DONE
+- Record final test count and benchmark scores
+- **Action:** I can do this immediately after B28
+
+### 5. Post Implementation Summary to /comms
+- Full session summary: what was built, test counts, benchmark scores
+- Link all stored verification artifacts
+- **Action:** I'll draft this after B28 closes
+
+### 6. Post Verification Artifacts
+- Already stored by Codex (pytest, routing, shell, PyInstaller, Docker, B29 contract)
+- Just need to reference them in the summary entry
+- **Action:** Include in the implementation summary entry
+
+### 7. Post Benchmark Results
+- Compile best scores across all 23 lanes with artifact links
+- **Action:** Include in the implementation summary entry
+
+### 8. Post Remaining Blockers
+- If B28 closes: "No remaining blockers"
+- If B28 stays stuck: classify as capability limit and discuss waiver
+- **Action:** Part of the final entry
+
+**Bottom line:** Everything depends on B28. Once that's green, I can close all remaining items in one pass (15 min of doc updates + one summary comms entry).
+
+Priority: Medium
+Tools Used: Analysis
