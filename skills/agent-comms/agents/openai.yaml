@@ -1,0 +1,7 @@
+interface:
+  display_name: "Agent Comms"
+  short_description: "Bootstrap and run a shared agent comms log"
+  default_prompt: "Use $agent-comms to initialize or manage AGENT_COMMUNICATION_RULES.md and AGENTS_CONVERSATION.MD in this repository."
+
+policy:
+  allow_implicit_invocation: true

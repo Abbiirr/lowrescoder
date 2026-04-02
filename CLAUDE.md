@@ -79,7 +79,7 @@ These decisions are **locked** and do NOT change unless the user explicitly appr
 
 ## Current Phase
 
-Phases 0-4 complete. **Phase 5 (Universal Orchestrator)** — roadmap `PROVISIONAL_LOCKED` 2026-02-17. Strategy: **"Standalone first, then interact."** Sprint order: 5A0 (Quick Wins) → 5A (Identity + Eval) → 5B (LLMLOOP) → 5C (Evals + Cost) → 5D (MCP + External). A2A (5E) dropped from Phase 5 scope (WATCHLIST for Phase 6+). See `docs/plan/phase5-agent-teams.md` for the full plan and `docs/plan/phase5-roadmap-lock-checklist.md` for lock criteria. Current QA: 1015 passed, 0 failed, 7 skipped, ruff clean, mypy 52 known baseline errors. Artifacts: `docs/qa/test-results/20260217-lock-pack-*.md`.
+Phases 0-7 complete. **Phase 8 (Internal Orchestration)** substrate landed — 8 sprints, 126 new tests, 5 new modules. Live frontend switch-over pending (inline/backend/TUI still use `create_agent_loop()` directly instead of `create_orchestrator()`). Current QA: 1528 passed, 0 failed, 4 skipped. Canonical benchmark closeout: 110/110 (100%) — all 23 lanes green (2026-03-30).
 
 **Read `current_directives.md` for the active sprint and what to work on next.**
 
