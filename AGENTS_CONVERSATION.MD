@@ -973,3 +973,65 @@ Phase A is now coherently reflected in both code and docs. Ready to start Phase 
 
 Priority: Normal
 Tools Used: editor, python script, git submodule ops
+
+### Entry 1078
+**Date:** 2026-04-11
+Agent: Claude | Role: Coder | Layer: 1-4 | Context: User showed /model output in the Python inline frontend is still a text dump — I built the picker in the Go TUI, which is the wrong frontend | Intent: Audit the inline TUI gaps and commit to fixing them in the correct frontend
+Directed to: Codex, User
+
+**Type: TUI Gap Audit + Plan**
+
+## Wrong-frontend acknowledgment
+
+User's screenshot shows `/model` in the **Python inline frontend** (`autocode chat` — what they actually run) still text-dumps the model list. The arrow-key picker I built lives in `cmd/autocode-tui/` (the Go TUI dev binary), not the inline frontend. This is the **second** time I've made this mistake. Going to fix it here and add a PTY test that actually runs `autocode` (not `autocode-tui`).
+
+## Inline TUI gap audit (what's still a text dump vs. what already has arrow keys)
+
+Existing arrow-select helper: `InlineApp._arrow_select(title, options, default_index)` at `autocode/src/autocode/inline/app.py:1213`. Used today for:
+- **Approval flow** (`_approval_prompt`) — ✅ arrow keys
+- **Edit apply/reject** — ✅ arrow keys
+- **Ask-user prompts** (`_handle_ask_user`) — ✅ arrow keys
+
+Where it's NOT used (the gap):
+
+| Slash command | Current behavior | Should be |
+|---|---|---|
+| **`/model`** | Text dump: `Current model: X (provider: Y) Available models: - a - b - c` | Arrow picker with cursor on active model (user's pain point) |
+| **`/provider`** | Text dump: `Current provider: X` + text list on `/provider list` | Arrow picker with cursor on active provider |
+| **`/mode`** | Text output listing 4 modes; Shift+Tab cycles them but no menu | Arrow picker with cursor on current mode |
+| **`/sessions`, `/resume`** | `_handle_sessions` text dump; `/resume <id>` requires typing a prefix | Arrow picker over recent sessions |
+| **`/loop list` + `/loop cancel`** | Text dump; `/loop cancel <id>` requires typing ID | Arrow picker over active loop jobs |
+| **`/checkpoint`** | Text dump of checkpoint list | Arrow picker over checkpoints with restore action |
+| **`/copy N`, `/copy last N`** | Numeric arg | Arrow picker over recent assistant messages |
+| **Bare `/`** | prompt_toolkit inline completer shows ghost text | Full multi-line cursorable menu like Claude Code's |
+
+**Highest priority (user's explicit screenshot):** `/model`, `/provider`, `/mode`.
+
+**Medium priority (quality-of-life):** `/sessions`/`/resume`, `/loop cancel`, `/checkpoint`.
+
+**Lower priority (architectural):** Bare `/` multi-line picker — requires more prompt_toolkit integration.
+
+## Plan
+
+### Step 1: Fix the highest-priority inline TUI gaps (this session)
+- Add `_model_picker` method to `InlineApp` using `_arrow_select`
+- Add `_provider_picker` method to `InlineApp` using `_arrow_select`
+- Add `_mode_picker` method (quick win — 4 options)
+- Intercept bare `/model`, `/m`, `/provider`, `/mode` in `_handle_input` BEFORE `command_router.dispatch` so the pickers run instead of the text-dump handlers
+- Non-bare forms (`/model <name>`, `/provider <name>`, `/mode <mode>`) still go through the existing handlers
+
+### Step 2: PTY verification against the actual `autocode` binary (not `autocode-tui`)
+- Write `/tmp/tty_test_inline_pickers.py` that spawns `autocode chat` (the inline frontend) under `pty.fork()`
+- Send `/model\r` → expect arrow picker to appear with real model list
+- Send arrow keys → expect cursor highlight to move
+- Send Enter → expect model switch confirmation
+
+### Step 3: Complete Phase B items
+1. ~~`apply_patch` with dry-run + conflict detection~~ — DONE
+2. **Tool-result clearing primitive** — new `clear_tool_results(ids)` tool
+3. **LSP tools via Jedi** — new `agent/lsp_tools.py` with `goto_definition`, `find_references`, `get_type_hint`
+4. **Fail-closed sandbox mode** — new `config.sandbox.fail_if_unavailable` flag + enforcement in `agent/sandbox.py`
+5. **Pattern-based permission rules** — new `agent/permission_rules.py` with `Bash(npm run test *)` style matchers
+
+Priority: High
+Tools Used: source audit
