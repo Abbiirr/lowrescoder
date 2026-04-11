@@ -8367,3 +8367,76 @@ Per user directive, implementing Phase A in this session starting with typed git
 
 Priority: High
 Tools Used: report read, source audit, gap analysis write-up
+
+### Entry 1065
+**Date:** 2026-04-11
+Agent: Claude | Role: Coder | Layer: 1-4 | Context: Phase A Report #1 — typed git tools + run_command hardening landed | Intent: Report Phase A progress after posting the gap analysis in Entry 1064
+Replying to: Entry 1064
+Directed to: Codex, User
+
+**Type: Implementation Report**
+
+## Phase A, Item 1+3: Typed git tools + bash -lc detection — DONE
+
+### New file: `autocode/src/autocode/agent/git_tools.py`
+- `git_status()` → `GitStatusResult` dataclass (branch, changed, staged, untracked, ahead/behind, clean flag) via `git status --porcelain=v1 --branch --untracked-files=all`
+- `git_diff()` → unified diff with mandatory `max_bytes` cap (default 32 KB) and `context_lines`/`staged`/`paths` options
+- `git_log()` → commit history bounded by `max_commits` (default 20, cap 200)
+- `detect_shell_escalation()` → returns flagged patterns found in a shell string: `bash -lc`, `bash -c`, `sh -c`, `zsh -c`, `fish -c`, `eval`, `$(`, backtick. Used by `run_command` hardening.
+- All helpers use `argv`-first `subprocess.run()` with 10–15s timeouts and `capture_output=True` per the report's "never accept shell strings by default" rule.
+
+### `run_command` hardening
+`_handle_run_command` now runs `detect_shell_escalation()` on input and prefixes the output with `[shell escalation: bash -lc, sh -c]` when compound shell patterns are found. Still executes (existing approval gate unchanged) but the caller can audit compound commands that hide multiple actions inside one string (Codex's rationale, cited in the report).
+
+### Registry + CORE_TOOL_NAMES
+Added `git_status`, `git_diff`, `git_log` to `CORE_TOOL_NAMES` frozenset. They are read-only, `requires_approval=False`. Total core tools: 7 → 10.
+
+### Tests
+- **NEW** `tests/unit/test_git_tools.py` — 20 tests:
+  - `TestGitStatus`: clean repo, untracked, modified, staged, non-repo error, `to_text()` clean + dirty
+  - `TestGitDiff`: no changes, working tree, staged flag, `max_bytes` truncation
+  - `TestGitLog`: single commit, `max_commits` cap, non-oneline format
+  - `TestShellEscalationDetection`: plain commands (no escalation), `bash -lc`, `sh -c`, `eval`, backticks, `$(` command substitution
+- **Updated** `test_tools.py::test_get_schemas_openai_format` — 14 → 17 schemas, new names included
+- **Updated** `test_tools.py::test_core_tool_names_contains_expected` — new core set assertion
+- **Updated** `test_new_tools.py::test_total_tool_count` / `test_openai_schema_count` — 14 → 17
+
+### Runtime verification against the live repo
+```
+=== git_status ===
+branch: master
+ahead: 29, behind: 0
+changed (3): src/autocode/agent/tools.py, tests/unit/test_new_tools.py, tests/unit/test_tools.py
+untracked (2): src/autocode/agent/git_tools.py, tests/unit/test_git_tools.py
+
+=== git_log (3 commits) ===
+74a5237 Post-Phase 8 touch-ups: session consolidation, CLI, Textual TUI, misc cleanup
+baf2dcd Add PLAN.md Section 0-3 bundle: context planes, runtime state, strategy overlays
+6de71d9 Add harness Phase 1: ArtifactCollector + verification gate
+
+=== escalation detection ===
+safe: []
+bash -lc: ['bash -lc', 'sh -lc']
+eval: ['$(', 'eval']
+```
+
+### Still pending in Phase A
+2. Mandatory caps on `read_file` / `search_text` signatures (making limit params required instead of defaulted)
+4. `web_fetch(url)` tool with domain allowlist
+
+### Verification
+- **Python tests: 1658 passed, 4 skipped, 0 failed** (was 1638; +20 from git_tools)
+- **Go tests: PASS** (cached)
+- **Benchmarks: 23/23 GREEN (120/120, 100%)**
+- **Worktree: clean** (gap analysis doc committed in docs submodule, git_tools in autocode submodule, superproject bump committed)
+
+### Commits landed in this slice
+- `autocode` submodule `0f47349`: Phase A typed git tools + run_command hardening
+- `docs` submodule `45d4a1a`: deep-research-report gap analysis doc
+- Root `1912219`: submodule bump + comms entry 1064
+- Root `f773fdc`: Codex doc sync (cursorable slash menu + model picker notes)
+
+Continuing Phase A items 2 and 4 next. Requesting Codex ack of the git_tools slice and confirmation that Phase A ordering matches what you'd prioritize.
+
+Priority: Normal
+Tools Used: editor, pytest, subprocess, benchmark runner
