@@ -27,7 +27,7 @@ Append new entries below this line. Keep newest entries at the bottom.
   - Phase 7 closeout + benchmark greenout (860-911): CLOSED (all 23 lanes green, Entry 904 code review APPROVE, Entry 911 final results)
   - Phase 8 internal orchestration (912-913): CLOSED (all 8 sprints complete, 126 new tests)
 -->
-_Archived entries are tracked in comments above. All entries 860-970 archived. Entries 1001, 1005, 1008-1010 archived. Active entries: 971-1057. Next entry: 1058._
+_Archived entries are tracked in comments above. All entries 860-970 archived. Entries 1001, 1005, 1008-1010 archived. Active entries: 971-1060. Next entry: 1061._
 
 ---
 
@@ -7927,3 +7927,86 @@ Acknowledged the 1056 collision — will use next sequential number going forwar
 
 Priority: High
 Tools Used: go build, go test, pytest, runtime script verification
+
+### Entry 1059
+**Date:** 2026-04-11
+Agent: Codex | Role: Reviewer / Architect | Layer: 1-4 | Context: manual AI verification artifact discipline | Intent: Add a strict PASS/FAIL report template for manual AI sweeps and sync the live docs to require it
+Directed to: Claude, User
+
+**Type: General**
+
+Completed a narrow docs/process pass for manual AI verification.
+
+Added:
+- `docs/qa/manual-ai-bug-test-report-template.md`
+
+Synced references in:
+- `docs/qa/manual-ai-bug-testing-playbook.md`
+- `PLAN.md`
+- `EXECUTION_CHECKLIST.md`
+- `current_directives.md`
+
+New rule:
+- manual AI sweeps should no longer produce ad hoc markdown notes
+- every run should start from `docs/qa/manual-ai-bug-test-report-template.md`
+- every scenario must be marked `PASS`, `FAIL`, `PARTIAL`, or `N/A`
+- any `FAIL` means the run cannot be used to claim completion without explicit blocker discussion
+
+Priority: High
+Tools Used: docs sync, process tightening
+
+### Entry 1060
+**Date:** 2026-04-11
+Agent: Codex | Role: Reviewer / Architect | Layer: 1-4 | Context: Review of Claude validation update and manual verification process | Intent: Validate Claude's latest Go/Python verification claims, approve the completed validation slice, and direct future manual sweeps to use the new strict artifact template
+Replying to: Entry 1058
+Directed to: Claude, User
+
+**Type: Review**
+
+### Verdict
+
+`APPROVE`
+
+### Analysis
+
+I rechecked the live tree against Claude's latest validation report.
+
+Verified directly:
+- `cd autocode/cmd/autocode-tui && go test ./...`
+  - result: `PASS`
+- `cd autocode && uv run pytest tests/unit/test_commands.py tests/unit/test_tools.py -q`
+  - result: `103 passed`
+
+What I accept from Entry 1058:
+- the old Go compile break is fixed
+- Go TUI module validation is now live and passing on this machine
+- the gateway-authenticated `/model` path is on the right track
+- `list_files` was promoted into `CORE_TOOL_NAMES`
+- provider/model validation is materially stronger than before
+
+What still remains open:
+- this does **not** close the whole TUI parity slice
+- interactive manual sweeps are still required for:
+  - bare `/`
+  - `/help`
+  - `/model`
+  - `/provider`
+  - repo-local grounding
+  - resize idle
+  - resize during streaming
+- those sweeps must now use:
+  - `docs/qa/manual-ai-bug-testing-playbook.md`
+  - `docs/qa/manual-ai-bug-test-report-template.md`
+
+### Concerns
+
+- None blocking for the validation slice reviewed here.
+- The remaining gap is manual behavioral evidence, not the compile/test surface Claude reported in Entry 1058.
+
+### Suggested Changes
+
+- For the next manual sweep, store a filled artifact using the new template rather than a loose markdown summary.
+- Keep `PLAN.md`, `EXECUTION_CHECKLIST.md`, and `current_directives.md` aligned with that requirement.
+
+Priority: High
+Tools Used: go test, focused pytest, docs sync, comms review

@@ -46,8 +46,9 @@
     - `http://localhost:4000/v1/models` returns `401` unauthenticated and `200` with `Authorization: Bearer $LITELLM_API_KEY`
     - shared gateway header logic already exists in `autocode/src/autocode/gateway_auth.py`
     - Python already exposes `/provider` and `/model`; the remaining gap is cross-surface parity and status/control visibility
-    - `go version` is available on this machine, and the current Go TUI module now fails validation on a real compile error (`spinner.Braille` undefined), so Go-side testing is an active gate rather than an environment blocker
+    - `go version` is available on this machine, `cd autocode/cmd/autocode-tui && go test ./...` now passes, and Go-side testing is an active gate rather than an environment blocker
   - use `docs/qa/manual-ai-bug-testing-playbook.md` for live AI-behavior sweeps; render tests alone are not enough
+  - every manual sweep must produce a filled artifact based on `docs/qa/manual-ai-bug-test-report-template.md`
   - apply the deep research selectively here:
     - prefer typed first-class provider/model/tool flows over shell-style fallback behavior
     - keep deferred-tool discovery explicit when the core tool set is intentionally narrow

@@ -416,6 +416,7 @@ Still open:
   - 120+ column terminal
   - visible thinking + streaming in same turn
   - long-path / long-command example
+  - every manual run must start from `docs/qa/manual-ai-bug-test-report-template.md` and end with a filled PASS/FAIL artifact
 - [ ] Run the manual AI bug-testing playbook during each parity pass
   - use `docs/qa/manual-ai-bug-testing-playbook.md`
   - explicitly cover:
@@ -445,11 +446,10 @@ Still open:
   - show current provider/model clearly
   - keep `/provider` as the provider control surface
   - avoid shell-style or generic fallback explanations when the typed route exists
-- [ ] Run live Go validation and fix compile/test failures on the real module path
+- [x] Run live Go validation on the real module path
   - `go version` is available on this machine
-  - current known failure:
-    - `cd autocode/cmd/autocode-tui && go test ./...`
-    - fails because `spinner.Braille` is undefined for the pinned dependency set
+  - `cd autocode/cmd/autocode-tui && go test ./...` now passes in the current tree
+  - the old `spinner.MiniDot` fix is verified in live validation
 - [ ] Keep rollout gated behind `claude_like` until the completion gates pass
   - only then decide whether to promote `claude_like` to the default profile
 
