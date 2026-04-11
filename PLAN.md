@@ -313,6 +313,8 @@ Still unfinished:
 - manual smoke artifacts
 - every manual sweep must produce a filled artifact from `docs/qa/manual-ai-bug-test-report-template.md`
 - bare `/` command-discovery parity with the shared Python router
+- cursorable slash-command menu: typing `/` should show the visible command list, Up/Down should move selection, and Enter should accept the highlighted command
+- `/model` should support an on-screen model picker rather than requiring the user to manually type the target alias
 - gateway-authenticated `/model` listing against `http://localhost:4000/v1`
 - stronger provider visibility and explicit provider-switching UX
 - prompt/tool-schema consistency around `list_files` vs the live callable tool surface
@@ -397,8 +399,12 @@ Keep the Claude-like visual contract while fixing the newly discovered interacti
 1. Slash-command discovery
    - bare `/` must expose the real command surface
    - Go TUI completion list must not drift from the Python router
+   - bare `/` must open a cursorable command menu
+   - Up/Down should move command selection
+   - Enter should accept the highlighted command
 2. Provider/model UX
    - `/model` must work against the authenticated local gateway
+   - `/model` should open a model picker state when run without args, with arrow-key selection and Enter-to-apply
    - provider must be visible in the persistent status surface
    - `/provider` should exist if provider switching remains a first-class workflow
    - all gateway-backed model listing must reuse `build_gateway_headers()` instead of duplicating ad hoc header logic

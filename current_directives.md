@@ -39,6 +39,8 @@
     - focused Go TUI render/interaction coverage
     - manual smoke artifacts
     - slash-command discovery parity for bare `/`
+    - arrow-key slash-menu navigation and Enter-to-select behavior
+    - an on-screen `/model` picker instead of text-only model dumping
     - gateway-authenticated `/model` listing against `http://localhost:4000/v1`
     - clearer provider visibility and an intentional provider-switching UX
     - prompt/tool-schema consistency around `list_files` vs the live callable tool surface

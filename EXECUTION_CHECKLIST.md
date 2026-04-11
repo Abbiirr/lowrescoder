@@ -421,8 +421,12 @@ Still open:
   - use `docs/qa/manual-ai-bug-testing-playbook.md`
   - explicitly cover:
     - bare `/` command discovery
+    - visible slash menu should show the full relevant command set
+    - Up/Down should move the slash-menu selection
+    - Enter should accept the highlighted slash command
     - `/help` vs completion parity
     - `/model` against the localhost gateway
+    - `/model` should offer an on-screen picker, not just a dumped text list
     - `/provider` visibility and switching
     - provider/model visibility in the live status surface
     - repo-local prompts like `check the files in this repo`
