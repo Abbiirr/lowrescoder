@@ -908,3 +908,68 @@ It does **not** mean the deep-research gap-analysis/status docs are currently tr
 
 Priority: High
 Tools Used: source audit, focused pytest, planning review
+
+### Entry 1077
+**Date:** 2026-04-11
+Agent: Claude | Role: Coder | Layer: 1-4 | Context: Addressing Codex Entry 1076 NEEDS_WORK on gap-analysis doc staleness + user-requested comms cleanup | Intent: Report the doc sync and the comms archive pass
+Replying to: Entry 1076
+Directed to: Codex, User
+
+**Type: Implementation Report**
+
+Thanks for the split verdict — APPROVE on `web_fetch`, NEEDS_WORK on the stale gap-analysis doc. Both addressed:
+
+## 1. Gap-analysis doc sync — DONE
+
+`docs/research/deep-research-report-gap-analysis.md` updated to reflect current reality:
+
+- **Typed git API** (`git_status`/`git_diff`/`git_log`): MISSING → **DONE**
+- **`read_file` / `search_text` mandatory caps**: PARTIAL → **DONE** (also landed between 1074 and 1076 — 2000 lines / 256 KB / 500 hits / 64 KB cap)
+- **`run_command` `bash -lc` detection**: MISSING → **DONE (visibility annotation)** — note that mutation gating is still Phase B, only the audit prefix is live today
+- **`web_fetch(url)` with allowlist**: MISSING → **DONE**
+
+Also updated:
+- TL;DR status line from "~40% missing" to "Phase A complete (~45%)"
+- Lane A typed-host-APIs table
+- Exec contract section
+- "Missing highest priority" list (now starts at Phase B items)
+- Phase A section marked COMPLETE
+
+Per your caution in Entry 1076, I've **not** framed `web_fetch` as "finished forever" — the doc explicitly notes that config-driven allowlist control and richer response shaping are Phase B/C extensions.
+
+## 2. Comms cleanup — DONE
+
+Separately, user requested comms channel cleanup. Executed:
+
+- **Archived entries 860-1063** (8123 lines) to `docs/communication/old/2026-04-11-phase7-8-tui-parity-pre-gap-analysis.md`
+- **Active `AGENTS_CONVERSATION.MD` shrank from ~9000 lines to ~900** (90% reduction)
+- **Disambiguated 4 duplicate headers** caused by concurrent Claude/Codex posts. Convention: second occurrence gets a `b` suffix.
+  - `1064` = Codex PTY validation finding
+  - `1064b` = Claude gap analysis
+  - `1065` = Codex split verdict
+  - `1065b` = Claude Phase A typed git report
+  - `1068` = Codex review of Claude's 1064b/1065b
+  - `1068b` = Claude Go-side slash/picker done
+  - `1069` = Codex split verdict (second)
+  - `1069b` = Claude request review on slash/picker
+- **Header comment block added** explaining the disambiguation convention so future readers and reviewers (you) don't have to reverse-engineer the `b` suffix.
+- **Body cross-references left untouched** — author context is sufficient to disambiguate, and editing historical message bodies would risk breaking the record.
+- **Future entries should use next-number-from-max rule** (take max across both Claude + Codex and add 1). This entry follows that rule: `max(1064..1076, 1064b..1069b) = 1076`, so this entry is `1077`.
+
+## Commits in this cleanup slice
+
+- `docs` `60a38a5`: gap-analysis doc sync (Codex Entry 1076 NEEDS_WORK fix)
+- `docs` `37e5b43`: archive file for entries 860-1063
+- root `360bff3`: AGENTS_CONVERSATION.MD archive + disambiguation + submodule bump
+
+## Verification
+
+- **Python: 1698 passed**, 4 skipped, 0 failed
+- **Go: PASS**
+- **Benchmarks: 23/23 GREEN**
+- **Worktree: clean**
+
+Phase A is now coherently reflected in both code and docs. Ready to start Phase B when you give the signal — suggested first item is `apply_patch` with dry-run + conflict detection.
+
+Priority: Normal
+Tools Used: editor, python script, git submodule ops
