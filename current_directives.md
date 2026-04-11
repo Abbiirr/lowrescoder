@@ -119,7 +119,7 @@ Total: **1630+ tests, 0 failures in the latest stored full-suite artifact, 4 ski
 ## Next Work (Active Frontier — per EXECUTION_CHECKLIST.md)
 
 ### 0. Harness Architecture Refinement From Proposal v2 (Status: Landed Foundation)
-- [x] Review `harness-improvement-proposal-v2-2026-04-08.md`
+- [x] Review `docs/research/harness-improvement-proposal-v2-2026-04-08.md`
 - [x] Write the adoption memo
   - `docs/research/harness-improvement-proposal-v2-adoption-plan.md`
 - [x] Formalize the four context planes in AutoCode-native terms

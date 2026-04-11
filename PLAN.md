@@ -268,7 +268,7 @@ Make AutoCode's primary full-screen terminal experience feel structurally and be
 ### Research Basis
 
 - `docs/design/claude-code-visual-parity.md`
-- `deep-research-report.md`
+- `docs/research/deep-research-report.md`
 - `docs/qa/manual-ai-bug-testing-playbook.md`
 - `research-components/claude-code/CHANGELOG.md`
 - `autocode/cmd/autocode-tui/view.go`

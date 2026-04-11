@@ -63,6 +63,7 @@ toolsharbor-cli/
 # External research clones (not part of this repo)
 claw-code/
 kuberwastaken-claude-code/
+research-components/
 
 # Scheduled-job runner output
 jobs/

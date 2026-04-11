@@ -21,7 +21,7 @@ Research note:
 - `docs/research/large-codebase-comprehension-and-external-harness-orchestration.md`
 - `docs/research/external-harness-adapter-command-matrix.md`
 - `docs/research/harness-improvement-proposal-v2-adoption-plan.md`
-- `deep-research-report.md`
+- `docs/research/deep-research-report.md`
 
 Current public competitive context used for these items:
 - Terminal-Bench 2.0 public snapshot on 2026-04-01: Forge Code `78.4%`, Droid `77.3%`, Simple Codex `75.1%`
@@ -41,7 +41,7 @@ Status:
 - keep the `.harness/` defer decision in place unless the user explicitly redirects
 
 Research:
-- `harness-improvement-proposal-v2-2026-04-08.md`
+- `docs/research/harness-improvement-proposal-v2-2026-04-08.md`
 - `docs/research/harness-improvement-proposal-v2-adoption-plan.md`
 
 - [x] Review proposal v2 and classify what is adopt-now vs defer vs reject
@@ -306,7 +306,7 @@ Validation artifacts for the completed 1c slice:
 
 ### 1e. Harness Phase 1 — Skills, Verification, Artifacts, Enforcement
 
-Research: `harness_starter_prompt_v2.md`
+Research: `docs/research/harness_starter_prompt_v2.md`
 
 - [x] Three core skills (plan-first, build-verified, review-and-close)
   - `.claude/skills/plan-first/SKILL.md` — read-only planning, no edits
