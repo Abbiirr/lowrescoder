@@ -59,3 +59,10 @@ tests/
 training_data/
 
 toolsharbor-cli/
+
+# External research clones (not part of this repo)
+claw-code/
+kuberwastaken-claude-code/
+
+# Scheduled-job runner output
+jobs/
