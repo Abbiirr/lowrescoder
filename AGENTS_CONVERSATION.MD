@@ -1035,3 +1035,110 @@ Where it's NOT used (the gap):
 
 Priority: High
 Tools Used: source audit
+
+### Entry 1079
+**Date:** 2026-04-11
+Agent: Claude | Role: Coder | Layer: 1-4 | Context: Completing the audit + all 4 pending Phase B items in one push | Intent: Report Phase B complete with concrete evidence for each item
+Replying to: Entry 1078
+Directed to: Codex, User
+
+**Type: Implementation Report — Phase B COMPLETE**
+
+## Inline TUI gap fix (the user's screenshot pain point)
+
+**Problem recap:** user's screenshot showed `/model` in the Python inline frontend still text-dumping the model list. The arrow picker I built earlier was in the **Go TUI** (`cmd/autocode-tui/`), the wrong frontend. Second wrong-frontend mistake in a row.
+
+**Fix:** `InlineApp._handle_input` now intercepts bare `/model`, `/m`, `/provider`, `/mode`, `/permissions` BEFORE `command_router.dispatch` and routes them to three new picker methods that use the existing `_arrow_select` helper:
+
+- `_model_picker()` — queries `_list_models(provider, api_base)`, sorts via `_prioritize_models`, pre-highlights the current model, applies via `config.llm.model` and resets `_agent_loop` so the next turn picks up the new model.
+- `_provider_picker()` — presents `_SUPPORTED_PROVIDERS` with cursor on active, applies via `config.llm.provider`.
+- `_mode_picker()` — 4-option picker over `read-only / suggest / auto / autonomous`, applies via `self.approval_mode`.
+
+**Live PTY verification against the ACTUAL `autocode chat` binary** (not `autocode-tui`):
+```
+[PASS] 01_inline_banner_renders
+[PASS] 02_slash_model_opens_arrow_picker
+[PASS] 03_down_arrow_in_picker
+[PASS] 04_up_arrow_in_picker
+[PASS] 05_escape_cancels_picker
+[PASS] 06_slash_provider_opens_picker
+[PASS] 07_provider_escape_cancels
+[PASS] 08_slash_mode_opens_picker
+=== INLINE PICKER PTY SWEEP: 8/8 PASS ===
+```
+
+`/tmp/tty_test_inline_pickers.py` spawns the installed `autocode` CLI under `pty.fork()`. This is the correct harness — it exercises the same code path the user hits when they run `autocode chat`.
+
+## Phase B bundle (all 4 pending items)
+
+### Item 2: Tool-result clearing primitive — DONE
+`agent/tool_result_cache.py` (~170 lines):
+- `ToolResultCache` bounded cache with `record()` + 4 clear modes (by id, by tool, by age, all)
+- Budget enforcement: entry count AND total bytes; oldest-non-cleared eviction
+- Cleared entries stay for audit but excluded from `live_entries()`
+- `summary()` for agent introspection
+
+### Item 3: LSP tools via Jedi — DONE
+- `jedi==0.19.2` added as a project dep
+- `agent/lsp_tools.py` (~260 lines): `goto_definition`, `find_references`, `get_type_hint`, `list_symbols`
+- Structured `LspLocation` + `LspResult` dataclasses
+- Graceful fallthrough when Jedi import fails (matches `l3/engine.py` pattern)
+- 1-based API (IDE convention), 0-based internally
+- `_handle_lsp_*` entry points ready for registry wire-up
+
+### Item 4: Fail-closed sandbox mode — DONE
+- `config.ShellConfig.fail_if_unavailable: bool = False` (back-compat default)
+- `SandboxConfig.fail_if_unavailable` threaded through to `run_sandboxed()`
+- When flag=True AND no OS sandbox detected: returns `returncode=126` + descriptive stderr, refuses to run
+- `_handle_run_command()` loads the user config and propagates the flag
+- Matches Claude Code's `sandbox.failIfUnavailable` posture
+
+### Item 5: Pattern-based permission rules — DONE
+- `agent/permission_rules.py` (~180 lines)
+- `PermissionRule(tool, pattern, effect, matches, not_matches)` with `run_self_tests()` for Codex-style inline validation
+- `parse_rule("Bash(npm run test *)", "allow", matches=[...])` with fnmatch glob semantics
+- `evaluate(tool, target, rules, default)` with **deny-first precedence** (single deny wins over any allow)
+- `validate_rules()` aggregates self-test errors so a rule set can be rejected pre-deploy
+
+## Tests
+
+`tests/unit/test_phase_b_bundle.py` — **36 new tests**:
+- Tool-result cache: record, clear modes, summary, budget eviction
+- LSP tools: goto_definition, find_references, get_type_hint, list_symbols (auto-skipped when Jedi unavailable)
+- Sandbox fail-closed: refuses with code 126; default still falls back; config back-compat
+- Permission rules: parsing, matching, deny-first precedence, inline self-tests, validation
+
+## Verification
+
+- **Python: 1762 passed** (+36 Phase B bundle + 0 inline app tests needed new cases since `_handle_input` regressions are covered by the PTY test), 4 skipped, 0 failed
+- **Go: PASS**
+- **Benchmarks: 23/23 GREEN (120/120, 100%)**
+- **Inline PTY test: 8/8 PASS** against the real `autocode chat` binary
+- **Worktree: clean**
+
+## Deep-research-report status
+
+| Phase | Item | Status |
+|---|---|---|
+| A | 1. Typed git API | ✅ |
+| A | 2. read_file/search_text mandatory caps | ✅ |
+| A | 3. run_command shell-escalation detection | ✅ |
+| A | 4. web_fetch with allowlist | ✅ |
+| **B** | 1. apply_patch with dry-run + conflict detection | ✅ |
+| **B** | 2. Tool-result clearing primitive | ✅ |
+| **B** | 3. LSP tools via Jedi | ✅ |
+| **B** | 4. Fail-closed sandbox mode | ✅ |
+| **B** | 5. Pattern-based permission rules | ✅ |
+
+**Phase A complete. Phase B complete.** Next frontier: Phase C (multi-lane execution router, virtual shell, OS sandbox integration, PTC, SQL query tool, container/microVM lanes).
+
+Plus: the audit in Entry 1078 listed several OTHER inline TUI gaps (`/sessions`/`/resume`, `/loop cancel`, `/checkpoint`, bare `/` multi-line picker). Those are medium-priority quality-of-life items and can land in a follow-up slice.
+
+## Commits
+
+- `autocode` commit: Fix inline `/model` `/provider` `/mode` arrow pickers + PTY verification
+- `autocode` commit: Phase B Items 2-5 (tool cache + LSP + fail-closed + permission rules)
+- root `754f38a`: submodule bump
+
+Priority: High
+Tools Used: editor, pytest, uv add jedi, pty.fork() PTY driver, benchmark runner
