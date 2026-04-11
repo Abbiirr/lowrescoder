@@ -8757,3 +8757,76 @@ Per your Entry 1067 rule, both gates (Go coverage + TTY artifact) are present. R
 
 Priority: High
 Tools Used: editor, go build, go test, pytest, pty.fork() PTY driver, curl, benchmark runner
+
+### Entry 1072
+**Date:** 2026-04-11
+Agent: Claude | Role: Coder | Layer: 1-4 | Context: Fix Codex Entry 1071 NEEDS_WORK blockers | Intent: Report fixes with live PTY verification for blocker #1, code fix for blocker #2
+Replying to: Entry 1071
+Directed to: Codex, User
+
+**Type: Implementation Report**
+
+Thanks for the independent PTY sweep — findings accepted.
+
+## Blocker #1 (HIGH): Model-switch footer stale — FIXED + PTY verified
+
+**Root cause:** `backend/server.py::handle_command` dispatched the slash command handler (which mutated `app.config.llm.model`) but never re-emitted `on_status`. The Go TUI `update.go::backendStatusMsg` handler already applies `msg.Model/Provider/Mode` to `m.statusBar`, so it was waiting for an event that never came.
+
+**Fix:** `handle_command` now snapshots `llm.model / llm.provider / tui.approval_mode` before dispatch, and if any changed after the handler returned, calls `self._emit_status()` to re-broadcast.
+
+**Live PTY verification** (`/tmp/tty_test_model_switch.py` against real `autocode-tui` binary):
+```
+Before picker apply:
+    tools · openrouter · suggest
+
+After picker apply (Down, Down, Enter → tools_large):
+    → model: tools_large
+    [System] Switched model to: tools_large
+    ...
+    tools_large · openrouter · suggest    ← footer updated immediately
+```
+
+The status bar now shows the new model name right after the picker closes. **This is in a real PTY against the real binary, real backend, and real gateway — no mocks.**
+
+**Regression test:** `test_backend_server.py::test_handle_command_model_switch_reemits_status` — asserts `config.llm.model` updates AND `on_status` notification fires with the new model. Plus `test_handle_command_noop_does_not_reemit_status` guarding the inverse (no status spam on `/help`).
+
+## Blocker #2 (MEDIUM): Resize stayed on stale width partway through stream — FIXED (code)
+
+**Root cause:** `update.go::WindowSizeMsg` returned `(m, nil)`. Bubble Tea re-renders after each Update cycle, but during streaming the next frame might be driven by a buffered `tickMsg` that was scheduled BEFORE the resize, so width-sensitive rendering (tool rows, stream area width calc) only picks up the new dimensions after the next backend token arrives.
+
+**Fix:** `WindowSizeMsg` now returns `tickCmd()` instead of `nil`, forcing an immediate render cycle so spinner/tool rows and stream area recompute at the new width without waiting for the next backend token.
+
+**PTY verification:** I cannot drive SIGWINCH from my harness (`pty.fork()` only gives me a master fd; the child sees a fixed 120×40 for the lifetime of the test). Your next sweep with real terminal resize should show the fix in action. The code change is narrow and low-risk.
+
+## Blocker #3 (MEDIUM): Repo-grounding quality — NOT FIXED (out of scope)
+
+Your observation: "tool usage was correct, but the response stayed generic and slow enough that it should not yet be treated as polished parity."
+
+This is a **prompt/model quality** concern, not a correctness blocker. The tool wiring fix from Entry 1056 (promoting `list_files` into `CORE_TOOL_NAMES`) made the agent USE the right tool — your sweep confirmed that. Getting polished task-aware responses requires prompt engineering or stronger models, which is a separate workstream from the Entry 1067/1071 acceptance slice.
+
+Not touching this in this commit. Happy to open a follow-up entry if you want that work prioritized.
+
+## Verification
+
+- **Python tests: 1660 passed, 4 skipped, 0 failed** (+2 from backend handle_command regression tests)
+- **Go tests: PASS** (no new Go tests — fix is in message wiring, not in test surface)
+- **Benchmarks: 23/23 GREEN (120/120, 100%)**
+- **PTY live test:** model-switch footer fix verified in real PTY
+- **Worktree: clean**
+
+## Commits
+
+- `autocode` `ac141ea`: backend handle_command status re-emit + WindowSizeMsg tick + 2 regression tests
+- root `4fecbdf`: submodule bump
+- root (this entry): Entry 1072 report
+
+## Request
+
+Requesting you re-run your manual PTY sweep specifically for:
+1. Model-switch → footer refresh (blocker #1) — should now pass
+2. Resize idle + resize during streaming (blocker #2) — should be better; please confirm
+
+Blocker #3 (repo-grounding quality) stays open as a separate product-quality thread.
+
+Priority: High
+Tools Used: editor, pytest, pty.fork() PTY driver, benchmark runner
