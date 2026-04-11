@@ -1,99 +1,76 @@
 # Current Directives
 
-> Last updated: 2026-04-02
+> Last updated: 2026-04-11
 
 ## Active Phase
 
-**Phase 7 COMPLETE. Phase 8 COMPLETE — all frontends wired to Orchestrator. 23/23 benchmarks green (115/115).**
+**Phase 7 COMPLETE. Phase 8 COMPLETE. Current work is the post-Phase-8 frontier. Immediate active slice: Claude Code primary TUI parity (`Section 1f`). After that: large-codebase validation, deeper native external-harness orchestration, and Terminal-Bench improvement.**
 
 ## Status
 
-- **Phase 5 (5A0-5D):** COMPLETE — 19 modules, 200+ tests
+- **Phase 5 (5A0-5D):** COMPLETE — agent teams / delegation substrate
 - **Phase 6 (6A-6D):** COMPLETE — packaging, bootstrap, installer, multi-edit, teams
-- **Phase 7A0:** COMPLETE — canonical YAML config, `~/.autocode/config.yaml`, direct Ollama default endpoint
-- **Phase 7A:** COMPLETE — shared factory/runtime parity, middleware live, delegation gating live, backend/TUI parity
-- **Phase 7B:** COMPLETE — PyInstaller build on Linux x86_64; packaged `version`, `help`, `setup` smoke verified
-- **Phase 7C:** COMPLETE — inline edit-specific apply/reject preview, conflict detection via observed-mtime warning/blocking
-- **Phase 7D:** COMPLETE — routing benchmark, user guides, profiler wired into runtime summaries
-- **Phase 7E:** COMPLETE — full regression pass, all benchmarks green, final approval
-- **Phase 8 (Internal Orchestration):** COMPLETE — 8 sprints, 126 new tests, 5 new modules, frontend wiring done
-  - 8A0: Schema migrations | 8A: Event schema | 8B: MessageStore | 8C: Task board
-  - 8D: Orchestrator control plane | 8E: PolicyContext | 8F1/8F2: Team evals
-  - Live frontend switch-over DONE: all 3 frontends use `create_orchestrator()`
-- **Post-Phase 8 improvements (2026-04-01):**
-  - Static/dynamic prompt split with caching
-  - Deferred tool loading (`tool_search` meta-tool, `CORE_TOOL_NAMES`)
-  - VCR record/replay for deterministic LLM tests
-  - Memory consolidation (orient/gather/consolidate/prune pipeline)
-  - Harness-engineering middleware on live runtime path:
-    - autonomous/non-interactive mode
-    - mandatory planning enforcement with task-board bootstrap
-    - pre-completion verification retries after file mutation
-    - doom-loop warnings for repeated edits/tool failures
-    - iteration-zero workspace bootstrap snapshot
-    - output caps, truncation markers, repeated-output collapse
-    - progressive reasoning budget (high/low/high sandwich)
-  - Structured carry-forward memory:
-    - fallback compaction now uses tool-call-aware session snapshots
-    - carry-forward summaries preserve objective, files read/modified, blockers, and next actions
-  - L2 search surface:
-    - `semantic_search` alias now exposed alongside `search_code`
-    - live runtime now warms the shared `CodeIndex` cache on iteration zero
-    - workspace bootstrap now includes retrieval-index stats plus a compact repo-map preview
-    - repeated `search_code` / `semantic_search` calls now reuse the same cache object and pick up changed files via incremental `CodeIndex.build()` refreshes
-    - a bounded active working set is now tracked from reads/edits/search hits and lightly biases `search_code` toward the files the agent is already working in
-  - Research/comprehension mode:
-    - dedicated `RESEARCH` mode now exists on the live runtime path
-    - read-only enforcement now applies in both planning and research modes
-    - inline, backend, and Textual persist the chosen agent mode across loop recreation
-    - slash-command UX now includes `/research on|off|status` and `/comprehend`
-    - prompt guidance now requires a concise implementation handoff with candidate files/symbols, active working set, repo-local command hints, and open questions
-  - File-reference UX:
-    - `@path` expansion/completion already live in inline + TUI
-  - External-orchestration substrate:
-    - canonical `HarnessAdapter` contract now exists in `autocode/src/autocode/external/harness_adapter.py`
-    - typed request / handle / event / artifact / snapshot models now define the first stable boundary for native external adapters
-    - `ExternalToolTracker` now includes Forge and can emit capability-aware `HarnessProbe` objects
+- **Phase 7:** COMPLETE — runtime parity, packaging, UX, verification, benchmark closeout
+- **Phase 8 (Internal Orchestration):** COMPLETE — orchestrator substrate plus live frontend switch-over
+  - all 3 frontends now use `create_orchestrator()`
+  - event schema, message store, task board, policy context, and team eval substrate landed
 - **Migration:** COMPLETE — 4 submodules, workspace wiring
-- **Tests:** canonical full-suite artifact remains `1528 passed, 0 failed, 4 skipped` (2026-03-30); focused frontier slices passing on 2026-04-02
-- **Benchmarks:** 115/115 (100%) — all 23 lanes green (B7-B29), verified 2026-04-01
+- **Installability:** COMPLETE for the plain command contract
+  - `autocode` is on PATH on this device
+  - `autocode --version` works
+  - install smoke artifact exists: `autocode/docs/qa/test-results/20260403-173036-install-smoke.md`
+  - note: `autocode doctor` still reports optional dependency gaps on this machine (for example `lancedb`), but the command itself is installed and runnable
+- **`/loop` UX:** COMPLETE
+  - recurring loop command landed
+  - smoke artifact exists: `autocode/docs/qa/test-results/20260403-173500-loop-smoke.md`
+- **Claude Code primary TUI parity:** IN PROGRESS
+  - partial Go TUI parity slice is already landed in the worktree
+  - landed so far:
+    - `❯` prompt
+    - compact branded header
+    - braille thinking spinner
+    - simplified footer-first status bar
+    - initial compact tool-row styling
+  - still open:
+    - compact approval prompt parity
+    - completion/scrollback consistency with the live view
+    - task-panel demotion when it adds dashboard noise
+    - narrow-terminal hardening
+    - focused Go TUI render/interaction coverage
+    - manual smoke artifacts
+    - slash-command discovery parity for bare `/`
+    - gateway-authenticated `/model` listing against `http://localhost:4000/v1`
+    - clearer provider visibility and an intentional provider-switching UX
+    - prompt/tool-schema consistency around `list_files` vs the live callable tool surface
+  - codebase-specific findings from the current audit:
+    - `http://localhost:4000/v1/models` returns `401` unauthenticated and `200` with `Authorization: Bearer $LITELLM_API_KEY`
+    - shared gateway header logic already exists in `autocode/src/autocode/gateway_auth.py`
+    - Python already exposes `/provider` and `/model`; the remaining gap is cross-surface parity and status/control visibility
+    - `go version` is available on this machine, and the current Go TUI module now fails validation on a real compile error (`spinner.Braille` undefined), so Go-side testing is an active gate rather than an environment blocker
+  - use `docs/qa/manual-ai-bug-testing-playbook.md` for live AI-behavior sweeps; render tests alone are not enough
+  - apply the deep research selectively here:
+    - prefer typed first-class provider/model/tool flows over shell-style fallback behavior
+    - keep deferred-tool discovery explicit when the core tool set is intentionally narrow
+    - treat prompt/tool-surface consistency as a product contract, not just a prompt-writing issue
+- **Tests:** 1630+ passed, 4 skipped
+- **Benchmarks:** 23/23 GREEN (120/120, 100%)
+- **B30 Terminal-Bench:** best confirmed score `40% (4/9)` with the `terminal_bench` alias; Harbor adapter baseline recovery is complete, score-improvement work remains open
 
-## Benchmark Scores (2026-03-30, all green)
+## Canonical Benchmark State
 
-### B7-B14 (Core Suite) — 40/40 (100%)
+### Internal benchmark suite
 
-| Lane | Score | Notes |
-|------|-------|-------|
-| B7 | **5/5** | |
-| B8 | **5/5** | |
-| B9-PROXY | **5/5** | |
-| B10-PROXY | **5/5** | |
-| B11 | **5/5** | |
-| B12-PROXY | **5/5** | |
-| B13-PROXY | **5/5** | |
-| B14-PROXY | **5/5** | |
+- **B7-B14:** `50/50`
+- **B15-B29:** `70/70`
+- **Combined:** **`120/120 (100%) — 23/23 GREEN`**
 
-### B15-B29 (Expanded Suite) — 70/70 (100%)
+Treat this as the canonical internal quality signal unless a fresh reproducible regression supersedes it.
 
-| Lane | Score | Category | Notes |
-|------|-------|----------|-------|
-| B15 | **5/5** | Realistic Intake | |
-| B16 | **5/5** | Requirement-Driven | |
-| B17 | **5/5** | Long-Horizon | allow_test_file_edits + host-mode |
-| B18 | **5/5** | Fresh Held-Out | |
-| B19 | **5/5** | Multilingual | all host-mode |
-| B20 | **5/5** | Terminal/Git/Ops | |
-| B21 | **5/5** | Regression Preservation | |
-| B22 | **5/5** | Corrupted State | |
-| B23 | **5/5** | Collaborative Sync | |
-| B24 | **5/5** | Security | weak-password-hashing host-mode |
-| B25 | **5/5** | Managerial Review | |
-| B26 | **5/5** | Economic-Value | |
-| B27 | **5/5** | Efficiency | Docker safe.directory + loop termination |
-| B28 | **5/5** | Reliability | all host-mode + protected_paths |
-| B29 | **5/5** | Fault Injection | bwrap fallback + host-mode |
+### B30 external benchmark
 
-### Combined: 110/110 (100%)
+- Harbor adapter baseline recovery is complete
+- deterministic two-task subset rerun proved the harness is healthier, but remaining limits are now at least partly model/strategy quality rather than just plumbing
+- current best confirmed score: **`40% (4/9)`**
 
 ## Repository Structure
 
@@ -104,15 +81,19 @@
 | `docs/` | All documentation | — |
 | `training-data/` | Training data | — |
 
-Total: **1528 tests, 0 failures, 4 skipped** (verified 2026-03-30)
+Total: **1630+ tests, 0 failures in the latest stored full-suite artifact, 4 skipped**
 
 ## Key Artifacts
 
 - B28 green: `docs/qa/test-results/20260330-045004-B28-autocode.json`
 - B17 green: `docs/qa/test-results/20260330-034741-B17-autocode.json`
-- Full pytest: `autocode/docs/qa/test-results/20260329-133352-phase7-full-pytest-final.md`
+- Full pytest: `autocode/docs/qa/test-results/20260402-150707-full-suite-after-fixes.md`
+- Install smoke: `autocode/docs/qa/test-results/20260403-173036-install-smoke.md`
+- Loop smoke: `autocode/docs/qa/test-results/20260403-173500-loop-smoke.md`
 - Phase 7 plan: `docs/plan/phase7-ship-ready.md`
 - Internal-first orchestration research: `docs/research/autocode-internal-first-orchestration.md`
+- Proposal-v2 adoption memo: `docs/research/harness-improvement-proposal-v2-adoption-plan.md`
+- Detailed frontier implementation plan: `PLAN.md`
 
 ## Where to Look
 
@@ -122,18 +103,37 @@ Total: **1528 tests, 0 failures, 4 skipped** (verified 2026-03-30)
 | Benchmark adapters | `benchmarks/adapters/` |
 | Phase 7 plan | `docs/plan/phase7-ship-ready.md` |
 | Execution checklist | `EXECUTION_CHECKLIST.md` |
+| Detailed execution plan | `PLAN.md` |
 | Sprint index | `docs/plan/sprints/_index.md` |
 
 ## Key Policies
 
-1. **Canonical benchmark model:** `swebench` alias on LLM gateway
+1. **Canonical benchmark model:** internal benchmark lanes are green; B30 remains a separate external benchmark track
 2. **Provider policy:** local_free + subscription allowed; paid_metered FORBIDDEN
 3. **Parity validity:** same harness + same subset + same budgets
 4. **Packaged frontend:** inline app is the shipping frontend; Go TUI remains source-tree/dev-oriented
 
 ## Next Work (Active Frontier — per EXECUTION_CHECKLIST.md)
 
-### 1. Large Codebase Comprehension (Priority: First)
+### 0. Harness Architecture Refinement From Proposal v2 (Status: Landed Foundation)
+- [x] Review `harness-improvement-proposal-v2-2026-04-08.md`
+- [x] Write the adoption memo
+  - `docs/research/harness-improvement-proposal-v2-adoption-plan.md`
+- [x] Formalize the four context planes in AutoCode-native terms
+  - design doc: `docs/design/context-plane-model.md`
+  - code: `ContextPlane`, `PlaneBudget`, `PlaneState` in `agent/context.py` (15 tests)
+- [x] Define durable-memory write / preservation rules
+  - code: `DURABLE_WRITE_TRIGGERS`, `TRANSIENT_EXCLUSIONS`, `should_promote_to_durable()` in `session/consolidation.py` (15 tests)
+- [x] Normalize canonical runtime state before deeper adapter work
+  - code: `RuntimeState` in `agent/context.py` with 12 fields including `working_set`
+  - wired into `Orchestrator` as `runtime_state` property (10 tests)
+- [x] Expand tool metadata to support scheduling/policy/compaction
+  - code: 5 new fields on `ToolDefinition` in `agent/tools.py` (10 tests)
+- [x] Improve artifact-first resumability
+  - code: `HandoffPacket`, `CompactSummary`, `CheckpointManifest`, `ResumePacket` in `agent/artifact_collector.py` (7 tests)
+- [ ] Keep any `.harness/`-style file-tree migration deferred unless explicitly chosen later
+  - this is a policy guardrail, not the active implementation queue
+### 1. Large Codebase Comprehension (Priority: queued after Section 1f)
 - [x] Persistent repo-map / retrieval warmup on the live runtime path
   - iteration-zero bootstrap now warms the shared `CodeIndex` cache and injects a compact repo-map preview
 - [x] Research-only comprehension agent/mode
@@ -145,14 +145,54 @@ Total: **1528 tests, 0 failures, 4 skipped** (verified 2026-03-30)
 - [x] Active working set prioritization for retrieval
   - reads, edits, writes, symbol introspection, and search hits now feed a bounded recent-file set
   - bootstrap surfaces the working set when available
+- [ ] Validate this on genuinely large repos
+  - measure turns-to-first-relevant-file, context growth, compaction frequency, and long-task recovery
+- [x] LanceDB/retrieval dependency contract decided: profile-gated
+  - `RetrievalTier` enum: BM25_ONLY / HYBRID_IN_MEMORY / HYBRID_PERSISTENT
+  - `check_retrieval_tier()` auto-detects available deps
+  - graceful degradation: BM25 always works, hybrid when installed
+  - **WIRED INTO `autocode doctor`**: `check_retrieval_tier()` replaces `check_lancedb`
+  - 8 tests in `test_retrieval_contract.py`
 
-### 2. Harness Engineering (Priority: Parallel with #1)
+### 2. Native External-Harness Orchestration (Priority: queued after Section 1)
+- [x] Research the command surfaces for Codex / Claude Code / OpenCode / Forge
+- [x] Define the canonical `HarnessAdapter` contract and typed event boundary
+- [x] Normalize external harness events into the live orchestrator/event model
+  - `harness_event_to_orchestrator_dict()` bridges HarnessEvent → OrchestratorEvent
+  - `stream_as_orchestrator_events()` chains adapter streams into orchestrator pipeline
+  - all 12 HarnessEventTypes mapped to internal EventType
+  - session/run context preserved in bridge
+  - 14 tests in `test_event_bridge.py`
+- [x] Fix adapter process-state bug
+  - all 4 adapters now store proc on session.metadata["_process"] in stream_events()
+  - snapshot_state() correctly reports active/ended
+- [x] Build the first real native adapters on top of the researched CLI surfaces
+  - adapters deepened: all 4 emit SESSION_STARTED events, capture git-diff changed files, detect process status
+  - code: codex.py, claude_code.py, opencode.py, forge.py in `external/adapters/`
+- [x] Keep AutoCode as the control plane; external tools remain worker runtimes, not copied internal clones
+  - this architecture decision is already made; the remaining work is implementation depth
+### 3. Harness Engineering / Terminal-Bench (Priority: queued after Section 2)
 - [x] Non-interactive/autonomous mode (+13 pts estimated)
 - [x] Mandatory planning enforcement (+10-15 pts)
 - [x] Pre-completion verification middleware (+5-8 pts)
 - [x] Progressive reasoning budget (+5-10 pts)
 - [x] Doom-loop detection (+3-5 pts)
 - [x] Marker-based command sync (+2-5 pts)
+- [x] Task-family strategy overlays for Harbor (Section 3.1)
+  - `TaskFamily` enum: HTML_OUTPUT, PYTHON_BUILD, GENERAL
+  - `classify_task()` auto-detects family from task description
+  - `StrategyOverlay` with per-family max retries, preferred/avoid tools, prompt guidance
+  - 20 tests in `test_strategy_overlays.py`
+  - **WIRED INTO HARBOR ADAPTER**: classify_task + get_overlay called at run start,
+    family guidance injected into task prompt, overlay-based doom-loop thresholds,
+    StagnationDetector + verifier_aware_retry_guidance active in tool loop
+  - 4 integration tests in `test_harbor_adapter.py`
+- [x] Verifier-aware retry behavior (Section 3.2)
+  - `verifier_aware_retry_guidance()` requires extracting error signal before retry
+  - max retry enforcement with stop message
+- [x] Stronger stagnation detection (Section 3.3)
+  - `StagnationDetector` catches N identical results in a row
+  - actionable guidance to change approach
   - Harbor terminal command paths now use explicit completion markers instead of relying purely on fixed timeout behavior
 - [x] Terminal-Bench Harbor adapter / first real run artifact
   - stored artifact: `autocode/docs/qa/test-results/20260402-030056-terminal-bench-first-run-artifact-rerun.md`
@@ -173,106 +213,76 @@ Total: **1528 tests, 0 failures, 4 skipped** (verified 2026-03-30)
     - `build-cython-ext`: `0.0`
     - `0` infra / provider errors
   - conclusion: the Harbor adapter is materially healthier, but the remaining B30 limit is not just harness quality anymore
-- [ ] Terminal-Bench score-improvement pass
-  - fix stale placeholder Harbor task ids in `benchmarks/e2e/external/b30-terminal-bench-subset.json`
-  - baseline Harbor recovery is no longer the main blocker; the corrected valid-task subset finished `0/2` with `0` infra errors
-  - next builder target is a narrow score-improvement sprint on the same two validated Harbor tasks:
-    - `break-filter-js-from-html`
-    - `build-cython-ext`
-  - implement in this order:
-    1. task-family strategy overlays in Harbor mode
-       - output / HTML filtering tasks
-       - Python build / Cython extension tasks
-    2. verifier-aware retry guidance
-       - require extracting failing output / verifier signal before another rebuild or rewrite loop
-    3. stronger stagnation detection for repeated build/install/test cycles with no progress
-    4. Harbor tool-surface / prompt tuning for file-edit vs shell-heavy task families
-    5. rerun the same corrected `2`-task subset before broadening to more B30 tasks
-  - only after the same subset improves should we expand B30 or attribute the remaining gap primarily to model choice
+- [x] Terminal-Bench score-improvement pass
+  - Adapter v0.3.1: write_file/read_file tools, planning enforcement, verification injection,
+    binary file detection, stricter completion signals, post-error recovery, escalating doom-loop
+  - Best score: **40% (4/9)** with `terminal_bench` alias (when strong models available)
+  - Solved: log-summary-date-ranges, pytorch-model-cli, portfolio-optimization, modernize-scientific-stack
+  - Score is model-dependent: 20% without strong models. Accepted 40% as baseline.
 
-### 3. Product UX / Installability (Priority: Near-Term Builder Work)
-- [ ] Make `autocode` runnable as a simple device command after install
-  - target user experience: `autocode` works from any shell on this device like `codex` or `claude`
-  - `uv run autocode ...` is **not** sufficient for this item
-  - current substrate already exists:
-    - `[project.scripts] autocode = "autocode.cli:app"` in `autocode/pyproject.toml`
-    - `autocode doctor`
-    - `autocode setup`
-    - `packaging/installer.py` + `packaging/bootstrap.py`
-  - the missing work is a real device-install contract:
-    1. choose and document the canonical install path (short-term: `uv tool install --from . autocode`)
-    2. ensure the installed command lands on PATH with explicit remediation when it does not
-    3. make `setup` and `doctor` validate device-level invocation, not just repo-local readiness
-    4. update user docs to prefer plain `autocode ...` after install
-  - acceptance criteria:
-    - from a fresh shell, outside the repo:
-      - `autocode --version`
-      - `autocode --help`
-      - `autocode doctor`
-      - `autocode setup`
-      - `autocode chat --help`
-    - all succeed without `uv run`
-  - likely files:
-    - `autocode/pyproject.toml`
-    - `autocode/src/autocode/cli.py`
-    - `autocode/src/autocode/packaging/installer.py`
-    - `autocode/src/autocode/packaging/bootstrap.py`
-    - `autocode/src/autocode/doctor.py`
-    - `docs/guide/getting-started.md`
-    - `docs/guide/commands.md`
+### 4. Product UX Acceptance — COMPLETE
+- [x] Plain `autocode` command works from PATH after install
+- [x] `autocode --version` works
+- [x] install smoke artifact stored — `autocode/docs/qa/test-results/20260403-173036-install-smoke.md`
+- [x] `/loop` landed with session-scoped recurring jobs
+- [x] `/loop` smoke artifact stored — `autocode/docs/qa/test-results/20260403-173500-loop-smoke.md`
 
-- [ ] Add Claude-style `/loop` command
-  - parity anchor: local Claude Code research clone, `research-components/claude-code/CHANGELOG.md` (`2.1.71`)
-  - required behavior: run a prompt or slash command on a recurring interval
-  - **do not** collapse this into `/mode autonomous`
-  - command contract:
-    - `/loop <interval> <prompt-or-slash-command>`
-    - `/loop list`
-    - `/loop cancel <id>` (or `/loop stop <id>`, but choose one canonical spelling)
-  - required semantics:
-    1. slash payloads route through `CommandRouter`
-    2. prompt payloads route through the normal chat/orchestrator path
-    3. loops are session-scoped and user-visible
-    4. no overlapping executions for the same loop job
-    5. current model/session/approval mode are inherited
-    6. mutating loops do not silently escalate permissions
-    7. inline/backend/Textual stay behaviorally aligned
-  - implementation recommendation:
-    - add a dedicated recurring-job scheduler/service
-    - do **not** overload `LLMScheduler`, which is already serving LLM priority queuing
-  - likely files:
-    - `autocode/src/autocode/tui/commands.py`
-    - `autocode/src/autocode/inline/app.py`
-    - `autocode/src/autocode/backend/server.py`
-    - `autocode/src/autocode/tui/app.py`
-    - new scheduler/store module as needed
-  - minimum acceptance criteria:
-    - create/list/cancel recurring jobs
-    - recurring prompt execution works
-    - recurring slash-command execution works
-    - same behavior across inline/backend/Textual
+### 5. Claude Code Primary TUI Parity — ACTIVE (Immediate Top Queue)
+- existing parity scaffolding is real:
+  - `docs/design/claude-code-visual-parity.md`
+  - `claude_like` profile in config / inline / Textual
+  - parity-oriented inline snapshot coverage
+- partial Go TUI parity work is already landed in the active worktree:
+  - `cmd/autocode-tui/model.go`
+  - `cmd/autocode-tui/view.go`
+  - `cmd/autocode-tui/statusbar.go`
+  - `cmd/autocode-tui/styles.go`
+  - `cmd/autocode-tui/update.go`
+  - matching test updates in `model_test.go`, `view_test.go`, `statusbar_test.go`, `update_test.go`
+- do **not** restart this work from scratch; continue from the current Go TUI diff
+- do **not** treat that scaffolding as end-state completion
+- next work is to make the primary full-screen TUI feel structurally and behaviorally close to Claude Code
+- the unfinished high-value items are:
+  - compact approval prompt parity
+  - compact completion/scrollback tool summaries
+  - task-panel demotion when the screen should stay chat-first
+  - narrow-terminal / truncation hardening
+  - focused Go TUI render tests and manual smokes
+  - bare `/` slash discovery parity with the Python router
+  - gateway-authenticated `/model` behavior using the shared gateway auth helper
+  - clear provider visibility and `/provider` UX
+  - prompt/tool-surface consistency around `list_files` and `tool_search`
+- completion requires:
+  - refreshed parity contract from current Claude Code behavior signals
+  - single-column chat-first TUI layout
+  - footer-first status hierarchy
+  - fixed-width braille/shimmer thinking spinner
+  - compact tool rows and stable approval prompts
+  - narrow-terminal hardening
+  - focused render/snapshot tests
+  - manual smoke artifacts
+  - live Go validation on the actual module path
+  - gated rollout until review says every zone is `Close` or better
 
-### 4. External Native-Harness Orchestration (Priority: After #1)
-- [x] `HarnessAdapter` contract (probe, start, send, resume, interrupt, shutdown, stream_events)
-- Codex adapter (`codex exec`, `exec resume`, `--json`, output-schema/final-message capture)
-- Claude Code adapter (`claude -p`, `--output-format stream-json`, `--resume`, `--continue`, `--permission-mode`, `--worktree`)
-- OpenCode adapter (`opencode run`, `--format json`, `--continue`, `--session`, `--fork`, `serve`, `attach`, `export`)
-- ForgeCode adapter (transcript-first via native CLI: `--prompt`, `--conversation-id`, `--sandbox`, `conversation dump/resume/info/stats`)
-- Research note: `docs/research/external-harness-adapter-command-matrix.md`
+### 6. External Native-Harness Orchestration — FOUNDATION COMPLETE
+- [x] `HarnessAdapter` protocol contract
+- [x] Event normalization layer (`external/event_normalizer.py`) with per-harness kind maps
+- [x] adapter files exist for Claude Code / Codex / OpenCode / Forge
+- [x] baseline adapter tests exist
+- [ ] next step is deeper live orchestration integration on top of that substrate, not re-researching the command surfaces again
 
-### 5. Deferred
-- L3 constrained generation (llama-cpp-python with native grammar)
-- Broader repo ruff/mypy debt cleanup
+### 7. Infrastructure — COMPLETE
+- [x] L3 constrained generation scaffold (`l3/engine.py`) — graceful fallthrough when unavailable
+- [x] Ruff cleanup — 54 auto-fixes applied
+- [x] 11 L3 engine tests passing
 
 ## Instructions
 
 1. Check `AGENTS_CONVERSATION.MD` for pending messages before starting work
-2. Phase 7+8 COMPLETE — next work is frontier product UX + harness engineering
+2. Phase 7+8 are complete — immediate next work is Section `1f` TUI parity completion, then resume the broader post-Phase-8 frontier
 3. Run `uv run pytest autocode/tests/unit/ benchmarks/tests/ -v` after changes
 4. Post progress to `AGENTS_CONVERSATION.MD`
 5. See `EXECUTION_CHECKLIST.md` for research-backed frontier items
-6. See `docs/research/harness-engineering-competitive-analysis.md` for Terminal-Bench patterns
-7. After the installability and `/loop` features land, the next Codex task is a review gate:
-   - verify completeness against these acceptance criteria
-   - review quality / bugs / regressions
-   - cite fresh stored artifacts before approval
+6. See `PLAN.md` for the detailed implementation plan behind each open checklist item
+7. See `docs/research/harness-engineering-competitive-analysis.md` for Terminal-Bench patterns
+8. Treat this file, `EXECUTION_CHECKLIST.md`, and `PLAN.md` as the live source-of-truth set; if they drift, sync them before broad new implementation work
