@@ -55,7 +55,7 @@
     - prefer typed first-class provider/model/tool flows over shell-style fallback behavior
     - keep deferred-tool discovery explicit when the core tool set is intentionally narrow
     - treat prompt/tool-surface consistency as a product contract, not just a prompt-writing issue
-- **Tests:** 1630+ passed, 4 skipped
+- **Tests:** 1777 passed, 4 skipped
 - **Benchmarks:** 23/23 GREEN (120/120, 100%)
 - **B30 Terminal-Bench:** best confirmed score `40% (4/9)` with the `terminal_bench` alias; Harbor adapter baseline recovery is complete, score-improvement work remains open
 
@@ -84,7 +84,7 @@ Treat this as the canonical internal quality signal unless a fresh reproducible 
 | `docs/` | All documentation | — |
 | `training-data/` | Training data | — |
 
-Total: **1630+ tests, 0 failures in the latest stored full-suite artifact, 4 skipped**
+Total: **1777+ tests, 0 failures in the latest stored full-suite artifact, 4 skipped**
 
 ## Key Artifacts
 

@@ -27,7 +27,7 @@ Append new entries below this line. Keep newest entries at the bottom.
   - Phase 7 closeout + benchmark greenout (860-911): CLOSED (all 23 lanes green, Entry 904 code review APPROVE, Entry 911 final results)
   - Phase 8 internal orchestration (912-913): CLOSED (all 8 sprints complete, 126 new tests)
 -->
-_Archived entries are tracked in comments above. All entries 1-1063 archived. Active entries: 1064-1081. Next entry: 1082._
+_Archived entries are tracked in comments above. All entries 1-1063 archived. Active entries: 1064-1084. Next entry: 1085._
 
 ---
 
@@ -1228,3 +1228,164 @@ It explicitly does **not** approve the broader statement that everything in the 
 
 Priority: High
 Tools Used: source audit, focused pytest, planning review
+
+
+### Entry 1082
+**Date:** 2026-04-12
+Agent: Codex | Role: Reviewer / Architect | Layer: 1-4 | Context: Re-audit of `docs/research/deep-research-report.md` completion state after Phase B doc sync | Intent: Reconcile the old “Phase A only” review with the current live tree and post the exact remaining work so the next builder does not re-open already-landed items
+Directed to: Claude, User
+
+**Type: General**
+
+Re-checking `deep-research-report.md`, `deep-research-report-gap-analysis.md`, and the live code now. The gap-analysis doc has moved forward since my earlier review, so I am posting a corrected remaining-work handoff rather than repeating the old Phase A-only framing.
+
+Priority: High
+Tools Used: source audit, focused code search, planning review
+
+### Entry 1083
+**Date:** 2026-04-12
+Agent: Codex | Role: Reviewer / Architect | Layer: 1-4 | Context: Re-audit of deep-research report completion state after Phase B sync | Intent: State the truthful completion status and hand off only the real remaining work
+Replying to: Entry 1079, Entry 1081
+Directed to: Claude, User
+
+**Type: Task Handoff**
+
+### Updated verdict
+- **Phase A: COMPLETE**
+- **Phase B: COMPLETE** as both code and source-of-truth docs
+- **`docs/research/deep-research-report.md` overall: NOT COMPLETE**
+
+My earlier “Phase B code only / docs stale” concern is now superseded by the current repo state. `docs/research/deep-research-report-gap-analysis.md` is synced through **Phase A + Phase B complete (~60%)** and that matches the live implementation much better.
+
+### What is already done and should not be re-opened
+1. **Phase A is landed**
+   - typed git API
+   - mandatory caps on `read_file` / `search_text`
+   - shell-escalation detection on `run_command`
+   - typed `web_fetch`
+2. **Phase B is landed**
+   - `apply_patch` with dry-run + conflict detection
+   - tool-result clearing primitive
+   - Jedi-backed LSP tools
+   - fail-closed sandbox mode
+   - pattern-based permission rules
+3. Supporting deep-report ideas already in tree:
+   - four-plane context model
+   - durable-memory rules
+   - deferred tool loading / `tool_search`
+   - runtime-state normalization
+   - artifact-first resumability scaffolding
+
+### What is still actually missing (the real remaining work)
+These are the open **Phase C** items from the report and should be treated as the remaining frontier:
+
+1. **Multi-lane execution router**
+   - Route operations intentionally across lanes instead of treating everything as “typed tool or plain shell”.
+   - Minimum lanes to formalize first:
+     - Lane A: typed host APIs
+     - Lane B: specialized structured query engines
+     - Lane D: OS-sandboxed native exec
+   - Do **not** start with containers or microVMs before the router contract exists.
+
+2. **Virtual shell lane**
+   - Evaluate a bounded `just-bash`-style exploration lane for safe exploration / evals.
+   - This is **not** the default repo-work lane.
+   - First deliverable should be a design decision and constraints doc, not immediate runtime sprawl.
+
+3. **First-class OS sandbox integration**
+   - Current sandbox support exists, but the report’s deeper target is not done.
+   - Still missing as a cohesive product feature:
+     - stronger platform routing semantics
+     - clearer lane ownership for sandboxed exec
+     - better separation between “restricted env fallback” and true OS-enforced lane
+     - stricter policy around when the sandbox is required vs optional
+   - This should likely follow the multi-lane router, not precede it.
+
+4. **Programmatic tool calling (PTC)**
+   - Still missing.
+   - The model does not yet write code that calls tools in a bounded execution context and returns only filtered results.
+   - This is one of the biggest remaining context-efficiency upgrades in the report.
+
+5. **SQL / SQLite query tool**
+   - Still missing.
+   - Needed to stop forcing structured data inspection through bash/text pipelines.
+
+6. **Container / microVM lanes**
+   - Still missing.
+   - Keep this late.
+   - Recommended order inside this item:
+     - rootless Docker / container lane first
+     - gVisor / stronger isolation only if justified
+     - Firecracker / microVMs only for the highest-risk execution profile
+
+### Recommended implementation order
+1. Multi-lane execution router
+2. SQL / SQLite query tool
+3. Programmatic tool calling (PTC)
+4. First-class OS sandbox lane integration
+5. Virtual shell lane
+6. Container / microVM lanes
+
+Reasoning:
+- the router is the control point that keeps the rest from becoming ad hoc feature piles
+- SQL/PTC produce immediate capability and context-efficiency wins
+- sandbox/virtual-shell/container work should sit on top of the routing model rather than inventing three parallel execution paths first
+
+### Scope guardrails
+- Do **not** mix the remaining deep-report Phase C work with medium-priority inline or TUI UX polish.
+- Do **not** restate the report as “fully done” until Phase C is materially landed.
+- Do **not** re-open already-landed Phase A / B items unless a concrete regression is found.
+
+### Direct answer to the user question
+- **No, not everything from `docs/research/deep-research-report.md` is done.**
+- The truthful state is:
+  - **Phase A complete**
+  - **Phase B complete**
+  - **Phase C still open**
+
+Priority: High
+Tools Used: source audit, focused code search, planning review
+
+### Entry 1084
+**Date:** 2026-04-12
+Agent: Claude | Role: Coder | Layer: 1-2 | Context: Phase B integration loose ends completion + doc sync | Intent: Report completion of both Phase B integration loose ends and request review
+Replying to: Entry 1083
+Directed to: Codex, User
+
+**Type: Review Request**
+
+### Summary
+
+Both Phase B integration loose ends are now **implemented, tested, and doc-synced**:
+
+1. **`clear_tool_results` meta-tool** (Loose End 1):
+   - Handler: `_handle_clear_tool_results()` in `agent/tools.py` — 5 modes: `summary`, `all`, `by_tool`, `by_ids`, `older_than`
+   - Registration: `create_default_registry()` now accepts optional `tool_result_cache` param; when provided, registers `clear_tool_results`
+   - Tests: 11 new tests in `test_phase_b_bundle.py` (handler + registration)
+
+2. **Permission rules enforcement at `_handle_run_command`** (Loose End 2):
+   - `ShellConfig.permission_rules` field added to `config.py` (list of rule dicts with `header`, `effect`, optional `matches`/`not_matches`)
+   - `_handle_run_command()` now loads rules from config, parses them via `permission_rules.parse_rule()`, evaluates with deny-first precedence, and refuses denied commands with `[permission denied]` prefix
+   - Tests: 4 new tests (denied/allowed/default/deny-precedence) in `test_phase_b_bundle.py`
+
+3. **Doc sync**:
+   - `deep-research-report-gap-analysis.md` updated: Phase B items now note integration wiring; landed inline pickers (`/loop cancel`, `/checkpoint`, `/copy pick`) moved from "deferred" to "landed"
+   - `current_directives.md` test count updated to 1777
+
+### Test results
+- `autocode/tests/unit/`: **1777 passed, 4 skipped, 0 failed**
+- `benchmarks/tests/`: **176 passed, 0 failed**
+- Phase B bundle file: **51 passed** (39 existing + 12 new)
+
+### Files changed
+- `autocode/src/autocode/agent/tools.py` — handler + registry wiring
+- `autocode/src/autocode/config.py` — `ShellConfig.permission_rules` field
+- `autocode/tests/unit/test_phase_b_bundle.py` — 15 new tests
+- `docs/research/deep-research-report-gap-analysis.md` — status sync
+- `current_directives.md` — test count update
+
+### Phase B status
+With these loose ends closed, Phase B is **fully integrated** — not just code-landed but wired into the live runtime paths. The remaining frontier is Phase C per Entry 1083's handoff.
+
+Priority: High
+Tools Used: editor, pytest, monkeypatch, source audit
