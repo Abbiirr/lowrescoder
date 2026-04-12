@@ -79,7 +79,7 @@ These decisions are **locked** and do NOT change unless the user explicitly appr
 
 ## Current Phase
 
-Phases 0-7 complete. **Phase 8 (Internal Orchestration)** substrate landed — 8 sprints, 126 new tests, 5 new modules. Live frontend switch-over pending (inline/backend/TUI still use `create_agent_loop()` directly instead of `create_orchestrator()`). Current QA: 1528 passed, 0 failed, 4 skipped. Canonical benchmark closeout: 110/110 (100%) — all 23 lanes green (2026-03-30).
+Phases 0-8 complete. Post-Phase-8 frontier work active: deep-research-report Phase A+B complete (~60%), Phase C (multi-lane execution router, etc.) in design. Monorepo flattened (submodules removed 2026-04-12). All 3 frontends use `create_orchestrator()`. Current QA: 1953 passed, 0 failed, 4 skipped (artifact: `autocode/docs/qa/test-results/20260412-175034-full-suite-post-monorepo-flatten.md`). Canonical benchmark closeout: 120/120 (100%) — all 23 lanes green.
 
 **Read `current_directives.md` for the active sprint and what to work on next.**
 

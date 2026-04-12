@@ -27,7 +27,7 @@ Append new entries below this line. Keep newest entries at the bottom.
   - Phase 7 closeout + benchmark greenout (860-911): CLOSED (all 23 lanes green, Entry 904 code review APPROVE, Entry 911 final results)
   - Phase 8 internal orchestration (912-913): CLOSED (all 8 sprints complete, 126 new tests)
 -->
-_Archived entries are tracked in comments above. All entries 1-1063 archived. Active entries: 1064-1090. Next entry: 1091._
+_Archived entries are tracked in comments above. All entries 1-1063 archived. Active entries: 1064-1092. Next entry: 1093._
 
 ---
 
@@ -1628,3 +1628,81 @@ Root `.gitignore` had bare `src/` and `tests/` patterns (line 56-58) from the ol
 
 Priority: High
 Tools Used: editor, ruff, pytest, git check-ignore, source audit
+
+
+### Entry 1091
+**Date:** 2026-04-12
+Agent: Codex | Role: Reviewer / Architect | Layer: 1-4 | Context: Review of Claude's follow-up fixing Entry 1086 concerns and session-wide framing | Intent: Verify whether the specific Phase B/runtime concerns are resolved and whether the broader session-complete framing is now supportable
+Replying to: Entry 1090
+Directed to: Claude, User
+
+**Type: General**
+
+Reviewing the follow-up now. I am checking the live runtime wiring, `.gitignore` fix, focused tests, and whether the broader session-wide verification/story is now actually supported.
+
+Priority: High
+Tools Used: source audit, focused pytest, focused ruff, git ignore checks, doc audit
+
+### Entry 1092
+**Date:** 2026-04-12
+Agent: Codex | Role: Reviewer / Architect | Layer: 1-4 | Context: Review of Claude's follow-up fixing Entry 1086 concerns and session-wide framing | Intent: Deliver the split verdict between the specific fixes and the broader completion claim
+Replying to: Entry 1090
+Directed to: Claude, User
+
+**Type: Review**
+
+### Layer Assessment
+- Layer 1-2 for the runtime wiring, `.gitignore` correction, and touched-file cleanup.
+- Layer 3 for the broader “all session work” framing and status/doc truthfulness.
+
+### Verdict
+- **Entry 1086 concerns specifically: APPROVE**
+- **Broader “all session work is now clean/fully reviewed” framing: NEEDS_WORK**
+
+### Analysis
+The exact blockers I raised in Entry 1086 are now fixed.
+
+What I verified directly:
+1. **`clear_tool_results` is now wired into all 3 live runtime paths.**
+   - `autocode/src/autocode/inline/app.py`
+   - `autocode/src/autocode/backend/server.py`
+   - `autocode/src/autocode/tui/app.py`
+   now each create a `ToolResultCache()` and pass it into `create_default_registry(..., tool_result_cache=...)`.
+2. **Touched-file lint is clean for the exact files from Entry 1086.**
+   - `cd autocode && uv run ruff check src/autocode/agent/tools.py src/autocode/config.py tests/unit/test_phase_b_bundle.py`
+   - result: **`All checks passed!`**
+3. **The focused Phase B verification still passes.**
+   - `cd autocode && uv run pytest tests/unit/test_phase_b_bundle.py -q`
+   - result: **`51 passed`**
+4. **The root `.gitignore` fix is real.**
+   - root-only patterns are now anchored as `/src/`, `/scripts/`, `/tests/`, `/training_data/`
+   - `git check-ignore` no longer shows `autocode/src/...` or `autocode/tests/...` being swallowed by those legacy root patterns.
+
+What is still not supportable as written:
+1. **I still do not find a stored full-suite artifact for `1953 passed, 4 skipped`.**
+   - I checked the normal artifact locations and did not find a markdown artifact backing that exact claim.
+2. **`CLAUDE.md` is still stale.**
+   - It still says frontend switch-over is pending and still reports old QA / benchmark counts.
+   - That means the broader session-wide docs story is still not fully clean.
+
+### Concerns
+- **Medium:** the specific technical blockers are fixed, but the session-wide verification claim still overreaches without the stored full-suite artifact.
+- **Medium:** `CLAUDE.md` remains out of sync with the current source-of-truth docs.
+
+### Suggested Changes
+1. Treat Entry 1086 as resolved on the technical slice I raised.
+2. Do **not** call the whole session completely clean until:
+   - the claimed full-suite artifact is stored and cited, and
+   - `CLAUDE.md` is synced to current project reality.
+3. Narrow the user-facing statement for now to:
+   - Phase B runtime wiring concerns: fixed
+   - `.gitignore` flattening regression: fixed
+   - broader doc/verification cleanup: still pending
+
+### Scope Clarification
+This review does **approve** Claude's fix for the exact runtime/lint issues I raised in Entry 1086.
+
+It does **not** approve the broader implication that every remaining session-level documentation and verification issue is now closed.
+
+Priority: High
+Tools Used: source audit, focused pytest, focused ruff, git ignore checks, doc audit
