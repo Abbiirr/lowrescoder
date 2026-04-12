@@ -37,6 +37,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return handleModelPickerKey(m, msg)
 		case stageProviderPicker:
 			return handleProviderPickerKey(m, msg)
+		case stagePalette:
+			return m.handlePaletteKey(msg)
 		}
 
 	case backendStatusMsg:
@@ -168,6 +170,13 @@ func (m model) handleInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+d":
 		m.quitting = true
 		return m, tea.Quit
+
+	case "ctrl+k":
+		m.stage = stagePalette
+		m.paletteFilter = ""
+		m.paletteCursor = 0
+		m.paletteMatches = filterPaletteCommands("")
+		return m, nil
 
 	case "enter":
 		// Slash menu: Enter accepts the highlighted completion instead of submitting
@@ -522,4 +531,106 @@ func (m *model) updateCompletions() {
 		}
 	}
 	m.completions = completions
+}
+
+// --- Command palette ---
+
+var paletteEntries = []struct {
+	Cmd  string
+	Desc string
+}{
+	{"/help", "Show help and available commands"},
+	{"/new", "Start a new session"},
+	{"/sessions", "List and switch sessions"},
+	{"/resume", "Resume a previous session"},
+	{"/model", "Switch the LLM model"},
+	{"/provider", "Switch the LLM provider"},
+	{"/mode", "Change approval mode"},
+	{"/compact", "Compact conversation to save tokens"},
+	{"/build", "Run build / agent loop"},
+	{"/loop", "Run agent loop with custom iterations"},
+	{"/research", "Deep research mode"},
+	{"/review", "Code review mode"},
+	{"/tasks", "Show task board"},
+	{"/plan", "Plan mode controls"},
+	{"/memory", "Show learned patterns"},
+	{"/checkpoint", "Manage checkpoints"},
+	{"/thinking", "Toggle thinking display"},
+	{"/shell", "Toggle shell execution"},
+	{"/init", "Initialize project context"},
+	{"/index", "Build code search index"},
+	{"/copy", "Copy last response to clipboard"},
+	{"/clear", "Clear the screen"},
+	{"/exit", "Quit AutoCode"},
+}
+
+func filterPaletteCommands(filter string) []string {
+	filter = strings.ToLower(strings.TrimSpace(filter))
+	var matches []string
+	for _, e := range paletteEntries {
+		if filter == "" ||
+			strings.Contains(strings.ToLower(e.Cmd), filter) ||
+			strings.Contains(strings.ToLower(e.Desc), filter) {
+			matches = append(matches, e.Cmd)
+		}
+	}
+	return matches
+}
+
+func paletteDescMap() map[string]string {
+	m := make(map[string]string, len(paletteEntries))
+	for _, e := range paletteEntries {
+		m[e.Cmd] = e.Desc
+	}
+	return m
+}
+
+func (m model) handlePaletteKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "escape", "esc", "ctrl+k":
+		m.stage = stageInput
+		composerFocus(&m)
+		return m, nil
+
+	case "enter":
+		if len(m.paletteMatches) > 0 && m.paletteCursor < len(m.paletteMatches) {
+			selected := m.paletteMatches[m.paletteCursor]
+			m.stage = stageInput
+			composerFocus(&m)
+			m.composer.SetValue(selected + " ")
+			return m, nil
+		}
+		m.stage = stageInput
+		composerFocus(&m)
+		return m, nil
+
+	case "up":
+		if m.paletteCursor > 0 {
+			m.paletteCursor--
+		}
+		return m, nil
+
+	case "down":
+		if m.paletteCursor < len(m.paletteMatches)-1 {
+			m.paletteCursor++
+		}
+		return m, nil
+
+	case "backspace":
+		if len(m.paletteFilter) > 0 {
+			m.paletteFilter = m.paletteFilter[:len(m.paletteFilter)-1]
+			m.paletteMatches = filterPaletteCommands(m.paletteFilter)
+			m.paletteCursor = 0
+		}
+		return m, nil
+
+	default:
+		r := msg.String()
+		if len(r) == 1 {
+			m.paletteFilter += r
+			m.paletteMatches = filterPaletteCommands(m.paletteFilter)
+			m.paletteCursor = 0
+		}
+		return m, nil
+	}
 }

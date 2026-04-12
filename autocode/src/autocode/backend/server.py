@@ -223,6 +223,29 @@ class BackendServer:
 
     # --- Wire protocol ---
 
+    def _expand_file_mentions(self, message: str) -> str:
+        """Extract @path references and inline file contents."""
+        import re
+        pattern = re.compile(r'@([\w./\-]+\.\w+)')
+        mentions = pattern.findall(message)
+        if not mentions:
+            return message
+        context_parts = []
+        for rel_path in mentions:
+            abs_path = self.project_root / rel_path
+            if abs_path.is_file():
+                try:
+                    content = abs_path.read_text(encoding="utf-8", errors="replace")
+                    if len(content) > 10000:
+                        content = content[:10000] + "\n...(truncated)"
+                    context_parts.append(f"[File: {rel_path}]\n{content}\n[/File]")
+                except Exception:
+                    context_parts.append(f"[File: {rel_path}] (could not read)\n[/File]")
+        if context_parts:
+            clean_msg = pattern.sub(r'`\1`', message)
+            return clean_msg + "\n\n" + "\n\n".join(context_parts)
+        return message
+
     def emit_notification(self, method: str, params: dict[str, Any]) -> None:
         """Send a JSON-RPC notification (no ID) to the Go frontend."""
         msg = {"jsonrpc": "2.0", "method": method, "params": params}
@@ -299,6 +322,15 @@ class BackendServer:
                     memory_content = memory_path.read_text(encoding="utf-8")
                 except OSError:
                     pass
+
+            # Load project rules (CLAUDE.md, AGENTS.md, .rules/*.md) — always on
+            try:
+                from autocode.layer2.rules import RulesLoader
+                rules_text = RulesLoader().load(self.project_root)
+                if rules_text:
+                    memory_content = (rules_text + "\n\n" + memory_content) if memory_content else rules_text
+            except Exception:
+                pass
 
             # Create TaskStore and register task tools
             self._task_store = TaskStore(
@@ -552,6 +584,9 @@ class BackendServer:
             title = message[:60] + ("..." if len(message) > 60 else "")
             self.session_store.update_session(self.session_id, title=title)
             self._session_titled = True
+
+        # --- @file mention expansion ---
+        message = self._expand_file_mentions(message)
 
         # --- Layer routing (Phase 3) ---
         layer_used = 4  # Default to L4

@@ -1260,4 +1260,125 @@ def create_default_router() -> CommandRouter:
             handler=_handle_checkpoint,
         )
     )
+    router.register(
+        SlashCommand(
+            name="undo",
+            aliases=[],
+            description="Undo: restore the most recent checkpoint",
+            handler=_handle_undo,
+        )
+    )
+    router.register(
+        SlashCommand(
+            name="diff",
+            aliases=[],
+            description="Show git diff of changes in the current session",
+            handler=_handle_diff,
+        )
+    )
+    router.register(
+        SlashCommand(
+            name="cost",
+            aliases=["tokens", "usage"],
+            description="Show token usage and estimated cost for this session",
+            handler=_handle_cost,
+        )
+    )
+    router.register(
+        SlashCommand(
+            name="export",
+            aliases=[],
+            description="Export conversation to markdown file",
+            handler=_handle_export,
+        )
+    )
     return router
+
+
+async def _handle_undo(app: AppContext, args: str) -> None:
+    """Restore the most recent checkpoint (undo last agent action)."""
+    try:
+        from autocode.session.checkpoint_store import CheckpointStore
+        from autocode.session.models import ensure_tables
+        from autocode.session.task_store import TaskStore
+
+        conn = app.session_store.get_connection()
+        ensure_tables(conn)
+        cp_store = CheckpointStore(conn, app.session_id)
+        checkpoints = cp_store.list_checkpoints()
+        if not checkpoints:
+            app.add_system_message("Nothing to undo — no checkpoints saved yet.")
+            return
+        latest = checkpoints[-1]
+        task_store = TaskStore(conn, app.session_id)
+        result = cp_store.restore_checkpoint(latest.id, task_store, app.session_store)
+        app.add_system_message(f"Undone to checkpoint: **{result['label']}**")
+    except Exception as e:
+        app.add_system_message(f"Undo failed: {e}")
+
+
+async def _handle_diff(app: AppContext, args: str) -> None:
+    """Show git diff of changes in the current working directory."""
+    import subprocess
+
+    try:
+        proc = subprocess.run(
+            "git diff --stat && echo '---' && git diff",
+            shell=True,
+            cwd=str(app.project_root),
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if proc.returncode != 0:
+            app.add_system_message(f"git diff failed: {proc.stderr[:200]}")
+            return
+        output = proc.stdout.strip()
+        if not output or output == "---":
+            app.add_system_message("No changes detected.")
+            return
+        if len(output) > 3000:
+            output = output[:3000] + "\n...(truncated)"
+        app.add_system_message(f"```diff\n{output}\n```")
+    except Exception as e:
+        app.add_system_message(f"Error running diff: {e}")
+
+
+async def _handle_cost(app: AppContext, args: str) -> None:
+    """Show token usage and estimated cost for the current session."""
+    messages = app.session_store.get_messages(app.session_id)
+    total_chars = sum(len(m.content) for m in messages)
+    est_tokens = total_chars // 4
+    user_msgs = sum(1 for m in messages if m.role == "user")
+    assistant_msgs = sum(1 for m in messages if m.role == "assistant")
+    tool_msgs = sum(1 for m in messages if m.role == "tool")
+
+    lines = [
+        "**Session Usage:**",
+        f"- Messages: {len(messages)} ({user_msgs} user, {assistant_msgs} assistant, {tool_msgs} tool)",
+        f"- Estimated tokens: ~{est_tokens:,}",
+        f"- Provider: {app.config.llm.provider} / {app.config.llm.model}",
+    ]
+    app.add_system_message("\n".join(lines))
+
+
+async def _handle_export(app: AppContext, args: str) -> None:
+    """Export conversation history to a markdown file."""
+    from pathlib import Path
+
+    messages = app.session_store.get_messages(app.session_id)
+    if not messages:
+        app.add_system_message("No messages to export.")
+        return
+
+    lines = [f"# Session {app.session_id[:8]}\n"]
+    for m in messages:
+        lines.append(f"## {m.role.capitalize()}\n\n{m.content}\n")
+
+    filename = args.strip() or f"session-{app.session_id[:8]}.md"
+    out_path = Path(app.project_root) / filename
+    try:
+        out_path.write_text("\n".join(lines), encoding="utf-8")
+        app.add_system_message(f"Exported to `{out_path}`")
+    except Exception as e:
+        app.add_system_message(f"Export failed: {e}")

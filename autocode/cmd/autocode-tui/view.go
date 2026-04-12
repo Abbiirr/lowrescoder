@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"strings"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 // View renders the live area (never the scrollback).
@@ -66,6 +68,10 @@ func (m model) View() string {
 		b.WriteString(separator(m.width))
 		b.WriteString("\n")
 		b.WriteString(renderProviderPicker(m))
+	case stagePalette:
+		b.WriteString(separator(m.width))
+		b.WriteString("\n")
+		b.WriteString(renderPaletteView(m))
 	default:
 		if m.claudeLike {
 			// Queue preview + composer slab (includes its own top/bottom bars)
@@ -201,6 +207,61 @@ func renderCompletionDropdown(completions []string, width int, cursor int) strin
 		b.WriteString(dimStyle.Render(fmt.Sprintf("  [%d/%d]", cursor+1, len(completions))))
 		b.WriteString("\n")
 	}
+
+	return b.String()
+}
+
+// renderPaletteView renders the command palette overlay.
+func renderPaletteView(m model) string {
+	var b strings.Builder
+
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#cc7832"))
+	activeStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("10"))
+	inactiveStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
+	descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	filterStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("14"))
+
+	b.WriteString(headerStyle.Render("◆ Command Palette"))
+	b.WriteString("  ")
+	if m.paletteFilter != "" {
+		b.WriteString(filterStyle.Render(m.paletteFilter))
+	} else {
+		b.WriteString(dimStyle.Render("type to filter…"))
+	}
+	b.WriteString("\n")
+
+	descs := paletteDescMap()
+
+	maxShow := 10
+	matches := m.paletteMatches
+	if len(matches) > maxShow {
+		matches = matches[:maxShow]
+	}
+
+	for i, cmd := range matches {
+		prefix := "  "
+		style := inactiveStyle
+		if i == m.paletteCursor {
+			prefix = "❯ "
+			style = activeStyle
+		}
+		desc := descs[cmd]
+		line := fmt.Sprintf("%s%-16s %s", prefix, style.Render(cmd), descStyle.Render(desc))
+		b.WriteString(line)
+		b.WriteString("\n")
+	}
+
+	if len(m.paletteMatches) > maxShow {
+		b.WriteString(dimStyle.Render(fmt.Sprintf("  … and %d more", len(m.paletteMatches)-maxShow)))
+		b.WriteString("\n")
+	}
+
+	if len(m.paletteMatches) == 0 {
+		b.WriteString(dimStyle.Render("  No matching commands"))
+		b.WriteString("\n")
+	}
+
+	b.WriteString(dimStyle.Render("  ↑↓ navigate · enter select · esc close"))
 
 	return b.String()
 }

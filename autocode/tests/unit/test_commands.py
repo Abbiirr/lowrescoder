@@ -95,6 +95,10 @@ class TestCommandRouter:
             "memory",
             "checkpoint",
             "loop",
+            "undo",
+            "diff",
+            "cost",
+            "export",
         }
         assert names == expected
 

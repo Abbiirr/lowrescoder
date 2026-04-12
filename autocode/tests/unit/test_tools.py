@@ -38,7 +38,7 @@ class TestToolRegistry:
     def test_get_schemas_openai_format(self) -> None:
         registry = create_default_registry()
         schemas = registry.get_schemas_openai_format()
-        assert len(schemas) == 23
+        assert len(schemas) == 27
         names = {s["function"]["name"] for s in schemas}
         assert names == {
             "read_file", "write_file", "edit_file", "list_files",
@@ -54,6 +54,8 @@ class TestToolRegistry:
             # LSP tools via Jedi (deep-research-report Phase B Item 3)
             "lsp_goto_definition", "lsp_find_references",
             "lsp_get_type", "lsp_symbols",
+            # Planning + discovery tools
+            "todo_write", "todo_read", "glob_files", "grep_content",
         }
         for schema in schemas:
             assert schema["type"] == "function"

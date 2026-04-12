@@ -22,6 +22,7 @@ const (
 	stageAskUser                     // Showing ask-user prompt
 	stageModelPicker                 // Showing model picker after /model
 	stageProviderPicker              // Showing provider picker after /provider
+	stagePalette                     // Showing command palette (Ctrl+K)
 )
 
 // toolCallEntry tracks a tool call for the current turn.
@@ -98,6 +99,11 @@ type model struct {
 	providerPickerEntries []string
 	providerPickerCursor  int
 	providerPickerCurrent string // provider that was active when the picker opened
+
+	// Command palette state (Ctrl+K)
+	paletteFilter  string
+	paletteCursor  int
+	paletteMatches []string
 
 	// Session picker state
 	sessionPickerEntries []sessionEntry

@@ -17,7 +17,7 @@ class TestToolRegistration:
     def test_total_tool_count(self):
         registry = create_default_registry()
         # 14 base + 3 typed git + 1 web_fetch + 1 apply_patch + 4 LSP = 23
-        assert len(registry.get_all()) == 23
+        assert len(registry.get_all()) == 27
 
     def test_new_tools_exist(self):
         registry = create_default_registry()
@@ -41,7 +41,7 @@ class TestToolRegistration:
         registry = create_default_registry()
         schemas = registry.get_schemas_openai_format()
         # 14 base + 3 typed git + 1 web_fetch + 1 apply_patch + 4 LSP = 23
-        assert len(schemas) == 23
+        assert len(schemas) == 27
 
     def test_new_tools_no_approval(self):
         """L1/L2 tools should not require approval."""

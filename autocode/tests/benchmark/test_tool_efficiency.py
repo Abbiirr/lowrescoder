@@ -148,16 +148,20 @@ class TestToolSelection:
     """Does the tool system correctly route to the right handler?"""
 
     def test_registry_has_all_expected_tools(self) -> None:
-        """Default registry has exactly 12 tools."""
+        """Default registry has all expected tools."""
         registry = create_default_registry()
         tools = registry.get_all()
-        assert len(tools) == 12
+        assert len(tools) == 27
         names = {t.name for t in tools}
         assert names == {
-            "read_file", "write_file", "edit_file", "list_files",
-            "search_text", "run_command", "ask_user",
-            "find_references", "find_definition", "get_type_info",
-            "list_symbols", "search_code",
+            "apply_patch", "ask_user", "edit_file", "find_definition",
+            "find_references", "get_type_info", "git_diff", "git_log",
+            "git_status", "list_files", "list_symbols",
+            "lsp_find_references", "lsp_get_type", "lsp_goto_definition",
+            "lsp_symbols", "read_file", "run_command", "search_code",
+            "search_text", "semantic_search", "tool_search",
+            "web_fetch", "write_file",
+            "todo_write", "todo_read", "glob_files", "grep_content",
         }
 
     def test_read_tools_do_not_require_approval(self) -> None:

@@ -335,18 +335,30 @@ class TestSprint2Tools:
         tools = registry.get_all()
         names = {t.name for t in tools}
         assert names == {
-            "read_file",
-            "write_file",
-            "edit_file",
-            "list_files",
-            "search_text",
-            "run_command",
+            "apply_patch",
             "ask_user",
-            "find_references",
+            "edit_file",
             "find_definition",
+            "find_references",
             "get_type_info",
+            "git_diff",
+            "git_log",
+            "git_status",
+            "list_files",
             "list_symbols",
+            "lsp_find_references",
+            "lsp_get_type",
+            "lsp_goto_definition",
+            "lsp_symbols",
+            "read_file",
+            "run_command",
             "search_code",
+            "search_text",
+            "semantic_search",
+            "tool_search",
+            "web_fetch",
+            "todo_write", "todo_read", "glob_files", "grep_content",
+            "write_file",
         }
 
 
@@ -384,25 +396,34 @@ class TestSprint2Commands:
         commands = router.get_all()
         names = {c.name for c in commands}
         expected = {
-            "exit",
-            "new",
-            "sessions",
-            "resume",
-            "help",
-            "model",
-            "mode",
-            "compact",
-            "init",
-            "shell",
-            "copy",
-            "freeze",
-            "thinking",
-            "clear",
-            "index",
-            "tasks",
-            "plan",
-            "memory",
+            "build",
             "checkpoint",
+            "clear",
+            "compact",
+            "copy",
+            "cost",
+            "diff",
+            "exit",
+            "export",
+            "freeze",
+            "help",
+            "index",
+            "init",
+            "loop",
+            "memory",
+            "mode",
+            "model",
+            "new",
+            "plan",
+            "provider",
+            "research",
+            "resume",
+            "review",
+            "sessions",
+            "shell",
+            "tasks",
+            "thinking",
+            "undo",
         }
         assert names == expected
 
@@ -602,7 +623,7 @@ class TestSprint2D:
 
         router = create_default_router()
         commands = router.get_all()
-        assert len(commands) == 19
+        assert len(commands) == 28
 
 
 # ============================================================
@@ -718,17 +739,19 @@ class TestSprint2E:
         assert callable(renderer.print_goodbye)
 
     def test_all_fifteen_commands(self) -> None:
-        """19 commands registered with correct names."""
+        """24 commands registered with correct names."""
         from autocode.tui.commands import create_default_router
 
         router = create_default_router()
         commands = router.get_all()
         names = {c.name for c in commands}
-        assert len(names) == 19
+        assert len(names) == 28
         expected = {
-            "exit", "new", "sessions", "resume", "help", "model",
-            "mode", "compact", "init", "shell", "copy", "freeze",
-            "thinking", "clear", "index", "tasks", "plan",
-            "memory", "checkpoint",
+            "build", "checkpoint", "clear", "compact", "copy",
+            "cost", "diff", "exit", "export", "freeze", "help",
+            "index", "init", "loop", "memory", "mode", "model",
+            "new", "plan", "provider", "research", "resume",
+            "review", "sessions", "shell", "tasks", "thinking",
+            "undo",
         }
         assert names == expected

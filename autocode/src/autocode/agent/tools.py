@@ -1738,4 +1738,141 @@ def create_default_registry(
         )
     )
 
+    # --- Todo tools (mandatory planning) ---
+    _todo_state: list[dict[str, str]] = []
+
+    def _handle_todo_write(**kwargs: Any) -> str:
+        import json as _json
+        todos = kwargs.get("todos", [])
+        if isinstance(todos, str):
+            try:
+                todos = _json.loads(todos)
+            except _json.JSONDecodeError:
+                return "Error: todos must be a JSON array of {id, text, status} objects"
+        _todo_state.clear()
+        for item in todos:
+            _todo_state.append({
+                "id": str(item.get("id", len(_todo_state))),
+                "text": str(item.get("text", "")),
+                "status": str(item.get("status", "pending")),
+            })
+        return f"Todo list updated: {len(_todo_state)} items"
+
+    def _handle_todo_read(**_kwargs: Any) -> str:
+        if not _todo_state:
+            return "No todos yet. Use todo_write to create a plan."
+        lines = []
+        for item in _todo_state:
+            icon = "✓" if item["status"] == "done" else "○"
+            lines.append(f"{icon} [{item['id']}] {item['text']} ({item['status']})")
+        return "\n".join(lines)
+
+    registry.register(ToolDefinition(
+        name="todo_write",
+        description=(
+            "Write or replace the task plan. You MUST call this before making "
+            "any code changes to plan your approach. Each todo is {id, text, status}."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "todos": {
+                    "type": "array",
+                    "description": "List of todo items with id, text, status (pending/in_progress/done)",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string"},
+                            "text": {"type": "string"},
+                            "status": {"type": "string"},
+                        },
+                        "required": ["id", "text", "status"],
+                    },
+                },
+            },
+            "required": ["todos"],
+        },
+        handler=_handle_todo_write,
+        requires_approval=False,
+    ))
+
+    registry.register(ToolDefinition(
+        name="todo_read",
+        description="Read the current task plan / todo list.",
+        parameters={"type": "object", "properties": {}},
+        handler=_handle_todo_read,
+        requires_approval=False,
+    ))
+
+    # --- Glob tool (fast file discovery) ---
+    def _handle_glob(**kwargs: Any) -> str:
+        import subprocess as _sp
+        pattern = kwargs.get("pattern", "*")
+        root = kwargs.get("directory", project_root or ".")
+        try:
+            proc = _sp.run(
+                ["find", root, "-name", pattern, "-type", "f",
+                 "-not", "-path", "*/.git/*",
+                 "-not", "-path", "*/__pycache__/*",
+                 "-not", "-path", "*/node_modules/*"],
+                capture_output=True, text=True, timeout=10,
+            )
+            if proc.returncode == 0 and proc.stdout.strip():
+                return "\n".join(proc.stdout.strip().splitlines()[:100])
+        except Exception:
+            pass
+        from pathlib import Path as _P
+        files = sorted(str(p) for p in _P(root).rglob(pattern) if p.is_file())[:100]
+        return "\n".join(files) if files else "No files found."
+
+    registry.register(ToolDefinition(
+        name="glob_files",
+        description="Find files matching a glob pattern. Use to locate files before reading them.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "pattern": {"type": "string", "description": "Glob pattern (e.g. '*.py')"},
+                "directory": {"type": "string", "description": "Root directory (default: project root)"},
+            },
+            "required": ["pattern"],
+        },
+        handler=_handle_glob,
+        requires_approval=False,
+    ))
+
+    # --- Grep tool (content search with line numbers) ---
+    def _handle_grep(**kwargs: Any) -> str:
+        import subprocess as _sp
+        pattern = kwargs.get("pattern", "")
+        directory = kwargs.get("directory", project_root or ".")
+        file_pattern = kwargs.get("file_pattern", "")
+        if not pattern:
+            return "Error: pattern is required"
+        try:
+            cmd = ["grep", "-rn", "-E", pattern, directory]
+            if file_pattern:
+                cmd = ["grep", "-rn", f"--include={file_pattern}", "-E", pattern, directory]
+            proc = _sp.run(cmd, capture_output=True, text=True, timeout=15)
+            if proc.stdout.strip():
+                return "\n".join(proc.stdout.strip().splitlines()[:50])
+            return "No matches found."
+        except Exception as e:
+            return f"Error running grep: {e}"
+
+    registry.register(ToolDefinition(
+        name="grep_content",
+        description="Search file contents for a regex pattern. Returns matching lines with paths and line numbers.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "pattern": {"type": "string", "description": "Regex pattern to search for"},
+                "directory": {"type": "string", "description": "Directory to search (default: project root)"},
+                "file_pattern": {"type": "string", "description": "File glob to limit search (e.g. '*.py')"},
+            },
+            "required": ["pattern"],
+        },
+        handler=_handle_grep,
+        requires_approval=False,
+    ))
+
     return registry

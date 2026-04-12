@@ -29,6 +29,10 @@ var knownCommands = []string{
 	"/review",
 	"/memory", "/mem",
 	"/checkpoint", "/ckpt",
+	"/undo",
+	"/diff",
+	"/cost", "/tokens", "/usage",
+	"/export",
 }
 
 // parseCommand extracts the command name and arguments from slash command text.
