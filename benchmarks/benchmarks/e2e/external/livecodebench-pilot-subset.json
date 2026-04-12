@@ -1,0 +1,101 @@
+{
+  "_meta": {
+    "description": "LiveCodeBench pilot subset: 15 coding problems with test cases",
+    "selection_criteria": "LeetCode-style problems, mixed difficulty, deterministic test suites",
+    "source": "https://livecodebench.github.io/",
+    "note": "Task IDs are representative selections from the public LiveCodeBench dataset. Problems have deterministic test suites for automated grading.",
+    "last_verified": "2026-02-19"
+  },
+  "tasks": [
+    {
+      "task_id": "lcb-001-reverse-integer",
+      "category": "math",
+      "difficulty": "easy",
+      "description": "Reverse digits of a 32-bit signed integer, return 0 on overflow"
+    },
+    {
+      "task_id": "lcb-002-valid-sudoku",
+      "category": "arrays",
+      "difficulty": "medium",
+      "description": "Determine if a 9x9 Sudoku board is valid"
+    },
+    {
+      "task_id": "lcb-003-group-anagrams",
+      "category": "hashing",
+      "difficulty": "medium",
+      "description": "Group strings that are anagrams of each other"
+    },
+    {
+      "task_id": "lcb-004-trapping-rain-water",
+      "category": "stacks",
+      "difficulty": "hard",
+      "description": "Calculate how much water can be trapped between bars"
+    },
+    {
+      "task_id": "lcb-005-climbing-stairs",
+      "category": "dynamic_programming",
+      "difficulty": "easy",
+      "description": "Count distinct ways to climb n stairs taking 1 or 2 steps"
+    },
+    {
+      "task_id": "lcb-006-rotting-oranges",
+      "category": "bfs",
+      "difficulty": "medium",
+      "description": "Determine minimum time for all oranges to rot via BFS spread"
+    },
+    {
+      "task_id": "lcb-007-longest-increasing-subsequence",
+      "category": "dynamic_programming",
+      "difficulty": "medium",
+      "description": "Find length of longest strictly increasing subsequence"
+    },
+    {
+      "task_id": "lcb-008-kth-largest",
+      "category": "heaps",
+      "difficulty": "medium",
+      "description": "Find the kth largest element in an unsorted array"
+    },
+    {
+      "task_id": "lcb-009-decode-ways",
+      "category": "dynamic_programming",
+      "difficulty": "medium",
+      "description": "Count number of ways to decode a digit string to letters"
+    },
+    {
+      "task_id": "lcb-010-number-of-islands",
+      "category": "dfs",
+      "difficulty": "medium",
+      "description": "Count number of islands in a 2D grid"
+    },
+    {
+      "task_id": "lcb-011-binary-tree-level-order",
+      "category": "trees",
+      "difficulty": "medium",
+      "description": "Return level order traversal of a binary tree"
+    },
+    {
+      "task_id": "lcb-012-edit-distance",
+      "category": "dynamic_programming",
+      "difficulty": "hard",
+      "description": "Find minimum edit distance between two strings"
+    },
+    {
+      "task_id": "lcb-013-max-subarray",
+      "category": "arrays",
+      "difficulty": "easy",
+      "description": "Find the contiguous subarray with the largest sum"
+    },
+    {
+      "task_id": "lcb-014-word-search",
+      "category": "backtracking",
+      "difficulty": "medium",
+      "description": "Determine if a word exists in a 2D character grid"
+    },
+    {
+      "task_id": "lcb-015-alien-dictionary",
+      "category": "graphs",
+      "difficulty": "hard",
+      "description": "Determine character order from a sorted alien dictionary"
+    }
+  ]
+}

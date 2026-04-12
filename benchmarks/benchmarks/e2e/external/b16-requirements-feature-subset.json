@@ -1,0 +1,23 @@
+{
+  "_meta": {
+    "description": "B16: Requirement-Driven Feature Delivery — implement from product requirements",
+    "comparison_validity": "prototype-only",
+    "parity_claim": "forbidden",
+    "note": "Restored prototype lane. Uses explicit acceptance criteria rather than issue-diff hints.",
+    "last_verified": "2026-03-20"
+  },
+  "tasks": [
+    {
+      "task_id": "b16-users-pagination",
+      "category": "feature",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Add cursor-based pagination to the users API with stable next/prev behavior and sensible defaults.",
+      "fixture_dir": "fixtures/b12/swl-001-add-pagination",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "_meta": {
+    "description": "B22: Corrupted State Recovery — recover from broken/half-applied states",
+    "comparison_validity": "internal",
+    "parity_claim": "forbidden",
+    "note": "Multi-task lane: JSON corruption, SQL migration, virtualenv, deploy, crontab.",
+    "last_verified": "2026-03-21"
+  },
+  "tasks": [
+    {
+      "task_id": "b22-broken-json-config",
+      "category": "file_operations",
+      "difficulty": "easy",
+      "language": "bash",
+      "description": "Recover a truncated JSON config file from its backup.",
+      "fixture_dir": "fixtures/b22/b22-broken-json-config",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b22-half-applied-migration",
+      "category": "data_processing",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Complete a half-applied SQLite database migration.",
+      "fixture_dir": "fixtures/b22/b22-half-applied-migration",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b22-corrupted-virtualenv",
+      "category": "package_management",
+      "difficulty": "medium",
+      "language": "bash",
+      "description": "Fix a Python virtualenv with broken pip/setuptools.",
+      "fixture_dir": "fixtures/b22/b22-corrupted-virtualenv",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "force_host": true
+    },
+    {
+      "task_id": "b22-partial-deploy",
+      "category": "file_operations",
+      "difficulty": "medium",
+      "language": "bash",
+      "description": "Complete a partially-applied deployment — some files are v1, some v2.",
+      "fixture_dir": "fixtures/b22/b22-partial-deploy",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b22-broken-crontab",
+      "category": "scripting",
+      "difficulty": "easy",
+      "language": "bash",
+      "description": "Fix syntax errors in a crontab file.",
+      "fixture_dir": "fixtures/b22/b22-broken-crontab",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    }
+  ]
+}

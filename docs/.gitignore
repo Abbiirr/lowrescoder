@@ -1,0 +1,4 @@
+# Benchmark result artifacts (generated at runtime by benchmark_runner)
+qa/test-results/
+qa/e2e-test-results/
+qa/phase3-benchmarks/

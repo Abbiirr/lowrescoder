@@ -1,0 +1,67 @@
+{
+  "_meta": {
+    "description": "B21: Regression and Contract Preservation — add behavior while keeping old paths safe",
+    "comparison_validity": "internal",
+    "parity_claim": "forbidden",
+    "note": "Multi-task lane: feature delivery, logging, optimization, refactoring, and dependency updates under regression pressure.",
+    "last_verified": "2026-03-21"
+  },
+  "tasks": [
+    {
+      "task_id": "b21-add-feature-keep-tests",
+      "category": "feature",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Add a new /status endpoint to a Flask app without breaking any of the 3 existing tests.",
+      "fixture_dir": "fixtures/b21/b21-add-feature-keep-tests",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "allow_test_file_edits": true
+    },
+    {
+      "task_id": "b21-add-logging-preserve-output",
+      "category": "maintenance",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Add logging to a data pipeline without changing its byte-for-byte stdout output.",
+      "fixture_dir": "fixtures/b21/b21-add-logging-preserve-output",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b21-optimize-keep-correctness",
+      "category": "maintenance",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Optimize O(n^2) algorithms in a processor module while keeping output byte-for-byte identical.",
+      "fixture_dir": "fixtures/b21/b21-optimize-keep-correctness",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b21-refactor-preserve-api",
+      "category": "refactoring",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Refactor messy internal implementation of mathutils while keeping the public API and all 6 tests identical.",
+      "fixture_dir": "fixtures/b21/b21-refactor-preserve-api",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b21-update-dependency-no-break",
+      "category": "maintenance",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Update a config parser to support v2 YAML-style format while keeping v1 INI-style backward compatible.",
+      "fixture_dir": "fixtures/b21/b21-update-dependency-no-break",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    }
+  ]
+}

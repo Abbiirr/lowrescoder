@@ -1,0 +1,26 @@
+{
+  "description": "Benchmark matrix configuration for multi-model comparison",
+  "configs": [
+    {
+      "name": "openrouter-default",
+      "description": "OpenRouter with default model",
+      "runs": 1,
+      "min_score": 30,
+      "strict": false,
+      "env": {
+        "HYBRIDCODER_LLM_PROVIDER": "openrouter"
+      }
+    },
+    {
+      "name": "ollama-qwen3-8b",
+      "description": "Ollama with Qwen3-8B (local)",
+      "runs": 1,
+      "min_score": 30,
+      "strict": false,
+      "env": {
+        "HYBRIDCODER_LLM_PROVIDER": "ollama",
+        "OLLAMA_MODEL": "qwen3:8b"
+      }
+    }
+  ]
+}

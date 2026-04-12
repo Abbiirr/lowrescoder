@@ -1,0 +1,76 @@
+{
+  "_meta": {
+    "description": "B23: Collaborative Out-of-Sync Recovery \u2014 stale handoff vs real source of truth",
+    "comparison_validity": "internal",
+    "parity_claim": "forbidden",
+    "note": "Multi-task lane: conflicting envs, diverged configs, outdated docs, schema drift, stale auth, stale lockfiles.",
+    "last_verified": "2026-03-21"
+  },
+  "tasks": [
+    {
+      "task_id": "b23-conflicting-env-files",
+      "category": "maintenance",
+      "difficulty": "medium",
+      "language": "bash",
+      "description": "Resolve conflicting environment files where multiple .env sources disagree on configuration values.",
+      "fixture_dir": "fixtures/b23/b23-conflicting-env-files",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b23-diverged-config",
+      "category": "maintenance",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Reconcile diverged configuration where code and config files have drifted apart.",
+      "fixture_dir": "fixtures/b23/b23-diverged-config",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b23-outdated-docs",
+      "category": "maintenance",
+      "difficulty": "easy",
+      "language": "markdown",
+      "description": "Update outdated documentation to match the current code and API behavior.",
+      "fixture_dir": "fixtures/b23/b23-outdated-docs",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b23-schema-drift",
+      "category": "maintenance",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Fix schema drift where the database schema and the application model definitions have diverged.",
+      "fixture_dir": "fixtures/b23/b23-schema-drift",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b23-stale-lockfile",
+      "category": "maintenance",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Fix a stale lockfile that no longer reflects the actual project dependencies.",
+      "fixture_dir": "fixtures/b23/b23-stale-lockfile",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    }
+  ]
+}

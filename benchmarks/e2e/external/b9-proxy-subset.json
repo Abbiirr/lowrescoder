@@ -1,0 +1,132 @@
+{
+  "_meta": {
+    "description": "Terminal-Bench proxy subset: 10 terminal/system tasks",
+    "comparison_validity": "proxy-only",
+    "parity_claim": "forbidden",
+    "note": "PROXY lane — Terminal-Bench-inspired fixtures. No published parity claims.",
+    "runner": "swebench",
+    "last_verified": "2026-03-04"
+  },
+  "tasks": [
+    {
+      "task_id": "tb-001-hello-world",
+      "category": "scripting",
+      "description": "Write a script that outputs \"Hello, World!\"",
+      "difficulty": "easy",
+      "language": "python",
+      "fixture_dir": "fixtures/b9/tb-001-hello-world",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "tb-002-fix-git",
+      "category": "version_control",
+      "description": "Fix a repo with detached HEAD and uncommitted changes",
+      "difficulty": "medium",
+      "language": "bash",
+      "fixture_dir": "fixtures/b9/tb-002-fix-git",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "build_deps_profile": "git-only"
+    },
+    {
+      "task_id": "tb-003-fix-permissions",
+      "category": "permissions",
+      "description": "Fix broken file permissions on a web app directory",
+      "difficulty": "easy",
+      "language": "bash",
+      "fixture_dir": "fixtures/b9/tb-003-fix-permissions",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "tb-004-csv-to-parquet",
+      "category": "data_processing",
+      "description": "Convert CSV to Parquet using Python",
+      "difficulty": "easy",
+      "language": "python",
+      "fixture_dir": "fixtures/b9/tb-004-csv-to-parquet",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "tb-005-chess-best-move",
+      "category": "algorithmic",
+      "description": "Find best chess move from FEN notation",
+      "difficulty": "hard",
+      "language": "python",
+      "fixture_dir": "fixtures/b9/tb-005-chess-best-move",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "tb-006-fibonacci-server",
+      "category": "networking",
+      "description": "Build HTTP server returning Fibonacci numbers",
+      "difficulty": "medium",
+      "language": "python",
+      "fixture_dir": "fixtures/b9/tb-006-fibonacci-server",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "tb-007-extract-safely",
+      "category": "file_operations",
+      "description": "Safely extract tar archive with path validation",
+      "difficulty": "medium",
+      "language": "python",
+      "fixture_dir": "fixtures/b9/tb-007-extract-safely",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "tb-008-count-dataset-tokens",
+      "category": "text_processing",
+      "description": "Count tokens in a text file",
+      "difficulty": "easy",
+      "language": "python",
+      "fixture_dir": "fixtures/b9/tb-008-count-dataset-tokens",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "tb-009-blind-maze-explorer-5x5",
+      "category": "algorithmic",
+      "description": "Navigate and map a 5x5 maze",
+      "difficulty": "hard",
+      "language": "python",
+      "fixture_dir": "fixtures/b9/tb-009-blind-maze-explorer-5x5",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "tb-010-conda-env-conflict-resolution",
+      "category": "package_management",
+      "description": "Resolve pip dependency conflicts",
+      "difficulty": "medium",
+      "language": "python",
+      "fixture_dir": "fixtures/b9/tb-010-conda-env-conflict-resolution",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    }
+  ]
+}

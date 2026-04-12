@@ -1,0 +1,107 @@
+{
+  "_meta": {
+    "description": "B29: Fault Injection and Infra Resilience \u2014 recover from transient and permanent failures",
+    "comparison_validity": "internal",
+    "parity_claim": "forbidden",
+    "note": "Multi-task lane: corrupt data, disk full, missing files, network timeouts, permission denied, transient failures.",
+    "last_verified": "2026-03-21"
+  },
+  "tasks": [
+    {
+      "task_id": "b29-handle-corrupt-data",
+      "category": "resilience",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Add error handling for corrupt or malformed data input without crashing the pipeline.",
+      "fixture_dir": "fixtures/b29/b29-handle-corrupt-data",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "force_host": true,
+        "protected_paths": [
+          "test_parser.py",
+          "data.csv"
+        ]
+      }
+    },
+    {
+      "task_id": "b29-handle-disk-full",
+      "category": "resilience",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Add graceful handling for disk-full conditions during file write operations.",
+      "fixture_dir": "fixtures/b29/b29-handle-disk-full",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "force_host": true,
+        "protected_paths": [
+          "test_writer.py"
+        ]
+      }
+    },
+    {
+      "task_id": "b29-handle-missing-file",
+      "category": "resilience",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Add proper error handling when required input files are missing instead of crashing with a traceback.",
+      "fixture_dir": "fixtures/b29/b29-handle-missing-file",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "force_host": true,
+        "protected_paths": [
+          "test_app.py"
+        ]
+      }
+    },
+    {
+      "task_id": "b29-handle-network-timeout",
+      "category": "resilience",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Add timeout handling and retry logic for network requests that may hang or fail transiently.",
+      "fixture_dir": "fixtures/b29/b29-handle-network-timeout",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "force_host": true,
+        "protected_paths": [
+          "test_client.py"
+        ]
+      }
+    },
+    {
+      "task_id": "b29-handle-permission-denied",
+      "category": "resilience",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Add graceful handling for permission-denied errors when accessing files or directories.",
+      "fixture_dir": "fixtures/b29/b29-handle-permission-denied",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "force_host": true,
+        "protected_paths": [
+          "test_reader.py"
+        ]
+      }
+    }
+  ]
+}

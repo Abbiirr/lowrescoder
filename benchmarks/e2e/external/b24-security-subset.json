@@ -1,0 +1,72 @@
+{
+  "_meta": {
+    "description": "B24: Security Audit and Safe Patching — fix vulnerabilities while preserving functionality",
+    "comparison_validity": "internal",
+    "parity_claim": "forbidden",
+    "note": "Multi-task lane: SQL injection, hardcoded secrets, file upload, password hashing, open redirect.",
+    "last_verified": "2026-03-21"
+  },
+  "tasks": [
+    {
+      "task_id": "b24-sql-injection",
+      "category": "security",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Fix SQL injection vulnerability in a Flask login endpoint.",
+      "fixture_dir": "fixtures/b24/b24-sql-injection",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "b24-hardcoded-secrets",
+      "category": "security",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Remove hardcoded API keys and passwords, read from environment variables instead.",
+      "fixture_dir": "fixtures/b24/b24-hardcoded-secrets",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b24-insecure-file-upload",
+      "category": "security",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Add file type validation and secure storage to an unrestricted file upload endpoint.",
+      "fixture_dir": "fixtures/b24/b24-insecure-file-upload",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "b24-weak-password-hashing",
+      "category": "security",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Replace MD5 password hashing with bcrypt/argon2/pbkdf2.",
+      "fixture_dir": "fixtures/b24/b24-weak-password-hashing",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "force_host": true
+      }
+    },
+    {
+      "task_id": "b24-open-redirect",
+      "category": "security",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Fix an open redirect vulnerability in an OAuth callback endpoint.",
+      "fixture_dir": "fixtures/b24/b24-open-redirect",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    }
+  ]
+}

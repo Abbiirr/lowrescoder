@@ -1,0 +1,66 @@
+{
+  "_meta": {
+    "description": "B15: Realistic Intake Mutation — natural-language intake over stable bugfix fixtures",
+    "comparison_validity": "internal",
+    "parity_claim": "forbidden",
+    "note": "Measures whether the agent can parse realistic user phrasing rather than benchmark-shaped prompts.",
+    "last_verified": "2026-03-21"
+  },
+  "tasks": [
+    {
+      "task_id": "b15-add-csv-export",
+      "category": "feature",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Add a CSV export function to a report module that outputs valid CSV with headers and all data rows.",
+      "fixture_dir": "fixtures/b15/b15-add-csv-export",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b15-add-dark-mode",
+      "category": "feature",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Add a dark mode toggle to a settings page with CSS styles and a functional toggle element.",
+      "fixture_dir": "fixtures/b15/b15-add-dark-mode",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b15-add-input-validation",
+      "category": "feature",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Add input validation to a form or API endpoint based on natural-language user requirements.",
+      "fixture_dir": "fixtures/b15/b15-add-input-validation",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b15-fix-slow-query",
+      "category": "bugfix",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Identify and fix a performance issue in a slow user list query using SQLite.",
+      "fixture_dir": "fixtures/b15/b15-fix-slow-query",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b15-make-responsive",
+      "category": "feature",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Make a web page layout responsive based on a natural-language user request.",
+      "fixture_dir": "fixtures/b15/b15-make-responsive",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    }
+  ]
+}

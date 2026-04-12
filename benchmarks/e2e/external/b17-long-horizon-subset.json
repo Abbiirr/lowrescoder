@@ -1,0 +1,73 @@
+{
+  "_meta": {
+    "description": "B17: Long-Horizon Multi-File Maintenance — larger refactoring and restructuring tasks",
+    "comparison_validity": "internal",
+    "parity_claim": "forbidden",
+    "note": "Multi-file maintenance tasks requiring consistent changes across codebase structure.",
+    "last_verified": "2026-03-21"
+  },
+  "tasks": [
+    {
+      "task_id": "b17-add-type-hints",
+      "category": "maintenance",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Add type hints across a multi-file Python project while preserving all behavior.",
+      "fixture_dir": "fixtures/b17/b17-add-type-hints",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "force_host": true
+    },
+    {
+      "task_id": "b17-extract-class",
+      "category": "refactoring",
+      "difficulty": "hard",
+      "language": "python",
+      "description": "Extract a class from a large module into its own file while preserving imports and tests.",
+      "fixture_dir": "fixtures/b17/b17-extract-class",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "force_host": true
+    },
+    {
+      "task_id": "b17-migrate-config-format",
+      "category": "maintenance",
+      "difficulty": "hard",
+      "language": "python",
+      "description": "Migrate configuration from one format to another across multiple files with backward compatibility.",
+      "fixture_dir": "fixtures/b17/b17-migrate-config-format",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "force_host": true
+    },
+    {
+      "task_id": "b17-rename-module",
+      "category": "refactoring",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Rename a Python module and update all imports across the project consistently.",
+      "fixture_dir": "fixtures/b17/b17-rename-module",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "force_host": true,
+      "allow_test_file_edits": true
+    },
+    {
+      "task_id": "b17-split-test-file",
+      "category": "refactoring",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Split a monolithic test file into multiple focused test modules while keeping all tests passing.",
+      "fixture_dir": "fixtures/b17/b17-split-test-file",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "force_host": true,
+      "allow_test_file_edits": true
+    }
+  ]
+}

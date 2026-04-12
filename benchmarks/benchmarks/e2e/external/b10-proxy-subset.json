@@ -1,0 +1,142 @@
+{
+  "_meta": {
+    "description": "Multilingual SWE-bench proxy subset: 10 Python bug-fix tasks",
+    "comparison_validity": "proxy-only",
+    "parity_claim": "forbidden",
+    "runner": "swebench",
+    "note": "Python-only proxy for the official multilingual SWE-bench lane",
+    "last_verified": "2026-03-04"
+  },
+  "tasks": [
+    {
+      "task_id": "ml-001-dtype-mismatch",
+      "repo": "",
+      "language": "python",
+      "difficulty": "easy",
+      "category": "bug-fix",
+      "description": "Fix floor division truncation in mean calculation",
+      "fixture_dir": "fixtures/b10/ml-001-dtype-mismatch",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "ml-002-off-by-one",
+      "repo": "",
+      "language": "python",
+      "difficulty": "easy",
+      "category": "bug-fix",
+      "description": "Fix off-by-one in sliding window function",
+      "fixture_dir": "fixtures/b10/ml-002-off-by-one",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "ml-003-encoding-error",
+      "repo": "",
+      "language": "python",
+      "difficulty": "easy",
+      "category": "bug-fix",
+      "description": "Fix Unicode encoding error in CSV reader",
+      "fixture_dir": "fixtures/b10/ml-003-encoding-error",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "ml-004-null-handling",
+      "repo": "",
+      "language": "python",
+      "difficulty": "easy",
+      "category": "bug-fix",
+      "description": "Fix null value handling in data pipeline",
+      "fixture_dir": "fixtures/b10/ml-004-null-handling",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "ml-005-race-condition",
+      "repo": "",
+      "language": "python",
+      "difficulty": "medium",
+      "category": "bug-fix",
+      "description": "Fix race condition in threaded counter",
+      "fixture_dir": "fixtures/b10/ml-005-race-condition",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "ml-006-float-precision",
+      "repo": "",
+      "language": "python",
+      "difficulty": "easy",
+      "category": "bug-fix",
+      "description": "Fix floating point comparison in test suite",
+      "fixture_dir": "fixtures/b10/ml-006-float-precision",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "ml-007-import-cycle",
+      "repo": "",
+      "language": "python",
+      "difficulty": "medium",
+      "category": "bug-fix",
+      "description": "Fix circular import between two modules",
+      "fixture_dir": "fixtures/b10/ml-007-import-cycle",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "ml-008-memory-leak",
+      "repo": "",
+      "language": "python",
+      "difficulty": "medium",
+      "category": "bug-fix",
+      "description": "Fix memory leak in cache implementation (unbounded dict)",
+      "fixture_dir": "fixtures/b10/ml-008-memory-leak",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "ml-009-timezone-bug",
+      "repo": "",
+      "language": "python",
+      "difficulty": "medium",
+      "category": "bug-fix",
+      "description": "Fix timezone conversion error",
+      "fixture_dir": "fixtures/b10/ml-009-timezone-bug",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    },
+    {
+      "task_id": "ml-010-regex-catastrophic",
+      "repo": "",
+      "language": "python",
+      "difficulty": "hard",
+      "category": "bug-fix",
+      "description": "Fix catastrophic backtracking in regex pattern",
+      "fixture_dir": "fixtures/b10/ml-010-regex-catastrophic",
+      "setup_commands": ["cd /work && bash setup.sh"],
+      "grading_command": "cd /work && python -m pytest tests/ -q --tb=short",
+      "python_version": "3.11",
+      "build_deps_profile": "none"
+    }
+  ]
+}

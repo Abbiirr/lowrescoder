@@ -1,0 +1,60 @@
+{
+  "_meta": {
+    "description": "B30: Terminal-Bench v2.0 — Multi-domain terminal mastery tasks via Harbor framework",
+    "comparison_validity": "external-benchmark",
+    "parity_claim": "forbidden",
+    "note": "External benchmark lane. Tasks run via Harbor framework against Terminal-Bench v2.0 dataset. Requires: harbor CLI, Docker. Not included in internal regression suite until Harbor adapter is fully wired.",
+    "last_verified": "2026-04-02",
+    "external_benchmark": "terminal-bench",
+    "external_version": "2.0",
+    "harbor_dataset": "terminal-bench@2.0",
+    "harbor_agent_import": "benchmarks.adapters.harbor_adapter:AutoCodeHarborAgent"
+  },
+  "tasks": [
+    {
+      "task_id": "tbench-break-filter-js-from-html",
+      "category": "debugging",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Repair HTML filtering output so the generated page excludes embedded JavaScript correctly.",
+      "harbor_task": "break-filter-js-from-html",
+      "force_host": false
+    },
+    {
+      "task_id": "tbench-build-cython-ext",
+      "category": "build_systems",
+      "difficulty": "hard",
+      "language": "python",
+      "description": "Fix and build a Cython extension package so verification imports succeed.",
+      "harbor_task": "build-cython-ext",
+      "force_host": false
+    },
+    {
+      "task_id": "tbench-configure-webserver",
+      "category": "sysadmin",
+      "difficulty": "hard",
+      "language": "bash",
+      "description": "Configure a web server from scratch.",
+      "harbor_task": "configure-git-webserver",
+      "force_host": false
+    },
+    {
+      "task_id": "tbench-crack-hash",
+      "category": "security",
+      "difficulty": "hard",
+      "language": "bash",
+      "description": "Crack a password hash using available tools.",
+      "harbor_task": "crack-7z-hash",
+      "force_host": false
+    },
+    {
+      "task_id": "tbench-train-model",
+      "category": "ml",
+      "difficulty": "hard",
+      "language": "python",
+      "description": "Train a machine learning model to meet accuracy requirements.",
+      "harbor_task": "train-fasttext",
+      "force_host": false
+    }
+  ]
+}

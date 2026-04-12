@@ -1,0 +1,57 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Type checking
+.mypy_cache/
+
+# Linting
+.ruff_cache/
+
+# Go
+build/
+*.exe
+cmd/hybridcoder-tui-spike/
+cmd/autocode-tui/autocode-tui
+
+# OS
+Thumbs.db
+.DS_Store
+nul
+
+.claude/
+sandboxes/
+logs/
+docs/qa/test-results/
+docs/qa/e2e-test-results/
+docs/qa/phase3-benchmarks/
+
+
+toolsharbor-cli/
+
+benchmarks/*/node_modules/

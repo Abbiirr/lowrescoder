@@ -96,7 +96,7 @@ uv run pytest autocode/tests/unit/ -v --cov=src/autocode
 # Unit tests — benchmarks
 uv run pytest benchmarks/tests/ -v
 
-# All tests (both submodules)
+# All tests (both modules)
 uv run pytest autocode/tests/unit/ benchmarks/tests/ -v
 
 # Sprint verification (run after completing a sprint)
@@ -118,24 +118,23 @@ uv run pytest -m integration autocode/tests/integration/
 
 ---
 
-## Repository Structure (Submodules)
+## Repository Structure
 
-This is a **git submodule superproject**. Code lives in child repos:
+Monorepo with logical folder segregation:
 
-| Submodule | Contents | Path |
-|-----------|----------|------|
-| `autocode/` | Python backend (`src/autocode/`), Go TUI (`cmd/autocode-tui/`), product tests | `autocode/` |
-| `benchmarks/` | Benchmark harness, adapters, e2e fixtures, benchmark tests | `benchmarks/` |
-| `docs/` | All documentation | `docs/` |
-| `training-data/` | Training data for models | `training-data/` |
+| Directory | Contents |
+|-----------|----------|
+| `autocode/` | Python backend (`src/autocode/`), Go TUI (`cmd/autocode-tui/`), product tests |
+| `benchmarks/` | Benchmark harness, adapters, e2e fixtures, benchmark tests |
+| `docs/` | All documentation |
+| `training-data/` | Training data for models |
 
-Root keeps: `CLAUDE.md`, `AGENTS_CONVERSATION.MD`, `pyproject.toml` (workspace), `Makefile` (delegator), `.gitmodules`
+Root keeps: `CLAUDE.md`, `AGENTS_CONVERSATION.MD`, `pyproject.toml` (workspace), `Makefile` (delegator)
 
 **Cross-module imports:** `uv` workspace with editable deps. `autocode` is importable from `benchmarks/` via workspace wiring.
 
 ```bash
-# After cloning, initialize submodules:
-git submodule update --init --recursive
+# After cloning:
 uv sync
 ```
 
