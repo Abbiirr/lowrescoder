@@ -1,0 +1,79 @@
+/* AutoCode TUI — Design Tokens & Layout
+ *
+ * Profile-aware: default uses standard Textual colors,
+ * claude_like uses amber accent (#cc7832) to match Claude Code. */
+
+/* --- Design tokens --- */
+$accent: #cc7832;
+$muted: ansi_bright_black;
+$success: ansi_green;
+$error: ansi_red;
+$warning: ansi_yellow;
+$tool-color: ansi_cyan;
+
+/* --- Layout --- */
+Screen {
+    layout: vertical;
+}
+
+#header {
+    dock: top;
+    height: 1;
+    background: $primary;
+    color: $text;
+    padding: 0 1;
+    text-style: bold;
+}
+
+#header.claude-like {
+    background: $surface;
+    color: $accent;
+}
+
+#chat-view {
+    height: 1fr;
+    overflow-y: auto;
+}
+
+#input-bar {
+    dock: bottom;
+    height: auto;
+    min-height: 3;
+    max-height: 10;
+}
+
+#status-bar {
+    dock: bottom;
+    height: 1;
+    color: $muted;
+    padding: 0 1;
+}
+
+#status-bar.claude-like {
+    color: $muted;
+    background: $surface;
+}
+
+/* --- Tool call rendering --- */
+.tool-call {
+    color: $tool-color;
+    padding-left: 2;
+}
+
+.tool-call .icon-ok {
+    color: $success;
+}
+
+.tool-call .icon-err {
+    color: $error;
+}
+
+.tool-call .icon-wait {
+    color: $warning;
+}
+
+/* --- Thinking indicator --- */
+.thinking {
+    color: $muted;
+    text-style: italic;
+}

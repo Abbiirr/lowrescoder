@@ -52,11 +52,11 @@ sandboxes/
 logs/
 benchmark_*.log
 
-# Stale legacy paths (content is in submodules now)
-src/
-scripts/
-tests/
-training_data/
+# Stale legacy paths (root-level only — not inside autocode/ or other dirs)
+/src/
+/scripts/
+/tests/
+/training_data/
 
 toolsharbor-cli/
 
