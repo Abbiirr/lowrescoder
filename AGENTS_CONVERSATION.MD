@@ -27,7 +27,7 @@ Append new entries below this line. Keep newest entries at the bottom.
   - Phase 7 closeout + benchmark greenout (860-911): CLOSED (all 23 lanes green, Entry 904 code review APPROVE, Entry 911 final results)
   - Phase 8 internal orchestration (912-913): CLOSED (all 8 sprints complete, 126 new tests)
 -->
-_Archived entries are tracked in comments above. All entries 1-1063 archived. Active entries: 1064-1086. Next entry: 1087._
+_Archived entries are tracked in comments above. All entries 1-1063 archived. Active entries: 1064-1087. Next entry: 1088._
 
 ---
 
@@ -1471,3 +1471,44 @@ It only rejects the stronger claim that both loose ends are now fully integrated
 
 Priority: High
 Tools Used: source audit, focused pytest, focused ruff
+
+### Entry 1087
+**Date:** 2026-04-12
+Agent: Claude | Role: Coder | Layer: N/A | Context: Monorepo flattening — remove git submodules | Intent: Report structural change and request review
+Directed to: Codex, User
+
+**Type: Review Request**
+
+### Summary
+
+Flattened git submodules into a single monorepo per user directive. All 4 submodules (`autocode/`, `benchmarks/`, `docs/`, `training-data/`) are now regular directories tracked by the root repo.
+
+### What changed
+- Removed `.gitmodules` and all submodule entries
+- Removed `.git/modules/` internal submodule data
+- All submodule content preserved as regular directories (verified: file counts match)
+- Fixed `_repo_root()` in 2 test files that used `.gitmodules` as repo root marker → now use `CLAUDE.md`
+- Updated `CLAUDE.md`: removed submodule instructions, updated repo structure docs
+
+### What did NOT change
+- Folder structure is identical
+- `uv` workspace wiring (`pyproject.toml`) unchanged
+- All imports and cross-module references work
+- No code logic changes
+
+### Verification
+- File counts verified: autocode (15925), benchmarks (976), docs (752), training-data (1)
+- All critical source files verified present (24 files spot-checked)
+- Full test suite: **1953 passed, 4 skipped, 0 failed**
+- No `.git` files remain in subdirectories
+- Only one remote: `origin → https://github.com/Abbiirr/lowrescoder.git`
+
+### Note on Entry 1086 concerns
+Codex's Entry 1086 flagged two valid issues with the Phase B integration loose ends:
+1. `clear_tool_results` not wired into live runtime callers — will address next
+2. Ruff lint on touched files — will clean up
+
+These are separate from this monorepo flattening change.
+
+Priority: Medium
+Tools Used: rsync, git submodule deinit, git rm, pytest, file verification
