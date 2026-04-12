@@ -38,17 +38,24 @@ class ContextEngine:
         return max(1, len(text) // 4)
 
     def truncate_tool_result(self, result: str, max_tokens: int = 500) -> str:
-        """Truncate a tool result if it exceeds max_tokens.
+        """MicroCompact: truncate tool output from the middle.
 
-        Keeps the first ~200 tokens and last ~100 tokens with a marker.
+        Keeps head (first ~60%) and tail (last ~40%) since useful info
+        like stack traces clusters at beginning and end. No API call needed.
         """
         token_count = self.count_tokens(result)
         if token_count <= max_tokens:
             return result
 
-        head_chars = 200 * 4
-        tail_chars = 100 * 4
-        return result[:head_chars] + "\n[... truncated ...]\n" + result[-tail_chars:]
+        max_chars = max_tokens * 4
+        head_chars = int(max_chars * 0.6)
+        tail_chars = max_chars - head_chars
+        omitted = len(result) - head_chars - tail_chars
+        return (
+            result[:head_chars]
+            + f"\n\n[… {omitted} chars omitted …]\n\n"
+            + result[-tail_chars:]
+        )
 
     async def build_messages(
         self,
@@ -105,7 +112,7 @@ class ContextEngine:
         # Estimate total message tokens
         total_msg_tokens = sum(self.count_tokens(m.content) for m in stored_messages)
 
-        # Auto-compact if over threshold
+        # Auto-compact if over threshold (Tier 2: AutoCompact at 75%)
         threshold_tokens = int(budget * self._compaction_threshold)
         if total_msg_tokens > threshold_tokens and len(stored_messages) > 4:
             should_compact = True
@@ -116,6 +123,22 @@ class ContextEngine:
                 if after_compaction is not None:
                     after_compaction(summary)
                 stored_messages = self._session_store.get_messages(session_id)
+                total_msg_tokens = sum(
+                    self.count_tokens(m.content) for m in stored_messages
+                )
+
+        # Emergency FullCompact (Tier 3: at 90% — keep only last 2 messages)
+        emergency_tokens = int(budget * 0.90)
+        if total_msg_tokens > emergency_tokens and len(stored_messages) > 2:
+            logger.warning(
+                "FullCompact: %d tokens > %d emergency threshold, aggressive trim",
+                total_msg_tokens,
+                emergency_tokens,
+            )
+            summary = await self.auto_compact(session_id, kept_messages=2)
+            if after_compaction is not None:
+                after_compaction(summary)
+            stored_messages = self._session_store.get_messages(session_id)
 
         # Assemble final message list
         # When static/dynamic split is provided, use two content blocks

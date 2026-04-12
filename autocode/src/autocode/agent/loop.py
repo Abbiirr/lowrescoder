@@ -243,7 +243,9 @@ class AgentLoop:
             "has_task_tools": has_task_tools,
             "plan_mode": self._mode == AgentMode.PLANNING,
             "agent_mode": self._mode.value,
-            "read_only_mode": self._mode in {AgentMode.PLANNING, AgentMode.RESEARCH, AgentMode.REVIEW},
+            "read_only_mode": self._mode in {
+                AgentMode.PLANNING, AgentMode.RESEARCH, AgentMode.REVIEW
+            },
             "build_mode": self._mode == AgentMode.BUILD,
             "review_mode": self._mode == AgentMode.REVIEW,
             "environment_snapshot": self._build_environment_snapshot(),
@@ -431,6 +433,7 @@ class AgentLoop:
         )
 
         _text_nudge_count = 0
+        _todo_write_seen = False  # Track if agent has planned via todo_write
 
         for _iteration in range(self.MAX_ITERATIONS):
             # Middleware: on_iteration
@@ -615,7 +618,8 @@ class AgentLoop:
                             continue
                         else:
                             logger.warning(
-                                "BUILD gate: retries exhausted, allowing completion without verification"
+                                "BUILD gate: retries exhausted,"
+                                " allowing completion without verification"
                             )
 
                 self.session_store.add_message(self.session_id, "assistant", text)
@@ -655,6 +659,9 @@ class AgentLoop:
             )
 
             for tc in response.tool_calls:
+                # Track todo_write usage for mandatory planning
+                if tc.name == "todo_write":
+                    _todo_write_seen = True
                 outcome = await self._execute_tool_call(
                     tc, msg_id,
                     on_tool_call=on_tool_call,
@@ -686,6 +693,23 @@ class AgentLoop:
                             {"iterations": _iteration + 1, "total_duration_ms": _total_ms},
                         )
                     return final_text
+
+            # Nudge: if iteration 2+ and no todo_write yet, inject planning prompt
+            if (
+                _iteration == 1
+                and not _todo_write_seen
+                and self.tool_registry.get("todo_write") is not None
+                and self.approval_manager.mode == ApprovalMode.AUTO
+            ):
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "[Planning Required] You have not created a plan yet. "
+                        "Before making more changes, call todo_write to outline "
+                        "your approach as a checklist. This helps track progress "
+                        "and avoid rework."
+                    ),
+                })
 
         # Max iterations reached — get final text response without tools
         log_event(

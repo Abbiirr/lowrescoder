@@ -60,7 +60,7 @@ class TestTruncation:
         # 500 tokens ~= 2000 chars, so make something longer
         long_text = "x" * 5000
         result = engine.truncate_tool_result(long_text, max_tokens=500)
-        assert "[... truncated ...]" in result
+        assert "omitted" in result
         assert len(result) < len(long_text)
         # Should have head + marker + tail
         assert result.startswith("x" * 100)  # starts with x's
@@ -114,7 +114,7 @@ class TestTaskToolTruncationBypass:
         """Confirm truncation works for non-task tools (baseline)."""
         long_text = "x" * 5000
         result = engine.truncate_tool_result(long_text, max_tokens=500)
-        assert "[... truncated ...]" in result
+        assert "omitted" in result
 
 
 class TestAutoCompact:
