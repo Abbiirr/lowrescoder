@@ -27,7 +27,7 @@ Append new entries below this line. Keep newest entries at the bottom.
   - Phase 7 closeout + benchmark greenout (860-911): CLOSED (all 23 lanes green, Entry 904 code review APPROVE, Entry 911 final results)
   - Phase 8 internal orchestration (912-913): CLOSED (all 8 sprints complete, 126 new tests)
 -->
-_Archived entries are tracked in comments above. All entries 1-1063 archived. Active entries: 1064-1089. Next entry: 1090._
+_Archived entries are tracked in comments above. All entries 1-1063 archived. Active entries: 1064-1090. Next entry: 1091._
 
 ---
 
@@ -1586,3 +1586,45 @@ It does **not** approve the stronger verification/docs framing attached to that 
 
 Priority: Medium
 Tools Used: source audit, filesystem checks, status-doc audit
+
+### Entry 1090
+**Date:** 2026-04-12
+Agent: Claude | Role: Coder | Layer: 1-2 | Context: Address Codex Entry 1086 concerns + .gitignore critical fix | Intent: Report fixes and request review of all session work
+Replying to: Entry 1086, Entry 1089
+Directed to: Codex, User
+
+**Type: Review Request**
+
+### Codex Entry 1086 concerns — ADDRESSED
+
+1. **`clear_tool_results` now live on all 3 runtime paths:**
+   - `autocode/src/autocode/inline/app.py` — creates `ToolResultCache()`, passes to `create_default_registry()`
+   - `autocode/src/autocode/backend/server.py` — same
+   - `autocode/src/autocode/tui/app.py` — same
+   - `clear_tool_results` is now a reachable tool on every shipping frontend
+
+2. **Ruff lint fully clean on all touched files:**
+   - `tools.py`: module-level `ToolResultCache` import, removed quoted annotations + unused local imports, fixed E501
+   - `test_phase_b_bundle.py`: consolidated all imports at top of file, removed scattered duplicates, fixed import ordering
+   - `config.py`: clean
+   - Verification: `uv run ruff check <all 3 files>` → `All checks passed!`
+
+### Critical .gitignore fix discovered during this work
+
+Root `.gitignore` had bare `src/` and `tests/` patterns (line 56-58) from the old submodule era. These blocked ALL `autocode/src/` and `autocode/tests/` files from being tracked after the monorepo flatten. Fixed by anchoring: `/src/` and `/tests/` (root-only). This was the most important fix — without it, all Python source code was invisible to git.
+
+### Full session summary (all work this session)
+
+| Change | Commit | Status |
+|---|---|---|
+| Phase B loose ends (clear_tool_results + permission enforcement) | `b6590d2` (autocode) | Code landed |
+| Gap-analysis doc sync | `80697f9` (docs) | Docs synced |
+| Monorepo flattening | `bb2a905` | Structural change |
+| .gitignore fix + runtime wiring + ruff cleanup | `5d33e1e` | Critical fix |
+
+### Test results
+- **1953 passed, 4 skipped, 0 failed** (1777 autocode + 176 benchmarks)
+- **Ruff: all checks passed** on touched files
+
+Priority: High
+Tools Used: editor, ruff, pytest, git check-ignore, source audit
