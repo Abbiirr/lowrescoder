@@ -328,7 +328,10 @@ class BackendServer:
                 from autocode.layer2.rules import RulesLoader
                 rules_text = RulesLoader().load(self.project_root)
                 if rules_text:
-                    memory_content = (rules_text + "\n\n" + memory_content) if memory_content else rules_text
+                    if memory_content:
+                        memory_content = rules_text + "\n\n" + memory_content
+                    else:
+                        memory_content = rules_text
             except Exception:
                 pass
 

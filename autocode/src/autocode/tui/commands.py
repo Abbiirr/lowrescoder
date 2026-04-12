@@ -1355,7 +1355,8 @@ async def _handle_cost(app: AppContext, args: str) -> None:
 
     lines = [
         "**Session Usage:**",
-        f"- Messages: {len(messages)} ({user_msgs} user, {assistant_msgs} assistant, {tool_msgs} tool)",
+        f"- Messages: {len(messages)}"
+        f" ({user_msgs} user, {assistant_msgs} assistant, {tool_msgs} tool)",
         f"- Estimated tokens: ~{est_tokens:,}",
         f"- Provider: {app.config.llm.provider} / {app.config.llm.model}",
     ]

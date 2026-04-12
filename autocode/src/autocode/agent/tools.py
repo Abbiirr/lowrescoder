@@ -1778,7 +1778,9 @@ def create_default_registry(
             "properties": {
                 "todos": {
                     "type": "array",
-                    "description": "List of todo items with id, text, status (pending/in_progress/done)",
+                    "description": (
+                        "List of todo items with id, text, status (pending/in_progress/done)"
+                    ),
                     "items": {
                         "type": "object",
                         "properties": {
@@ -1821,8 +1823,8 @@ def create_default_registry(
                 return "\n".join(proc.stdout.strip().splitlines()[:100])
         except Exception:
             pass
-        from pathlib import Path as _P
-        files = sorted(str(p) for p in _P(root).rglob(pattern) if p.is_file())[:100]
+        from pathlib import Path as _Path
+        files = sorted(str(p) for p in _Path(root).rglob(pattern) if p.is_file())[:100]
         return "\n".join(files) if files else "No files found."
 
     registry.register(ToolDefinition(
@@ -1832,7 +1834,10 @@ def create_default_registry(
             "type": "object",
             "properties": {
                 "pattern": {"type": "string", "description": "Glob pattern (e.g. '*.py')"},
-                "directory": {"type": "string", "description": "Root directory (default: project root)"},
+                "directory": {
+                    "type": "string",
+                    "description": "Root directory (default: project root)",
+                },
             },
             "required": ["pattern"],
         },
@@ -1861,13 +1866,22 @@ def create_default_registry(
 
     registry.register(ToolDefinition(
         name="grep_content",
-        description="Search file contents for a regex pattern. Returns matching lines with paths and line numbers.",
+        description=(
+            "Search file contents for a regex pattern."
+            " Returns matching lines with paths and line numbers."
+        ),
         parameters={
             "type": "object",
             "properties": {
                 "pattern": {"type": "string", "description": "Regex pattern to search for"},
-                "directory": {"type": "string", "description": "Directory to search (default: project root)"},
-                "file_pattern": {"type": "string", "description": "File glob to limit search (e.g. '*.py')"},
+                "directory": {
+                    "type": "string",
+                    "description": "Directory to search (default: project root)",
+                },
+                "file_pattern": {
+                    "type": "string",
+                    "description": "File glob to limit search (e.g. '*.py')",
+                },
             },
             "required": ["pattern"],
         },
