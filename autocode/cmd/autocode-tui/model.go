@@ -55,6 +55,10 @@ type model struct {
 	streamDirty  bool             // Whether tokenBuf has unflushed content
 	showThinking bool
 
+	// Spinner verb rotation (Claude Code style — 187 verbs)
+	currentVerb string
+	verbTicks   int
+
 	// Tool calls for current turn
 	toolCalls []toolCallEntry
 
@@ -132,6 +136,7 @@ func initialModel(backend *Backend) model {
 		streamBuf:       &strings.Builder{},
 		thinkingBuf:     &strings.Builder{},
 		showThinking:    true,
+		currentVerb:     randomVerb(),
 		approvalOptions: []string{"Yes", "Yes, this session", "No"},
 		queueMax:        10,
 	}

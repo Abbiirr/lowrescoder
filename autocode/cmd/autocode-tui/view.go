@@ -93,17 +93,35 @@ func (m model) View() string {
 	return b.String()
 }
 
-// renderThinking renders the last 5 lines of thinking tokens.
+// renderThinking renders thinking tokens with a Claude Code style header.
 func renderThinking(m model) string {
 	if !m.showThinking || m.thinkingBuf.Len() == 0 {
 		return ""
 	}
+	var b strings.Builder
 	content := m.thinkingBuf.String()
 	lines := strings.Split(content, "\n")
+
+	// Header: "Thinking…" in dim style
+	b.WriteString(dimStyle.Render("  ▸ Thinking…"))
+	b.WriteString("\n")
+
+	// Show last 5 lines, indented and dimmed
 	if len(lines) > 5 {
 		lines = lines[len(lines)-5:]
 	}
-	return thinkingStyle.Render(strings.Join(lines, "\n")) + "\n"
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		rendered := line
+		if len(rendered) > 120 {
+			rendered = rendered[:117] + "..."
+		}
+		b.WriteString(thinkingStyle.Render("  │ " + rendered))
+		b.WriteString("\n")
+	}
+	return b.String()
 }
 
 // renderToolArea renders the tool call log for the current turn.
@@ -151,7 +169,7 @@ func renderStreamArea(m model) string {
 	content := m.streamBuf.String()
 	if content == "" && m.tokenBuf.Len() == 0 {
 		// Show spinner while waiting for first token
-		b.WriteString(m.spin.View() + dimStyle.Render(" Thinking\u2026") + "\n")
+		b.WriteString(m.spin.View() + " " + accentStyle.Render(m.currentVerb+"…") + "\n")
 	} else {
 		// Cap displayed content (show last 50 lines)
 		displayed := content

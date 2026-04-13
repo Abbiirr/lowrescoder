@@ -8,10 +8,10 @@ import (
 func TestViewShowsSpinnerWhileWaiting(t *testing.T) {
 	m := initialModel(nil)
 	m.stage = stageStreaming
-	// Empty buffers — should show spinner
+	// Empty buffers — should show spinner with a rotating verb
 	view := m.View()
-	if !strings.Contains(view, "Thinking") {
-		t.Errorf("expected 'Thinking' in view during empty streaming, got:\n%s", view)
+	if !strings.Contains(view, "…") {
+		t.Errorf("expected spinner verb with '…' in view during empty streaming, got:\n%s", view)
 	}
 }
 

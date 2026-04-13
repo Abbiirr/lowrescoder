@@ -142,6 +142,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spin, cmd = m.spin.Update(msg)
+		// Rotate spinner verb every ~3 seconds
+		if m.stage == stageStreaming {
+			m.verbTicks++
+			if m.verbTicks >= 8 { // spinner ticks ~2.5x/sec with MiniDot
+				m.verbTicks = 0
+				m.currentVerb = randomVerb()
+			}
+		}
 		return m, cmd
 	}
 
@@ -361,6 +369,8 @@ func (m model) sendChat(text string) (tea.Model, tea.Cmd) {
 	m.lastError = ""
 	m.streamDirty = false
 	m.interruptCount = 0
+	m.currentVerb = randomVerb()
+	m.verbTicks = 0
 
 	// Send to backend — keep composer focused for parallel typing
 	m.stage = stageStreaming
