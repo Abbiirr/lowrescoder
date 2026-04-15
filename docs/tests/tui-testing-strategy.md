@@ -1,0 +1,179 @@
+# TUI Testing Strategy
+
+This is the required validation policy for interactive terminal UI changes in this repo. Use it for Go Bubble Tea TUI, Python inline chat, Textual TUI, and any terminal-driven interactive path.
+
+`docs/tests/pty-testing.md` explains how to run PTY checks. This file defines what must be tested before a TUI-affecting change is considered done.
+
+## Rule
+
+If you change interactive terminal behavior, you must run the full checklist in this file.
+
+Do not treat unit tests, snapshots, or `go test` alone as sufficient for TUI work.
+
+If you cannot run one of the required checks, do not silently skip it:
+- state the blocker explicitly
+- record what was not run
+- do not claim the TUI work is complete without user acknowledgment
+
+## What Counts As TUI Work
+
+Treat any of the following as TUI work:
+- startup, prompt, focus, or shutdown behavior
+- rendering, layout, streaming, scrollback, status bar, task panel, or approval UI
+- keyboard handling, palette behavior, slash-command UX, pickers, interrupts, queues
+- backend-to-TUI notifications, warning/error rendering, or terminal output classification
+- inline vs alt-screen behavior
+
+## Required Validation Matrix
+
+Run all of these for every TUI change unless the user explicitly waives a check.
+
+### 1. Startup Path
+
+Prove the real interactive entrypoint starts into a usable state.
+
+Required checks:
+- startup reaches a usable prompt, header, or explicit timeout fallback
+- no panic, traceback, or dead start
+- no obviously malformed terminal output on boot
+
+Good evidence:
+- PTY transcript or scripted PTY capture
+
+### 2. Basic Chat Turn
+
+Prove a normal user turn still works.
+
+Required checks:
+- user can send one plain message
+- assistant output appears in the expected visible region
+- the turn returns to a usable input state
+- no unexpected picker or modal appears after the turn
+
+Good evidence:
+- PTY artifact showing one send/response cycle
+
+### 3. Slash / Picker Surface
+
+Prove the command surface is still usable.
+
+Required baseline checks:
+- `/help` or equivalent command discovery responds visibly
+- `/model` works without corrupting the session
+- if the TUI supports a picker or palette, it opens and closes cleanly
+
+If your change touched another command, test that command too.
+
+### 4. Keyboard Interaction
+
+Prove important control keys still behave correctly.
+
+Required baseline checks:
+- Enter submits when expected
+- Escape cancels/closes when expected
+- Ctrl+K works if the TUI supports the command palette
+- Ctrl+C behavior is correct for the current runtime contract
+
+If your change touched another binding, test that binding too.
+
+### 5. Warning / Error Rendering
+
+Prove backend stderr and runtime errors are rendered with the right severity.
+
+Required checks:
+- warnings do not render as fatal red blocking errors
+- real errors still surface clearly
+- no raw traceback/panic text leaks into the normal happy path
+
+This check is mandatory for any backend/TUI notification change.
+
+### 6. Queue / Interrupt / Streaming Cleanliness
+
+Prove the TUI does not leak internal state into the visible stream.
+
+Required checks:
+- no queue/debug text leaks into chat output
+- no duplicate or stuck spinner/status junk remains after the turn
+- interrupt/cancel/followup behavior stays coherent if touched
+
+If the change touched streaming, queues, or interrupts, this is a hard gate.
+
+### 7. Narrow / Real Terminal Constraints
+
+Prove the UI still behaves in a real terminal geometry.
+
+Required checks:
+- run at least one narrow-ish terminal size
+- no catastrophic wrapping, invisible prompt, or broken footer/status bar
+- no obvious corruption from resize or constrained width
+
+You do not need a full visual design review every time, but you do need to prove the layout still functions.
+
+### 8. Changed-Feature Regression
+
+Prove the feature you changed actually works in the live TUI, not just in a unit test.
+
+Required checks:
+- run the smallest real scenario that exercises the exact behavior you changed
+- assert on visible behavior, not just internal state
+- include at least one regression assertion for the failure mode you were fixing
+
+Examples:
+- warning classification fix: show warning is visible but not fatal
+- `/followup` fix: show queued follow-up drains through normal chat path
+- inline-mode fix: show `--inline` changes terminal behavior
+
+## Required Test Layers
+
+For TUI work, validation should usually include all three:
+
+1. Focused unit or component tests for the changed logic
+2. Real PTY-backed validation of the interactive path
+3. Stored artifact under `docs/qa/test-results/`
+
+If one layer is missing, call it out explicitly.
+
+## Verification Criteria
+
+A TUI change is only ready to report as complete when all of the following are true:
+- focused tests for the changed code are green
+- the full validation matrix above was run
+- a fresh artifact was stored under `docs/qa/test-results/`
+- the artifact demonstrates the changed behavior and the absence of the known regression
+- docs and runtime behavior describe the same contract
+
+## Exit Gates
+
+Do not mark TUI work complete if any of these are true:
+- no PTY or real-terminal evidence was produced
+- the changed feature was only tested indirectly
+- startup, basic chat, picker/palette, or warning/error behavior was not checked
+- the artifact is stale or from a different tree state
+- docs still overstate what is implemented
+
+## Suggested Artifact Contents
+
+Each stored TUI artifact should say:
+- entrypoint used
+- terminal size
+- whether the run was manual or scripted
+- commands/inputs sent
+- what was expected
+- what was observed
+- pass/fail per checklist item
+
+## Minimal Reporting Template
+
+Use language like this in final reports or comms:
+
+- Startup: passed
+- Basic chat turn: passed
+- Slash/picker surface: passed
+- Keyboard interaction: passed
+- Warning/error rendering: passed
+- Queue/stream cleanliness: passed
+- Narrow terminal check: passed
+- Changed-feature regression: passed
+- Artifact: `docs/qa/test-results/<name>.md`
+
+If any item is not run, say that explicitly and why.

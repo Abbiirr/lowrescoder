@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // e2e tests simulate full message flows through the Update loop.
@@ -18,7 +18,7 @@ func TestFullChatFlow(t *testing.T) {
 
 	// Step 1: User sends a message
 	m.composer.SetValue("hello world")
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	m = updated.(model)
 
 	if m.stage != stageStreaming {
@@ -59,7 +59,7 @@ func TestFullChatFlow(t *testing.T) {
 	}
 
 	// Step 5: Verify View shows content during streaming
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "Hi there!") {
 		t.Errorf("expected streaming content in View, got:\n%s", view)
 	}
@@ -86,7 +86,7 @@ func TestFullChatFlowWithToolCall(t *testing.T) {
 
 	// Send message
 	m.composer.SetValue("read the file")
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	m = updated.(model)
 
 	// Tool call starts
@@ -100,7 +100,7 @@ func TestFullChatFlowWithToolCall(t *testing.T) {
 	}
 
 	// View should show tool call
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "read_file") {
 		t.Errorf("expected tool call in view during streaming")
 	}
@@ -138,7 +138,7 @@ func TestFullApprovalFlow(t *testing.T) {
 
 	// Send message
 	m.composer.SetValue("write a file")
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	m = updated.(model)
 
 	// Some tokens
@@ -160,7 +160,7 @@ func TestFullApprovalFlow(t *testing.T) {
 	}
 
 	// View shows approval prompt (title-cased tool name)
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "Write File") {
 		t.Errorf("expected approval prompt (Write File) in view, got:\n%s", view)
 	}
@@ -170,7 +170,7 @@ func TestFullApprovalFlow(t *testing.T) {
 
 	// User approves (Enter on first option "Yes")
 	m.approvalCursor = 0
-	updated, _ = handleApprovalKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ = handleApprovalKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	m = updated.(model)
 
 	if m.stage != stageStreaming {
@@ -199,26 +199,26 @@ func TestFullCancelFlow(t *testing.T) {
 
 	// Send message
 	m.composer.SetValue("do something")
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	m = updated.(model)
 
 	// Queue another message while streaming
 	m.composer.SetValue("next task")
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ = m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	m = updated.(model)
 	if len(m.messageQueue) != 1 {
 		t.Fatalf("expected 1 queued message, got %d", len(m.messageQueue))
 	}
 
-	// Cancel with Ctrl+C
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	// Cancel with Escape (Ctrl+C enters steer mode; Esc cancels)
+	updated, _ = m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
 	m = updated.(model)
 
 	// Queue should be cleared
 	if m.messageQueue != nil {
 		t.Errorf("expected queue cleared after cancel, got %v", m.messageQueue)
 	}
-	// Still streaming (waiting for backend done)
+	// Still streaming (waiting for backend to confirm cancel)
 	if m.stage != stageStreaming {
 		t.Errorf("expected stageStreaming while waiting for cancel confirmation, got %d", m.stage)
 	}
@@ -238,12 +238,12 @@ func TestFullQueueFlow(t *testing.T) {
 
 	// Send first message
 	m.composer.SetValue("first")
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	m = updated.(model)
 
 	// Type and queue second message during streaming
 	m.composer.SetValue("second")
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ = m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	m = updated.(model)
 
 	if len(m.messageQueue) != 1 {
@@ -287,7 +287,7 @@ func TestFullSessionResumeFlow(t *testing.T) {
 
 	// Step 1: User types /resume and presses Enter
 	m.composer.SetValue("/resume")
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	m = updated.(model)
 
 	// Should have sent session.list to backend
@@ -326,7 +326,7 @@ func TestFullSessionResumeFlow(t *testing.T) {
 	}
 
 	// Verify view shows the picker
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "Select a session to resume") {
 		t.Errorf("expected question in view")
 	}
@@ -335,14 +335,14 @@ func TestFullSessionResumeFlow(t *testing.T) {
 	}
 
 	// Step 3: Navigate to second item
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ = m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
 	m = updated.(model)
 	if m.askCursor != 1 {
 		t.Errorf("expected cursor=1, got %d", m.askCursor)
 	}
 
 	// Step 4: Select second item
-	updated, cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd = m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	m = updated.(model)
 
 	if m.stage != stageInput {
@@ -394,14 +394,14 @@ func TestFullSessionResumeCancelFlow(t *testing.T) {
 	}
 
 	// Step 2: Navigate down
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ = m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
 	m = updated.(model)
 	if m.askCursor != 1 {
 		t.Errorf("expected cursor=1, got %d", m.askCursor)
 	}
 
 	// Step 3: Cancel with Escape
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	updated, cmd := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
 	m = updated.(model)
 
 	if m.stage != stageInput {
@@ -428,7 +428,7 @@ func TestFullSessionResumeCancelFlow(t *testing.T) {
 
 	// Step 4: Can now type normally
 	m.composer.SetValue("hello after cancel")
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ = m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	m = updated.(model)
 
 	if m.stage != stageStreaming {
@@ -444,7 +444,7 @@ func TestFullSessionResumeDirectIDFlow(t *testing.T) {
 
 	// Type /resume with a direct session ID
 	m.composer.SetValue("/resume my-session-id")
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	m = updated.(model)
 
 	// Should NOT enter session picker — should go directly to resume
@@ -482,7 +482,7 @@ func TestFullThinkingFlow(t *testing.T) {
 
 	// Send message
 	m.composer.SetValue("explain this")
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	m = updated.(model)
 
 	// Thinking tokens arrive
@@ -496,7 +496,7 @@ func TestFullThinkingFlow(t *testing.T) {
 	}
 
 	// View should show thinking tokens
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "Let me think") {
 		t.Errorf("expected thinking tokens in view when enabled, got:\n%s", view)
 	}
@@ -531,7 +531,7 @@ func TestFullThinkingTokensDisplayInRealTime(t *testing.T) {
 
 	// User sends the prompt
 	m.composer.SetValue("think long and hard, two people sitting under a tree, what is the probability it is an apple tree if they are in england")
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	m = updated.(model)
 
 	if m.stage != stageStreaming {
@@ -582,7 +582,7 @@ func TestFullThinkingTokensDisplayInRealTime(t *testing.T) {
 		}
 
 		// View() should show thinking content right now — not deferred to done
-		view := m.View()
+		view := m.View().Content
 		// The view caps thinking at 5 lines, so check the latest chunk
 		// is visible (at least the tail of what's been delivered)
 		if i < 3 {
@@ -610,7 +610,7 @@ func TestFullThinkingTokensDisplayInRealTime(t *testing.T) {
 	// the view should NOT show all lines
 	fullThinking := m.thinkingBuf.String()
 	allLines := strings.Split(fullThinking, "\n")
-	view := m.View()
+	view := m.View().Content
 	visibleLineCount := 0
 	for _, line := range allLines {
 		trimmed := strings.TrimSpace(line)
@@ -634,7 +634,7 @@ func TestFullThinkingTokensDisplayInRealTime(t *testing.T) {
 	m = updated.(model)
 
 	// View should show BOTH thinking AND streaming response
-	view = m.View()
+	view = m.View().Content
 	if !strings.Contains(view, "probability drops") {
 		t.Error("expected thinking content still visible while response streams")
 	}
@@ -663,7 +663,7 @@ func TestFullThinkingTokensDisplayInRealTime(t *testing.T) {
 	}
 
 	// View should no longer show thinking (it was reset)
-	view = m.View()
+	view = m.View().Content
 	if strings.Contains(view, "apple trees") {
 		t.Error("expected thinking content gone from view after done")
 	}
@@ -689,14 +689,14 @@ func TestThinkingTokensDisabledNotShownInView(t *testing.T) {
 	}
 
 	// But View should NOT show it
-	view := m.View()
+	view := m.View().Content
 	if strings.Contains(view, "secret reasoning") {
 		t.Error("expected thinking hidden when showThinking=false")
 	}
 
 	// Toggle back on — thinking should now appear
 	m.showThinking = true
-	view = m.View()
+	view = m.View().Content
 	if !strings.Contains(view, "secret reasoning") {
 		t.Errorf("expected thinking visible after re-enabling, got:\n%s", view)
 	}
@@ -741,7 +741,7 @@ func TestThinkingTokensInterleavedWithResponseTokens(t *testing.T) {
 	}
 
 	// View should show both thinking and streaming content
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "reconsider the climate") {
 		t.Errorf("expected thinking in view, got:\n%s", view)
 	}

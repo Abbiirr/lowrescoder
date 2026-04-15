@@ -9,11 +9,12 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // Backend manages the Python backend subprocess and JSON-RPC communication.
@@ -293,8 +294,20 @@ func (b *Backend) drainStderr(ctx context.Context) {
 		if line == "" {
 			continue
 		}
-		// Surface backend stderr as error messages
-		if b.program != nil {
+		if b.program == nil {
+			continue
+		}
+		// Classify by log level so Python WARNING lines don't render as fatal errors.
+		upper := strings.ToUpper(line)
+		switch {
+		case strings.Contains(upper, "DEBUG:") || strings.Contains(upper, " DEBUG ") ||
+			strings.Contains(upper, "INFO:") || strings.Contains(upper, " INFO "):
+			// Suppress DEBUG/INFO — too noisy for the chat UI.
+		case strings.Contains(upper, "WARNING:") || strings.Contains(upper, "WARN:") ||
+			strings.Contains(upper, " WARNING ") || strings.Contains(upper, " WARN "):
+			b.program.Send(backendWarningMsg{Message: "[backend] " + line})
+		default:
+			// ERROR, CRITICAL, unknown format → surface as error.
 			b.program.Send(backendErrorMsg{Message: "[backend] " + line})
 		}
 	}
@@ -459,6 +472,17 @@ func (b *Backend) dispatchNotification(msg RPCMessage) {
 		b.program.Send(backendTaskStateMsg{
 			Tasks:     params.Tasks,
 			Subagents: params.Subagents,
+		})
+
+	case "on_cost_update":
+		var params CostUpdateParams
+		if err := json.Unmarshal(msg.Params, &params); err != nil {
+			return
+		}
+		b.program.Send(backendCostMsg{
+			Cost:      params.Cost,
+			TokensIn:  params.TokensIn,
+			TokensOut: params.TokensOut,
 		})
 	}
 }

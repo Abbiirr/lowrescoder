@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestUpdateWindowSizeMsg(t *testing.T) {
@@ -220,7 +220,7 @@ func TestHandleInputKeyCtrlCFirstPress(t *testing.T) {
 	m := initialModel(nil)
 	m.stage = stageInput
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: 'c', Mod: tea.ModCtrl}))
 	um := updated.(model)
 
 	if um.interruptCount != 1 {
@@ -236,7 +236,7 @@ func TestHandleInputKeyCtrlCSecondPress(t *testing.T) {
 	m.stage = stageInput
 	m.interruptCount = 1
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: 'c', Mod: tea.ModCtrl}))
 	um := updated.(model)
 
 	if !um.quitting {
@@ -248,7 +248,7 @@ func TestHandleInputKeyCtrlD(t *testing.T) {
 	m := initialModel(nil)
 	m.stage = stageInput
 
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	updated, cmd := m.Update(tea.KeyPressMsg(tea.Key{Code: 'd', Mod: tea.ModCtrl}))
 	um := updated.(model)
 
 	if !um.quitting {
@@ -264,7 +264,7 @@ func TestHandleInputKeyEnterEmpty(t *testing.T) {
 	m.stage = stageInput
 	m.composer.SetValue("")
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if um.stage != stageInput {
@@ -272,16 +272,19 @@ func TestHandleInputKeyEnterEmpty(t *testing.T) {
 	}
 }
 
-func TestHandleStreamingKeyCtrlC(t *testing.T) {
+func TestHandleStreamingKeyCtrlCEntersSteer(t *testing.T) {
 	m := initialModel(nil)
 	m.stage = stageStreaming
 	m.messageQueue = []string{"queued msg"}
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: 'c', Mod: tea.ModCtrl}))
 	um := updated.(model)
 
-	if um.messageQueue != nil {
-		t.Error("expected queue to be cleared on cancel")
+	if um.stage != stageSteer {
+		t.Errorf("expected stageSteer after Ctrl+C, got %d", um.stage)
+	}
+	if !um.stageSteer {
+		t.Error("expected stageSteer flag to be true")
 	}
 }
 
@@ -290,7 +293,7 @@ func TestHandleStreamingKeyEscape(t *testing.T) {
 	m.stage = stageStreaming
 	m.messageQueue = []string{"queued msg"}
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
 	um := updated.(model)
 
 	if um.messageQueue != nil {
@@ -303,7 +306,7 @@ func TestHandleStreamingKeyEnterQueues(t *testing.T) {
 	m.stage = stageStreaming
 	m.composer.SetValue("next message")
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if len(um.messageQueue) != 1 {
@@ -321,7 +324,7 @@ func TestHandleStreamingKeyEnterQueueFull(t *testing.T) {
 	m.messageQueue = []string{"a", "b"}
 	m.composer.SetValue("overflow")
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if len(um.messageQueue) != 2 {
@@ -461,7 +464,7 @@ func TestTypingDuringStreaming(t *testing.T) {
 	m.composer.Focus()
 
 	// Simulate typing a character during streaming
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Text: "a", Code: 'a'}))
 	um := updated.(model)
 
 	if um.composer.Value() != "a" {
@@ -479,7 +482,7 @@ func TestQueueMessageDuringStreamingPreservesInput(t *testing.T) {
 	m.composer.Focus()
 	m.composer.SetValue("queued message")
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	// Message should be queued
@@ -496,25 +499,28 @@ func TestQueueMessageDuringStreamingPreservesInput(t *testing.T) {
 	}
 }
 
-func TestCtrlCDuringStreamingCancels(t *testing.T) {
+func TestCtrlCEntersSteerDuringStreaming(t *testing.T) {
 	m := initialModel(nil)
 	m.stage = stageStreaming
 	m.composer.Focus()
 	m.messageQueue = []string{"a", "b"}
 	m.interruptCount = 0
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: 'c', Mod: tea.ModCtrl}))
 	um := updated.(model)
 
-	// Queue should be cleared
-	if um.messageQueue != nil {
-		t.Errorf("expected queue cleared on Ctrl+C, got %v", um.messageQueue)
+	// First Ctrl+C enters steer mode
+	if um.stage != stageSteer {
+		t.Errorf("expected stageSteer after Ctrl+C, got %d", um.stage)
 	}
-	// Should still be in streaming (waiting for backend to confirm cancel)
-	if um.stage != stageStreaming {
-		t.Errorf("expected to stay in stageStreaming after cancel, got %d", um.stage)
+	if !um.stageSteer {
+		t.Error("expected stageSteer flag to be true")
 	}
-	// interruptCount should be 1 (next Ctrl+C will force quit)
+	// Queue is preserved (not cleared) — steer can be sent or cancelled
+	if um.messageQueue == nil {
+		t.Error("expected queue preserved during steer, got nil")
+	}
+	// interruptCount should be 1 (second Ctrl+C will force quit)
 	if um.interruptCount != 1 {
 		t.Errorf("expected interruptCount=1, got %d", um.interruptCount)
 	}
@@ -525,18 +531,21 @@ func TestDoubleCtrlCDuringStreamingQuits(t *testing.T) {
 	m.stage = stageStreaming
 	m.interruptCount = 0
 
-	// First Ctrl+C: cancel, don't quit
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	// First Ctrl+C: enter steer mode, don't quit
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: 'c', Mod: tea.ModCtrl}))
 	um := updated.(model)
 	if um.quitting {
-		t.Error("first Ctrl+C should cancel, not quit")
+		t.Error("first Ctrl+C should enter steer mode, not quit")
+	}
+	if um.stage != stageSteer {
+		t.Errorf("expected stageSteer after first Ctrl+C, got %d", um.stage)
 	}
 	if um.interruptCount != 1 {
 		t.Errorf("expected interruptCount=1 after first Ctrl+C, got %d", um.interruptCount)
 	}
 
 	// Second Ctrl+C: force quit
-	updated2, _ := um.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	updated2, _ := um.Update(tea.KeyPressMsg(tea.Key{Code: 'c', Mod: tea.ModCtrl}))
 	um2 := updated2.(model)
 	if !um2.quitting {
 		t.Error("second Ctrl+C should force-quit during streaming")
@@ -548,7 +557,7 @@ func TestCtrlCDuringInputFirstPress(t *testing.T) {
 	m.stage = stageInput
 	m.interruptCount = 0
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: 'c', Mod: tea.ModCtrl}))
 	um := updated.(model)
 
 	if um.interruptCount != 1 {
@@ -564,7 +573,7 @@ func TestCtrlCDuringInputSecondPress(t *testing.T) {
 	m.stage = stageInput
 	m.interruptCount = 1
 
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	updated, cmd := m.Update(tea.KeyPressMsg(tea.Key{Code: 'c', Mod: tea.ModCtrl}))
 	um := updated.(model)
 
 	if !um.quitting {
@@ -580,7 +589,7 @@ func TestEscapeDuringStreamingCancels(t *testing.T) {
 	m.stage = stageStreaming
 	m.messageQueue = []string{"pending"}
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
 	um := updated.(model)
 
 	if um.messageQueue != nil {
@@ -594,7 +603,7 @@ func TestInputFocusRestoredAfterApproval(t *testing.T) {
 	m.approvalRequestID = 1000
 	m.approvalCursor = 0 // "Yes"
 
-	updated, _ := handleApprovalKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := handleApprovalKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if um.stage != stageStreaming {
@@ -610,7 +619,7 @@ func TestInputFocusRestoredAfterApprovalDenied(t *testing.T) {
 	m.stage = stageApproval
 	m.approvalRequestID = 1000
 
-	updated, _ := handleApprovalKey(m, tea.KeyMsg{Type: tea.KeyEscape})
+	updated, _ := handleApprovalKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
 	um := updated.(model)
 
 	if um.stage != stageStreaming {
@@ -628,7 +637,7 @@ func TestInputFocusRestoredAfterAskUser(t *testing.T) {
 	m.askOptions = []string{"A", "B"}
 	m.askCursor = 0
 
-	updated, _ := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if um.stage != stageStreaming {
@@ -827,7 +836,7 @@ func TestCtrlDQuitsFromStreaming(t *testing.T) {
 	m.stage = stageStreaming
 
 	// Ctrl+D should force-quit even during streaming
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: 'd', Mod: tea.ModCtrl}))
 	um := updated.(model)
 
 	if !um.quitting {
@@ -844,7 +853,7 @@ func TestQueueCountInView(t *testing.T) {
 	m.messageQueue = []string{"a", "b", "c"}
 
 	// View sets statusBar.Queue and renders it
-	view := m.View()
+	view := m.View().Content
 
 	if !strings.Contains(view, "queue: 3") {
 		t.Errorf("expected 'queue: 3' in view, got:\n%s", view)
@@ -859,7 +868,7 @@ func TestInterruptCountResetsOnSend(t *testing.T) {
 	m.interruptCount = 1
 	m.composer.SetValue("hello")
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if um.interruptCount != 0 {
@@ -886,7 +895,7 @@ func TestSlashExitViaEnter(t *testing.T) {
 	m.stage = stageInput
 	m.composer.SetValue("/exit")
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if !um.quitting {
@@ -900,7 +909,7 @@ func TestSlashThinkingViaEnter(t *testing.T) {
 	m.showThinking = true
 	m.composer.SetValue("/thinking")
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if um.showThinking {
@@ -913,7 +922,7 @@ func TestSlashCommandBackendDelegatedNoBackend(t *testing.T) {
 	m.stage = stageInput
 	m.composer.SetValue("/help")
 
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	// Should not crash with nil backend
@@ -932,7 +941,7 @@ func TestEnterAcceptsAutocompleteSuggestion(t *testing.T) {
 
 	// Type "/hel" to get a single suggestion (/help)
 	for _, r := range []rune{'/', 'h', 'e', 'l'} {
-		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Text: string(r), Code: r}))
 		m = updated.(model)
 	}
 
@@ -942,7 +951,7 @@ func TestEnterAcceptsAutocompleteSuggestion(t *testing.T) {
 	}
 
 	// Press Enter — single completion auto-accepts, submits /help
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	m = updated.(model)
 
 	// Composer should be cleared after submission
@@ -974,7 +983,7 @@ func TestSlashCommandClearsCompletions(t *testing.T) {
 	m.completions = []string{"/exit", "/explore"}
 	m.composer.SetValue("/exit")
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if um.completions != nil {
@@ -1142,7 +1151,7 @@ func TestSlashResumeViaEnter(t *testing.T) {
 	m.stage = stageInput
 	m.composer.SetValue("/resume")
 
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	// With nil backend, should get error message
@@ -1179,5 +1188,222 @@ func TestTokenMsgEmptyTextDuringInput(t *testing.T) {
 	// Empty text should not produce a Println (trimmed to empty)
 	if cmd != nil {
 		t.Error("expected nil command for empty token during input stage")
+	}
+}
+
+// --- Phase 3: Sliding window tests ---
+
+func TestTickFlushesStableLinesToScrollback(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageStreaming
+	m.maxLiveLines = 3
+	// Write 6 lines of content to tokenBuf
+	for i := 0; i < 6; i++ {
+		m.tokenBuf.WriteString("line " + strings.Repeat("x", i+1))
+		m.tokenBuf.WriteString("\n")
+	}
+	m.streamDirty = true
+
+	updated, cmd := m.Update(tickMsg{})
+	um := updated.(model)
+
+	// First 3 lines should be flushed to stableScrollbackLines
+	if len(um.stableScrollbackLines) < 3 {
+		t.Errorf("expected at least 3 stable lines, got %d", len(um.stableScrollbackLines))
+	}
+	// streamBuf should only contain the last maxLiveLines
+	lines := strings.Split(um.streamBuf.String(), "\n")
+	// Filter empty trailing line from trailing newline
+	nonEmpty := 0
+	for _, l := range lines {
+		if l != "" {
+			nonEmpty++
+		}
+	}
+	if nonEmpty > m.maxLiveLines {
+		t.Errorf("expected at most %d live lines, got %d", m.maxLiveLines, nonEmpty)
+	}
+	// Should have produced tea.Println commands for flushed lines
+	if cmd == nil {
+		t.Error("expected tea.Println commands for flushed stable lines")
+	}
+}
+
+func TestTickNoFlushWhenBelowMaxLiveLines(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageStreaming
+	m.maxLiveLines = 10
+	m.tokenBuf.WriteString("short content\n")
+	m.streamDirty = true
+
+	updated, _ := m.Update(tickMsg{})
+	um := updated.(model)
+
+	if len(um.stableScrollbackLines) != 0 {
+		t.Errorf("expected no stable lines for short content, got %d", len(um.stableScrollbackLines))
+	}
+}
+
+// --- Phase 4: Steer mode tests ---
+
+func TestSteerModeEnterOnCtrlC(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageStreaming
+
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: 'c', Mod: tea.ModCtrl}))
+	um := updated.(model)
+
+	if um.stage != stageSteer {
+		t.Errorf("expected stageSteer, got %d", um.stage)
+	}
+	if !um.stageSteer {
+		t.Error("expected stageSteer flag")
+	}
+}
+
+func TestSteerModeEscapeReturnsToStreaming(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageSteer
+	m.stageSteer = true
+	m.steerInput = "partial"
+
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
+	um := updated.(model)
+
+	if um.stage != stageStreaming {
+		t.Errorf("expected stageStreaming, got %d", um.stage)
+	}
+	if um.stageSteer {
+		t.Error("expected stageSteer to be cleared")
+	}
+}
+
+func TestSteerModeCtrlCQuitsOnSecondPress(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageSteer
+	m.stageSteer = true
+	m.interruptCount = 1
+
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: 'c', Mod: tea.ModCtrl}))
+	um := updated.(model)
+
+	if !um.quitting {
+		t.Error("expected second Ctrl+C to force-quit")
+	}
+}
+
+func TestSteerModeEnterSendsMessage(t *testing.T) {
+	b := NewBackend()
+	m := initialModel(b)
+	m.stage = stageSteer
+	m.stageSteer = true
+	m.steerInput = "change direction"
+
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
+	um := updated.(model)
+
+	if um.stageSteer {
+		t.Error("expected stageSteer to be cleared after enter")
+	}
+	if um.steerInput != "" {
+		t.Errorf("expected steer input cleared, got '%s'", um.steerInput)
+	}
+}
+
+func TestFollowupQueueCommand(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageInput
+	m.composer.SetValue("/followup do this next")
+
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
+	um := updated.(model)
+
+	if len(um.followupQueue) != 1 {
+		t.Fatalf("expected 1 followup, got %d", len(um.followupQueue))
+	}
+	if um.followupQueue[0] != "do this next" {
+		t.Errorf("expected 'do this next', got '%s'", um.followupQueue[0])
+	}
+}
+
+func TestPlanModeToggle(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageInput
+
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
+	m = updated.(model)
+	m.composer.SetValue("/plan")
+
+	updated, _ = m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
+	um := updated.(model)
+
+	if !um.planMode {
+		t.Error("expected planMode to be true after /plan command")
+	}
+}
+
+// --- Phase 5: External editor keybinding ---
+
+func TestCtrlEInInputStage(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageInput
+	m.composer.SetValue("initial text")
+
+	updated, cmd := m.Update(tea.KeyPressMsg(tea.Key{Code: 'e', Mod: tea.ModCtrl}))
+	// The command should trigger openEditorCmd
+	if cmd == nil {
+		t.Error("expected non-nil command for Ctrl+E (editor)")
+	}
+	um := updated.(model)
+	// Composer content should remain unchanged until editor returns
+	if um.composer.Value() != "initial text" {
+		t.Errorf("expected composer content preserved, got '%s'", um.composer.Value())
+	}
+}
+
+// --- Phase 5: Theme detection ---
+
+func TestThemeDetectionDarkDefault(t *testing.T) {
+	msg := detectThemeCmd()
+	result := msg()
+	bgMsg, ok := result.(bgColorMsg)
+	if !ok {
+		t.Fatalf("expected bgColorMsg, got %T", result)
+	}
+	// Default (no COLORFGBG) should be dark
+	if bgMsg.R != 30 || bgMsg.G != 30 || bgMsg.B != 30 {
+		t.Errorf("expected dark default (30,30,30), got (%d,%d,%d)", bgMsg.R, bgMsg.G, bgMsg.B)
+	}
+}
+
+// --- Phase 5: Frecency history ---
+
+func TestFrecencyAddNewEntry(t *testing.T) {
+	var entries []historyEntry
+	entries = historyAddFrecency(entries, "hello")
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Text != "hello" || entries[0].Count != 1 {
+		t.Errorf("expected hello/1, got %s/%d", entries[0].Text, entries[0].Count)
+	}
+}
+
+func TestFrecencyAddExistingEntry(t *testing.T) {
+	entries := []historyEntry{{Text: "hello", Count: 3, Last: 1000}}
+	entries = historyAddFrecency(entries, "hello")
+	if entries[0].Count != 4 {
+		t.Errorf("expected count 4, got %d", entries[0].Count)
+	}
+}
+
+func TestFrecencySortByScore(t *testing.T) {
+	entries := []historyEntry{
+		{Text: "rare", Count: 1, Last: 100},
+		{Text: "frequent", Count: 10, Last: 99999},
+	}
+	sorted := sortByFrecency(entries)
+	if sorted[0].Text != "frequent" {
+		t.Errorf("expected 'frequent' first, got '%s'", sorted[0].Text)
 	}
 }

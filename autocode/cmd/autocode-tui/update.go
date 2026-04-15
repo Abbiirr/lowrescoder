@@ -2,10 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/spinner"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/spinner"
+	tea "charm.land/bubbletea/v2"
 )
 
 // Update handles all messages for the root model.
@@ -23,12 +26,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// stale-width formatting partway through a stream.
 		return m, tickCmd()
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch m.stage {
 		case stageInput, stageInit:
 			return m.handleInputKey(msg)
 		case stageStreaming:
 			return m.handleStreamingKey(msg)
+		case stageSteer:
+			return m.handleSteerKey(msg)
 		case stageApproval:
 			return handleApprovalKey(m, msg)
 		case stageAskUser:
@@ -41,12 +46,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handlePaletteKey(msg)
 		}
 
+	case startupTimeoutMsg:
+		// Backend didn't send on_status within the startup window.
+		// Transition to stageInput so the TUI is usable; show a warning.
+		if m.stage == stageInit {
+			m.stage = stageInput
+			m.lastError = "Backend not connected (startup timeout). Commands requiring the backend will fail."
+		}
+		return m, nil
+
 	case backendStatusMsg:
 		m.statusBar.Model = msg.Model
 		m.statusBar.Provider = msg.Provider
 		m.statusBar.Mode = msg.Mode
+		if msg.SessionID != "" {
+			m.sessionID = msg.SessionID
+		}
 		if m.stage == stageInit {
 			m.stage = stageInput
+			m.lastError = "" // clear any startup-timeout error once backend connects
 		}
 		return m, nil
 
@@ -86,6 +104,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.lastError = msg.Message
 		return m, nil
 
+	case backendWarningMsg:
+		// Warnings are printed to scrollback as dim text, not as a blocking error banner.
+		return m, tea.Println(dimStyle.Render("⚠ " + msg.Message))
+
 	case backendApprovalRequestMsg:
 		return enterApproval(m, msg), nil
 
@@ -122,12 +144,61 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.quitting = true
 		return m, tea.Quit
 
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spin, cmd = m.spin.Update(msg)
+		if m.stage == stageStreaming {
+			m.verbTicks++
+			if m.verbTicks >= 8 {
+				m.verbTicks = 0
+				m.currentVerb = randomVerb()
+			}
+		}
+		return m, cmd
+
+	// --- Phase 3: Sliding window tick ---
 	case tickMsg:
+		var cmds []tea.Cmd
 		if m.streamDirty {
-			// Flush token buffer to stream buffer
 			m.streamBuf.WriteString(m.tokenBuf.String())
 			m.tokenBuf.Reset()
 			m.streamDirty = false
+
+			// Sliding window: flush stable lines to scrollback via tea.Println
+			content := m.streamBuf.String()
+			lines := strings.Split(content, "\n")
+			if len(lines) > m.maxLiveLines {
+				stable := lines[:len(lines)-m.maxLiveLines]
+				for _, line := range stable {
+					if strings.TrimSpace(line) != "" {
+						cmds = append(cmds, tea.Println(streamStyle.Render(line)))
+					} else {
+						cmds = append(cmds, tea.Println(""))
+					}
+				}
+				m.stableScrollbackLines = append(m.stableScrollbackLines, stable...)
+				remaining := lines[len(lines)-m.maxLiveLines:]
+				m.streamBuf.Reset()
+				m.streamBuf.WriteString(strings.Join(remaining, "\n"))
+			}
+		}
+		if len(cmds) > 0 {
+			return m, tea.Batch(cmds...)
+		}
+		return m, nil
+
+	// --- Phase 4: Steer ---
+	case steerSendMsg:
+		if m.backend != nil {
+			m.backend.SendRequest("steer", SteerParams{Message: msg.Text})
+		}
+		return m, nil
+
+	case followupDrainMsg:
+		if len(m.followupQueue) > 0 {
+			next := m.followupQueue[0]
+			m.followupQueue = m.followupQueue[1:]
+			return m.sendChat(next)
 		}
 		return m, nil
 
@@ -139,18 +210,46 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case spinner.TickMsg:
-		var cmd tea.Cmd
-		m.spin, cmd = m.spin.Update(msg)
-		// Rotate spinner verb every ~3 seconds
-		if m.stage == stageStreaming {
-			m.verbTicks++
-			if m.verbTicks >= 8 { // spinner ticks ~2.5x/sec with MiniDot
-				m.verbTicks = 0
-				m.currentVerb = randomVerb()
-			}
+	case backendForkResultMsg:
+		if msg.Error != "" {
+			m.lastError = "Fork failed: " + msg.Error
+			return m, nil
 		}
-		return m, cmd
+		if msg.NewSessionID != "" {
+			m.sessionID = msg.NewSessionID
+		}
+		return m, tea.Println(dimStyle.Render("Forked session: " + msg.NewSessionID))
+
+	// --- Phase 5: Editor done ---
+	case editorDoneMsg:
+		if msg.Content != "" {
+			m.composer.SetValue(msg.Content)
+			composerAutoHeight(&m)
+		}
+		return m, nil
+
+	// --- Phase 5: Background color detected ---
+	case bgColorMsg:
+		m.bgColorR = msg.R
+		m.bgColorG = msg.G
+		m.bgColorB = msg.B
+		luminance := (0.299*float64(msg.R) + 0.587*float64(msg.G) + 0.114*float64(msg.B))
+		if luminance > 128 {
+			m.themeDetected = "light"
+		} else {
+			m.themeDetected = "dark"
+		}
+		return m, nil
+
+	// --- Phase 6: Cost/token updates ---
+	case backendCostMsg:
+		m.totalCost = msg.Cost
+		m.statusBar.Tokens = m.totalTokensIn + m.totalTokensOut
+		return m, nil
+
+	case backendSessionIDMsg:
+		m.sessionID = msg.SessionID
+		return m, nil
 	}
 
 	// Forward unhandled messages to composer (cursor blink, etc.)
@@ -164,7 +263,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // handleInputKey handles key events during input stage.
-func (m model) handleInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m model) handleInputKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "ctrl+c":
 		m.interruptCount++
@@ -178,6 +277,9 @@ func (m model) handleInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+d":
 		m.quitting = true
 		return m, tea.Quit
+
+	case "ctrl+e":
+		return m, openEditorCmd(m.composer.Value())
 
 	case "ctrl+k":
 		m.stage = stagePalette
@@ -306,29 +408,26 @@ func (m model) handleInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleStreamingKey handles key events during streaming.
-func (m model) handleStreamingKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m model) handleStreamingKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "ctrl+d":
-		// Force quit from streaming
 		m.quitting = true
 		return m, tea.Quit
 
 	case "ctrl+c":
-		// Double Ctrl+C force quits; single cancels generation
 		m.interruptCount++
 		if m.interruptCount >= 2 {
 			m.quitting = true
 			return m, tea.Quit
 		}
-		// Cancel generation + clear queue
-		m.messageQueue = nil
-		if m.backend != nil {
-			m.backend.SendRequest("cancel", CancelParams{})
-		}
+		// Phase 4: First Ctrl+C enters steer mode instead of cancelling
+		m.stageSteer = true
+		m.stage = stageSteer
+		m.steerInput = ""
+		m.steerCursor = 0
 		return m, nil
 
 	case "escape", "esc":
-		// Cancel generation + clear queue
 		m.messageQueue = nil
 		if m.backend != nil {
 			m.backend.SendRequest("cancel", CancelParams{})
@@ -336,7 +435,6 @@ func (m model) handleStreamingKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case "enter":
-		// Queue message during streaming
 		text := composerValue(&m)
 		if text != "" && len(m.messageQueue) < m.queueMax {
 			m.messageQueue = append(m.messageQueue, text)
@@ -345,7 +443,6 @@ func (m model) handleStreamingKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	default:
-		// Allow typing while streaming (parallel input)
 		var cmd tea.Cmd
 		m.composer, cmd = m.composer.Update(msg)
 		composerAutoHeight(&m)
@@ -394,9 +491,17 @@ func (m model) handleDone(msg backendDoneMsg) (tea.Model, tea.Cmd) {
 
 	// Update stats
 	m.statusBar.Tokens += msg.TokensIn + msg.TokensOut
+	m.totalTokensIn += msg.TokensIn
+	m.totalTokensOut += msg.TokensOut
 
 	// Build scrollback output
 	var cmds []tea.Cmd
+
+	// Sliding window: flush stable scrollback lines
+	for _, line := range m.stableScrollbackLines {
+		cmds = append(cmds, tea.Println(line))
+	}
+	m.stableScrollbackLines = nil
 
 	// Tool calls summary — same compact ⎿ format as live view
 	for _, tc := range m.toolCalls {
@@ -432,7 +537,13 @@ func (m model) handleDone(msg backendDoneMsg) (tea.Model, tea.Cmd) {
 	m.stage = stageInput
 	composerFocus(&m)
 
-	// Drain queue if messages pending
+	// Drain followup queue first, then message queue.
+	// followupDrainMsg handler calls sendChat — do NOT route through steerSendMsg.
+	if len(m.followupQueue) > 0 {
+		cmds = append(cmds, func() tea.Msg { return followupDrainMsg{} })
+		return m, tea.Batch(cmds...)
+	}
+
 	if len(m.messageQueue) > 0 {
 		cmds = append(cmds, func() tea.Msg { return queueDrainMsg{} })
 	}
@@ -459,6 +570,36 @@ func (m model) handleSlashCommand(text string) (tea.Model, tea.Cmd) {
 			state = "on"
 		}
 		return m, tea.Println(dimStyle.Render("Thinking: " + state))
+
+	case "plan":
+		m.planMode = !m.planMode
+		state := "off"
+		if m.planMode {
+			state = "on"
+		}
+		return m, tea.Println(dimStyle.Render("Plan mode: " + state))
+
+	case "followup":
+		if args == "" {
+			return m, tea.Println(errorStyle.Render("Usage: /followup <message>"))
+		}
+		m.followupQueue = append(m.followupQueue, args)
+		return m, tea.Println(dimStyle.Render(fmt.Sprintf("Followup queued (%d pending)", len(m.followupQueue))))
+
+	case "fork":
+		if m.backend == nil {
+			return m, tea.Println(errorStyle.Render("Backend not connected — /fork requires the Python backend"))
+		}
+		return m, m.backend.SendRequestCmd("session.fork", ForkSessionParams{}, func(result json.RawMessage, rpcErr *RPCError) tea.Msg {
+			if rpcErr != nil {
+				return backendForkResultMsg{Error: rpcErr.Message}
+			}
+			var forkResult ForkSessionResult
+			if err := json.Unmarshal(result, &forkResult); err != nil {
+				return backendForkResultMsg{Error: err.Error()}
+			}
+			return backendForkResultMsg{NewSessionID: forkResult.NewSessionID}
+		})
 
 	case "resume":
 		if m.backend == nil {
@@ -565,11 +706,18 @@ var paletteEntries = []struct {
 	{"/plan", "Plan mode controls"},
 	{"/memory", "Show learned patterns"},
 	{"/checkpoint", "Manage checkpoints"},
+	{"/undo", "Restore the most recent checkpoint"},
+	{"/diff", "Show the current git diff"},
+	{"/cost", "Show session token usage"},
+	{"/export", "Export the conversation to markdown"},
 	{"/thinking", "Toggle thinking display"},
 	{"/shell", "Toggle shell execution"},
 	{"/init", "Initialize project context"},
 	{"/index", "Build code search index"},
 	{"/copy", "Copy last response to clipboard"},
+	{"/followup", "Queue a message after current tool"},
+	{"/fork", "Fork the current session"},
+	{"/plan", "Toggle plan mode"},
 	{"/clear", "Clear the screen"},
 	{"/exit", "Quit AutoCode"},
 }
@@ -595,7 +743,7 @@ func paletteDescMap() map[string]string {
 	return m
 }
 
-func (m model) handlePaletteKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m model) handlePaletteKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "escape", "esc", "ctrl+k":
 		m.stage = stageInput
@@ -642,5 +790,113 @@ func (m model) handlePaletteKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.paletteCursor = 0
 		}
 		return m, nil
+	}
+}
+
+// --- Phase 4: Steer handler ---
+
+// handleSteerKey handles key events while the user is typing a steer message.
+// Steer injects a message mid-tool-execution without cancelling the current tool.
+func (m model) handleSteerKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter":
+		text := strings.TrimSpace(m.steerInput)
+		if text == "" {
+			m.stage = stageStreaming
+			m.stageSteer = false
+			return m, nil
+		}
+		m.stage = stageStreaming
+		m.stageSteer = false
+		m.steerInput = ""
+		m.steerCursor = 0
+		return m, func() tea.Msg { return steerSendMsg{Text: text} }
+
+	case "escape", "esc":
+		m.stage = stageStreaming
+		m.stageSteer = false
+		m.steerInput = ""
+		m.steerCursor = 0
+		return m, nil
+
+	case "ctrl+c":
+		m.interruptCount++
+		if m.interruptCount >= 2 {
+			m.quitting = true
+			return m, tea.Quit
+		}
+		m.stage = stageStreaming
+		m.stageSteer = false
+		m.steerInput = ""
+		m.steerCursor = 0
+		m.messageQueue = nil
+		if m.backend != nil {
+			m.backend.SendRequest("cancel", CancelParams{})
+		}
+		return m, nil
+
+	case "backspace":
+		if m.steerCursor > 0 && len(m.steerInput) > 0 {
+			m.steerInput = m.steerInput[:m.steerCursor-1] + m.steerInput[m.steerCursor:]
+			m.steerCursor--
+		}
+		return m, nil
+
+	case "left":
+		if m.steerCursor > 0 {
+			m.steerCursor--
+		}
+		return m, nil
+
+	case "right":
+		if m.steerCursor < len(m.steerInput) {
+			m.steerCursor++
+		}
+		return m, nil
+
+	default:
+		r := msg.String()
+		if len(r) == 1 {
+			m.steerInput = m.steerInput[:m.steerCursor] + r + m.steerInput[m.steerCursor:]
+			m.steerCursor++
+		}
+		return m, nil
+	}
+}
+
+// openEditorCmd opens the user's $EDITOR with the current composer content,
+// reads the result back, and returns an editorDoneMsg.
+func openEditorCmd(initialContent string) tea.Cmd {
+	return func() tea.Msg {
+		editor := os.Getenv("EDITOR")
+		if editor == "" {
+			editor = "vi"
+		}
+		tmpFile, err := os.CreateTemp("", "autocode-*.md")
+		if err != nil {
+			return editorDoneMsg{Content: initialContent}
+		}
+		tmpPath := tmpFile.Name()
+		defer os.Remove(tmpPath)
+
+		if _, err := tmpFile.WriteString(initialContent); err != nil {
+			tmpFile.Close()
+			return editorDoneMsg{Content: initialContent}
+		}
+		tmpFile.Close()
+
+		cmd := exec.Command(editor, tmpPath)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return editorDoneMsg{Content: initialContent}
+		}
+
+		content, err := os.ReadFile(tmpPath)
+		if err != nil {
+			return editorDoneMsg{Content: initialContent}
+		}
+		return editorDoneMsg{Content: strings.TrimSpace(string(content))}
 	}
 }

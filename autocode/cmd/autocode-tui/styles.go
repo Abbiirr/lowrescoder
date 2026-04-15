@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 // --- TUI Styles ---
@@ -65,10 +65,10 @@ var (
 					Foreground(lipgloss.Color("#cc7832"))
 
 	composerFrameApprovalStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("11"))
+					Foreground(lipgloss.Color("11"))
 
 	composerFrameAskUserStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("14"))
+					Foreground(lipgloss.Color("14"))
 
 	composerTitleStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("240"))

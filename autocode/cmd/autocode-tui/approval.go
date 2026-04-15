@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // enterApproval transitions the model to approval stage.
@@ -62,7 +62,7 @@ func titleCase(s string) string {
 }
 
 // handleApprovalKey handles key events during approval.
-func handleApprovalKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleApprovalKey(m model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "up", "k":
 		m.approvalCursor--

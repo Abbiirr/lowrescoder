@@ -81,7 +81,7 @@ type StatusParams struct {
 
 // TaskStateParams carries task and subagent state updates.
 type TaskStateParams struct {
-	Tasks     []taskEntry    `json:"tasks"`
+	Tasks     []taskEntry     `json:"tasks"`
 	Subagents []subagentEntry `json:"subagents"`
 }
 
@@ -159,4 +159,28 @@ type SessionInfo struct {
 	Title    string `json:"title"`
 	Model    string `json:"model"`
 	Provider string `json:"provider"`
+}
+
+// --- Phase 4: Steer / Fork params ---
+
+// SteerParams injects a message into the running agent loop.
+type SteerParams struct {
+	Message string `json:"message"`
+}
+
+// ForkSessionParams forks the current session at the current message.
+type ForkSessionParams struct {
+	SessionID string `json:"session_id,omitempty"`
+}
+
+// ForkSessionResult is the response from session.fork.
+type ForkSessionResult struct {
+	NewSessionID string `json:"new_session_id"`
+}
+
+// CostUpdateParams carries cost/token data from an on_cost_update notification.
+type CostUpdateParams struct {
+	Cost      string `json:"cost"`
+	TokensIn  int    `json:"tokens_in"`
+	TokensOut int    `json:"tokens_out"`
 }

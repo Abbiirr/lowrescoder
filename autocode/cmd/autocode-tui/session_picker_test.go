@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // --- enterSessionPicker tests ---
@@ -226,28 +226,28 @@ func TestSessionPickerArrowNavigation(t *testing.T) {
 	m = enterSessionPicker(m, msg)
 
 	// Down arrow
-	updated, _ := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
 	m = updated.(model)
 	if m.askCursor != 1 {
 		t.Errorf("expected cursor=1 after down, got %d", m.askCursor)
 	}
 
 	// Down again
-	updated, _ = handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ = handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
 	m = updated.(model)
 	if m.askCursor != 2 {
 		t.Errorf("expected cursor=2 after second down, got %d", m.askCursor)
 	}
 
 	// Down wraps to 0
-	updated, _ = handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ = handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
 	m = updated.(model)
 	if m.askCursor != 0 {
 		t.Errorf("expected cursor=0 after wrap, got %d", m.askCursor)
 	}
 
 	// Up wraps to last
-	updated, _ = handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ = handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyUp}))
 	m = updated.(model)
 	if m.askCursor != 2 {
 		t.Errorf("expected cursor=2 after up wrap, got %d", m.askCursor)
@@ -267,7 +267,7 @@ func TestSessionPickerEnterSelectsSession(t *testing.T) {
 	m = enterSessionPicker(m, msg)
 	m.askCursor = 1 // Select "Second"
 
-	updated, cmd := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	// Should return to stageInput
@@ -312,7 +312,7 @@ func TestSessionPickerEnterFirstItem(t *testing.T) {
 	m = enterSessionPicker(m, msg)
 	m.askCursor = 0 // Default first item
 
-	updated, _ := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if um.stage != stageInput {
@@ -341,7 +341,7 @@ func TestSessionPickerEscapeCancels(t *testing.T) {
 	msg := backendSessionListMsg{Sessions: entries}
 	m = enterSessionPicker(m, msg)
 
-	updated, cmd := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyEscape})
+	updated, cmd := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
 	um := updated.(model)
 
 	if um.stage != stageInput {
@@ -366,7 +366,7 @@ func TestSessionPickerCtrlCCancels(t *testing.T) {
 	msg := backendSessionListMsg{Sessions: entries}
 	m = enterSessionPicker(m, msg)
 
-	updated, _ := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyCtrlC})
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: 'c', Mod: tea.ModCtrl}))
 	um := updated.(model)
 
 	if um.stage != stageInput {
@@ -388,7 +388,7 @@ func TestSessionPickerDoesNotSendResponseToBackend(t *testing.T) {
 
 	// Escape should NOT send a SendResponse to backend (which would be bad since
 	// there's no real ask-user request ID to respond to)
-	handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyEscape})
+	handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
 
 	// No AskUserResult should be in writeCh — only the cancel message
 	// Drain any messages and check none contain "answer"
@@ -411,7 +411,7 @@ func TestSessionPickerSelectionResetsState(t *testing.T) {
 	msg := backendSessionListMsg{Sessions: entries}
 	m = enterSessionPicker(m, msg)
 
-	updated, _ := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if um.sessionPickerEntries != nil {
@@ -434,7 +434,7 @@ func TestSessionPickerViewRendersCorrectly(t *testing.T) {
 	msg := backendSessionListMsg{Sessions: entries}
 	m = enterSessionPicker(m, msg)
 
-	view := m.View()
+	view := m.View().Content
 
 	// Should show the question
 	if !strings.Contains(view, "Select a session to resume") {
@@ -527,7 +527,7 @@ func TestRegularAskUserNotAffectedBySentinel(t *testing.T) {
 	// Enter and exit session picker
 	entries := []sessionEntry{{ID: "a", Title: "test"}}
 	m = enterSessionPicker(m, backendSessionListMsg{Sessions: entries})
-	updated, _ := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyEscape})
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
 	m = updated.(model)
 
 	// Now simulate a real ask-user request
@@ -560,7 +560,7 @@ func TestSessionPickerSendsFullSessionID(t *testing.T) {
 	msg := backendSessionListMsg{Sessions: entries}
 	m = enterSessionPicker(m, msg)
 
-	handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 
 	select {
 	case data := <-b.writeCh:

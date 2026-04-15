@@ -9,7 +9,7 @@ func TestViewShowsSpinnerWhileWaiting(t *testing.T) {
 	m := initialModel(nil)
 	m.stage = stageStreaming
 	// Empty buffers — should show spinner with a rotating verb
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "…") {
 		t.Errorf("expected spinner verb with '…' in view during empty streaming, got:\n%s", view)
 	}
@@ -20,7 +20,7 @@ func TestViewShowsStreamingContent(t *testing.T) {
 	m.stage = stageStreaming
 	m.streamBuf.WriteString("Hello from the model")
 
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "Hello from the model") {
 		t.Errorf("expected streaming content in view, got:\n%s", view)
 	}
@@ -31,7 +31,7 @@ func TestViewShowsThinkingTokens(t *testing.T) {
 	m.showThinking = true
 	m.thinkingBuf.WriteString("I am reasoning about this")
 
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "I am reasoning about this") {
 		t.Errorf("expected thinking tokens in view when showThinking=true, got:\n%s", view)
 	}
@@ -42,7 +42,7 @@ func TestViewHidesThinkingByDefault(t *testing.T) {
 	m.showThinking = false
 	m.thinkingBuf.WriteString("hidden reasoning")
 
-	view := m.View()
+	view := m.View().Content
 	if strings.Contains(view, "hidden reasoning") {
 		t.Errorf("expected thinking tokens hidden when showThinking=false, got:\n%s", view)
 	}
@@ -55,7 +55,7 @@ func TestViewShowsToolCalls(t *testing.T) {
 		{Name: "read_file", Status: "running"},
 	}
 
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "read_file") {
 		t.Errorf("expected tool call name in view, got:\n%s", view)
 	}
@@ -68,7 +68,7 @@ func TestViewShowsToolCallError(t *testing.T) {
 		{Name: "write_file", Status: "error", Result: "permission denied"},
 	}
 
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "permission denied") {
 		t.Errorf("expected error result in view, got:\n%s", view)
 	}
@@ -81,7 +81,7 @@ func TestViewShowsToolCallResult(t *testing.T) {
 		{Name: "read_file", Status: "completed", Result: "file contents here"},
 	}
 
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "file contents here") {
 		t.Errorf("expected tool result in view, got:\n%s", view)
 	}
@@ -91,7 +91,7 @@ func TestViewShowsErrorMessage(t *testing.T) {
 	m := initialModel(nil)
 	m.lastError = "something went wrong"
 
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "something went wrong") {
 		t.Errorf("expected error message in view, got:\n%s", view)
 	}
@@ -101,7 +101,7 @@ func TestViewShowsSeparator(t *testing.T) {
 	m := initialModel(nil)
 	m.width = 80
 
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "─") {
 		t.Errorf("expected separator line in view, got:\n%s", view)
 	}
@@ -112,7 +112,7 @@ func TestViewShowsInputDuringStreaming(t *testing.T) {
 	m.stage = stageStreaming
 	m.streamBuf.WriteString("streaming content")
 
-	view := m.View()
+	view := m.View().Content
 	// composer.View() produces output containing the placeholder or cursor
 	// Since composer is focused, it should show something
 	if view == "" {
@@ -129,7 +129,7 @@ func TestViewShowsApprovalPrompt(t *testing.T) {
 	m.approvalArgs = `{"path": "/tmp/test.txt"}`
 	m.approvalCursor = 0
 
-	view := m.View()
+	view := m.View().Content
 	// Compact approval: title-cased tool name
 	if !strings.Contains(view, "Write File") {
 		t.Errorf("expected title-cased approval tool in view, got:\n%s", view)
@@ -149,7 +149,7 @@ func TestViewShowsAskUserPrompt(t *testing.T) {
 	m.askOptions = []string{"A", "B", "C"}
 	m.askCursor = 0
 
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "Which option?") {
 		t.Errorf("expected ask-user question in view, got:\n%s", view)
 	}
@@ -159,7 +159,7 @@ func TestViewShowsStatusBar(t *testing.T) {
 	m := initialModel(nil)
 	m.statusBar.Model = "qwen3:8b"
 
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "qwen3:8b") {
 		t.Errorf("expected model name in status bar, got:\n%s", view)
 	}
@@ -169,7 +169,7 @@ func TestViewEmptyOnQuitting(t *testing.T) {
 	m := initialModel(nil)
 	m.quitting = true
 
-	view := m.View()
+	view := m.View().Content
 	if view != "" {
 		t.Errorf("expected empty view when quitting, got:\n%s", view)
 	}
@@ -183,7 +183,7 @@ func TestViewToolCallResultTruncation(t *testing.T) {
 		{Name: "read_file", Status: "completed", Result: longResult},
 	}
 
-	view := m.View()
+	view := m.View().Content
 	if strings.Contains(view, longResult) {
 		t.Error("expected long result to be truncated in view")
 	}
@@ -201,7 +201,7 @@ func TestViewThinkingCappedAt5Lines(t *testing.T) {
 	}
 	m.thinkingBuf.WriteString(strings.Join(lines, "\n"))
 
-	view := m.View()
+	view := m.View().Content
 	// Should show at most 5 lines of thinking
 	// The first lines should be omitted
 	thinkingCount := strings.Count(view, "thinking line")
@@ -215,7 +215,7 @@ func TestViewDuringStageInit(t *testing.T) {
 	m.stage = stageInit
 	m.width = 80
 
-	view := m.View()
+	view := m.View().Content
 
 	// During init stage, should still render the composer and status bar
 	// The default case in the switch renders composer
@@ -232,18 +232,20 @@ func TestViewDuringStageInit(t *testing.T) {
 	}
 }
 
-func TestViewStreamBufCappedAt50Lines(t *testing.T) {
+func TestViewStreamBufSlidingWindow(t *testing.T) {
 	m := initialModel(nil)
 	m.stage = stageStreaming
 	lines := make([]string, 60)
 	for i := range lines {
 		lines[i] = "content line"
 	}
-	m.streamBuf.WriteString(strings.Join(lines, "\n"))
+	// Simulate what tickMsg does: flush stable lines to scrollback
+	m.stableScrollbackLines = lines[:50]
+	m.streamBuf.WriteString(strings.Join(lines[50:], "\n"))
 
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "lines above") {
-		t.Error("expected '[N lines above]' indicator for long streaming content")
+		t.Error("expected '[N lines above]' indicator for content flushed to scrollback")
 	}
 }
 
@@ -254,7 +256,7 @@ func TestViewTaskPanelHiddenInInput(t *testing.T) {
 		{Title: "hidden-task", Status: "in_progress"},
 	}
 
-	view := m.View()
+	view := m.View().Content
 	if strings.Contains(view, "hidden-task") {
 		t.Error("expected task panel to be hidden during input stage (chat-first)")
 	}
@@ -268,7 +270,7 @@ func TestViewTaskPanelVisibleDuringStreaming(t *testing.T) {
 		{Title: "active-task", Status: "in_progress"},
 	}
 
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "active-task") {
 		t.Errorf("expected task panel to be visible during streaming, got:\n%s", view)
 	}
@@ -283,7 +285,7 @@ func TestViewNarrowTerminalToolTruncation(t *testing.T) {
 		{Name: "read_file", Status: "completed", Result: longResult},
 	}
 
-	view := m.View()
+	view := m.View().Content
 	if strings.Contains(view, longResult) {
 		t.Error("expected tool result to be truncated at narrow width")
 	}
@@ -299,7 +301,7 @@ func TestViewToolCallUsesElbow(t *testing.T) {
 		{Name: "bash", Status: "running"},
 	}
 
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "⎿") {
 		t.Errorf("expected ⎿ prefix for tool calls, got:\n%s", view)
 	}

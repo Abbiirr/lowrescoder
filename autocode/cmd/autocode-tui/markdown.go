@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/charmbracelet/glamour"
+	"charm.land/glamour/v2"
 )
 
 // renderMarkdownContent renders markdown using Glamour.
@@ -13,7 +13,7 @@ func renderMarkdownContent(content string, width int) string {
 	}
 
 	renderer, err := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
+		glamour.WithEnvironmentConfig(),
 		glamour.WithWordWrap(width-2),
 	)
 	if err != nil {

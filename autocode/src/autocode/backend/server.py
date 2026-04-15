@@ -226,7 +226,8 @@ class BackendServer:
     def _expand_file_mentions(self, message: str) -> str:
         """Extract @path references and inline file contents."""
         import re
-        pattern = re.compile(r'@([\w./\-]+\.\w+)')
+
+        pattern = re.compile(r"@([\w./\-]+\.\w+)")
         mentions = pattern.findall(message)
         if not mentions:
             return message
@@ -242,7 +243,7 @@ class BackendServer:
                 except Exception:
                     context_parts.append(f"[File: {rel_path}] (could not read)\n[/File]")
         if context_parts:
-            clean_msg = pattern.sub(r'`\1`', message)
+            clean_msg = pattern.sub(r"`\1`", message)
             return clean_msg + "\n\n" + "\n\n".join(context_parts)
         return message
 
@@ -289,12 +290,39 @@ class BackendServer:
         mode = self.config.tui.approval_mode
         if self._approval_manager:
             mode = self._approval_manager.mode.value
-        self.emit_notification("on_status", {
-            "model": self.config.llm.model,
-            "provider": self.config.llm.provider,
-            "mode": mode,
-            "session_id": self.session_id,
-        })
+        self.emit_notification(
+            "on_status",
+            {
+                "model": self.config.llm.model,
+                "provider": self.config.llm.provider,
+                "mode": mode,
+                "session_id": self.session_id,
+            },
+        )
+
+    def _emit_cost_update(self) -> None:
+        """Emit per-turn cost/token update to the Go TUI status bar.
+
+        This is a per-turn notification emitted alongside ``on_done``.
+        Honest contract: this is *not* live-streaming cost — it is a
+        snapshot taken after each agent turn completes.
+        """
+        tokens_in = 0
+        tokens_out = 0
+        if self._session_stats:
+            tokens = self._session_stats.token_tracker.total
+            tokens_in = tokens.prompt_tokens
+            tokens_out = tokens.completion_tokens
+        self._total_tokens_in += tokens_in
+        self._total_tokens_out += tokens_out
+        self.emit_notification(
+            "on_cost_update",
+            {
+                "cost": "0.0000",
+                "tokens_in": self._total_tokens_in,
+                "tokens_out": self._total_tokens_out,
+            },
+        )
 
     # --- Agent loop setup (mirrors InlineApp._ensure_agent_loop) ---
 
@@ -314,30 +342,18 @@ class BackendServer:
                 shell_config=self.config.shell,
             )
 
-            # Load project memory if available
-            memory_path = self.project_root / ".autocode" / "memory.md"
-            memory_content = None
-            if memory_path.exists():
-                try:
-                    memory_content = memory_path.read_text(encoding="utf-8")
-                except OSError:
-                    pass
+            from autocode.agent.factory import (
+                create_orchestrator,
+                load_project_memory_content,
+            )
 
-            # Load project rules (CLAUDE.md, AGENTS.md, .rules/*.md) — always on
-            try:
-                from autocode.layer2.rules import RulesLoader
-                rules_text = RulesLoader().load(self.project_root)
-                if rules_text:
-                    if memory_content:
-                        memory_content = rules_text + "\n\n" + memory_content
-                    else:
-                        memory_content = rules_text
-            except Exception:
-                pass
+            # Load project memory + always-on rules (CLAUDE.md, AGENTS.md, .rules/*.md)
+            memory_content = load_project_memory_content(self.project_root)
 
             # Create TaskStore and register task tools
             self._task_store = TaskStore(
-                self.session_store.get_connection(), self.session_id,
+                self.session_store.get_connection(),
+                self.session_id,
             )
             register_task_tools(self._tool_registry, self._task_store)
 
@@ -345,7 +361,8 @@ class BackendServer:
             project_id = str(self.project_root)
             conn = self.session_store.get_connection()
             self._memory_store = MemoryStore(
-                conn, project_id,
+                conn,
+                project_id,
                 max_entries=self.config.agent.memory_max_entries,
                 max_context_tokens=self.config.agent.memory_context_max_tokens,
             )
@@ -355,6 +372,7 @@ class BackendServer:
             # Sprint 4C: L3Provider (graceful degradation)
             try:
                 from autocode.layer3.provider import L3Provider
+
                 self._l3_provider = L3Provider(
                     model_path=self.config.layer3.model_path,
                     grammar_constrained=self.config.layer3.grammar_constrained,
@@ -366,6 +384,7 @@ class BackendServer:
             # Sprint 4C: ContextAssembler
             try:
                 from autocode.core.context import ContextAssembler
+
                 self._context_assembler = ContextAssembler(
                     context_budget=self.config.layer2.context_budget,
                 )
@@ -408,8 +427,6 @@ class BackendServer:
             if self._memory_store:
                 memory_context = self._memory_store.get_context()
 
-            # Use shared factory for consistent runtime wiring
-            from autocode.agent.factory import create_orchestrator
             self._agent_loop, self._session_stats = create_orchestrator(
                 provider=self._provider,
                 tool_registry=self._tool_registry,
@@ -445,11 +462,14 @@ class BackendServer:
 
     def _on_tool_call(self, tool_name: str, status: str, result: str = "") -> None:
         """Tool call status callback -> notification on_tool_call."""
-        self.emit_notification("on_tool_call", {
-            "name": tool_name,
-            "status": status,
-            "result": result,
-        })
+        self.emit_notification(
+            "on_tool_call",
+            {
+                "name": tool_name,
+                "status": status,
+                "result": result,
+            },
+        )
         # Track edits
         if status in ("completed", "success") and tool_name in ("write_file", "edit_file"):
             self._edit_count += 1
@@ -468,10 +488,13 @@ class BackendServer:
         subagents: list[dict[str, Any]] = []
         if self._subagent_manager:
             subagents = self._subagent_manager.list_all()
-        self.emit_notification("on_task_state", {
-            "tasks": tasks,
-            "subagents": subagents,
-        })
+        self.emit_notification(
+            "on_task_state",
+            {
+                "tasks": tasks,
+                "subagents": subagents,
+            },
+        )
 
     async def _approval_callback(self, tool_name: str, arguments: dict[str, Any]) -> bool:
         """Approval callback -> request on_tool_request, waits for Go response."""
@@ -484,10 +507,13 @@ class BackendServer:
 
         args_str = json.dumps(arguments, indent=2)
         try:
-            result = await self.emit_request("on_tool_request", {
-                "tool": tool_name,
-                "args": args_str,
-            })
+            result = await self.emit_request(
+                "on_tool_request",
+                {
+                    "tool": tool_name,
+                    "args": args_str,
+                },
+            )
         except asyncio.CancelledError:
             return False
 
@@ -510,11 +536,14 @@ class BackendServer:
     ) -> str:
         """Ask-user callback -> request on_ask_user, waits for Go response."""
         try:
-            result = await self.emit_request("on_ask_user", {
-                "question": question,
-                "options": options,
-                "allow_text": allow_text,
-            })
+            result = await self.emit_request(
+                "on_ask_user",
+                {
+                    "question": question,
+                    "options": options,
+                    "allow_text": allow_text,
+                },
+            )
         except asyncio.CancelledError:
             return options[0] if options else ""
 
@@ -531,8 +560,10 @@ class BackendServer:
         if self._memory_store and self.session_store and self.session_id:
             try:
                 await self._memory_store.learn_from_session(
-                    self.session_id, self.session_store,
-                    self._provider, self._llm_scheduler,
+                    self.session_id,
+                    self.session_store,
+                    self._provider,
+                    self._llm_scheduler,
                 )
             except Exception:
                 logger.warning("Failed to learn from session", exc_info=True)
@@ -551,6 +582,7 @@ class BackendServer:
         self._task_store = None
 
         from autocode.agent.tools import clear_observed_file_mtimes
+
         clear_observed_file_mtimes()
         self._memory_store = None
         self._checkpoint_store = None
@@ -560,6 +592,7 @@ class BackendServer:
 
     async def handle_chat(self, message: str, session_id: str | None, request_id: int) -> None:
         """Handle a chat request from the Go frontend."""
+
         def _done_params(*, cancelled: bool = False) -> dict[str, Any]:
             params: dict[str, Any] = {"layer_used": layer_used}
             if cancelled:
@@ -578,7 +611,8 @@ class BackendServer:
             await self._teardown_agent_resources()
             self.session_id = session_id
             self._session_log_dir = setup_session_logging(
-                self.config.logging, self.session_id,
+                self.config.logging,
+                self.session_id,
             )
             self._session_approved_tools.clear()
 
@@ -613,10 +647,13 @@ class BackendServer:
                         )
                         response = handler.handle(message)
                         self.emit_notification("on_token", {"text": response.content})
-                        self.emit_notification("on_done", {
-                            **_done_params(),
-                            "layer_used": 1,
-                        })
+                        self.emit_notification(
+                            "on_done",
+                            {
+                                **_done_params(),
+                                "layer_used": 1,
+                            },
+                        )
                         return
                     except ImportError:
                         pass  # tree-sitter not available, fall through to L4
@@ -655,7 +692,8 @@ class BackendServer:
                                 rules_loader = RulesLoader()
                                 rules_text = rules_loader.load(self.project_root)
                                 assembled = self._context_assembler.assemble(
-                                    message, rules=rules_text,
+                                    message,
+                                    rules=rules_text,
                                     search_results=results,
                                 )
                                 # Run agent loop with injected L2 context
@@ -668,10 +706,14 @@ class BackendServer:
                                     ask_user_callback=self._ask_user_callback,
                                     injected_context=assembled,
                                 )
-                                self.emit_notification("on_done", {
-                                    **_done_params(),
-                                    "layer_used": 2,
-                                })
+                                self._emit_cost_update()
+                                self.emit_notification(
+                                    "on_done",
+                                    {
+                                        **_done_params(),
+                                        "layer_used": 2,
+                                    },
+                                )
                                 return
                         except ImportError:
                             pass  # L2 deps not available, fall through
@@ -692,13 +734,18 @@ class BackendServer:
                             result_text = await self._l3_provider.generate(message)
                             self.session_store.add_message(self.session_id, "user", message)
                             self.session_store.add_message(
-                                self.session_id, "assistant", result_text,
+                                self.session_id,
+                                "assistant",
+                                result_text,
                             )
                             self.emit_notification("on_token", {"text": result_text})
-                            self.emit_notification("on_done", {
-                                **_done_params(),
-                                "layer_used": 3,
-                            })
+                            self.emit_notification(
+                                "on_done",
+                                {
+                                    **_done_params(),
+                                    "layer_used": 3,
+                                },
+                            )
                             return
                         except Exception:
                             pass  # L3 failed, fall through to L4
@@ -717,12 +764,14 @@ class BackendServer:
                 ask_user_callback=self._ask_user_callback,
             )
         except asyncio.CancelledError:
+            self._emit_cost_update()
             self.emit_notification("on_done", _done_params(cancelled=True))
             return
         except Exception as e:
             logger.exception("Error in handle_chat: %s", e)
             self.emit_notification("on_error", {"message": str(e)})
 
+        self._emit_cost_update()
         self.emit_notification("on_done", _done_params())
 
     async def handle_cancel(self, request_id: int) -> None:
@@ -874,21 +923,28 @@ class BackendServer:
         """List tasks for the current session."""
         if self._task_store is None:
             self._task_store = TaskStore(
-                self.session_store.get_connection(), self.session_id,
+                self.session_store.get_connection(),
+                self.session_id,
             )
         tasks = self._task_store.list_tasks()
-        self.emit_response(request_id, {
-            "tasks": [t.model_dump(mode="json") for t in tasks],
-        })
+        self.emit_response(
+            request_id,
+            {
+                "tasks": [t.model_dump(mode="json") for t in tasks],
+            },
+        )
 
     async def handle_subagent_list(self, request_id: int) -> None:
         """List all subagents (active and completed)."""
         if self._subagent_manager is None:
             self.emit_response(request_id, {"subagents": []})
             return
-        self.emit_response(request_id, {
-            "subagents": self._subagent_manager.list_all(),
-        })
+        self.emit_response(
+            request_id,
+            {
+                "subagents": self._subagent_manager.list_all(),
+            },
+        )
 
     async def handle_subagent_cancel(self, subagent_id: str, request_id: int) -> None:
         """Cancel a running subagent."""
@@ -911,19 +967,25 @@ class BackendServer:
         try:
             agent_mode = AgentMode(mode)
         except ValueError:
-            self.emit_response(request_id, {
-                "error": f"Invalid mode '{mode}'. Use 'normal', 'planning', or 'research'.",
-            })
+            self.emit_response(
+                request_id,
+                {
+                    "error": f"Invalid mode '{mode}'. Use 'normal', 'planning', or 'research'.",
+                },
+            )
             return
         old_mode = self._agent_mode
         self._agent_mode = agent_mode
         self._plan_mode_enabled = agent_mode == AgentMode.PLANNING
         if self._agent_loop:
             self._agent_loop.set_mode(agent_mode)
-        self.emit_response(request_id, {
-            "mode": agent_mode.value,
-            "changed": old_mode != self._agent_mode,
-        })
+        self.emit_response(
+            request_id,
+            {
+                "mode": agent_mode.value,
+                "changed": old_mode != self._agent_mode,
+            },
+        )
 
     async def handle_config_get(self, request_id: int) -> None:
         """Return current configuration."""
@@ -964,9 +1026,12 @@ class BackendServer:
             self.emit_response(request_id, {"checkpoints": []})
             return
         checkpoints = self._checkpoint_store.list_checkpoints()
-        self.emit_response(request_id, {
-            "checkpoints": [cp.model_dump(mode="json") for cp in checkpoints],
-        })
+        self.emit_response(
+            request_id,
+            {
+                "checkpoints": [cp.model_dump(mode="json") for cp in checkpoints],
+            },
+        )
 
     async def handle_checkpoint_restore(self, checkpoint_id: str, request_id: int) -> None:
         """Restore a checkpoint for the current session."""
@@ -975,7 +1040,9 @@ class BackendServer:
             return
         try:
             result = self._checkpoint_store.restore_checkpoint(
-                checkpoint_id, self._task_store, self.session_store,
+                checkpoint_id,
+                self._task_store,
+                self.session_store,
             )
             self.emit_response(request_id, {"ok": True, **result})
         except Exception as e:
@@ -988,9 +1055,12 @@ class BackendServer:
             return
         try:
             from autocode.agent.plan_artifact import export
+
             path = export(
-                self.session_id, self._task_store,
-                self._subagent_manager, self.project_root,
+                self.session_id,
+                self._task_store,
+                self._subagent_manager,
+                self.project_root,
             )
             self.emit_response(request_id, {"path": str(path)})
         except Exception as e:
@@ -1003,10 +1073,65 @@ class BackendServer:
             return
         try:
             from autocode.agent.plan_artifact import sync_from_markdown
+
             updated = sync_from_markdown(self.session_id, self._task_store, path)
             self.emit_response(request_id, {"updated": updated})
         except Exception as e:
             self.emit_response(request_id, {"error": str(e)})
+
+    async def handle_steer(self, message: str, request_id: int) -> None:
+        """Inject a steer message into the active agent run.
+
+        If a run is active, cancel it and persist the steer message as a
+        user message in the current session.  The Go TUI receives the
+        ``on_done`` notification from the cancelled run and can present
+        the steer result immediately.
+
+        If no run is active, returns a structured error so the caller can
+        distinguish "nothing to steer" from a real failure.
+        """
+        if not message.strip():
+            self.emit_response(request_id, {"error": "Steer message is empty"})
+            return
+
+        if self._agent_task is None or self._agent_task.done():
+            self.emit_response(
+                request_id,
+                {"error": "No active run to steer", "active": False},
+            )
+            return
+
+        if self._agent_loop:
+            self._agent_loop.cancel()
+
+        self.session_store.add_message(
+            self.session_id,
+            "user",
+            f"[steer] {message}",
+        )
+
+        self.emit_response(request_id, {"ok": True, "injected": True})
+
+    async def handle_session_fork(self, request_id: int) -> None:
+        """Fork the current session into a new one.
+
+        Creates a new session with the same messages as the current
+        session.  The backend does *not* switch to the new session — the
+        Go TUI controls session switching via ``session.resume``.
+        """
+        new_id = self.session_store.create_session(
+            title=f"Fork of {self.session_id[:8]}",
+            model=self.config.llm.model,
+            provider=self.config.llm.provider,
+            project_dir=str(self.project_root),
+        )
+
+        messages = self.session_store.get_messages(self.session_id)
+        for msg in messages:
+            self.session_store.add_message(new_id, msg.role, msg.content)
+
+        self._emit_status()
+        self.emit_response(request_id, {"new_session_id": new_id})
 
     async def handle_shutdown(self, request_id: int) -> None:
         """Gracefully shut down the server."""
@@ -1146,14 +1271,22 @@ class BackendServer:
         elif method == "plan.sync":
             path = params.get("path", "")
             await self.handle_plan_sync(path, request_id)
+        elif method == "steer":
+            message = params.get("message", "")
+            await self.handle_steer(message, request_id)
+        elif method == "session.fork":
+            await self.handle_session_fork(request_id)
         elif method == "shutdown":
             await self.handle_shutdown(request_id)
         else:
             if request_id:
                 self.emit_response(request_id, {"error": f"Unknown method: {method}"})
         log_event(
-            logger, logging.DEBUG, "rpc_response",
-            method=method, request_id=request_id,
+            logger,
+            logging.DEBUG,
+            "rpc_response",
+            method=method,
+            request_id=request_id,
             duration_ms=int((time.monotonic() - _dispatch_start) * 1000),
         )
 

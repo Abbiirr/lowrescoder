@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/textarea"
+	"charm.land/lipgloss/v2"
 )
 
 const (
@@ -25,14 +25,20 @@ func newComposer(width int) textarea.Model {
 	ta.SetHeight(composerMinH)
 
 	// Minimal styling — no highlight on cursor line
-	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
-	ta.FocusedStyle.Placeholder = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	ta.FocusedStyle.Prompt = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
-	ta.FocusedStyle.Text = lipgloss.NewStyle()
-	ta.BlurredStyle.CursorLine = lipgloss.NewStyle()
-	ta.BlurredStyle.Placeholder = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	ta.BlurredStyle.Prompt = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	ta.BlurredStyle.Text = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	ta.SetStyles(textarea.Styles{
+		Focused: textarea.StyleState{
+			CursorLine:  lipgloss.NewStyle(),
+			Placeholder: lipgloss.NewStyle().Foreground(lipgloss.Color("240")),
+			Prompt:      lipgloss.NewStyle().Foreground(lipgloss.Color("10")),
+			Text:        lipgloss.NewStyle(),
+		},
+		Blurred: textarea.StyleState{
+			CursorLine:  lipgloss.NewStyle(),
+			Placeholder: lipgloss.NewStyle().Foreground(lipgloss.Color("240")),
+			Prompt:      lipgloss.NewStyle().Foreground(lipgloss.Color("240")),
+			Text:        lipgloss.NewStyle().Foreground(lipgloss.Color("240")),
+		},
+	})
 
 	// Rebind: Enter sends (intercepted by us), Alt+Enter/Ctrl+J inserts newline
 	ta.KeyMap.InsertNewline = key.NewBinding(

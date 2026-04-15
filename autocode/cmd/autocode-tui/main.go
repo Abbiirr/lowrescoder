@@ -2,20 +2,22 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func main() {
-	// Check terminal compatibility
+	inlineMode := flag.Bool("inline", false, "Run in inline mode (scrollback-friendly, no alternate screen)")
+	flag.Parse()
+
 	if shouldUseLegacy() {
 		fmt.Fprintln(os.Stderr, "Terminal does not support interactive TUI. Use 'autocode chat' directly.")
 		os.Exit(1)
 	}
 
-	// Find Python backend
 	pythonCmd, pythonArgs, found := findPythonBackend()
 	if !found {
 		fmt.Fprintln(os.Stderr, "Could not find AutoCode Python backend.")
@@ -23,40 +25,35 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create backend
 	backend := NewBackend()
 
-	// Create Bubble Tea program
 	m := initialModel(backend)
-	p := tea.NewProgram(
-		m,
-		// No tea.WithAltScreen() — inline mode preserves native scrollback
-		tea.WithMouseCellMotion(),
-	)
+	m.inlineMode = *inlineMode
 
-	// Start backend with program reference
+	// In BubbleTea v2 alt-screen is set per-View via v.AltScreen (see view.go).
+	// m.inlineMode controls that field: default = alt-screen, --inline = scrollback.
+	p := tea.NewProgram(m)
+
 	ctx := context.Background()
 	if err := backend.Start(ctx, p, pythonCmd, pythonArgs); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to start backend: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Optional session resume injected by the Python CLI wrapper.
 	if sessionID := os.Getenv("AUTOCODE_SESSION_ID"); sessionID != "" {
 		backend.SendRequest("session.resume", SessionResumeParams{SessionID: sessionID})
 	}
 
-	// Print welcome banner (above the live area)
 	fmt.Println(welcomeStyle.Render("AutoCode") + dimStyle.Render(" — Edge-native AI coding assistant"))
 	fmt.Println(dimStyle.Render("Type a message to start. Use /help for commands, Ctrl+D to quit."))
 	fmt.Println()
 
-	// Run the TUI
+	// Mode 2026 (synchronized output) is enabled by default in bubbletea v2.
+
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
 	}
 
-	// Shutdown
 	backend.Shutdown()
 
 	fmt.Println(dimStyle.Render("Goodbye!"))

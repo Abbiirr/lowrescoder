@@ -134,7 +134,6 @@ class AutoCodeApp(App[None]):
             return self._agent_loop
 
         from autocode.agent.approval import ApprovalManager, ApprovalMode
-        from autocode.agent.factory import create_orchestrator
         from autocode.agent.tools import create_default_registry
         from autocode.layer4.llm import create_provider
 
@@ -153,14 +152,13 @@ class AutoCodeApp(App[None]):
             shell_config=self.config.shell,
         )
 
-        # Load project memory if available
-        memory_content = None
-        memory_file = self.project_root / ".autocode" / "memory.md"
-        if memory_file.exists():
-            try:
-                memory_content = memory_file.read_text(encoding="utf-8")
-            except OSError:
-                pass
+        from autocode.agent.factory import (
+            create_orchestrator,
+            load_project_memory_content,
+        )
+
+        # Load project memory + always-on rules (CLAUDE.md, AGENTS.md, .rules/*.md)
+        memory_content = load_project_memory_content(self.project_root)
 
         self._agent_loop, self._session_stats = create_orchestrator(
             provider=self._provider,
@@ -200,7 +198,10 @@ class AutoCodeApp(App[None]):
         """Execute slash loop payload through the command router."""
         result = self.command_router.dispatch(payload)
         if result is None:
-            self.query_one("#chat-view", ChatView).add_message("system", f"Unknown command: {payload}")
+            self.query_one("#chat-view", ChatView).add_message(
+                "system",
+                f"Unknown command: {payload}",
+            )
             return
         cmd, args = result
         await cmd.handler(self, args)

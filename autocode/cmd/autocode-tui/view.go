@@ -4,22 +4,28 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
-// View renders the live area (never the scrollback).
-// O(1) — only renders what's currently active on screen.
-func (m model) View() string {
+// View renders the live area.
+// Stable scrollback lines are emitted via tea.Println and never redrawn.
+// BubbleTea v2 with Mode 2026 handles terminal-level differential rendering automatically.
+func (m model) View() tea.View {
 	if m.quitting {
-		return ""
+		return tea.NewView("")
 	}
 
 	var b strings.Builder
 
-	// 0. Header (compact branded header)
-	if m.stage == stageInput && len(m.toolCalls) == 0 && m.streamBuf.Len() == 0 {
+	// 0. Header (compact branded header or startup indicator)
+	if m.stage == stageInit || (m.stage == stageInput && len(m.toolCalls) == 0 && m.streamBuf.Len() == 0) {
 		b.WriteString(accentStyle.Render("\u25c6") + " AutoCode\n")
-		b.WriteString(dimStyle.Render("/help for help, /model to switch, Ctrl+D to quit"))
+		if m.stage == stageInit {
+			b.WriteString(m.spin.View() + " " + dimStyle.Render("Connecting to backend…"))
+		} else {
+			b.WriteString(dimStyle.Render("/help for help, /model to switch, Ctrl+D to quit"))
+		}
 		b.WriteString("\n")
 	}
 
@@ -50,7 +56,13 @@ func (m model) View() string {
 		b.WriteString(renderCompletionDropdown(m.completions, m.width, m.completionCursor))
 	}
 
-	// 7. Input area (depends on stage)
+	// 7. Steer input overlay (Phase 4)
+	if m.stage == stageSteer {
+		b.WriteString(renderSteerView(m))
+		b.WriteString("\n")
+	}
+
+	// 8. Input area (depends on stage)
 	switch m.stage {
 	case stageApproval:
 		b.WriteString(separator(m.width))
@@ -72,13 +84,13 @@ func (m model) View() string {
 		b.WriteString(separator(m.width))
 		b.WriteString("\n")
 		b.WriteString(renderPaletteView(m))
+	case stageSteer:
+		// steer view already rendered above
 	default:
 		if m.claudeLike {
-			// Queue preview + composer slab (includes its own top/bottom bars)
 			b.WriteString(renderQueuePreview(m))
 			b.WriteString(renderComposer(m))
 		} else {
-			// Default profile: simple separator + textarea (no frame)
 			b.WriteString(separator(m.width))
 			b.WriteString("\n")
 			b.WriteString(m.composer.View())
@@ -86,11 +98,25 @@ func (m model) View() string {
 	}
 	b.WriteString("\n")
 
-	// 8. Status bar
-	m.statusBar.Queue = len(m.messageQueue)
+	// 9. Plan mode indicator (Phase 5)
+	if m.planMode {
+		b.WriteString(planModeStyle.Render(" [PLAN MODE] "))
+		b.WriteString("\n")
+	}
+
+	// 10. Task dashboard footer (Phase 5)
+	b.WriteString(renderTaskDashboard(m))
+
+	// 11. Status bar
+	m.statusBar.Queue = len(m.messageQueue) + len(m.followupQueue)
+	m.statusBar.SessionID = m.sessionID
+	m.statusBar.BackgroundTasks = m.backgroundTasks
 	b.WriteString(m.statusBar.View())
 
-	return b.String()
+	v := tea.NewView(b.String())
+	v.MouseMode = tea.MouseModeCellMotion
+	v.AltScreen = !m.inlineMode // default: alt-screen; --inline: scrollback-preserving inline mode
+	return v
 }
 
 // renderThinking renders thinking tokens with a Claude Code style header.
@@ -168,20 +194,16 @@ func renderStreamArea(m model) string {
 	var b strings.Builder
 	content := m.streamBuf.String()
 	if content == "" && m.tokenBuf.Len() == 0 {
-		// Show spinner while waiting for first token
 		b.WriteString(m.spin.View() + " " + accentStyle.Render(m.currentVerb+"…") + "\n")
 	} else {
-		// Cap displayed content (show last 50 lines)
 		displayed := content
 		if m.tokenBuf.Len() > 0 {
 			displayed += m.tokenBuf.String()
 		}
-		lines := strings.Split(displayed, "\n")
-		if len(lines) > 50 {
-			b.WriteString(dimStyle.Render(fmt.Sprintf("[%d lines above]\n", len(lines)-50)))
-			lines = lines[len(lines)-50:]
+		if m.stableScrollbackLines != nil {
+			displayed = dimStyle.Render(fmt.Sprintf("[%d lines above]\n", len(m.stableScrollbackLines))) + displayed
 		}
-		b.WriteString(streamStyle.Render(strings.Join(lines, "\n")))
+		b.WriteString(streamStyle.Render(displayed))
 		b.WriteString("\n")
 	}
 	return b.String()
@@ -282,4 +304,65 @@ func renderPaletteView(m model) string {
 	b.WriteString(dimStyle.Render("  ↑↓ navigate · enter select · esc close"))
 
 	return b.String()
+}
+
+// --- Phase 4: Steer view ---
+
+// planModeStyle renders the plan mode indicator.
+var planModeStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("11")).Background(lipgloss.Color("236"))
+
+// renderSteerView renders the steer input overlay during streaming.
+func renderSteerView(m model) string {
+	var b strings.Builder
+	b.WriteString(separator(m.width))
+	b.WriteString("\n")
+	b.WriteString(accentStyle.Render("  ⚡ Steer: "))
+	b.WriteString(m.steerInput)
+	b.WriteString("▏")
+	b.WriteString("\n")
+	b.WriteString(dimStyle.Render("  Enter to send · Esc to cancel"))
+	b.WriteString("\n")
+	return b.String()
+}
+
+// --- Phase 5: Task dashboard ---
+
+// renderTaskDashboard renders a compact task dashboard in the footer area.
+func renderTaskDashboard(m model) string {
+	if len(m.taskPanelTasks) == 0 {
+		return ""
+	}
+	pending := 0
+	running := 0
+	done := 0
+	failed := 0
+	for _, t := range m.taskPanelTasks {
+		switch t.Status {
+		case "pending":
+			pending++
+		case "running":
+			running++
+		case "done", "completed":
+			done++
+		case "failed", "error":
+			failed++
+		}
+	}
+	var parts []string
+	if pending > 0 {
+		parts = append(parts, fmt.Sprintf("⏳ %d pending", pending))
+	}
+	if running > 0 {
+		parts = append(parts, fmt.Sprintf("▶ %d running", running))
+	}
+	if done > 0 {
+		parts = append(parts, fmt.Sprintf("✓ %d done", done))
+	}
+	if failed > 0 {
+		parts = append(parts, fmt.Sprintf("✗ %d failed", failed))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return dimStyle.Render("  "+strings.Join(parts, " · ")) + "\n"
 }

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestEnterApproval(t *testing.T) {
@@ -37,7 +37,7 @@ func TestApprovalKeyUp(t *testing.T) {
 	m.approvalCursor = 0
 
 	// Up should wrap to last option
-	updated, _ := handleApprovalKey(m, tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ := handleApprovalKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyUp}))
 	um := updated.(model)
 
 	if um.approvalCursor != 2 {
@@ -51,7 +51,7 @@ func TestApprovalKeyDown(t *testing.T) {
 	m.approvalCursor = 2
 
 	// Down should wrap to first option
-	updated, _ := handleApprovalKey(m, tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ := handleApprovalKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
 	um := updated.(model)
 
 	if um.approvalCursor != 0 {
@@ -64,7 +64,7 @@ func TestApprovalKeyDownNormal(t *testing.T) {
 	m.stage = stageApproval
 	m.approvalCursor = 0
 
-	updated, _ := handleApprovalKey(m, tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ := handleApprovalKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
 	um := updated.(model)
 
 	if um.approvalCursor != 1 {
@@ -77,7 +77,7 @@ func TestApprovalKeyUpNormal(t *testing.T) {
 	m.stage = stageApproval
 	m.approvalCursor = 2
 
-	updated, _ := handleApprovalKey(m, tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ := handleApprovalKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyUp}))
 	um := updated.(model)
 
 	if um.approvalCursor != 1 {
@@ -90,7 +90,7 @@ func TestApprovalEnterYes(t *testing.T) {
 	m.stage = stageApproval
 	m.approvalCursor = 0 // "Yes"
 
-	updated, _ := handleApprovalKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := handleApprovalKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if um.stage != stageStreaming {
@@ -103,7 +103,7 @@ func TestApprovalEnterNo(t *testing.T) {
 	m.stage = stageApproval
 	m.approvalCursor = 2 // "No"
 
-	updated, _ := handleApprovalKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := handleApprovalKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if um.stage != stageStreaming {
@@ -116,7 +116,7 @@ func TestApprovalEnterSessionApprove(t *testing.T) {
 	m.stage = stageApproval
 	m.approvalCursor = 1 // "Yes, this session"
 
-	updated, _ := handleApprovalKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := handleApprovalKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if um.stage != stageStreaming {
@@ -128,7 +128,7 @@ func TestApprovalEscape(t *testing.T) {
 	m := initialModel(nil)
 	m.stage = stageApproval
 
-	updated, _ := handleApprovalKey(m, tea.KeyMsg{Type: tea.KeyEscape})
+	updated, _ := handleApprovalKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
 	um := updated.(model)
 
 	if um.stage != stageStreaming {
@@ -140,7 +140,7 @@ func TestApprovalCtrlC(t *testing.T) {
 	m := initialModel(nil)
 	m.stage = stageApproval
 
-	updated, _ := handleApprovalKey(m, tea.KeyMsg{Type: tea.KeyCtrlC})
+	updated, _ := handleApprovalKey(m, tea.KeyPressMsg(tea.Key{Code: 'c', Mod: tea.ModCtrl}))
 	um := updated.(model)
 
 	if um.stage != stageStreaming {

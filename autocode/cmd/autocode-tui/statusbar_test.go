@@ -93,8 +93,8 @@ func TestStatusBarTruncation(t *testing.T) {
 		Width: 20,
 	}
 	view := s.View()
-	if len(view) > 30 {
-		t.Errorf("expected truncated status bar for narrow width, got %d chars: %s", len(view), view)
+	if !strings.Contains(view, "…") {
+		t.Errorf("expected truncation indicator in narrow status bar, got: %s", view)
 	}
 }
 
@@ -115,5 +115,44 @@ func TestStatusBarAllFields(t *testing.T) {
 	}
 	if !strings.Contains(view, "$0.12") {
 		t.Errorf("expected cost in view, got: %s", view)
+	}
+}
+
+func TestStatusBarSessionID(t *testing.T) {
+	s := statusBarModel{
+		Model:     "qwen3:8b",
+		Mode:      "suggest",
+		SessionID: "abc123",
+		Width:     80,
+	}
+	view := s.View()
+	if !strings.Contains(view, "abc123") {
+		t.Errorf("expected session ID in view, got: %s", view)
+	}
+}
+
+func TestStatusBarBackgroundTasks(t *testing.T) {
+	s := statusBarModel{
+		Model:           "qwen3:8b",
+		Mode:            "suggest",
+		BackgroundTasks: 2,
+		Width:           80,
+	}
+	view := s.View()
+	if !strings.Contains(view, "2 bg") {
+		t.Errorf("expected background tasks in view, got: %s", view)
+	}
+}
+
+func TestStatusBarNoBackgroundTasks(t *testing.T) {
+	s := statusBarModel{
+		Model:           "qwen3:8b",
+		Mode:            "suggest",
+		BackgroundTasks: 0,
+		Width:           80,
+	}
+	view := s.View()
+	if strings.Contains(view, "bg") {
+		t.Errorf("expected no background tasks indicator when 0, got: %s", view)
 	}
 }

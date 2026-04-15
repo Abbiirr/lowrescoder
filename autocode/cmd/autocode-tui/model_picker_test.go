@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // --- Slash-menu cursor navigation (Entry 1067 acceptance slice) ---
@@ -15,7 +15,7 @@ func TestSlashMenuUpArrowMovesCursor(t *testing.T) {
 	m.completions = []string{"/help", "/hello", "/history"}
 	m.completionCursor = 1
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyUp}))
 	um := updated.(model)
 	if um.completionCursor != 0 {
 		t.Errorf("expected cursor=0 after Up from 1, got %d", um.completionCursor)
@@ -28,7 +28,7 @@ func TestSlashMenuUpArrowWrapsFromTop(t *testing.T) {
 	m.completions = []string{"/help", "/hello", "/history"}
 	m.completionCursor = 0
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyUp}))
 	um := updated.(model)
 	if um.completionCursor != 2 {
 		t.Errorf("expected cursor=2 (wrap to bottom), got %d", um.completionCursor)
@@ -41,7 +41,7 @@ func TestSlashMenuDownArrowMovesCursor(t *testing.T) {
 	m.completions = []string{"/help", "/hello", "/history"}
 	m.completionCursor = 0
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
 	um := updated.(model)
 	if um.completionCursor != 1 {
 		t.Errorf("expected cursor=1 after Down from 0, got %d", um.completionCursor)
@@ -54,7 +54,7 @@ func TestSlashMenuDownArrowWrapsFromBottom(t *testing.T) {
 	m.completions = []string{"/help", "/hello", "/history"}
 	m.completionCursor = 2
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
 	um := updated.(model)
 	if um.completionCursor != 0 {
 		t.Errorf("expected cursor=0 (wrap to top), got %d", um.completionCursor)
@@ -67,7 +67,7 @@ func TestSlashMenuEnterAcceptsHighlighted(t *testing.T) {
 	m.completions = []string{"/help", "/hello", "/history"}
 	m.completionCursor = 1 // /hello
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 	if um.composer.Value() != "/hello" {
 		t.Errorf("expected Enter to accept /hello, composer=%q", um.composer.Value())
@@ -86,7 +86,7 @@ func TestSlashMenuTabAcceptsHighlighted(t *testing.T) {
 	m.completions = []string{"/help", "/hello", "/history"}
 	m.completionCursor = 2 // /history
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyTab}))
 	um := updated.(model)
 	if um.composer.Value() != "/history" {
 		t.Errorf("expected Tab to accept /history, composer=%q", um.composer.Value())
@@ -99,7 +99,7 @@ func TestSlashMenuEscapeClosesMenu(t *testing.T) {
 	m.completions = []string{"/help", "/hello", "/history"}
 	m.completionCursor = 1
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
 	um := updated.(model)
 	if um.completions != nil {
 		t.Error("expected Escape to close the slash menu")
@@ -148,7 +148,7 @@ func TestModelPickerUpArrowMovesCursor(t *testing.T) {
 	m.modelPickerEntries = []string{"a", "b", "c"}
 	m.modelPickerCursor = 1
 
-	updated, _ := handleModelPickerKey(m, tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ := handleModelPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyUp}))
 	um := updated.(model)
 	if um.modelPickerCursor != 0 {
 		t.Errorf("expected cursor=0 after Up from 1, got %d", um.modelPickerCursor)
@@ -161,7 +161,7 @@ func TestModelPickerUpArrowWraps(t *testing.T) {
 	m.modelPickerEntries = []string{"a", "b", "c"}
 	m.modelPickerCursor = 0
 
-	updated, _ := handleModelPickerKey(m, tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ := handleModelPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyUp}))
 	um := updated.(model)
 	if um.modelPickerCursor != 2 {
 		t.Errorf("expected cursor=2 (wrap), got %d", um.modelPickerCursor)
@@ -174,7 +174,7 @@ func TestModelPickerDownArrowMovesCursor(t *testing.T) {
 	m.modelPickerEntries = []string{"a", "b", "c"}
 	m.modelPickerCursor = 0
 
-	updated, _ := handleModelPickerKey(m, tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ := handleModelPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
 	um := updated.(model)
 	if um.modelPickerCursor != 1 {
 		t.Errorf("expected cursor=1 after Down from 0, got %d", um.modelPickerCursor)
@@ -187,7 +187,7 @@ func TestModelPickerDownArrowWraps(t *testing.T) {
 	m.modelPickerEntries = []string{"a", "b", "c"}
 	m.modelPickerCursor = 2
 
-	updated, _ := handleModelPickerKey(m, tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ := handleModelPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
 	um := updated.(model)
 	if um.modelPickerCursor != 0 {
 		t.Errorf("expected cursor=0 (wrap), got %d", um.modelPickerCursor)
@@ -201,14 +201,14 @@ func TestModelPickerVimNavigation(t *testing.T) {
 	m.modelPickerCursor = 0
 
 	// 'j' down
-	updated, _ := handleModelPickerKey(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	updated, _ := handleModelPickerKey(m, tea.KeyPressMsg(tea.Key{Text: "j", Code: 'j'}))
 	um := updated.(model)
 	if um.modelPickerCursor != 1 {
 		t.Errorf("expected j=down, cursor=1, got %d", um.modelPickerCursor)
 	}
 
 	// 'k' up
-	updated2, _ := handleModelPickerKey(um, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	updated2, _ := handleModelPickerKey(um, tea.KeyPressMsg(tea.Key{Text: "k", Code: 'k'}))
 	um2 := updated2.(model)
 	if um2.modelPickerCursor != 0 {
 		t.Errorf("expected k=up, cursor=0, got %d", um2.modelPickerCursor)
@@ -222,7 +222,7 @@ func TestModelPickerEnterAppliesHighlighted(t *testing.T) {
 	m.modelPickerEntries = []string{"gpt-4", "claude-3", "tools"}
 	m.modelPickerCursor = 1 // claude-3
 
-	updated, _ := handleModelPickerKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := handleModelPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 	if um.stage != stageInput {
 		t.Errorf("expected return to stageInput after apply, got %d", um.stage)
@@ -249,7 +249,7 @@ func TestModelPickerEscapeCancels(t *testing.T) {
 	m.modelPickerEntries = []string{"a", "b"}
 	m.modelPickerCursor = 1
 
-	updated, _ := handleModelPickerKey(m, tea.KeyMsg{Type: tea.KeyEsc})
+	updated, _ := handleModelPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
 	um := updated.(model)
 	if um.stage != stageInput {
 		t.Errorf("expected return to stageInput after Escape, got %d", um.stage)
@@ -272,7 +272,7 @@ func TestModelPickerCtrlCCancels(t *testing.T) {
 	m.modelPickerEntries = []string{"a", "b"}
 	m.modelPickerCursor = 0
 
-	updated, _ := handleModelPickerKey(m, tea.KeyMsg{Type: tea.KeyCtrlC})
+	updated, _ := handleModelPickerKey(m, tea.KeyPressMsg(tea.Key{Code: 'c', Mod: tea.ModCtrl}))
 	um := updated.(model)
 	if um.stage != stageInput {
 		t.Errorf("expected return to stageInput after Ctrl+C, got %d", um.stage)
@@ -285,7 +285,7 @@ func TestModelPickerEmptyListExits(t *testing.T) {
 	m.modelPickerEntries = nil
 
 	// Any key with empty list should exit back to input
-	updated, _ := handleModelPickerKey(m, tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ := handleModelPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyUp}))
 	um := updated.(model)
 	if um.stage != stageInput {
 		t.Errorf("expected exit to stageInput on empty list, got %d", um.stage)
@@ -326,7 +326,7 @@ func TestBareSlashModelOpensPicker(t *testing.T) {
 	m.composer.SetValue("/model")
 
 	// Enter should trigger model.list request, not /model text dump
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	// Composer should be cleared after the submit
@@ -352,7 +352,7 @@ func TestBareSlashMOpensModelPicker(t *testing.T) {
 	m.stage = stageInput
 	m.composer.SetValue("/m")
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	_ = updated.(model)
 
 	select {
@@ -395,5 +395,81 @@ func TestBackendModelListMsgEmptySetsError(t *testing.T) {
 	}
 	if um.lastError == "" {
 		t.Error("expected lastError set on empty model list")
+	}
+}
+
+// --- C1 regression: model picker must NOT appear after a normal chat turn ---
+
+// TestModelPickerDoesNotAppearAfterChatDone verifies the C1 regression:
+// a normal backendDoneMsg (end of chat turn) must not open the model picker.
+// Previously the picker could appear unsolicited, blocking every chat turn.
+func TestModelPickerDoesNotAppearAfterChatDone(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageStreaming
+	m.tokenBuf.WriteString("Hello!")
+	m.streamBuf.WriteString("Hello!")
+
+	updated, _ := m.Update(backendDoneMsg{TokensIn: 5, TokensOut: 10})
+	um := updated.(model)
+
+	if um.stage == stageModelPicker {
+		t.Error("C1 regression: model picker must not open after a normal chat done event")
+	}
+	if um.stage != stageInput {
+		t.Errorf("expected stageInput after done, got stage=%d", um.stage)
+	}
+}
+
+// TestModelPickerDoesNotAppearAfterStatus verifies that on_status notifications
+// (sent by the backend after model/provider changes) do not open the model picker.
+func TestModelPickerDoesNotAppearAfterStatus(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageInput
+
+	updated, _ := m.Update(backendStatusMsg{Model: "tools", Provider: "openai", Mode: "suggest"})
+	um := updated.(model)
+
+	if um.stage == stageModelPicker {
+		t.Error("C1 regression: model picker must not open on backendStatusMsg")
+	}
+}
+
+// TestStartupTimeoutTransitionsToInput verifies that startupTimeoutMsg
+// unblocks stageInit and transitions to stageInput even without backendStatusMsg.
+func TestStartupTimeoutTransitionsToInput(t *testing.T) {
+	m := initialModel(nil)
+	// Starts in stageInit — simulates slow/missing backend
+	if m.stage != stageInit {
+		t.Fatalf("expected stageInit on init, got %d", m.stage)
+	}
+
+	updated, _ := m.Update(startupTimeoutMsg{})
+	um := updated.(model)
+
+	if um.stage != stageInput {
+		t.Errorf("expected stageInput after startup timeout, got %d", um.stage)
+	}
+	if um.lastError == "" {
+		t.Error("expected lastError set after startup timeout (backend not connected warning)")
+	}
+}
+
+// TestStartupTimeoutNoopAfterBackendConnects verifies that startupTimeoutMsg
+// arriving after the backend already connected does not override the connected state.
+func TestStartupTimeoutNoopAfterBackendConnects(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageInput // already connected
+	m.lastError = ""
+
+	updated, _ := m.Update(startupTimeoutMsg{})
+	um := updated.(model)
+
+	// Should be a no-op since we're not in stageInit
+	if um.stage != stageInput {
+		t.Errorf("expected stageInput unchanged, got %d", um.stage)
+	}
+	// lastError should not be set if we were already connected
+	if um.lastError != "" {
+		t.Errorf("unexpected lastError after noop timeout: %s", um.lastError)
 	}
 }

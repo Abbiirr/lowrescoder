@@ -36,6 +36,7 @@ console = Console()
 def _version_callback(value: bool) -> None:
     if value:
         from autocode import __version__
+
         console.print(f"autocode {__version__}")
         raise typer.Exit()
 
@@ -44,8 +45,12 @@ def _version_callback(value: bool) -> None:
 def _default(
     ctx: typer.Context,
     version: bool = typer.Option(
-        False, "--version", "-V", callback=_version_callback,
-        is_eager=True, help="Show version and exit.",
+        False,
+        "--version",
+        "-V",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show version and exit.",
     ),
 ) -> None:
     """Edge-native AI coding assistant."""
@@ -53,9 +58,13 @@ def _default(
         # Call chat with explicit defaults — Typer's OptionInfo objects
         # are truthy, so bare chat() would hit the legacy path
         chat(
-            verbose=False, session=None, tui=False,
-            alternate_screen=False, legacy=False,
-            inline=False, parallel=True,
+            verbose=False,
+            session=None,
+            tui=False,
+            alternate_screen=False,
+            legacy=False,
+            inline=False,
+            parallel=True,
         )
 
 
@@ -207,7 +216,11 @@ def chat(
     tui: bool = typer.Option(False, "--tui", help="Use fullscreen Textual TUI"),
     alternate_screen: bool = typer.Option(False, "--alternate-screen", help="Alias for --tui"),
     legacy: bool = typer.Option(False, "--legacy", help="Use legacy Rich REPL (no agent loop)"),
-    inline: bool = typer.Option(False, "--inline", help="Use Python inline REPL instead of Go TUI"),
+    inline: bool = typer.Option(
+        False,
+        "--inline",
+        help="Use Python inline REPL (explicit fallback when Go TUI is unavailable)",
+    ),
     parallel: bool = typer.Option(
         True,
         "--parallel/--sequential",
@@ -262,8 +275,7 @@ def chat(
 
             if verbose:
                 console.print(
-                    f"[dim]Go TUI exited with code {result.returncode}. "
-                    "Using inline REPL.[/]"
+                    f"[dim]Go TUI exited with code {result.returncode}. Using inline REPL.[/]"
                 )
         else:
             if verbose:

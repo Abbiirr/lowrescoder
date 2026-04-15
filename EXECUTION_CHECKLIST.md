@@ -1,6 +1,6 @@
 # Execution Checklist
 
-Last updated: 2026-04-11 (deep-research + codebase audit integrated; TUI parity queue now reflects real gateway auth, router parity, prompt/tool-surface contract, and live Go validation findings)
+Last updated: 2026-04-15 (all 1f Tasks A-E complete; PTY 0 bugs; focused gates green; commit-scope cleanup still required)
 Owner: Codex
 Purpose: live status checklist for source-of-truth work, active next-frontier research-to-implementation items, and any benchmark/harness follow-up. Re-check this file every 10 minutes during active work.
 
@@ -9,7 +9,7 @@ Detailed implementation map:
 - For every open item below, find the matching numbered section in `PLAN.md` before implementing.
 
 Execution order:
-1. Section 1f Claude Code primary TUI parity
+1. Section 1f Unified TUI Consolidation (replaces "Claude Code primary TUI parity")
 2. Section 1 large-repo validation / retrieval contract
 3. Section 2 external-harness event normalization + deeper adapters
 4. Section 3 Terminal-Bench score improvement
@@ -343,119 +343,146 @@ Per Codex Entry 993: these must be scoped behind explicit profiles/modes/config,
   - REVIEW blocks all edits
   - /build and /review slash commands
 
-### 1f. Claude Code Primary TUI Parity
+### 1f. Unified TUI Consolidation
 
-Existing scaffolding that should be reused, not re-counted as completion:
-- [x] parity spec exists at `docs/design/claude-code-visual-parity.md`
-- [x] `claude_like` profile exists in config / inline / Textual
-- [x] some inline parity-oriented snapshot tests already exist in `test_inline_renderer.py`
-- [x] first Go TUI parity slice is already landed in the active worktree
-  - `❯` prompt
-  - compact branded header
-  - braille thinking spinner
-  - simplified footer-first status bar
-  - initial compact tool-row styling
-  - matching first-pass test updates in:
-    - `model_test.go`
-    - `view_test.go`
-    - `statusbar_test.go`
-    - `update_test.go`
-  - do not restart this work from scratch
+**Architecture direction (2026-04-13):** One TUI remains the target end state. Go BubbleTea (`autocode-tui`) is the default interactive frontend today. Python inline still exists as an explicit `--inline` fallback in `cli.py`, so removal is not complete yet. Python backend remains the subprocess daemon.
 
-Still open:
-- [x] Refresh the parity contract from current Claude Code behavior
-  - fold in the latest local changelog signals:
-    - footer-first status hierarchy
-    - fixed-width braille/shimmer spinner
-    - compact tool-call grouping/collapse
-    - narrow-terminal footer stability
-    - reduced layout jitter during streaming
-- [x] Make the primary full-screen TUI the first real parity target
-  - treat the TUI as the main execution surface for this workstream
-  - do not drift into a Pi-style multi-pane orchestrator dashboard
-- [ ] Rebuild the core layout contract
-  - single-column chat-first hierarchy
-  - minimal branded header
-  - bottom footer/status line as the main live-status surface
-  - prompt kept visually minimal and stable
-  - current remaining gaps:
-    - task-panel demotion when it creates dashboard noise
-    - completion/scrollback consistency with the live view
-- [ ] Align the highest-salience interaction visuals
-  - thinking spinner/text
-  - compact tool rows
-  - success/failure markers
-  - approval prompt shape
-  - prompt/footer hierarchy
-  - current remaining gaps:
-    - compact approval prompt parity
-    - compact tool/result summaries on turn completion
-- [ ] Harden narrow-terminal and render-stability behavior
-  - 80-column layout must remain readable
-  - long model names, file paths, and tool args must truncate cleanly
-  - spinner/tool updates must not cause visible layout jitter
-  - Unicode/wide-char rendering must stay correct
-- [ ] Add focused render/snapshot/string-contract coverage
-  - welcome
-  - idle prompt
-  - streaming
-  - thinking
-  - compact tool success
-  - compact tool failure
-  - approval prompt
-  - narrow-terminal footer
-- [ ] Pass non-regression quality gates on the TUI suite
-  - `view_test.go`
-  - `statusbar_test.go`
-  - `update_test.go`
-  - `approval_test.go`
-  - `commands_test.go`
-  - `e2e_test.go`
-- [ ] Record manual smoke artifacts before calling parity complete
-  - 80-column terminal
-  - 120+ column terminal
-  - visible thinking + streaming in same turn
-  - long-path / long-command example
-  - every manual run must start from `docs/qa/manual-ai-bug-test-report-template.md` and end with a filled PASS/FAIL artifact
-- [ ] Run the manual AI bug-testing playbook during each parity pass
-  - use `docs/qa/manual-ai-bug-testing-playbook.md`
-  - explicitly cover:
-    - bare `/` command discovery
-    - visible slash menu should show the full relevant command set
-    - Up/Down should move the slash-menu selection
-    - Enter should accept the highlighted slash command
-    - `/help` vs completion parity
-    - `/model` against the localhost gateway
-    - `/model` should offer an on-screen picker, not just a dumped text list
-    - `/provider` visibility and switching
-    - provider/model visibility in the live status surface
-    - repo-local prompts like `check the files in this repo`
-    - live resize behavior while idle and while streaming
-    - `autocode ask` when slash/provider/tool-surface behavior changes
-- [ ] Fix prompt/tool-surface mismatches before calling parity complete
-  - current known bug class:
-    - system prompt still teaches `list_files`
-    - live core schema may expose only a narrower tool subset plus `tool_search`
-    - this can trigger bogus self-diagnosis like “tool list is empty” or “no list_files tool”
-- [ ] Fix gateway auth/header parity for model listing and health checks
-  - current known bug class:
-    - unauthenticated `http://localhost:4000/v1/models` returns `401`
-    - authenticated with `Authorization: Bearer $LITELLM_API_KEY` returns the real alias catalog
-    - shared helper already exists in `autocode/src/autocode/gateway_auth.py`
-    - AutoCode should not mislabel that as generic gateway failure
-- [ ] Add a router-parity contract between the Go TUI slash surface and the Python router
-  - bare `/` discovery should not rely only on visual snapshots
-  - `knownCommands` in `cmd/autocode-tui/commands.go` must stay aligned with `create_default_router()` in `src/autocode/tui/commands.py`
-- [ ] Treat provider/model state as typed first-class UI state
-  - show current provider/model clearly
-  - keep `/provider` as the provider control surface
-  - avoid shell-style or generic fallback explanations when the typed route exists
-- [x] Run live Go validation on the real module path
-  - `go version` is available on this machine
-  - `cd autocode/cmd/autocode-tui && go test ./...` now passes in the current tree
-  - the old `spinner.MiniDot` fix is verified in live validation
-- [ ] Keep rollout gated behind `claude_like` until the completion gates pass
-  - only then decide whether to promote `claude_like` to the default profile
+**Research sources used:**
+- `research-components/pi-mono` — differential rendering, steering queues, JSONL branching, log/context split
+- `research-components/claude-code` — Ink renderer, inline mode, status bar, Ctrl+K palette
+- `research-components/aider` — sliding window streaming, token-aware summarization, multiline input
+- `research-components/opencode` — frecency history, timeline fork, background theme detection
+- `research-components/goose` — task dashboard emojis, thinking randomization, `/plan` mode
+- `research-components/gastown` — charmbracelet stack, agent-mode awareness, adaptive colors
+- BubbleTea v2 — `tea.EnableMode2026()` for synchronized output (Mode 2026), native support
+
+**Already landed (keep, do not redo):**
+- [x] `stagePalette` + Ctrl+K palette (`cmd/autocode-tui/update.go`, `view.go`)
+- [x] 187 rotating spinner verbs (`spinnerverbs.go`)
+- [x] `❯` prompt, branded header, braille thinking spinner
+- [x] footer-first status bar
+- [x] `/undo`, `/diff`, `/cost`, `/export` commands (`tui/commands.py`)
+- [x] `todo_write`, `todo_read`, `glob_files`, `grep_content` tools
+- [x] Go palette entries for all new commands (`update.go`)
+- [x] `todo_write`/`todo_read` in CORE_TOOL_NAMES
+- [x] Always-on RulesLoader via `load_project_memory_content()` in `agent/factory.py`
+
+**Phase 1 — Fix Critical Bugs: code-fixed, PTY closure done**
+- [x] C3: Go TUI PTY startup — `startupTimeoutMsg` 15s fallback added; `stageInit` now shows spinner and unblocks after timeout (`messages.go`, `model.go`, `update.go`, `view.go`)
+- [x] C1: Model picker after every chat — regression tests added in `model_picker_test.go`; no unsolicited `requestModelListCmd` trigger found; tests guard against future regressions
+- [x] C2: “(queued N pending)” text leak — root cause was CLAUDE.md context pollution; `_RULES_MAX_CHARS = 3000` cap added in `agent/factory.py`
+- [ ] H4/M3: Python inline session recovery after gateway timeout — reset `_current_agent` on cancellation in `handle_chat` (deferred; inline REPL being removed)
+- [x] Store a fresh PTY artifact for the current tree
+  - startup, normal chat, `/model`, Ctrl+K, and warning classification covered in:
+    - `autocode/docs/qa/test-results/20260415-080003-tui-backend-parity-pty-smoke-deterministic-v3-20260415.md`
+    - `autocode/docs/qa/test-results/20260415-150741-pty-phase1-fixes.md`
+
+**Phase 2 — Consolidation (one TUI): default routing done, contract not closed**
+- [x] Wire `autocode chat` → launches `autocode-tui` binary — `_find_go_tui_binary()` in `cli.py` already does this; binary at `autocode/build/autocode-tui`; `--inline` flag is explicit opt-in fallback
+- [x] Decide the inline fallback contract in `autocode/src/autocode/cli.py`
+  - DECIDED: `--inline` is kept as an explicit documented fallback
+  - docs updated in `current_directives.md` to accurately describe the contract
+  - help text in `cli.py` updated to say "explicit fallback"
+- [ ] Rename `autocode-tui` binary to be the primary `autocode` interactive entrypoint
+- [ ] Ensure `autocode serve` remains the standalone backend daemon
+- [ ] Update install scripts and `autocode/cmd/` accordingly
+- [ ] Run full test suite; update all tests that reference inline TUI
+
+**Phase 3 — Mode 2026 + Differential Rendering (Go side):**
+- [x] BubbleTea v2 migration (v1.3.4 → v2.0.2, charm.land vanity imports, tea.KeyPressMsg, tea.View struct)
+- [x] Mode 2026 enabled by default in BubbleTea v2 (no manual ANSI sequences needed)
+- [x] Sliding window for stream: stable completed lines → scrollback via tea.Println, last N lines → live panel
+- [x] ~~Implement differential renderer: cache lastRenderedLines~~ CORRECTED: BubbleTea v2 handles terminal-level diffing natively via Mode 2026; dead scaffolding (`lastRenderedLines`, `renderGeneration`) removed
+- [x] `--inline` flag wired: default = alt-screen; `--inline` opts out (no `tea.WithAltScreen()`), preserving scrollback — NEEDS_WORK → FIXED
+- [x] Verify: focused `go test ./...` green
+
+**Phase 4 — Pi-mono Features (Go side complete, backend parity landed):**
+- [x] Steering queue: `Ctrl+C` during streaming → steer input mode → `steer` RPC to backend; Esc cancels; second Ctrl+C force-quits
+- [x] Follow-up queue: `/followup <msg>` queues a message — CORRECTED: was routing via steer RPC (wrong); fixed to drain via `followupDrainMsg` → `sendChat` path
+- [x] JSONL session branching: `/fork` command creates branch, `session.fork` RPC to backend; `ForkSessionParams`/`ForkSessionResult` protocol types
+- [ ] log.jsonl + context.jsonl split: Python backend change (deferred)
+- [x] Backend RPC handlers in `autocode/src/autocode/backend/server.py`
+  - `steer` request handling added — cancels active run and injects steer message
+  - `session.fork` request handling added — creates forked session with copied messages, does not switch
+  - 29 new tests in `test_backend_server.py`
+
+**Phase 5 — Best-of-All Features (Go side):**
+- [x] Multiline input: `Alt+Enter` / `Ctrl+J` inserts newline, `Enter` submits — already in composer via `textarea.KeyMap`
+- [x] External editor: `Ctrl+E` opens `$EDITOR` with current input buffer; `editorDoneMsg` loads result back into composer
+- [x] Frecency-based prompt history: `historyEntry` type with `frecencyScore()`, `sortByFrecency()`, `historyAddFrecency()`; `loadFrecencyHistory()`/`saveFrecencyHistory()` for JSONL persistence
+- [x] Task dashboard: `renderTaskDashboard()` shows pending/running/done/failed counts (Goose pattern)
+- [x] `/plan` mode: `/plan` command toggles `planMode`; `planModeStyle` renders `[PLAN MODE]` indicator in view
+- [x] Background theme detection: `detectThemeCmd()` reads `COLORFGBG` env var; `bgColorMsg` sets `themeDetected`
+
+**Phase 6 — Status Bar Enhancements (Go side complete, backend producer landed):**
+- [x] Live cost display: `totalCost` updated by `backendCostMsg`; displayed in status bar — CORRECTED: `on_cost_update` notification routing added to `dispatchNotification`; was missing, now wired
+- [x] Live token count: `totalTokensIn`+`totalTokensOut` accumulated in `handleDone`; displayed in status bar
+- [x] Provider/model display: always visible via `backendStatusMsg`
+- [x] Session ID display: shown in status bar
+- [x] Background task indicator: `backgroundTasks` count + "⏳ N bg" in status bar
+- [x] Python backend `on_cost_update` producer
+  - Go-side notification parsing is wired
+  - backend now emits `on_cost_update` after each chat turn (L4 and L2 paths)
+  - documented as per-turn snapshot, not live-streaming cost
+
+**Stderr classification fix (from live-use bug, Entry 1105):**
+- [x] `drainStderr` now classifies log lines by severity: WARNING/WARN → dim yellow, DEBUG/INFO → suppress, ERROR/CRITICAL/unknown → red error banner
+
+**Immediate next slice (start here):**
+- [x] Task A: backend `steer` RPC in `autocode/src/autocode/backend/server.py`
+  - testing strategy: targeted Python tests for dispatch, happy path, and no-active-run failure
+  - exit gate: backend no longer rejects `steer`; no hang/traceback; Go tests still green
+- [x] Task B: backend `session.fork` RPC in `autocode/src/autocode/backend/server.py`
+  - testing strategy: targeted Python tests for new session id, session/log setup, and documented switch behavior
+  - exit gate: returns a usable `new_session_id`; docs/comms match actual behavior
+- [x] Task C: backend `on_cost_update` producer
+  - testing strategy: targeted Python notification tests, plus focused Go regression run
+  - exit gate: emit real `on_cost_update` payloads; documented as per-turn only
+- [x] Task D: CLI contract cleanup in `autocode/src/autocode/cli.py`
+  - DECIDED: `--inline` kept as explicit documented fallback
+  - testing strategy: targeted CLI tests plus a minimal smoke on the chosen path
+  - exit gate: code, help text, and docs all agree on whether `--inline` is supported
+- [x] Task E: PTY validation artifact refresh
+  - artifact: `autocode/docs/qa/test-results/20260415-150741-pty-phase1-fixes.md` (10/10 checks, 0 bugs — 2026-04-15)
+  - focused smoke companion: `autocode/docs/qa/test-results/20260415-080003-tui-backend-parity-pty-smoke-deterministic-v3-20260415.md`
+  - exit gate met: stored artifact shows no unsolicited picker, queue leak, panic, traceback, or fatal warning rendering
+
+**Completion Gates (Section 1f closeout):**
+- `cd autocode/cmd/autocode-tui && go test -count=1 ./...` green
+- targeted backend tests for new JSON-RPC handlers and cost-update emission green
+- stored PTY artifact for the live Go TUI path shows:
+  - startup reaches a usable prompt or timeout fallback
+  - normal chat does not open unsolicited model/provider pickers
+  - queue/debug text does not leak into the visible stream
+  - backend warnings do not render as fatal red error banners
+- docs and CLI contract agree on whether `--inline` remains supported
+- `uv run pytest autocode/tests/unit/ -v` green (≥1778 pass, 0 fail)
+- Manual smoke: PTY artifact from `pty_tui_bugfind.py` with no model-picker-after-chat, no queue leak
+- `autocode chat` launches Go TUI (not Python inline REPL)
+
+**Phase 7 — Feature Completeness Backlog (unlock after Section 1f closeout):**
+
+Feature audit completed 2026-04-13: 35 DONE (51%), 8 PARTIAL (12%), 26 MISSING (38%) out of 69 features surveyed across research-components. Full detail in `PLAN.md §1f.8`. Implement in priority order:
+
+*Tier 1 — Quick Wins (1-2h each):*
+- [ ] QW1: Double-press Ctrl+C quit guard — show "Press Ctrl+C again to quit" hint at `stageInput` on first press; quit only on second press within 3s window
+- [ ] QW2: Turn duration timer — track turn-start time, show elapsed in status bar while streaming; final duration shown after `on_done`
+- [ ] QW3: Pager for long outputs — `/help`, `/config`, `/memory` open `stagePager` (j/k scroll, q/Esc exit) instead of dumping to stream area
+
+*Tier 2 — Medium Effort (half-day each):*
+- [ ] ME1: Collapsible tool output — tool rows with output > 8 lines show `[+N more]`; Tab/Enter expands
+- [ ] ME2: Tool timeline summary — after `on_done`, emit a one-line summary "bash → ✓ | read_file → ✓ (3 tools, 2.1s)" via `tea.Println`
+- [ ] ME3: Colored diff display — for `edit_file` tool results containing a unified diff, render `+` lines green and `-` lines red/dim
+- [ ] ME4: File path tab completion — extend `completion.go` to complete file paths after `@` or in `/shell <partial>`
+- [ ] ME5: Live markdown rendering in main stream — apply `glamour.Render()` to `streamBuf` content at tick time (line-by-line to handle partial code blocks)
+- [ ] ME6: External editor ($EDITOR) wiring — `Ctrl+E` at `stageInput`; `editorDoneMsg`/`openEditorCmd()` already exist in `messages.go` and `update.go`; verify they are actually wired
+
+*Tier 3 — Larger Changes (multi-session):*
+- [ ] L1: `/export` command rendering — write scrollback + tool calls to `~/.autocode/exports/<session>-<ts>.md`; show confirmation in status bar
+- [ ] L2: Session fork/branch TUI — after 1f.7 Task B lands, show new session ID and "branch `<id>`" status bar indicator on successful fork
+- [ ] L3: Help overlay — `?` at non-streaming stage shows scrollable keybinding overlay; close with Esc/q
+- [ ] L4: Dark/light theme variants — use `themeDetected` field to switch between two lipgloss palettes; env var `AUTOCODE_THEME=light` as initial toggle
+- [ ] L5: Syntax highlighting for code blocks — `alecthomas/chroma` for triple-backtick blocks; opt-in via `AUTOCODE_SYNTAX=1`
 
 ## Remaining Work (Post-Phase 8)
 

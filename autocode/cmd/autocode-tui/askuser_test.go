@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestEnterAskUserWithOptions(t *testing.T) {
@@ -87,21 +87,21 @@ func TestAskUserArrowNavigation(t *testing.T) {
 	m.askCursor = 0
 
 	// Down
-	updated, _ := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
 	um := updated.(model)
 	if um.askCursor != 1 {
 		t.Errorf("expected cursor=1 after down, got %d", um.askCursor)
 	}
 
 	// Down again
-	updated2, _ := handleAskUserKey(um, tea.KeyMsg{Type: tea.KeyDown})
+	updated2, _ := handleAskUserKey(um, tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
 	um2 := updated2.(model)
 	if um2.askCursor != 2 {
 		t.Errorf("expected cursor=2 after second down, got %d", um2.askCursor)
 	}
 
 	// Up
-	updated3, _ := handleAskUserKey(um2, tea.KeyMsg{Type: tea.KeyUp})
+	updated3, _ := handleAskUserKey(um2, tea.KeyPressMsg(tea.Key{Code: tea.KeyUp}))
 	um3 := updated3.(model)
 	if um3.askCursor != 1 {
 		t.Errorf("expected cursor=1 after up, got %d", um3.askCursor)
@@ -115,7 +115,7 @@ func TestAskUserArrowWrap(t *testing.T) {
 
 	// Up from 0 → wraps to 2
 	m.askCursor = 0
-	updated, _ := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyUp}))
 	um := updated.(model)
 	if um.askCursor != 2 {
 		t.Errorf("expected cursor=2 (wrap from top), got %d", um.askCursor)
@@ -123,7 +123,7 @@ func TestAskUserArrowWrap(t *testing.T) {
 
 	// Down from 2 → wraps to 0
 	m.askCursor = 2
-	updated2, _ := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyDown})
+	updated2, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
 	um2 := updated2.(model)
 	if um2.askCursor != 0 {
 		t.Errorf("expected cursor=0 (wrap from bottom), got %d", um2.askCursor)
@@ -137,7 +137,7 @@ func TestAskUserEnterSelectsOption(t *testing.T) {
 	m.askOptions = []string{"Alpha", "Beta"}
 	m.askCursor = 1 // Select "Beta"
 
-	updated, _ := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if um.stage != stageStreaming {
@@ -155,7 +155,7 @@ func TestAskUserEnterPrefersTypedText(t *testing.T) {
 	m.composer.Focus()
 	m.composer.SetValue("custom answer")
 
-	updated, cmd := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if um.stage != stageStreaming {
@@ -174,7 +174,7 @@ func TestAskUserEscapeDefaultsFirst(t *testing.T) {
 	m.askOptions = []string{"Default", "Other"}
 	m.askCursor = 1
 
-	updated, cmd := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyEscape})
+	updated, cmd := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
 	um := updated.(model)
 
 	if um.stage != stageStreaming {
@@ -192,7 +192,7 @@ func TestAskUserEscapeEmptyOptions(t *testing.T) {
 	m.askOptions = nil
 	m.askAllowText = true
 
-	updated, _ := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyEscape})
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
 	um := updated.(model)
 
 	if um.stage != stageStreaming {
@@ -207,7 +207,7 @@ func TestAskUserFocusRestored(t *testing.T) {
 	m.askOptions = []string{"X"}
 	m.askCursor = 0
 
-	updated, _ := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	if !um.composer.Focused() {
@@ -274,7 +274,7 @@ func TestAskUserMultiStageFlow(t *testing.T) {
 	}
 
 	// Answer first ask-user
-	updated2, _ := handleAskUserKey(um, tea.KeyMsg{Type: tea.KeyEnter})
+	updated2, _ := handleAskUserKey(um, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um2 := updated2.(model)
 	if um2.stage != stageStreaming {
 		t.Fatalf("expected stageStreaming after answer, got %d", um2.stage)
@@ -295,7 +295,7 @@ func TestAskUserMultiStageFlow(t *testing.T) {
 	}
 
 	// Answer second ask-user
-	updated4, _ := handleAskUserKey(um3, tea.KeyMsg{Type: tea.KeyEnter})
+	updated4, _ := handleAskUserKey(um3, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um4 := updated4.(model)
 	if um4.stage != stageStreaming {
 		t.Errorf("expected stageStreaming after second answer, got %d", um4.stage)
@@ -325,7 +325,7 @@ func TestAskUserTypingDuringOptions(t *testing.T) {
 	m.composer.Focus()
 
 	// Type a character
-	updated, _ := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'z'}})
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Text: "z", Code: 'z'}))
 	um := updated.(model)
 
 	if um.composer.Value() != "z" {
@@ -340,7 +340,7 @@ func TestAskUserEscWithCtrlC(t *testing.T) {
 	m.askOptions = []string{"A"}
 	m.askCursor = 0
 
-	updated, _ := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyCtrlC})
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: 'c', Mod: tea.ModCtrl}))
 	um := updated.(model)
 
 	if um.stage != stageStreaming {
@@ -355,14 +355,14 @@ func TestAskUserVimNavigation(t *testing.T) {
 	m.askCursor = 0
 
 	// 'j' moves down (vim binding)
-	updated, _ := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Text: "j", Code: 'j'}))
 	um := updated.(model)
 	if um.askCursor != 1 {
 		t.Errorf("expected cursor=1 after 'j', got %d", um.askCursor)
 	}
 
 	// 'k' moves up (vim binding)
-	updated2, _ := handleAskUserKey(um, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	updated2, _ := handleAskUserKey(um, tea.KeyPressMsg(tea.Key{Text: "k", Code: 'k'}))
 	um2 := updated2.(model)
 	if um2.askCursor != 0 {
 		t.Errorf("expected cursor=0 after 'k', got %d", um2.askCursor)
@@ -378,7 +378,7 @@ func TestAskUserEnterEmptyFreeTextNoOptions(t *testing.T) {
 	m.composer.Focus()
 	m.composer.SetValue("") // empty text
 
-	updated, _ := handleAskUserKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 
 	// Should stay in ask-user (no answer provided)

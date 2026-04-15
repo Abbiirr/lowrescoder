@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // enterModelPicker transitions to the model picker state with a list of
@@ -93,7 +93,7 @@ func renderModelPicker(m model) string {
 }
 
 // handleModelPickerKey handles key events while the model picker is open.
-func handleModelPickerKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleModelPickerKey(m model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	n := len(m.modelPickerEntries)
 	if n == 0 {
 		return exitModelPicker(m), nil

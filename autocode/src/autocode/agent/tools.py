@@ -127,6 +127,10 @@ CORE_TOOL_NAMES = frozenset(
         "web_fetch",
         # Transactional multi-file patch (deep-research-report Phase B Item 1)
         "apply_patch",
+        # Planning tools must be visible on the default schema path so
+        # the AUTO-mode planning nudge can actually succeed.
+        "todo_write",
+        "todo_read",
     }
 )
 

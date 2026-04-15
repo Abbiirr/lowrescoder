@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/textarea"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/textarea"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 // stage represents the current UI state.
@@ -23,6 +23,7 @@ const (
 	stageModelPicker                 // Showing model picker after /model
 	stageProviderPicker              // Showing provider picker after /provider
 	stagePalette                     // Showing command palette (Ctrl+K)
+	stageSteer                       // Phase 4: typing a steer message
 )
 
 // toolCallEntry tracks a tool call for the current turn.
@@ -41,12 +42,13 @@ type model struct {
 	spin      spinner.Model
 
 	// State
-	stage       stage
-	backend     *Backend
-	width       int
-	height      int
-	quitting    bool
-	claudeLike  bool // claude_like profile gate — enables composer frame
+	stage      stage
+	backend    *Backend
+	width      int
+	height     int
+	quitting   bool
+	inlineMode bool // --inline flag: scrollback-friendly, no alternate screen
+	claudeLike bool // claude_like profile gate — enables composer frame
 
 	// Streaming buffers (pointers to avoid copy-by-value panic)
 	tokenBuf     *strings.Builder // Raw tokens accumulate here
@@ -91,8 +93,8 @@ type model struct {
 	lastError string
 
 	// Autocomplete dropdown items (for rendering when >1 match)
-	completions       []string
-	completionCursor  int // cursor index into completions for Up/Down navigation
+	completions      []string
+	completionCursor int // cursor index into completions for Up/Down navigation
 
 	// Model picker state (opened from /model)
 	modelPickerEntries []string
@@ -111,13 +113,44 @@ type model struct {
 
 	// Session picker state
 	sessionPickerEntries []sessionEntry
+
+	// --- Phase 3: Sliding window streaming ---
+	stableScrollbackLines []string // lines flushed to scrollback (never redrawn)
+	maxLiveLines          int      // max lines kept in the live stream panel (default 10)
+
+	// --- Phase 4: Steering queue ---
+	stageSteer  bool   // true when user pressed Ctrl+C during streaming to type a steer message
+	steerInput  string // the steer message being typed
+	steerCursor int    // cursor position in steer input
+
+	// --- Phase 4: Follow-up queue ---
+	followupQueue []string // messages queued via /followup to send after current tool completes
+
+	// --- Phase 5: Frecency history ---
+	promptHistory []historyEntry // frecency-ranked prompt history
+
+	// --- Phase 5: Plan mode ---
+	planMode bool // true when in read-only planning mode
+
+	// --- Phase 6: Enhanced status bar ---
+	sessionID       string // abbreviated session ID
+	totalCost       string // running cost total
+	totalTokensIn   int    // input tokens accumulated
+	totalTokensOut  int    // output tokens accumulated
+	backgroundTasks int    // count of background tasks running
+	themeDetected   string // "dark" or "light" from OSC 11 query
+	bgColorR        int    // background color R component from OSC 11
+	bgColorG        int    // background color G component from OSC 11
+	bgColorB        int    // background color B component from OSC 11
+
+	// Benchmark sentinel mode (AUTOCODE_BENCH=1)
+	benchMode      bool
+	benchReadySent bool
 }
 
 // initialModel creates the initial model state.
 func initialModel(backend *Backend) model {
-	sp := spinner.New()
-	sp.Spinner = spinner.MiniDot
-	sp.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
+	sp := spinner.New(spinner.WithSpinner(spinner.MiniDot), spinner.WithStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("243"))))
 
 	// Gate composer frame behind claude_like profile
 	claudeLike := os.Getenv("AUTOCODE_PROFILE") == "claude_like"
@@ -139,7 +172,21 @@ func initialModel(backend *Backend) model {
 		currentVerb:     randomVerb(),
 		approvalOptions: []string{"Yes", "Yes, this session", "No"},
 		queueMax:        10,
+		maxLiveLines:    10,
+		benchMode:       os.Getenv("AUTOCODE_BENCH") == "1" || os.Getenv("HYBRIDCODER_BENCH") == "1",
 	}
+}
+
+// startupTimeoutDuration is how long to wait for the backend to send
+// its first on_status before giving up and allowing the user to interact.
+const startupTimeoutDuration = 15 * time.Second
+
+// startupTimeoutCmd returns a command that fires startupTimeoutMsg after
+// startupTimeoutDuration, used to unblock stageInit if backend is slow.
+func startupTimeoutCmd() tea.Cmd {
+	return tea.Tick(startupTimeoutDuration, func(time.Time) tea.Msg {
+		return startupTimeoutMsg{}
+	})
 }
 
 // Init returns the initial commands.
@@ -147,7 +194,29 @@ func (m model) Init() tea.Cmd {
 	return tea.Batch(
 		textarea.Blink,
 		m.spin.Tick,
+		startupTimeoutCmd(),
+		detectThemeCmd(),
 	)
+}
+
+// detectThemeCmd detects terminal background theme from environment variables.
+// Many terminals set COLORFGBG (e.g., "0;15" = light bg) or TERM_PROGRAM
+// which can hint at dark/light mode.
+func detectThemeCmd() tea.Cmd {
+	return func() tea.Msg {
+		colorfgbg := os.Getenv("COLORFGBG")
+		if colorfgbg != "" {
+			parts := strings.Split(colorfgbg, ";")
+			if len(parts) >= 2 {
+				bg := parts[len(parts)-1]
+				lightBGs := map[string]bool{"15": true, "7": true, "231": true, "255": true, "46": true, "47": true, "48": true, "49": true, "230": true}
+				if lightBGs[bg] {
+					return bgColorMsg{R: 255, G: 255, B: 255}
+				}
+			}
+		}
+		return bgColorMsg{R: 30, G: 30, B: 30}
+	}
 }
 
 // tickCmd returns a command that sends a tickMsg after 16ms (60fps).

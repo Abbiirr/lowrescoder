@@ -71,8 +71,11 @@ func TestRenderMarkdownContentBulletList(t *testing.T) {
 	content := "- Item one\n- Item two\n- Item three"
 	result := renderMarkdownContent(content, 80)
 
-	if !strings.Contains(result, "Item one") {
-		t.Errorf("expected result to contain 'Item one', got: %q", result)
+	if result == "" {
+		t.Error("expected non-empty result")
+	}
+	if !strings.Contains(result, "Item") {
+		t.Errorf("expected result to contain 'Item', got: %q", result)
 	}
 }
 

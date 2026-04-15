@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestCompletionsPrefixMatch(t *testing.T) {
@@ -204,7 +204,7 @@ func TestSuggestionsSetOnKeyPress(t *testing.T) {
 
 	// Type "/" then "h" then "e"
 	for _, r := range []rune{'/', 'h', 'e'} {
-		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Text: string(r), Code: r}))
 		m = updated.(model)
 	}
 
@@ -236,7 +236,7 @@ func TestDropdownRenderedForMultipleMatches(t *testing.T) {
 
 	// Type "/s" which matches multiple commands
 	for _, r := range []rune{'/', 's'} {
-		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Text: string(r), Code: r}))
 		m = updated.(model)
 	}
 
@@ -244,7 +244,7 @@ func TestDropdownRenderedForMultipleMatches(t *testing.T) {
 		t.Fatalf("expected multiple completions for /s, got %v", m.completions)
 	}
 
-	view := m.View()
+	view := m.View().Content
 	// Dropdown should show completion items
 	if !strings.Contains(view, "/sessions") && !strings.Contains(view, "/shell") {
 		t.Errorf("expected dropdown with /sessions or /shell in view, got:\n%s", view)
@@ -258,7 +258,7 @@ func TestDropdownHiddenForSingleMatch(t *testing.T) {
 
 	// Type "/he" — only matches /help and /h, let's use "/hel" for single match
 	for _, r := range []rune{'/', 'h', 'e', 'l'} {
-		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Text: string(r), Code: r}))
 		m = updated.(model)
 	}
 
@@ -267,7 +267,7 @@ func TestDropdownHiddenForSingleMatch(t *testing.T) {
 		t.Fatalf("expected 1 completion for /hel, got %v", m.completions)
 	}
 
-	view := m.View()
+	view := m.View().Content
 	// Dropdown should NOT be rendered (ghost text handles single match)
 	// Check that we don't see the dropdown-style rendering (indented items)
 	lines := strings.Split(view, "\n")
@@ -289,7 +289,7 @@ func TestDropdownHiddenForNonSlash(t *testing.T) {
 
 	// Type regular text
 	for _, r := range []rune{'h', 'e', 'l', 'l', 'o'} {
-		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Text: string(r), Code: r}))
 		m = updated.(model)
 	}
 
@@ -304,7 +304,7 @@ func TestDropdownClearedOnEnter(t *testing.T) {
 
 	// Type "/he" to populate completions
 	for _, r := range []rune{'/', 'h', 'e'} {
-		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Text: string(r), Code: r}))
 		m = updated.(model)
 	}
 
@@ -314,7 +314,7 @@ func TestDropdownClearedOnEnter(t *testing.T) {
 
 	// Now type the full command and press Enter
 	m.composer.SetValue("/help")
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	m = updated.(model)
 
 	if m.completions != nil {
@@ -328,7 +328,7 @@ func TestTabAcceptsSuggestion(t *testing.T) {
 
 	// Type "/hel" to get a single suggestion (/help)
 	for _, r := range []rune{'/', 'h', 'e', 'l'} {
-		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Text: string(r), Code: r}))
 		m = updated.(model)
 	}
 
@@ -338,7 +338,7 @@ func TestTabAcceptsSuggestion(t *testing.T) {
 	}
 
 	// Press Tab — should accept first completion
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyTab}))
 	m = updated.(model)
 
 	if m.composer.Value() != "/help" {

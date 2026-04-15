@@ -7,6 +7,7 @@ token_tracker, and session_stats are always present.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from autocode.agent.approval import ApprovalManager
@@ -22,6 +23,44 @@ from autocode.agent.tools import ToolRegistry
 from autocode.config import Layer2Config
 from autocode.session.store import SessionStore
 from autocode.session.task_store import TaskStore
+
+_RULES_MAX_CHARS = 3000  # Cap injected rules to ~750 tokens to prevent context pollution
+
+
+def load_project_memory_content(project_root: Path) -> str | None:
+    """Load project memory plus always-on rules for runtime prompt injection.
+
+    Rules injection is capped at _RULES_MAX_CHARS characters to prevent large
+    files (e.g. CLAUDE.md at 10KB) from polluting the LLM context and causing
+    it to reproduce internal status text in its responses.
+    """
+    memory_content = None
+    try:
+        memory_content = (project_root / ".autocode" / "memory.md").read_text(encoding="utf-8")
+    except OSError:
+        pass
+
+    try:
+        from autocode.layer2.rules import RulesLoader
+
+        rules_text = RulesLoader().load(project_root)
+        if rules_text:
+            # Truncate to cap — keep the start of the rules (invariants, stack)
+            # which is more stable than the status/frontier sections at the end.
+            if len(rules_text) > _RULES_MAX_CHARS:
+                rules_text = (
+                    rules_text[:_RULES_MAX_CHARS]
+                    + "\n\n[...rules truncated for context budget...]"
+                )
+            memory_content = (
+                f"{rules_text}\n\n{memory_content}"
+                if memory_content
+                else rules_text
+            )
+    except Exception:  # noqa: BLE001 — layer2 is optional; any failure degrades to no rules
+        pass
+
+    return memory_content
 
 
 def create_agent_loop(

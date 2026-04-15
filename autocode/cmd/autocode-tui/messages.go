@@ -116,3 +116,56 @@ type backendTaskStateMsg struct {
 	Tasks     []taskEntry
 	Subagents []subagentEntry
 }
+
+// startupTimeoutMsg fires when the backend has not sent backendStatusMsg
+// within the startup timeout. Transitions stageInit → stageInput with an
+// error so the TUI is usable even when the backend is slow to start.
+type startupTimeoutMsg struct{}
+
+// --- Phase 4: Steer / Followup / Fork messages ---
+
+// steerSendMsg is sent when the user confirms a steer message.
+type steerSendMsg struct {
+	Text string
+}
+
+// followupDrainMsg processes the next followup message.
+type followupDrainMsg struct{}
+
+// backendForkResultMsg carries the result of a fork_session RPC.
+type backendForkResultMsg struct {
+	NewSessionID string
+	Error        string
+}
+
+// --- Phase 5: Editor / Theme messages ---
+
+// editorDoneMsg is sent when the external editor closes.
+type editorDoneMsg struct {
+	Content string
+}
+
+// bgColorMsg carries the detected terminal background color.
+type bgColorMsg struct {
+	R, G, B int
+}
+
+// backendWarningMsg carries a backend stderr line classified as WARNING severity.
+// Rendered in dim yellow rather than the red error banner.
+type backendWarningMsg struct {
+	Message string
+}
+
+// --- Phase 6: Cost / Token messages ---
+
+// backendCostMsg carries a cost update from the backend.
+type backendCostMsg struct {
+	Cost      string
+	TokensIn  int
+	TokensOut int
+}
+
+// backendSessionIDMsg carries the session ID from the backend.
+type backendSessionIDMsg struct {
+	SessionID string
+}

@@ -6,13 +6,15 @@ import (
 )
 
 type statusBarModel struct {
-	Model    string
-	Provider string
-	Mode     string
-	Tokens   int
-	Cost     string
-	Queue    int
-	Width    int
+	Model           string
+	Provider        string
+	Mode            string
+	Tokens          int
+	Cost            string
+	Queue           int
+	SessionID       string
+	BackgroundTasks int
+	Width           int
 }
 
 func (s statusBarModel) View() string {
@@ -40,11 +42,17 @@ func (s statusBarModel) View() string {
 	if s.Cost != "" {
 		parts = append(parts, s.Cost)
 	}
+	if s.SessionID != "" {
+		parts = append(parts, s.SessionID)
+	}
 
 	result := strings.Join(parts, " · ")
 
 	if s.Queue > 0 {
 		result += fmt.Sprintf(" · queue: %d", s.Queue)
+	}
+	if s.BackgroundTasks > 0 {
+		result += fmt.Sprintf(" · ⏳ %d bg", s.BackgroundTasks)
 	}
 
 	maxLen := s.Width - 2

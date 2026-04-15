@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // --- Provider picker state transitions ---
@@ -44,7 +44,7 @@ func TestProviderPickerUpArrowMovesCursor(t *testing.T) {
 	m.providerPickerEntries = []string{"ollama", "openrouter"}
 	m.providerPickerCursor = 1
 
-	updated, _ := handleProviderPickerKey(m, tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ := handleProviderPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyUp}))
 	um := updated.(model)
 	if um.providerPickerCursor != 0 {
 		t.Errorf("expected cursor=0 after Up, got %d", um.providerPickerCursor)
@@ -57,7 +57,7 @@ func TestProviderPickerUpArrowWraps(t *testing.T) {
 	m.providerPickerEntries = []string{"ollama", "openrouter"}
 	m.providerPickerCursor = 0
 
-	updated, _ := handleProviderPickerKey(m, tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ := handleProviderPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyUp}))
 	um := updated.(model)
 	if um.providerPickerCursor != 1 {
 		t.Errorf("expected cursor=1 (wrap), got %d", um.providerPickerCursor)
@@ -70,7 +70,7 @@ func TestProviderPickerDownArrowMovesCursor(t *testing.T) {
 	m.providerPickerEntries = []string{"ollama", "openrouter"}
 	m.providerPickerCursor = 0
 
-	updated, _ := handleProviderPickerKey(m, tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ := handleProviderPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
 	um := updated.(model)
 	if um.providerPickerCursor != 1 {
 		t.Errorf("expected cursor=1 after Down, got %d", um.providerPickerCursor)
@@ -83,7 +83,7 @@ func TestProviderPickerDownArrowWraps(t *testing.T) {
 	m.providerPickerEntries = []string{"ollama", "openrouter"}
 	m.providerPickerCursor = 1
 
-	updated, _ := handleProviderPickerKey(m, tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ := handleProviderPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
 	um := updated.(model)
 	if um.providerPickerCursor != 0 {
 		t.Errorf("expected cursor=0 (wrap), got %d", um.providerPickerCursor)
@@ -97,14 +97,14 @@ func TestProviderPickerVimJkNavigation(t *testing.T) {
 	m.providerPickerCursor = 0
 
 	// j = down
-	updated, _ := handleProviderPickerKey(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	updated, _ := handleProviderPickerKey(m, tea.KeyPressMsg(tea.Key{Text: "j", Code: 'j'}))
 	um := updated.(model)
 	if um.providerPickerCursor != 1 {
 		t.Errorf("expected j=down cursor=1, got %d", um.providerPickerCursor)
 	}
 
 	// k = up
-	updated2, _ := handleProviderPickerKey(um, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	updated2, _ := handleProviderPickerKey(um, tea.KeyPressMsg(tea.Key{Text: "k", Code: 'k'}))
 	um2 := updated2.(model)
 	if um2.providerPickerCursor != 0 {
 		t.Errorf("expected k=up cursor=0, got %d", um2.providerPickerCursor)
@@ -120,7 +120,7 @@ func TestProviderPickerEnterAppliesHighlighted(t *testing.T) {
 	m.providerPickerEntries = []string{"ollama", "openrouter"}
 	m.providerPickerCursor = 1 // openrouter
 
-	updated, _ := handleProviderPickerKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := handleProviderPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 	if um.stage != stageInput {
 		t.Errorf("expected return to stageInput, got %d", um.stage)
@@ -147,7 +147,7 @@ func TestProviderPickerEscapeCancels(t *testing.T) {
 	m.providerPickerEntries = []string{"ollama", "openrouter"}
 	m.providerPickerCursor = 1
 
-	updated, _ := handleProviderPickerKey(m, tea.KeyMsg{Type: tea.KeyEsc})
+	updated, _ := handleProviderPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
 	um := updated.(model)
 	if um.stage != stageInput {
 		t.Errorf("expected return to stageInput after Escape, got %d", um.stage)
@@ -169,7 +169,7 @@ func TestProviderPickerCtrlCCancels(t *testing.T) {
 	m.stage = stageProviderPicker
 	m.providerPickerEntries = []string{"ollama", "openrouter"}
 
-	updated, _ := handleProviderPickerKey(m, tea.KeyMsg{Type: tea.KeyCtrlC})
+	updated, _ := handleProviderPickerKey(m, tea.KeyPressMsg(tea.Key{Code: 'c', Mod: tea.ModCtrl}))
 	um := updated.(model)
 	if um.stage != stageInput {
 		t.Errorf("expected return to stageInput after Ctrl+C, got %d", um.stage)
@@ -181,7 +181,7 @@ func TestProviderPickerEmptyListExits(t *testing.T) {
 	m.stage = stageProviderPicker
 	m.providerPickerEntries = nil
 
-	updated, _ := handleProviderPickerKey(m, tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ := handleProviderPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyUp}))
 	um := updated.(model)
 	if um.stage != stageInput {
 		t.Errorf("expected exit to stageInput on empty list, got %d", um.stage)
@@ -221,7 +221,7 @@ func TestBareSlashProviderOpensPicker(t *testing.T) {
 	m.stage = stageInput
 	m.composer.SetValue("/provider")
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
 	um := updated.(model)
 	// Composer cleared
 	if um.composer.Value() != "" {

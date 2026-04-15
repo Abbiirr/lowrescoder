@@ -89,7 +89,8 @@ class TestBackendServerInit:
 
     @pytest.mark.asyncio
     async def test_ensure_agent_loop_preserves_backend_runtime_modules(
-        self, server: BackendServer,
+        self,
+        server: BackendServer,
     ) -> None:
         """Backend should keep task/subagent/delegation state when using the factory."""
         mock_provider = AsyncMock()
@@ -146,7 +147,9 @@ class TestWireProtocol:
         assert msg["params"]["provider"] == "ollama"
 
     def test_write_message_newline_delimited(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         server.emit_notification("on_token", {"text": "a"})
         server.emit_notification("on_token", {"text": "b"})
@@ -238,7 +241,9 @@ class TestRequestHandlers:
 
     @pytest.mark.asyncio
     async def test_handle_session_resume_not_found(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         await server.handle_session_resume("nonexistent", 5)
         captured = capsys.readouterr()
@@ -254,7 +259,9 @@ class TestRequestHandlers:
 
     @pytest.mark.asyncio
     async def test_handle_session_resume_found(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         # The initial session should be findable by prefix
         prefix = server.session_id[:8]
@@ -285,7 +292,9 @@ class TestRequestHandlers:
 
     @pytest.mark.asyncio
     async def test_handle_config_set_invalid_key(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         await server.handle_config_set("invalid", "value", 8)
         captured = capsys.readouterr()
@@ -301,7 +310,9 @@ class TestRequestHandlers:
 
     @pytest.mark.asyncio
     async def test_handle_cancel_no_agent(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         # Cancel when no agent is running should not error
         await server.handle_cancel(9)
@@ -323,7 +334,9 @@ class TestRequestHandlers:
 
     @pytest.mark.asyncio
     async def test_handle_command_unknown(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         await server.handle_command("/nonexistent", 11)
         captured = capsys.readouterr()
@@ -379,8 +392,7 @@ class TestRequestHandlers:
             if msg.get("method") == "on_status":
                 status_events.append(msg)
         assert status_events, (
-            "expected an on_status notification after /model switch, "
-            f"got: {captured.out}"
+            f"expected an on_status notification after /model switch, got: {captured.out}"
         )
         # The most recent status must reflect the new model
         last = status_events[-1]
@@ -405,8 +417,7 @@ class TestRequestHandlers:
             if msg.get("method") == "on_status":
                 status_events += 1
         assert status_events == 0, (
-            f"expected no on_status re-emit after /help (no state change), "
-            f"got {status_events}"
+            f"expected no on_status re-emit after /help (no state change), got {status_events}"
         )
 
 
@@ -425,7 +436,9 @@ class TestDispatch:
 
     @pytest.mark.asyncio
     async def test_dispatch_unknown_method(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         await server._dispatch("unknown.method", {}, 102)
         captured = capsys.readouterr()
@@ -602,7 +615,9 @@ class TestHandleChat:
 
     @pytest.mark.asyncio
     async def test_handle_chat_sends_done(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         with patch.object(server, "_ensure_agent_loop") as mock_ensure:
             mock_loop = AsyncMock()
@@ -624,7 +639,9 @@ class TestHandleChat:
 
     @pytest.mark.asyncio
     async def test_handle_chat_error_sends_error(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         with patch.object(server, "_ensure_agent_loop") as mock_ensure:
             mock_loop = AsyncMock()
@@ -647,7 +664,9 @@ class TestHandleChat:
 
     @pytest.mark.asyncio
     async def test_handle_chat_cancelled(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         with patch.object(server, "_ensure_agent_loop") as mock_ensure:
             mock_loop = AsyncMock()
@@ -670,7 +689,9 @@ class TestHandleChat:
 
     @pytest.mark.asyncio
     async def test_handle_chat_init_error_sends_done(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         """If _ensure_agent_loop() itself throws, on_error + on_done must still be sent."""
         with patch.object(server, "_ensure_agent_loop", side_effect=RuntimeError("init failed")):
@@ -742,6 +763,7 @@ class TestApprovalCallbackExtended:
     @pytest.mark.asyncio
     async def test_approval_callback_session_approve_adds_tool(self, server: BackendServer) -> None:
         """Session approve should add tool to _session_approved_tools."""
+
         async def mock_emit(method: str, params: dict[str, Any]) -> dict[str, Any]:
             return {"approved": True, "session_approve": True}
 
@@ -753,6 +775,7 @@ class TestApprovalCallbackExtended:
     @pytest.mark.asyncio
     async def test_approval_callback_single_approve_no_session(self, server: BackendServer) -> None:
         """Single approve should NOT add tool to session approved set."""
+
         async def mock_emit(method: str, params: dict[str, Any]) -> dict[str, Any]:
             return {"approved": True, "session_approve": False}
 
@@ -764,6 +787,7 @@ class TestApprovalCallbackExtended:
     @pytest.mark.asyncio
     async def test_approval_callback_denied(self, server: BackendServer) -> None:
         """Denied approval should return False."""
+
         async def mock_emit(method: str, params: dict[str, Any]) -> dict[str, Any]:
             return {"approved": False}
 
@@ -778,6 +802,7 @@ class TestAskUserCallbackExtended:
     @pytest.mark.asyncio
     async def test_ask_user_callback_returns_answer(self, server: BackendServer) -> None:
         """Normal path: ask_user returns the user's answer."""
+
         async def mock_emit(method: str, params: dict[str, Any]) -> dict[str, Any]:
             return {"answer": "custom response"}
 
@@ -791,7 +816,9 @@ class TestConfigSetExtended:
 
     @pytest.mark.asyncio
     async def test_config_set_single_part_key(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         """Single-part key should fail."""
         await server.handle_config_set("invalid", "value", 20)
@@ -809,7 +836,9 @@ class TestConfigSetExtended:
 
     @pytest.mark.asyncio
     async def test_config_set_unknown_section(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         """Unknown section should fail."""
         await server.handle_config_set("fakesection.field", "value", 21)
@@ -829,7 +858,9 @@ class TestEmitStatusExtended:
     """Extended status emission tests."""
 
     def test_emit_status_includes_all_fields(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         """Status notification should include model, provider, mode, session_id."""
         server._emit_status()
@@ -897,7 +928,8 @@ class TestSessionState:
 
     @pytest.mark.asyncio
     async def test_handle_chat_session_switch_resets_task_store(
-        self, server: BackendServer,
+        self,
+        server: BackendServer,
     ) -> None:
         server._task_store = MagicMock()
         server._agent_loop = MagicMock()
@@ -914,7 +946,8 @@ class TestSessionState:
 
     @pytest.mark.asyncio
     async def test_handle_chat_session_switch_clears_approved_tools(
-        self, server: BackendServer,
+        self,
+        server: BackendServer,
     ) -> None:
         server._session_approved_tools.add("write_file")
         server._session_approved_tools.add("run_command")
@@ -938,7 +971,8 @@ class TestSessionState:
 
     @pytest.mark.asyncio
     async def test_session_new_resets_scheduler_and_manager(
-        self, server: BackendServer,
+        self,
+        server: BackendServer,
     ) -> None:
         server._llm_scheduler = MagicMock()
         server._llm_scheduler.shutdown = AsyncMock()
@@ -961,7 +995,8 @@ class TestSessionState:
 
     @pytest.mark.asyncio
     async def test_plan_mode_persists_across_loop_recreation(
-        self, server: BackendServer,
+        self,
+        server: BackendServer,
     ) -> None:
         server._plan_mode_enabled = True
         server._agent_mode = AgentMode.PLANNING
@@ -974,7 +1009,8 @@ class TestSessionState:
 
     @pytest.mark.asyncio
     async def test_research_mode_persists_across_loop_recreation(
-        self, server: BackendServer,
+        self,
+        server: BackendServer,
     ) -> None:
         server._agent_mode = AgentMode.RESEARCH
         await server._teardown_agent_resources()
@@ -983,7 +1019,8 @@ class TestSessionState:
 
     @pytest.mark.asyncio
     async def test_session_new_teardown_before_id_switch(
-        self, server: BackendServer,
+        self,
+        server: BackendServer,
     ) -> None:
         """Teardown must run while self.session_id still points to the OLD session.
 
@@ -1009,7 +1046,8 @@ class TestSessionState:
 
     @pytest.mark.asyncio
     async def test_session_resume_teardown_before_id_switch(
-        self, server: BackendServer,
+        self,
+        server: BackendServer,
     ) -> None:
         """Same lifecycle ordering check for handle_session_resume."""
         old_session_id = server.session_id
@@ -1030,7 +1068,8 @@ class TestSessionState:
 
     @pytest.mark.asyncio
     async def test_chat_session_switch_teardown_before_id_switch(
-        self, server: BackendServer,
+        self,
+        server: BackendServer,
     ) -> None:
         """Same lifecycle ordering check for handle_chat session switch."""
         old_session_id = server.session_id
@@ -1061,7 +1100,9 @@ class TestTaskStateNotification:
     """Test on_task_state notification payload shape."""
 
     def test_emit_task_state_empty(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         """on_task_state emits correct shape with empty stores."""
         server._emit_task_state()
@@ -1072,7 +1113,9 @@ class TestTaskStateNotification:
         assert msg["params"]["subagents"] == []
 
     def test_emit_task_state_with_task_store(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         """on_task_state includes tasks from TaskStore."""
         from autocode.session.task_store import TaskStore
@@ -1092,7 +1135,9 @@ class TestTaskStateNotification:
         assert "id" in msg["params"]["tasks"][0]
 
     def test_on_tool_call_emits_task_state_on_task_tool(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         """BUG-20: Task tool completions trigger on_task_state notification."""
         server._on_tool_call("create_task", "completed", "Created task #1")
@@ -1109,7 +1154,9 @@ class TestL2ContextInjectionServer:
 
     @pytest.mark.asyncio
     async def test_l2_route_passes_assembled_context_to_agent_loop(
-        self, server: BackendServer, capsys: CaptureFixture,
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
     ) -> None:
         """When L2 routing activates, assembled context must be passed as injected_context."""
         # Set up the server with L2 prerequisites
@@ -1135,14 +1182,14 @@ class TestL2ContextInjectionServer:
         ):
             from autocode.core.types import RequestType
 
-            mock_router.return_value.classify.return_value = (
-                RequestType.SEMANTIC_SEARCH
-            )
+            mock_router.return_value.classify.return_value = RequestType.SEMANTIC_SEARCH
             mock_search.return_value.search.return_value = [{"text": "c1"}]
             mock_rules.return_value.load.return_value = "- rule1"
 
             await server.handle_chat(
-                "how does the parser work", None, 80,
+                "how does the parser work",
+                None,
+                80,
             )
 
             # Verify agent_loop.run was called with injected_context
@@ -1161,3 +1208,312 @@ class TestL2ContextInjectionServer:
                     break
             assert done_msg is not None
             assert done_msg["params"]["layer_used"] == 2
+
+
+class TestSteerRPC:
+    """Tests for the steer JSON-RPC handler."""
+
+    @pytest.mark.asyncio
+    async def test_steer_no_active_run(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        await server.handle_steer("change approach", 200)
+        captured = capsys.readouterr()
+        msg = json.loads(captured.out.strip())
+        assert msg["id"] == 200
+        assert "error" in msg["result"]
+        assert msg["result"]["active"] is False
+
+    @pytest.mark.asyncio
+    async def test_steer_empty_message(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        server._agent_task = asyncio.create_task(asyncio.sleep(100))
+        try:
+            await server.handle_steer("   ", 201)
+            captured = capsys.readouterr()
+            msg = json.loads(captured.out.strip())
+            assert msg["id"] == 201
+            assert "error" in msg["result"]
+        finally:
+            server._agent_task.cancel()
+            try:
+                await server._agent_task
+            except asyncio.CancelledError:
+                pass
+
+    @pytest.mark.asyncio
+    async def test_steer_active_run_cancels_and_injects(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        server._agent_loop = MagicMock()
+        server._agent_task = asyncio.create_task(asyncio.sleep(100))
+        try:
+            await server.handle_steer("use a different approach", 202)
+            captured = capsys.readouterr()
+            msg = json.loads(captured.out.strip())
+            assert msg["id"] == 202
+            assert msg["result"]["ok"] is True
+            assert msg["result"]["injected"] is True
+
+            server._agent_loop.cancel.assert_called_once()
+        finally:
+            server._agent_task.cancel()
+            try:
+                await server._agent_task
+            except asyncio.CancelledError:
+                pass
+
+    @pytest.mark.asyncio
+    async def test_steer_persists_message_in_session(
+        self,
+        server: BackendServer,
+    ) -> None:
+        server._agent_loop = MagicMock()
+        server._agent_task = asyncio.create_task(asyncio.sleep(100))
+        try:
+            await server.handle_steer("try again", 203)
+            messages = server.session_store.get_messages(server.session_id)
+            assert any("[steer] try again" in m.content for m in messages)
+        finally:
+            server._agent_task.cancel()
+            try:
+                await server._agent_task
+            except asyncio.CancelledError:
+                pass
+
+    @pytest.mark.asyncio
+    async def test_dispatch_steer(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        await server._dispatch("steer", {"message": "hello"}, 204)
+        captured = capsys.readouterr()
+        msg = json.loads(captured.out.strip())
+        assert msg["id"] == 204
+        assert "error" in msg["result"]
+        assert msg["result"]["active"] is False
+
+    @pytest.mark.asyncio
+    async def test_steer_completed_task_returns_error(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        async def _noop() -> None:
+            pass
+
+        server._agent_task = asyncio.create_task(_noop())
+        await server._agent_task
+        await server.handle_steer("redirect", 205)
+        captured = capsys.readouterr()
+        msg = json.loads(captured.out.strip())
+        assert msg["id"] == 205
+        assert "error" in msg["result"]
+
+
+class TestSessionForkRPC:
+    """Tests for the session.fork JSON-RPC handler."""
+
+    @pytest.mark.asyncio
+    async def test_fork_creates_new_session(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        old_id = server.session_id
+        await server.handle_session_fork(300)
+        captured = capsys.readouterr()
+        lines = captured.out.strip().split("\n")
+        response = None
+        for line in lines:
+            msg = json.loads(line)
+            if msg.get("id") == 300:
+                response = msg
+                break
+        assert response is not None
+        new_id = response["result"]["new_session_id"]
+        assert new_id != old_id
+        assert len(new_id) > 0
+
+    @pytest.mark.asyncio
+    async def test_fork_copies_messages(
+        self,
+        server: BackendServer,
+    ) -> None:
+        server.session_store.add_message(server.session_id, "user", "hello")
+        server.session_store.add_message(
+            server.session_id,
+            "assistant",
+            "world",
+        )
+        old_id = server.session_id
+
+        await server.handle_session_fork(301)
+
+        sessions = server.session_store.list_sessions()
+        forked = [s for s in sessions if s.id != old_id]
+        assert len(forked) >= 1
+        new_id = forked[-1].id
+        messages = server.session_store.get_messages(new_id)
+        assert len(messages) == 2
+        assert messages[0].content == "hello"
+        assert messages[1].content == "world"
+
+    @pytest.mark.asyncio
+    async def test_fork_does_not_switch_session(
+        self,
+        server: BackendServer,
+    ) -> None:
+        old_id = server.session_id
+        await server.handle_session_fork(302)
+        assert server.session_id == old_id
+
+    @pytest.mark.asyncio
+    async def test_fork_emits_status(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        capsys.readouterr()
+        await server.handle_session_fork(303)
+        captured = capsys.readouterr()
+        status_found = False
+        for line in captured.out.strip().split("\n"):
+            msg = json.loads(line)
+            if msg.get("method") == "on_status":
+                status_found = True
+                break
+        assert status_found
+
+    @pytest.mark.asyncio
+    async def test_dispatch_session_fork(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        old_id = server.session_id
+        await server._dispatch("session.fork", {}, 304)
+        captured = capsys.readouterr()
+        lines = captured.out.strip().split("\n")
+        response = None
+        for line in lines:
+            msg = json.loads(line)
+            if msg.get("id") == 304:
+                response = msg
+                break
+        assert response is not None
+        assert "new_session_id" in response["result"]
+        assert response["result"]["new_session_id"] != old_id
+
+
+class TestCostUpdateProducer:
+    """Tests for on_cost_update notification emission."""
+
+    @pytest.mark.asyncio
+    async def test_cost_update_emitted_on_chat_done(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        with patch.object(server, "_ensure_agent_loop") as mock_ensure:
+            mock_loop = AsyncMock()
+            mock_loop.run = AsyncMock(return_value="response")
+            mock_loop.session_id = server.session_id
+            mock_ensure.return_value = mock_loop
+
+            await server.handle_chat("test", None, 1)
+
+            captured = capsys.readouterr()
+            lines = captured.out.strip().split("\n")
+            cost_found = False
+            for line in lines:
+                msg = json.loads(line)
+                if msg.get("method") == "on_cost_update":
+                    cost_found = True
+                    assert "tokens_in" in msg["params"]
+                    assert "tokens_out" in msg["params"]
+                    assert "cost" in msg["params"]
+                    break
+            assert cost_found
+
+    @pytest.mark.asyncio
+    async def test_cost_update_emitted_on_cancel(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        with patch.object(server, "_ensure_agent_loop") as mock_ensure:
+            mock_loop = AsyncMock()
+            mock_loop.run = AsyncMock(side_effect=asyncio.CancelledError)
+            mock_loop.session_id = server.session_id
+            mock_ensure.return_value = mock_loop
+
+            await server.handle_chat("test", None, 1)
+
+            captured = capsys.readouterr()
+            lines = captured.out.strip().split("\n")
+            cost_found = False
+            for line in lines:
+                msg = json.loads(line)
+                if msg.get("method") == "on_cost_update":
+                    cost_found = True
+                    break
+            assert cost_found
+
+    @pytest.mark.asyncio
+    async def test_cost_update_accumulates_tokens(
+        self,
+        server: BackendServer,
+    ) -> None:
+        assert server._total_tokens_in == 0
+        assert server._total_tokens_out == 0
+        server._emit_cost_update()
+        assert server._total_tokens_in == 0
+        assert server._total_tokens_out == 0
+
+    @pytest.mark.asyncio
+    async def test_cost_update_shape(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        server._emit_cost_update()
+        captured = capsys.readouterr()
+        msg = json.loads(captured.out.strip())
+        assert msg["method"] == "on_cost_update"
+        assert msg["params"]["cost"] == "0.0000"
+        assert "tokens_in" in msg["params"]
+        assert "tokens_out" in msg["params"]
+
+    @pytest.mark.asyncio
+    async def test_cost_update_with_session_stats(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        mock_stats = MagicMock()
+        mock_tracker = MagicMock()
+        mock_tracker.total.prompt_tokens = 100
+        mock_tracker.total.completion_tokens = 50
+        mock_stats.token_tracker = mock_tracker
+        server._session_stats = mock_stats
+
+        server._emit_cost_update()
+        captured = capsys.readouterr()
+        msg = json.loads(captured.out.strip())
+        assert msg["params"]["tokens_in"] == 100
+        assert msg["params"]["tokens_out"] == 50
+
+        server._emit_cost_update()
+        captured = capsys.readouterr()
+        msg = json.loads(captured.out.strip())
+        assert msg["params"]["tokens_in"] == 200
+        assert msg["params"]["tokens_out"] == 100

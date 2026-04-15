@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // enterAskUser transitions the model to ask-user stage.
@@ -64,7 +64,7 @@ func renderAskUserView(m model) string {
 }
 
 // handleAskUserKey handles key events during ask-user.
-func handleAskUserKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleAskUserKey(m model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "up", "k":
 		if len(m.askOptions) > 0 {

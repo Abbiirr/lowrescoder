@@ -1,10 +1,10 @@
 # Current Directives
 
-> Last updated: 2026-04-11
+> Last updated: 2026-04-15
 
 ## Active Phase
 
-**Phase 7 COMPLETE. Phase 8 COMPLETE. Current work is the post-Phase-8 frontier. Immediate active slice: Claude Code primary TUI parity (`Section 1f`). After that: large-codebase validation, deeper native external-harness orchestration, and Terminal-Bench improvement.**
+**Phase 7 COMPLETE. Phase 8 COMPLETE. Current work is the post-Phase-8 frontier. Immediate active slice: Unified TUI Consolidation (`Section 1f`). After that: large-codebase validation, deeper native external-harness orchestration, and Terminal-Bench improvement.**
 
 ## Status
 
@@ -23,39 +23,53 @@
 - **`/loop` UX:** COMPLETE
   - recurring loop command landed
   - smoke artifact exists: `autocode/docs/qa/test-results/20260403-173500-loop-smoke.md`
-- **Claude Code primary TUI parity:** IN PROGRESS
-  - partial Go TUI parity slice is already landed in the worktree
-  - landed so far:
-    - `❯` prompt
-    - compact branded header
-    - braille thinking spinner
-    - simplified footer-first status bar
-    - initial compact tool-row styling
-  - still open:
-    - compact approval prompt parity
-    - completion/scrollback consistency with the live view
-    - task-panel demotion when it adds dashboard noise
-    - narrow-terminal hardening
-    - focused Go TUI render/interaction coverage
-    - manual smoke artifacts
-    - slash-command discovery parity for bare `/`
-    - arrow-key slash-menu navigation and Enter-to-select behavior
-    - an on-screen `/model` picker instead of text-only model dumping
-    - gateway-authenticated `/model` listing against `http://localhost:4000/v1`
-    - clearer provider visibility and an intentional provider-switching UX
-    - prompt/tool-schema consistency around `list_files` vs the live callable tool surface
-  - codebase-specific findings from the current audit:
-    - `http://localhost:4000/v1/models` returns `401` unauthenticated and `200` with `Authorization: Bearer $LITELLM_API_KEY`
-    - shared gateway header logic already exists in `autocode/src/autocode/gateway_auth.py`
-    - Python already exposes `/provider` and `/model`; the remaining gap is cross-surface parity and status/control visibility
-    - `go version` is available on this machine, `cd autocode/cmd/autocode-tui && go test ./...` now passes, and Go-side testing is an active gate rather than an environment blocker
-  - use `docs/qa/manual-ai-bug-testing-playbook.md` for live AI-behavior sweeps; render tests alone are not enough
-  - every manual sweep must produce a filled artifact based on `docs/qa/manual-ai-bug-test-report-template.md`
-  - apply the deep research selectively here:
-    - prefer typed first-class provider/model/tool flows over shell-style fallback behavior
-    - keep deferred-tool discovery explicit when the core tool set is intentionally narrow
-    - treat prompt/tool-surface consistency as a product contract, not just a prompt-writing issue
-- **Tests:** 1777 passed, 4 skipped
+- **Unified TUI Consolidation:** Go TUI Phases 1-6 are landed and the focused closeout gates are green; remaining work is commit-scope cleanup plus follow-up prioritization.
+  - **Direction:** One TUI only — Go BubbleTea (`autocode-tui`) is the primary interactive frontend target
+  - **Why:** Pi-mono architecture (Go+BubbleTea) is the research-validated best approach; BubbleTea v2 supports Mode 2026 natively; Go TUI is what the user actually uses
+  - **Live state today:** `autocode chat` defaults to the Go TUI binary, but `autocode/src/autocode/cli.py` still exposes `--inline`, so the Python inline fallback is not removed yet
+  - **Python side target:** backend-only (`autocode serve`) remains the long-term target, but the current contract keeps Python inline as an explicit fallback via `--inline`
+  - Historical PTY bug report: `autocode/docs/qa/pty-tui-bug-report.md` (kept as a research/debug log, not the current gate status)
+  - **Phase 1 — DONE** (critical bug fixes):
+    - ✓ C3: `startupTimeoutMsg` 15s fallback unblocks `stageInit`; spinner shows "Connecting to backend…" immediately
+    - ✓ C1: Regression tests added in `model_picker_test.go`; no unsolicited trigger found in current code
+    - ✓ C2: `_RULES_MAX_CHARS = 3000` cap in `factory.py` stops LLM reproducing internal status text
+  - **Phase 2 — DONE** (consolidation wired):
+    - ✓ `autocode chat` already launches Go TUI via `_find_go_tui_binary()` in `cli.py`
+    - ✓ Binary at `autocode/build/autocode-tui`; `--inline` flag available as explicit fallback
+  - **Phase 3 — DONE** (Mode 2026 + differential rendering):
+    - ✓ BubbleTea v2 migration (v1.3.4 → v2.0.2, charm.land vanity imports, tea.KeyPressMsg, tea.View struct)
+    - ✓ Mode 2026 enabled by default in BubbleTea v2
+    - ✓ Rendering model corrected: BubbleTea v2 handles terminal diffing; stable completed lines still flush via `tea.Println`
+    - ✓ Sliding window streaming: stable lines flushed to scrollback, last N lines in live panel
+    - ✓ `--inline` flag for scrollback-friendly mode
+  - **Phase 4 — DONE** (Pi-mono features, backend parity landed):
+    - ✓ Steering queue: `Ctrl+C` during streaming → steer input mode → `steer` RPC; Esc cancels; second Ctrl+C force-quits
+    - ✓ Follow-up queue: `/followup <msg>` queues message after current tool
+    - ✓ JSONL session branching: `/fork` command, `session.fork` RPC, `ForkSessionParams`/`ForkSessionResult`
+    - ✗ log.jsonl + context.jsonl split: Python backend change — deferred
+    - ✓ Backend RPC handlers for `steer` and `session.fork` landed in `autocode/src/autocode/backend/server.py` with targeted tests in `autocode/tests/unit/test_backend_server.py`
+  - **Phase 5 — DONE** (best-of-all features):
+    - ✓ Multiline input: `Alt+Enter`/`Ctrl+J` inserts newline, `Enter` submits
+    - ✓ External editor: `Ctrl+E` opens `$EDITOR` with current input
+    - ✓ Frecency-based prompt history: `historyEntry`, `frecencyScore()`, `loadFrecencyHistory()`/`saveFrecencyHistory()`
+    - ✓ Task dashboard: `renderTaskDashboard()` shows pending/running/done/failed counts
+    - ✓ `/plan` mode: toggles `planMode`, renders `[PLAN MODE]` indicator
+    - ✓ Background theme detection: `detectThemeCmd()` reads `COLORFGBG`, sets `themeDetected` dark/light
+  - **Phase 6 — DONE** (status bar enhancements):
+    - ✓ Live cost display: `totalCost` via `backendCostMsg`
+    - ✓ Token count: `totalTokensIn`+`totalTokensOut`, displayed as "X.Xk tokens"
+    - ✓ Provider/model: always visible via `backendStatusMsg`
+    - ✓ Session ID: from `backendStatusMsg`, shown in status bar
+    - ✓ Background task indicator: `backgroundTasks` count, "⏳ N bg" in status bar
+    - ✓ Backend `on_cost_update` emission landed; Python backend now emits per-turn cost snapshots and targeted tests cover the producer path
+  - Focused `go test` is green on the current tree.
+  - Fresh PTY artifacts:
+    - focused smoke: `autocode/docs/qa/test-results/20260415-080003-tui-backend-parity-pty-smoke-deterministic-v3-20260415.md`
+    - phase-fix regression: `autocode/docs/qa/test-results/20260415-150741-pty-phase1-fixes.md`
+  - Immediate remaining work is commit-scope cleanup and deciding whether the deferred `log.jsonl` / `context.jsonl` split should stay follow-up or move back into the active queue.
+  - research basis: `autocode/docs/qa/pty-tui-bug-report.md` + all TUIs in `research-components/` + web research
+  - plan details: `PLAN.md` Section 1f
+- **Tests:** 1778 passed, 4 skipped
 - **Benchmarks:** 23/23 GREEN (120/120, 100%)
 - **B30 Terminal-Bench:** best confirmed score `40% (4/9)` with the `terminal_bench` alias; Harbor adapter baseline recovery is complete, score-improvement work remains open
 
@@ -114,7 +128,7 @@ Total: **1777+ tests, 0 failures in the latest stored full-suite artifact, 4 ski
 1. **Canonical benchmark model:** internal benchmark lanes are green; B30 remains a separate external benchmark track
 2. **Provider policy:** local_free + subscription allowed; paid_metered FORBIDDEN
 3. **Parity validity:** same harness + same subset + same budgets
-4. **Packaged frontend:** inline app is the shipping frontend; Go TUI remains source-tree/dev-oriented
+4. **Packaged frontend:** Go TUI (`autocode-tui`) is the primary interactive frontend; Python inline REPL is available as an explicit `--inline` fallback; Python backend serves as the JSON-RPC subprocess daemon
 
 ## Next Work (Active Frontier — per EXECUTION_CHECKLIST.md)
 
@@ -230,42 +244,21 @@ Total: **1777+ tests, 0 failures in the latest stored full-suite artifact, 4 ski
 - [x] `/loop` landed with session-scoped recurring jobs
 - [x] `/loop` smoke artifact stored — `autocode/docs/qa/test-results/20260403-173500-loop-smoke.md`
 
-### 5. Claude Code Primary TUI Parity — ACTIVE (Immediate Top Queue)
-- existing parity scaffolding is real:
-  - `docs/design/claude-code-visual-parity.md`
-  - `claude_like` profile in config / inline / Textual
-  - parity-oriented inline snapshot coverage
-- partial Go TUI parity work is already landed in the active worktree:
-  - `cmd/autocode-tui/model.go`
-  - `cmd/autocode-tui/view.go`
-  - `cmd/autocode-tui/statusbar.go`
-  - `cmd/autocode-tui/styles.go`
-  - `cmd/autocode-tui/update.go`
-  - matching test updates in `model_test.go`, `view_test.go`, `statusbar_test.go`, `update_test.go`
-- do **not** restart this work from scratch; continue from the current Go TUI diff
-- do **not** treat that scaffolding as end-state completion
-- next work is to make the primary full-screen TUI feel structurally and behaviorally close to Claude Code
-- the unfinished high-value items are:
-  - compact approval prompt parity
-  - compact completion/scrollback tool summaries
-  - task-panel demotion when the screen should stay chat-first
-  - narrow-terminal / truncation hardening
-  - focused Go TUI render tests and manual smokes
-  - bare `/` slash discovery parity with the Python router
-  - gateway-authenticated `/model` behavior using the shared gateway auth helper
-  - clear provider visibility and `/provider` UX
-  - prompt/tool-surface consistency around `list_files` and `tool_search`
-- completion requires:
-  - refreshed parity contract from current Claude Code behavior signals
-  - single-column chat-first TUI layout
-  - footer-first status hierarchy
-  - fixed-width braille/shimmer thinking spinner
-  - compact tool rows and stable approval prompts
-  - narrow-terminal hardening
-  - focused render/snapshot tests
-  - manual smoke artifacts
-  - live Go validation on the actual module path
-  - gated rollout until review says every zone is `Close` or better
+### 5. Unified TUI Consolidation — ACTIVE (Immediate Top Queue)
+- **Target end state:** one interactive TUI, Go BubbleTea first.
+- **Live state:** Go TUI is the default interactive path, but the Python inline fallback still exists behind `--inline`.
+- Existing Go TUI work already landed (keep, do not redo):
+  - `cmd/autocode-tui/model.go` — stagePalette, verbTicks, currentVerb
+  - `cmd/autocode-tui/view.go` — renderPaletteView, renderThinking, spinner verbs
+  - `cmd/autocode-tui/update.go` — Ctrl+K palette, handlePaletteKey
+  - `cmd/autocode-tui/spinnerverbs.go` — 187 rotating verbs
+  - `cmd/autocode-tui/statusbar.go`, `styles.go`, `commands.go`
+  - All closeout gates now green — Section 1f is closeable:
+    - ✓ PTY artifact: `autocode/docs/qa/test-results/20260415-150741-pty-phase1-fixes.md` (0 bugs, 5/5 scenarios)
+    - ✓ CLI contract: `--inline` kept as explicit documented fallback; Go TUI is default; docs agree
+    - ✓ Backend parity: `steer`, `session.fork`, `on_cost_update` landed in `server.py` with tests
+    - ✓ Ruff: all 12 changed files clean (`20260415-150744-ruff-focused-20260415.md`)
+  - Follow-up (not blocking commit): `log.jsonl` / `context.jsonl` split, Phase 7 feature backlog
 
 ### 6. External Native-Harness Orchestration — FOUNDATION COMPLETE
 - [x] `HarnessAdapter` protocol contract

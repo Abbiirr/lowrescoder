@@ -1490,14 +1490,13 @@ class InlineApp:
                 shell_config=self.config.shell,
             )
 
-            # Load project memory if available
-            memory_path = self.project_root / ".autocode" / "memory.md"
-            memory_content = None
-            if memory_path.exists():
-                try:
-                    memory_content = memory_path.read_text(encoding="utf-8")
-                except OSError:
-                    pass
+            # Load project memory + always-on rules (CLAUDE.md, AGENTS.md, .rules/*.md)
+            from autocode.agent.factory import (
+                create_orchestrator,
+                load_project_memory_content,
+            )
+
+            memory_content = load_project_memory_content(self.project_root)
 
             # Training-grade event recorder (opt-in)
             event_recorder: EventRecorder | None = None
@@ -1511,9 +1510,6 @@ class InlineApp:
                     max_episodes=self.config.logging.training.max_episodes_per_session,
                 )
                 event_recorder = EventRecorder(episode_store)
-
-            # Use shared factory for consistent runtime wiring
-            from autocode.agent.factory import create_orchestrator
 
             self._agent_loop, self._session_stats = create_orchestrator(
                 provider=self._provider,
@@ -1719,7 +1715,12 @@ class InlineApp:
 
         # Check session-level auto-approve
         if tool_name in self._session_approved_tools:
-            self.renderer.print_tool_call(tool_name, "pending", "(auto-approved)", profile=self.config.ui.profile)
+            self.renderer.print_tool_call(
+                tool_name,
+                "pending",
+                "(auto-approved)",
+                profile=self.config.ui.profile,
+            )
             return True
 
         is_edit = tool_name == "edit_file"
@@ -1759,7 +1760,12 @@ class InlineApp:
         """Parallel-mode approval prompt (typed y/s/n)."""
         # Check session-level auto-approve
         if tool_name in self._session_approved_tools:
-            self.renderer.print_tool_call(tool_name, "pending", "(auto-approved)", profile=self.config.ui.profile)
+            self.renderer.print_tool_call(
+                tool_name,
+                "pending",
+                "(auto-approved)",
+                profile=self.config.ui.profile,
+            )
             return True
 
         if self._pending_prompt_request is not None:

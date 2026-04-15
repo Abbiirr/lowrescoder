@@ -2,9 +2,12 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // History manages command history with persistence.
@@ -138,4 +141,105 @@ func historyNext() string {
 		return globalHistory.Next()
 	}
 	return ""
+}
+
+// historyEntry is a frecency-ranked prompt history entry.
+type historyEntry struct {
+	Text  string
+	Count int   // number of times used
+	Last  int64 // unix timestamp of last use
+}
+
+// frecencyScore computes the frecency ranking score.
+func frecencyScore(entry historyEntry) int {
+	return entry.Count*10 + int((entry.Last % 100000))
+}
+
+// sortByFrecency sorts promptHistory entries by frecency score (highest first).
+func sortByFrecency(entries []historyEntry) []historyEntry {
+	sorted := make([]historyEntry, len(entries))
+	copy(sorted, entries)
+	for i := 0; i < len(sorted)-1; i++ {
+		for j := i + 1; j < len(sorted); j++ {
+			if frecencyScore(sorted[j]) > frecencyScore(sorted[i]) {
+				sorted[i], sorted[j] = sorted[j], sorted[i]
+			}
+		}
+	}
+	return sorted
+}
+
+// historyAddFrecency adds or updates a frecency history entry.
+func historyAddFrecency(entries []historyEntry, text string) []historyEntry {
+	now := time.Now().Unix()
+	for i := range entries {
+		if entries[i].Text == text {
+			entries[i].Count++
+			entries[i].Last = now
+			return entries
+		}
+	}
+	entries = append(entries, historyEntry{Text: text, Count: 1, Last: now})
+	return entries
+}
+
+// loadFrecencyHistory reads frecency-ranked history from JSONL file.
+func loadFrecencyHistory(path string) []historyEntry {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+
+	var entries []historyEntry
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		var entry historyEntry
+		if err := parseHistoryEntry(line, &entry); err == nil {
+			entries = append(entries, entry)
+		}
+	}
+	return entries
+}
+
+// saveFrecencyHistory writes frecency history to JSONL file.
+func saveFrecencyHistory(path string, entries []historyEntry) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	writer := bufio.NewWriter(f)
+	for _, entry := range entries {
+		writer.WriteString(formatHistoryEntry(entry) + "\n")
+	}
+	return writer.Flush()
+}
+
+func parseHistoryEntry(line string, entry *historyEntry) error {
+	parts := strings.SplitN(line, "|", 3)
+	if len(parts) != 3 {
+		return fmt.Errorf("invalid history entry format")
+	}
+	count, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return err
+	}
+	last, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		return err
+	}
+	entry.Count = count
+	entry.Last = last
+	entry.Text = parts[2]
+	return nil
+}
+
+func formatHistoryEntry(entry historyEntry) string {
+	return fmt.Sprintf("%d|%d|%s", entry.Count, entry.Last, entry.Text)
 }

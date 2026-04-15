@@ -327,6 +327,9 @@ class TestDeferredToolLoading:
             "web_fetch",
             # Transactional multi-file patch (deep-research-report Phase B)
             "apply_patch",
+            # Planning tools must be visible on the default schema path
+            "todo_write",
+            "todo_read",
         }
         assert expected == CORE_TOOL_NAMES
 
@@ -361,6 +364,8 @@ class TestDeferredToolLoading:
         # After create_default_registry it won't have tool_search unless we add it
         # So check that core_names is a subset of CORE_TOOL_NAMES
         assert core_names <= CORE_TOOL_NAMES
+        assert "todo_write" in core_names
+        assert "todo_read" in core_names
         # And non-core tools are excluded
         assert "find_references" not in core_names
         assert "search_code" not in core_names
@@ -379,6 +384,8 @@ class TestDeferredToolLoading:
         assert "write_file" not in deferred
         assert "list_files" not in deferred
         assert "run_command" not in deferred
+        assert "todo_write" not in deferred
+        assert "todo_read" not in deferred
 
     def test_tool_search_shows_parameter_schemas(self) -> None:
         """tool_search result includes parameter information."""

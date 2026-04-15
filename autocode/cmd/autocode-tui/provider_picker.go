@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // enterProviderPicker transitions to the provider picker state with the
@@ -62,7 +62,7 @@ func renderProviderPicker(m model) string {
 }
 
 // handleProviderPickerKey handles key events while the provider picker is open.
-func handleProviderPickerKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleProviderPickerKey(m model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	n := len(m.providerPickerEntries)
 	if n == 0 {
 		return exitProviderPicker(m), nil
