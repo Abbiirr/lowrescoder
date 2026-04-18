@@ -15,6 +15,7 @@ func enterProviderPicker(m model, providers []string, current string) model {
 	m.stage = stageProviderPicker
 	m.providerPickerEntries = providers
 	m.providerPickerCurrent = current
+	m.providerPickerFilter = ""
 	m.providerPickerCursor = 0
 	for i, name := range providers {
 		if name == current {
@@ -32,23 +33,44 @@ func exitProviderPicker(m model) model {
 	m.providerPickerEntries = nil
 	m.providerPickerCursor = 0
 	m.providerPickerCurrent = ""
+	m.providerPickerFilter = ""
 	m.composer.Focus()
 	return m
+}
+
+// providerPickerVisible returns the indices into m.providerPickerEntries
+// that match the current filter.
+func providerPickerVisible(m model) []int {
+	return filteredPickerIndices(m.providerPickerEntries, m.providerPickerFilter)
 }
 
 // renderProviderPicker renders the provider picker UI.
 func renderProviderPicker(m model) string {
 	var b strings.Builder
 
-	b.WriteString(welcomeStyle.Render("Select a provider:"))
+	header := "Select a provider:"
+	if m.providerPickerFilter != "" {
+		header = fmt.Sprintf("Select a provider:  [filter: %s]", m.providerPickerFilter)
+	}
+	b.WriteString(welcomeStyle.Render(header))
 	b.WriteString("\n")
 
-	for i, name := range m.providerPickerEntries {
+	visible := providerPickerVisible(m)
+	if len(visible) == 0 {
+		b.WriteString(dimStyle.Render("  (no matches — Backspace or Esc to clear)"))
+		b.WriteString("\n\n")
+		b.WriteString(dimStyle.Render("  Type to filter \u00b7 Up/Down select \u00b7 Enter apply \u00b7 Esc cancel"))
+		return b.String()
+	}
+
+	cursor := clampCursorToVisible(m.providerPickerCursor, visible)
+	for i, entryIdx := range visible {
+		name := m.providerPickerEntries[entryIdx]
 		marker := ""
 		if name == m.providerPickerCurrent {
 			marker = " (active)"
 		}
-		if i == m.providerPickerCursor {
+		if i == cursor {
 			b.WriteString(approvalActiveStyle.Render(fmt.Sprintf("  \u276f %s%s", name, marker)))
 		} else {
 			b.WriteString(approvalInactiveStyle.Render(fmt.Sprintf("    %s%s", name, marker)))
@@ -57,45 +79,80 @@ func renderProviderPicker(m model) string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(dimStyle.Render("  Up/Down select \u00b7 Enter apply \u00b7 Esc cancel"))
+	b.WriteString(dimStyle.Render("  Type to filter \u00b7 Up/Down select \u00b7 Enter apply \u00b7 Esc cancel"))
 	return b.String()
 }
 
 // handleProviderPickerKey handles key events while the provider picker is open.
 func handleProviderPickerKey(m model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	n := len(m.providerPickerEntries)
-	if n == 0 {
+	if len(m.providerPickerEntries) == 0 {
 		return exitProviderPicker(m), nil
 	}
 
 	switch msg.String() {
 	case "up", "k":
+		visible := providerPickerVisible(m)
+		if len(visible) == 0 {
+			return m, nil
+		}
+		m.providerPickerCursor = clampCursorToVisible(m.providerPickerCursor, visible)
 		m.providerPickerCursor--
 		if m.providerPickerCursor < 0 {
-			m.providerPickerCursor = n - 1
+			m.providerPickerCursor = len(visible) - 1
 		}
 		return m, nil
 
 	case "down", "j":
+		visible := providerPickerVisible(m)
+		if len(visible) == 0 {
+			return m, nil
+		}
+		m.providerPickerCursor = clampCursorToVisible(m.providerPickerCursor, visible)
 		m.providerPickerCursor++
-		if m.providerPickerCursor >= n {
+		if m.providerPickerCursor >= len(visible) {
 			m.providerPickerCursor = 0
 		}
 		return m, nil
 
 	case "enter":
-		chosen := m.providerPickerEntries[m.providerPickerCursor]
+		visible := providerPickerVisible(m)
+		if len(visible) == 0 {
+			return m, nil
+		}
+		cursor := clampCursorToVisible(m.providerPickerCursor, visible)
+		chosen := m.providerPickerEntries[visible[cursor]]
 		m = exitProviderPicker(m)
 		if m.backend != nil {
 			m.backend.SendRequest("command", CommandParams{Cmd: "/provider " + chosen})
 		}
 		return m, tea.Println(dimStyle.Render(fmt.Sprintf("  \u2192 provider: %s", chosen)))
 
-	case "escape", "esc", "ctrl+c":
+	case "backspace":
+		if len(m.providerPickerFilter) > 0 {
+			runes := []rune(m.providerPickerFilter)
+			m.providerPickerFilter = string(runes[:len(runes)-1])
+			m.providerPickerCursor = 0
+		}
+		return m, nil
+
+	case "escape", "esc":
+		if m.providerPickerFilter != "" {
+			m.providerPickerFilter = ""
+			m.providerPickerCursor = 0
+			return m, nil
+		}
+		m = exitProviderPicker(m)
+		return m, tea.Println(dimStyle.Render("  \u2192 (cancelled)"))
+
+	case "ctrl+c":
 		m = exitProviderPicker(m)
 		return m, tea.Println(dimStyle.Render("  \u2192 (cancelled)"))
 	}
 
+	if r := runeForFilter(msg); r != 0 {
+		m.providerPickerFilter += string(r)
+		m.providerPickerCursor = 0
+	}
 	return m, nil
 }
 

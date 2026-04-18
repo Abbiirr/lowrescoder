@@ -473,3 +473,273 @@ func TestStartupTimeoutNoopAfterBackendConnects(t *testing.T) {
 		t.Errorf("unexpected lastError after noop timeout: %s", um.lastError)
 	}
 }
+
+// --- Slice 1: Model picker filter-by-typing (Stable TUI v1 Milestone A closeout) ---
+
+func pressRune(r rune) tea.KeyPressMsg {
+	return tea.KeyPressMsg(tea.Key{Text: string(r), Code: r})
+}
+
+func TestModelPickerFilterAppendsRune(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageModelPicker
+	m.modelPickerEntries = []string{"gpt-4", "claude-3", "coding", "tools"}
+
+	updated, _ := handleModelPickerKey(m, pressRune('c'))
+	um := updated.(model)
+	if um.modelPickerFilter != "c" {
+		t.Errorf("expected filter=c, got %q", um.modelPickerFilter)
+	}
+	updated2, _ := handleModelPickerKey(um, pressRune('o'))
+	um2 := updated2.(model)
+	if um2.modelPickerFilter != "co" {
+		t.Errorf("expected filter=co after two keys, got %q", um2.modelPickerFilter)
+	}
+}
+
+func TestModelPickerFilterBackspace(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageModelPicker
+	m.modelPickerEntries = []string{"gpt-4", "claude-3"}
+	m.modelPickerFilter = "abc"
+
+	updated, _ := handleModelPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyBackspace}))
+	um := updated.(model)
+	if um.modelPickerFilter != "ab" {
+		t.Errorf("expected filter=ab after backspace, got %q", um.modelPickerFilter)
+	}
+}
+
+func TestModelPickerFilterBackspaceOnEmptyNoop(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageModelPicker
+	m.modelPickerEntries = []string{"a", "b"}
+	m.modelPickerFilter = ""
+
+	updated, _ := handleModelPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyBackspace}))
+	um := updated.(model)
+	if um.modelPickerFilter != "" {
+		t.Errorf("expected empty filter stays empty, got %q", um.modelPickerFilter)
+	}
+	if um.stage != stageModelPicker {
+		t.Errorf("expected stage unchanged on backspace-empty, got %d", um.stage)
+	}
+}
+
+func TestModelPickerFilterNarrowsVisible(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageModelPicker
+	m.modelPickerEntries = []string{"gpt-4", "claude-3", "coding", "tools", "codestral"}
+	m.modelPickerFilter = "cod"
+
+	visible := modelPickerVisible(m)
+	if len(visible) != 2 {
+		t.Errorf("expected 2 visible entries for filter=cod, got %d: %v", len(visible), visible)
+	}
+	// Check the names
+	names := []string{}
+	for _, idx := range visible {
+		names = append(names, m.modelPickerEntries[idx])
+	}
+	if names[0] != "coding" || names[1] != "codestral" {
+		t.Errorf("expected [coding, codestral], got %v", names)
+	}
+}
+
+func TestModelPickerFilterCaseInsensitive(t *testing.T) {
+	m := initialModel(nil)
+	m.modelPickerEntries = []string{"GPT-4", "Claude", "Tools"}
+	m.modelPickerFilter = "gpt"
+
+	visible := modelPickerVisible(m)
+	if len(visible) != 1 || m.modelPickerEntries[visible[0]] != "GPT-4" {
+		t.Errorf("expected case-insensitive match GPT-4, got %v", visible)
+	}
+}
+
+func TestModelPickerFilterEmptyShowsAll(t *testing.T) {
+	m := initialModel(nil)
+	m.modelPickerEntries = []string{"a", "b", "c"}
+	m.modelPickerFilter = ""
+
+	visible := modelPickerVisible(m)
+	if len(visible) != 3 {
+		t.Errorf("expected all 3 visible with empty filter, got %d", len(visible))
+	}
+}
+
+func TestModelPickerFilterNoMatchShowsNone(t *testing.T) {
+	m := initialModel(nil)
+	m.modelPickerEntries = []string{"a", "b", "c"}
+	m.modelPickerFilter = "xyz"
+
+	visible := modelPickerVisible(m)
+	if len(visible) != 0 {
+		t.Errorf("expected 0 visible for non-matching filter, got %d", len(visible))
+	}
+}
+
+func TestModelPickerFirstEscapeClearsFilter(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageModelPicker
+	m.modelPickerEntries = []string{"gpt-4", "claude-3"}
+	m.modelPickerFilter = "cod"
+
+	updated, _ := handleModelPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
+	um := updated.(model)
+	if um.modelPickerFilter != "" {
+		t.Errorf("expected first Escape to clear filter, got %q", um.modelPickerFilter)
+	}
+	if um.stage != stageModelPicker {
+		t.Errorf("expected to stay in stageModelPicker after first Escape, got %d", um.stage)
+	}
+}
+
+func TestModelPickerSecondEscapeExits(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageModelPicker
+	m.modelPickerEntries = []string{"gpt-4", "claude-3"}
+	m.modelPickerFilter = "" // filter already cleared
+
+	updated, _ := handleModelPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
+	um := updated.(model)
+	if um.stage != stageInput {
+		t.Errorf("expected Escape to exit when filter empty, got stage %d", um.stage)
+	}
+}
+
+func TestModelPickerFilterCursorResetsOnType(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageModelPicker
+	m.modelPickerEntries = []string{"gpt-4", "claude-3", "coding"}
+	m.modelPickerCursor = 2
+
+	updated, _ := handleModelPickerKey(m, pressRune('c'))
+	um := updated.(model)
+	if um.modelPickerCursor != 0 {
+		t.Errorf("expected cursor reset to 0 after filter change, got %d", um.modelPickerCursor)
+	}
+}
+
+func TestModelPickerFilterResetsOnExit(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageModelPicker
+	m.modelPickerEntries = []string{"a", "b"}
+	m.modelPickerFilter = "x"
+
+	m = exitModelPicker(m)
+	if m.modelPickerFilter != "" {
+		t.Errorf("expected filter cleared on exit, got %q", m.modelPickerFilter)
+	}
+}
+
+func TestModelPickerFilterResetsOnEnter(t *testing.T) {
+	b := NewBackend()
+	m := initialModel(b)
+	m.stage = stageModelPicker
+	m.modelPickerEntries = []string{"alpha", "beta"}
+	m.modelPickerFilter = "b"
+
+	updated, _ := handleModelPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
+	um := updated.(model)
+	if um.modelPickerFilter != "" {
+		t.Errorf("expected filter cleared after Enter, got %q", um.modelPickerFilter)
+	}
+	if um.stage != stageInput {
+		t.Errorf("expected stageInput after Enter, got %d", um.stage)
+	}
+	// And the filtered selection should be beta (not alpha), since filter=b
+	select {
+	case data := <-b.writeCh:
+		if !strings.Contains(string(data), "beta") {
+			t.Errorf("expected 'beta' selected via filter, got %s", data)
+		}
+	default:
+		t.Error("expected /model request sent to backend")
+	}
+}
+
+func TestModelPickerFilterEnterWithNoMatchesNoop(t *testing.T) {
+	b := NewBackend()
+	m := initialModel(b)
+	m.stage = stageModelPicker
+	m.modelPickerEntries = []string{"alpha", "beta"}
+	m.modelPickerFilter = "zzz"
+
+	updated, _ := handleModelPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
+	um := updated.(model)
+	if um.stage != stageModelPicker {
+		t.Errorf("expected stay in picker on Enter with no matches, got stage %d", um.stage)
+	}
+	// No request sent
+	select {
+	case <-b.writeCh:
+		t.Error("expected no backend request when filter has no matches")
+	default:
+	}
+}
+
+func TestModelPickerFilterArrowsNavigateFilteredList(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageModelPicker
+	m.modelPickerEntries = []string{"gpt-4", "claude-3", "coding", "codestral"}
+	m.modelPickerFilter = "cod"
+	m.modelPickerCursor = 0 // coding
+
+	updated, _ := handleModelPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
+	um := updated.(model)
+	if um.modelPickerCursor != 1 {
+		t.Errorf("expected cursor=1 (codestral) after Down in filtered list, got %d", um.modelPickerCursor)
+	}
+
+	// Down again should wrap to 0 (only 2 visible)
+	updated2, _ := handleModelPickerKey(um, tea.KeyPressMsg(tea.Key{Code: tea.KeyDown}))
+	um2 := updated2.(model)
+	if um2.modelPickerCursor != 0 {
+		t.Errorf("expected wrap to 0 after Down from 1 in 2-entry filtered list, got %d", um2.modelPickerCursor)
+	}
+}
+
+func TestModelPickerRenderShowsFilterHeader(t *testing.T) {
+	m := initialModel(nil)
+	m.modelPickerEntries = []string{"gpt-4", "claude-3", "coding"}
+	m.modelPickerFilter = "cod"
+
+	view := renderModelPicker(m)
+	if !strings.Contains(view, "filter: cod") {
+		t.Errorf("expected filter header visible, got:\n%s", view)
+	}
+}
+
+func TestModelPickerRenderNoMatchesMessage(t *testing.T) {
+	m := initialModel(nil)
+	m.modelPickerEntries = []string{"gpt-4", "claude-3"}
+	m.modelPickerFilter = "zzz"
+
+	view := renderModelPicker(m)
+	if !strings.Contains(view, "no matches") {
+		t.Errorf("expected 'no matches' hint, got:\n%s", view)
+	}
+}
+
+func TestRuneForFilterRejectsControlKeys(t *testing.T) {
+	// Ctrl+A should return 0 (not filter input)
+	r := runeForFilter(tea.KeyPressMsg(tea.Key{Code: 'a', Mod: tea.ModCtrl}))
+	if r != 0 {
+		t.Errorf("expected Ctrl+A rejected, got %q", r)
+	}
+}
+
+func TestRuneForFilterAcceptsDigits(t *testing.T) {
+	r := runeForFilter(pressRune('4'))
+	if r != '4' {
+		t.Errorf("expected '4' accepted, got %q", r)
+	}
+}
+
+func TestRuneForFilterAcceptsHyphen(t *testing.T) {
+	r := runeForFilter(pressRune('-'))
+	if r != '-' {
+		t.Errorf("expected '-' accepted, got %q", r)
+	}
+}

@@ -125,13 +125,14 @@ Examples:
 
 ## Required Test Layers
 
-For TUI work, validation should usually include all three:
+For TUI work, validation should usually include all four:
 
 1. Focused unit or component tests for the changed logic
 2. Real PTY-backed validation of the interactive path
-3. Stored artifact under `docs/qa/test-results/`
+3. **Visual snapshot regression** (`autocode/tests/vhs/run_visual_suite.py`) when the change touches layout, color, picker behavior, palette, alt-screen, or scrollback. Any visual-behavior change requires either (a) a green diff against the committed reference PNGs, or (b) a deliberate `--update` that replaces the affected references and is explicitly called out in the review. See `autocode/tests/vhs/README.md` for the detailed guide.
+4. Stored artifact under `docs/qa/test-results/`
 
-If one layer is missing, call it out explicitly.
+If any layer is missing, call it out explicitly.
 
 ## Verification Criteria
 
@@ -150,6 +151,7 @@ Do not mark TUI work complete if any of these are true:
 - startup, basic chat, picker/palette, or warning/error behavior was not checked
 - the artifact is stale or from a different tree state
 - docs still overstate what is implemented
+- the change touches visual surface (layout/color/picker/palette/alt-screen/scrollback) and no visual-suite diff or baseline update is in the review
 
 ## Suggested Artifact Contents
 

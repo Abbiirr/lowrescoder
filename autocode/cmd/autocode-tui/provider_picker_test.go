@@ -271,3 +271,112 @@ func TestBackendProviderListMsgEmptySetsError(t *testing.T) {
 		t.Error("expected lastError set")
 	}
 }
+
+// --- Slice 1: Provider picker filter ---
+
+func TestProviderPickerFilterAppendsRune(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageProviderPicker
+	m.providerPickerEntries = []string{"openai", "anthropic", "groq"}
+
+	updated, _ := handleProviderPickerKey(m, pressRune('o'))
+	um := updated.(model)
+	if um.providerPickerFilter != "o" {
+		t.Errorf("expected filter=o, got %q", um.providerPickerFilter)
+	}
+}
+
+func TestProviderPickerFilterNarrowsVisible(t *testing.T) {
+	m := initialModel(nil)
+	m.providerPickerEntries = []string{"openai", "openrouter", "anthropic", "groq"}
+	m.providerPickerFilter = "open"
+
+	visible := providerPickerVisible(m)
+	if len(visible) != 2 {
+		t.Errorf("expected 2 visible for filter=open, got %d", len(visible))
+	}
+}
+
+func TestProviderPickerFilterBackspace(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageProviderPicker
+	m.providerPickerEntries = []string{"a", "b"}
+	m.providerPickerFilter = "xy"
+
+	updated, _ := handleProviderPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyBackspace}))
+	um := updated.(model)
+	if um.providerPickerFilter != "x" {
+		t.Errorf("expected filter=x after backspace, got %q", um.providerPickerFilter)
+	}
+}
+
+func TestProviderPickerFirstEscapeClearsFilter(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageProviderPicker
+	m.providerPickerEntries = []string{"a", "b"}
+	m.providerPickerFilter = "x"
+
+	updated, _ := handleProviderPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
+	um := updated.(model)
+	if um.providerPickerFilter != "" {
+		t.Errorf("expected filter cleared on first Escape, got %q", um.providerPickerFilter)
+	}
+	if um.stage != stageProviderPicker {
+		t.Errorf("expected stay in picker after first Escape, got %d", um.stage)
+	}
+}
+
+func TestProviderPickerSecondEscapeExits(t *testing.T) {
+	m := initialModel(nil)
+	m.stage = stageProviderPicker
+	m.providerPickerEntries = []string{"a"}
+
+	updated, _ := handleProviderPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
+	um := updated.(model)
+	if um.stage != stageInput {
+		t.Errorf("expected exit on Escape with empty filter, got %d", um.stage)
+	}
+}
+
+func TestProviderPickerFilterEnterSelectsVisible(t *testing.T) {
+	b := NewBackend()
+	m := initialModel(b)
+	m.stage = stageProviderPicker
+	m.providerPickerEntries = []string{"openai", "anthropic", "groq"}
+	m.providerPickerFilter = "gro" // narrows to just "groq"
+	m.providerPickerCursor = 0
+
+	updated, _ := handleProviderPickerKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
+	um := updated.(model)
+	if um.stage != stageInput {
+		t.Errorf("expected stageInput after Enter, got %d", um.stage)
+	}
+	select {
+	case data := <-b.writeCh:
+		if !strings.Contains(string(data), "groq") {
+			t.Errorf("expected /provider groq, got %s", data)
+		}
+	default:
+		t.Error("expected backend request")
+	}
+}
+
+func TestProviderPickerFilterResetsOnExit(t *testing.T) {
+	m := initialModel(nil)
+	m.providerPickerFilter = "abc"
+	m = exitProviderPicker(m)
+	if m.providerPickerFilter != "" {
+		t.Errorf("expected filter cleared on exit, got %q", m.providerPickerFilter)
+	}
+}
+
+func TestProviderPickerRenderShowsFilterHeader(t *testing.T) {
+	m := initialModel(nil)
+	m.providerPickerEntries = []string{"openai"}
+	m.providerPickerFilter = "ope"
+
+	view := renderProviderPicker(m)
+	if !strings.Contains(view, "filter: ope") {
+		t.Errorf("expected filter header, got:\n%s", view)
+	}
+}

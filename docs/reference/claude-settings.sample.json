@@ -1,0 +1,47 @@
+{
+  "_comment": "Sample hooks configuration. Copy to .claude/settings.json to enable. All hooks are advisory except PreToolUse, which can block a tool call by exiting non-zero or emitting {\"block\": true, \"reason\": \"...\"} on stdout.",
+
+  "hooks": {
+    "SessionStart": [
+      {
+        "_comment": "Logs session start to a local file for audit.",
+        "command": [".claude/hooks/log_session.sh"],
+        "timeout_s": 2.0
+      }
+    ],
+
+    "PreToolUse": [
+      {
+        "_comment": "Guards destructive Bash commands (rm -rf, curl | sh, etc.).",
+        "matcher": "Bash",
+        "command": [".claude/hooks/pre_tool_guard.sh"],
+        "timeout_s": 3.0
+      }
+    ],
+
+    "PostToolUse": [
+      {
+        "_comment": "Runs formatter on edited Python files. Uncomment to enable.",
+        "matcher": "Write|Edit",
+        "command": [".claude/hooks/format_after_edit.sh"],
+        "timeout_s": 10.0
+      }
+    ],
+
+    "Stop": [
+      {
+        "_comment": "Records final transcript + verify.json gate at end of turn.",
+        "command": [".claude/hooks/stop_gate.sh"],
+        "timeout_s": 5.0
+      }
+    ],
+
+    "StopFailure": [
+      {
+        "_comment": "Fires only when a turn ends in failure (e.g. iteration cap).",
+        "command": [".claude/hooks/stop_failure.sh"],
+        "timeout_s": 5.0
+      }
+    ]
+  }
+}

@@ -164,6 +164,8 @@ uv sync
 | Tech research (deep dives) | `docs/claude/*.md` |
 | Vendor/tool reference | `docs/codex/*.md` |
 | Go TUI migration details | `docs/archive/plan/go-bubble-tea-migration.md` |
+| **TUI visual snapshot pipeline (VHS)** | `autocode/tests/vhs/README.md` |
+| **Feature audit across pi-mono / claude-code / opencode / codex / aider / claw-code / goose / open-swe** | `docs/plan/research-components-feature-checklist.md` |
 | Archived conversations | `docs/communication/old/` (read only when asked) |
 | Archived/superseded docs | `docs/archive/` |
 

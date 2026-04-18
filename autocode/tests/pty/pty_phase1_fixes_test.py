@@ -5,9 +5,11 @@ Targeted scenarios:
   C3  — startup: TUI shows 'AutoCode' + 'Connecting to backend' immediately
   C1  — no model picker after a normal chat turn (backendDoneMsg regression)
   STD — stderr WARNING appears as ⚠ dim line, not red 'Error:' banner
-  INL — --inline flag: no alt-screen ANSI escape (?1049h) in output
-  ALT — default (no --inline): alt-screen ANSI escape present
+  INL — default (no --altscreen): no alt-screen ANSI escape (?1049h) in output
+  ALT — --altscreen flag: alt-screen ANSI escape present
   FLW — /followup sends via chat path (no 'steer' leakage visible)
+
+Inline is now the default runtime mode; pass --altscreen explicitly to opt in.
 
 Run: python3 autocode/tests/pty/pty_phase1_fixes_test.py
 """
@@ -27,7 +29,7 @@ import time
 
 GO_TUI = os.path.join(
     os.path.dirname(__file__),
-    "../../cmd/autocode-tui/autocode-tui",
+    "../../build/autocode-tui",
 )
 GO_TUI = os.path.abspath(GO_TUI)
 
@@ -292,23 +294,27 @@ def test_inline_mode() -> None:
 
 
 def test_default_altscreen() -> None:
-    """Default (no --inline): v.AltScreen=true, so \\x1b[?1049h must be present."""
-    log("\n[ALT] Default mode: alt-screen ANSI escape expected")
+    """With explicit --altscreen: v.AltScreen=true, so \\x1b[?1049h must be present.
+
+    Default is now INLINE (Claude-Code-like); alt-screen is opt-in via
+    --altscreen. The previous default-test was flipped to explicitly ask
+    for alt-screen to keep the coverage without demanding the old default.
+    """
+    log("\n[ALT] --altscreen flag: alt-screen ANSI escape expected")
     env = {"AUTOCODE_PYTHON_CMD": MOCK_BACKEND}
-    fd, pid = spawn([GO_TUI], env_extra=env)
+    fd, pid = spawn([GO_TUI, "--altscreen"], env_extra=env)
     try:
         raw = read_until(fd, quiet=1.5, maxwait=8.0, stop_on=b"AutoCode")
         if ALT_SCREEN_ENTER in raw:
-            ok("ALT_altscreen", "Alt-screen escape (?1049h) present in default mode")
+            ok("ALT_altscreen", "Alt-screen escape (?1049h) present with --altscreen")
         else:
-            # BubbleTea v2 may use a different escape or defer it — check for AltScreen indicators
             alt_indicators = [b"\x1b[?1049h", b"\x1b[?47h", b"\x1b[?1047h"]
             found = any(ind in raw for ind in alt_indicators)
             if found:
                 ok("ALT_altscreen", "Alt-screen escape present (variant form)")
             else:
                 bug("ALT_altscreen",
-                    "No alt-screen escape in default mode — v.AltScreen=true not taking effect",
+                    "No alt-screen escape with --altscreen — flag not taking effect",
                     "MEDIUM")
         text = strip(raw)
         if "AutoCode" in text:

@@ -1,0 +1,5 @@
+⚠ [backend] WARNING: mock backend starting — this is a test warning
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ Ask AutoCode…
+tools · openrouter · suggest · mock-session-001                                                                                                          master
+  suggest · shift+tab to cycle modes

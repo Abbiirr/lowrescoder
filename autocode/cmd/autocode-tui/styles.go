@@ -34,6 +34,18 @@ var (
 	statusBarStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("240"))
 
+	// branchPillStyle renders the git branch as a compact right-side pill
+	// in the status bar, matching Claude Code's bottom-right branch tag.
+	branchPillStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("15")).
+			Background(lipgloss.Color("#0e7e9a")).
+			Bold(true)
+
+	// modeHintStyle renders the bottom "mode · (shift+tab to cycle)" line.
+	modeHintStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("245")).
+			Italic(true)
+
 	approvalActiveStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("10")).
 				Bold(true)

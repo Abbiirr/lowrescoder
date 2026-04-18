@@ -60,6 +60,21 @@ def load_project_memory_content(project_root: Path) -> str | None:
     except Exception:  # noqa: BLE001 — layer2 is optional; any failure degrades to no rules
         pass
 
+    # Append a skills catalog (frontmatter only) so the model sees available
+    # skills without loading their bodies. Loading is lazy per invocation.
+    try:
+        from autocode.agent.skills import default_catalog, skill_catalog_section
+
+        catalog = default_catalog(project_root)
+        entries = catalog.scan()
+        section = skill_catalog_section(entries)
+        if section:
+            memory_content = (
+                f"{memory_content}\n\n{section}" if memory_content else section
+            )
+    except Exception:  # noqa: BLE001 — skills discovery is optional; degrade silently
+        pass
+
     return memory_content
 
 

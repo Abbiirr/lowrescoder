@@ -1,0 +1,12 @@
+⚠ [backend] WARNING: mock backend starting — this is a test warning
+> __WARNING__ deliberate test
+⚠ [backend] WARNING: deliberate mid-session warning from mock backend
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+  Warning emitted.
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ Ask AutoCode…
+tools · openrouter · suggest · 8 tokens · mock-session-001                                                                                               master
+  suggest · shift+tab to cycle modes

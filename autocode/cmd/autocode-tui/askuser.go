@@ -52,12 +52,18 @@ func renderAskUserView(m model) string {
 			b.WriteString(dimStyle.Render("  (or type a custom answer below)"))
 			b.WriteString("\n")
 			b.WriteString(m.composer.View())
+			b.WriteString("\n")
 		}
+		b.WriteString(dimStyle.Render("  \u2191/\u2193 select \u00b7 Enter confirm \u00b7 Esc cancel"))
+		b.WriteString("\n")
 	} else {
 		// Free-text only
 		b.WriteString(dimStyle.Render("  (type your answer)"))
 		b.WriteString("\n")
 		b.WriteString(m.composer.View())
+		b.WriteString("\n")
+		b.WriteString(dimStyle.Render("  Enter confirm \u00b7 Esc cancel"))
+		b.WriteString("\n")
 	}
 
 	return b.String()
@@ -81,6 +87,23 @@ func handleAskUserKey(m model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			if m.askCursor >= len(m.askOptions) {
 				m.askCursor = 0
 			}
+		}
+		return m, nil
+
+	case "backspace":
+		// Session picker: filter backspace
+		if m.askRequestID == -1 && len(m.sessionPickerFilter) > 0 {
+			runes := []rune(m.sessionPickerFilter)
+			m.sessionPickerFilter = string(runes[:len(runes)-1])
+			m.askCursor = 0
+			m = applySessionPickerFilter(m)
+			return m, nil
+		}
+		// Fall through to composer when in text mode
+		if m.askAllowText || len(m.askOptions) == 0 {
+			var cmd tea.Cmd
+			m.composer, cmd = m.composer.Update(msg)
+			return m, cmd
 		}
 		return m, nil
 
@@ -122,9 +145,16 @@ func handleAskUserKey(m model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Println(dimStyle.Render(fmt.Sprintf("  \u2192 %s", answer)))
 
 	case "escape", "esc", "ctrl+c":
-		// Session picker mode: just cancel and return to input
+		// Session picker mode: first Escape clears filter, then cancels
 		if m.askRequestID == -1 {
+			if m.sessionPickerFilter != "" && msg.String() != "ctrl+c" {
+				m.sessionPickerFilter = ""
+				m.askCursor = 0
+				m = applySessionPickerFilter(m)
+				return m, nil
+			}
 			m.sessionPickerEntries = nil
+			m.sessionPickerFilter = ""
 			m.stage = stageInput
 			m.composer.SetValue("")
 			m.composer.Placeholder = "Ask AutoCode\u2026"
@@ -151,6 +181,16 @@ func handleAskUserKey(m model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Println(dimStyle.Render("  \u2192 (cancelled)"))
 
 	default:
+		// Session picker: type-to-filter
+		if m.askRequestID == -1 {
+			if r := runeForFilter(msg); r != 0 {
+				m.sessionPickerFilter += string(r)
+				m.askCursor = 0
+				m = applySessionPickerFilter(m)
+				return m, nil
+			}
+			return m, nil
+		}
 		// Forward to composer if in text mode
 		if m.askAllowText || len(m.askOptions) == 0 {
 			var cmd tea.Cmd

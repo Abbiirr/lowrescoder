@@ -573,3 +573,169 @@ func TestSessionPickerSendsFullSessionID(t *testing.T) {
 		t.Error("expected session.resume message")
 	}
 }
+
+// --- Slice 1: Session picker filter ---
+
+func TestSessionPickerFilterAppendsRune(t *testing.T) {
+	m := initialModel(nil)
+	entries := []sessionEntry{
+		{ID: "aaaa1111", Title: "first", Model: "m"},
+		{ID: "bbbb2222", Title: "second", Model: "m"},
+	}
+	m = enterSessionPicker(m, backendSessionListMsg{Sessions: entries})
+
+	updated, _ := handleAskUserKey(m, pressRune('f'))
+	um := updated.(model)
+	if um.sessionPickerFilter != "f" {
+		t.Errorf("expected filter=f, got %q", um.sessionPickerFilter)
+	}
+}
+
+func TestSessionPickerFilterNarrowsVisible(t *testing.T) {
+	m := initialModel(nil)
+	entries := []sessionEntry{
+		{ID: "aaaa1111", Title: "hello world", Model: "m"},
+		{ID: "bbbb2222", Title: "goodbye", Model: "m"},
+		{ID: "cccc3333", Title: "hello there", Model: "m"},
+	}
+	m = enterSessionPicker(m, backendSessionListMsg{Sessions: entries})
+	m.sessionPickerFilter = "hello"
+
+	visible := sessionPickerVisible(m)
+	if len(visible) != 2 {
+		t.Errorf("expected 2 visible for filter=hello, got %d: %v", len(visible), visible)
+	}
+}
+
+func TestSessionPickerFilterUpdatesAskOptions(t *testing.T) {
+	m := initialModel(nil)
+	entries := []sessionEntry{
+		{ID: "aaaa1111", Title: "apple", Model: "m"},
+		{ID: "bbbb2222", Title: "banana", Model: "m"},
+		{ID: "cccc3333", Title: "apricot", Model: "m"},
+	}
+	m = enterSessionPicker(m, backendSessionListMsg{Sessions: entries})
+
+	// Type "ap" → narrows to apple + apricot
+	updated, _ := handleAskUserKey(m, pressRune('a'))
+	um := updated.(model)
+	updated2, _ := handleAskUserKey(um, pressRune('p'))
+	um2 := updated2.(model)
+
+	if um2.sessionPickerFilter != "ap" {
+		t.Errorf("expected filter=ap, got %q", um2.sessionPickerFilter)
+	}
+	if len(um2.askOptions) != 2 {
+		t.Errorf("expected 2 askOptions for filter=ap, got %d: %v", len(um2.askOptions), um2.askOptions)
+	}
+}
+
+func TestSessionPickerFilterBackspace(t *testing.T) {
+	m := initialModel(nil)
+	entries := []sessionEntry{
+		{ID: "aaaa1111", Title: "alpha", Model: "m"},
+		{ID: "bbbb2222", Title: "beta", Model: "m"},
+	}
+	m = enterSessionPicker(m, backendSessionListMsg{Sessions: entries})
+	m.sessionPickerFilter = "ab"
+
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyBackspace}))
+	um := updated.(model)
+	if um.sessionPickerFilter != "a" {
+		t.Errorf("expected filter=a after backspace, got %q", um.sessionPickerFilter)
+	}
+}
+
+func TestSessionPickerFirstEscapeClearsFilter(t *testing.T) {
+	m := initialModel(nil)
+	entries := []sessionEntry{{ID: "a", Title: "t", Model: "m"}}
+	m = enterSessionPicker(m, backendSessionListMsg{Sessions: entries})
+	m.sessionPickerFilter = "xyz"
+	// Force askOptions to reflect the filter
+	m = applySessionPickerFilter(m)
+
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
+	um := updated.(model)
+	if um.sessionPickerFilter != "" {
+		t.Errorf("expected filter cleared on first Escape, got %q", um.sessionPickerFilter)
+	}
+	if um.stage != stageAskUser {
+		t.Errorf("expected stay in ask-user (picker) stage after first Escape, got %d", um.stage)
+	}
+}
+
+func TestSessionPickerSecondEscapeExits(t *testing.T) {
+	m := initialModel(nil)
+	entries := []sessionEntry{{ID: "a", Title: "t", Model: "m"}}
+	m = enterSessionPicker(m, backendSessionListMsg{Sessions: entries})
+
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
+	um := updated.(model)
+	if um.stage != stageInput {
+		t.Errorf("expected exit on Escape when filter empty, got %d", um.stage)
+	}
+}
+
+func TestSessionPickerCtrlCExitsRegardlessOfFilter(t *testing.T) {
+	// Ctrl+C is "get me out" regardless of filter state
+	m := initialModel(nil)
+	entries := []sessionEntry{{ID: "a", Title: "t", Model: "m"}}
+	m = enterSessionPicker(m, backendSessionListMsg{Sessions: entries})
+	m.sessionPickerFilter = "xyz"
+	m = applySessionPickerFilter(m)
+
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: 'c', Mod: tea.ModCtrl}))
+	um := updated.(model)
+	if um.stage != stageInput {
+		t.Errorf("expected Ctrl+C exits regardless of filter, got %d", um.stage)
+	}
+}
+
+func TestSessionPickerFilterEnterSelectsVisible(t *testing.T) {
+	b := NewBackend()
+	m := initialModel(b)
+	entries := []sessionEntry{
+		{ID: "id-apple", Title: "apple", Model: "m"},
+		{ID: "id-banana", Title: "banana", Model: "m"},
+		{ID: "id-apricot", Title: "apricot", Model: "m"},
+	}
+	m = enterSessionPicker(m, backendSessionListMsg{Sessions: entries})
+	// Filter to "apri" → just apricot remains
+	m.sessionPickerFilter = "apri"
+	m = applySessionPickerFilter(m)
+	m.askCursor = 0
+
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
+	um := updated.(model)
+	if um.stage != stageInput {
+		t.Errorf("expected stageInput after Enter, got %d", um.stage)
+	}
+	select {
+	case data := <-b.writeCh:
+		s := string(data)
+		if !strings.Contains(s, "id-apricot") {
+			t.Errorf("expected id-apricot selected via filter, got %s", s)
+		}
+	default:
+		t.Error("expected session.resume request")
+	}
+}
+
+func TestSessionPickerFilterResetsOnExit(t *testing.T) {
+	m := initialModel(nil)
+	entries := []sessionEntry{{ID: "a", Title: "t", Model: "m"}}
+	m = enterSessionPicker(m, backendSessionListMsg{Sessions: entries})
+	m.sessionPickerFilter = "xyz"
+
+	// Escape once clears filter, so set filter and then exit directly
+	m = applySessionPickerFilter(m)
+	// Two escapes to fully exit
+	updated, _ := handleAskUserKey(m, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
+	um := updated.(model)
+	// first escape cleared filter
+	updated2, _ := handleAskUserKey(um, tea.KeyPressMsg(tea.Key{Code: tea.KeyEscape}))
+	um2 := updated2.(model)
+	if um2.sessionPickerFilter != "" {
+		t.Errorf("expected filter cleared after exit, got %q", um2.sessionPickerFilter)
+	}
+}

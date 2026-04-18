@@ -1,0 +1,45 @@
+{
+  "hard": {
+    "basic_turn_returns_to_usable_input": {
+      "detail": "no composer marker after turn \u2014 input not regained",
+      "passed": false
+    },
+    "composer_present": {
+      "detail": "none of the composer markers found",
+      "passed": false
+    },
+    "no_crash_during_capture": {
+      "detail": "raw_bytes=166",
+      "passed": true
+    },
+    "no_queue_debug_leak": {
+      "detail": "clean",
+      "passed": true
+    },
+    "response_followed_user_prompt": {
+      "detail": "no substantial response content after user prompt",
+      "passed": false
+    },
+    "spinner_observed_during_turn": {
+      "detail": "no spinner chars or verb markers seen during turn",
+      "passed": false
+    }
+  },
+  "soft": {
+    "composer_has_rounded_border": {
+      "detail": "no rounded-border characters found (Track 3 gap H1)",
+      "passed": false
+    },
+    "spinner_has_interrupt_hint": {
+      "detail": "no interrupt-hint text found (Track 3 gap H2)",
+      "passed": false
+    }
+  },
+  "summary": {
+    "all_hard_passed": false,
+    "hard_passed": 2,
+    "hard_total": 6,
+    "soft_passed": 0,
+    "soft_total": 2
+  }
+}

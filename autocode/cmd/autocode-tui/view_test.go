@@ -294,15 +294,24 @@ func TestViewNarrowTerminalToolTruncation(t *testing.T) {
 	}
 }
 
-func TestViewToolCallUsesElbow(t *testing.T) {
+func TestViewToolCallUsesBulletAndElbow(t *testing.T) {
+	// Tool-call cards now use Claude-Code-style bullet headers (●/○) plus
+	// an optional └ continuation line for result previews. The legacy ⎿
+	// elbow glyph is no longer used; this test asserts the new shape.
 	m := initialModel(nil)
 	m.stage = stageStreaming
 	m.toolCalls = []toolCallEntry{
-		{Name: "bash", Status: "running"},
+		{Name: "bash", Status: "completed", Result: "ok"},
 	}
 
 	view := m.View().Content
-	if !strings.Contains(view, "⎿") {
-		t.Errorf("expected ⎿ prefix for tool calls, got:\n%s", view)
+	if !strings.Contains(view, "\u25cf") && !strings.Contains(view, "\u25cb") {
+		t.Errorf("expected ● or ○ bullet for tool call header, got:\n%s", view)
+	}
+	if !strings.Contains(view, "\u2514") {
+		t.Errorf("expected └ continuation for result preview, got:\n%s", view)
+	}
+	if !strings.Contains(view, "bash") {
+		t.Errorf("expected tool name 'bash' in view, got:\n%s", view)
 	}
 }

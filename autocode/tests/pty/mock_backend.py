@@ -7,6 +7,9 @@ specific scenarios without a real LLM:
   - responds to chat requests with a short token stream + on_done
   - emits a WARNING to stderr (to test severity classification)
   - never opens a model list (C1 regression guard)
+  - if chat body contains ``__ASK_USER__``, emit an on_ask_user request
+    and wait for the TUI's answer before completing the turn (Phase 2
+    Scenario 2)
 
 Usage: set AUTOCODE_PYTHON_CMD to this script.
 """
@@ -16,6 +19,11 @@ import json
 import sys
 import threading
 import time
+
+# Pending ask_user request IDs → threading.Event + answer slot.
+_ASK_LOCK = threading.Lock()
+_PENDING_ASK: dict[int, dict] = {}
+_NEXT_ASK_ID = 9000
 
 
 def send(method: str, params: dict) -> None:
@@ -28,6 +36,42 @@ def respond(id_: int, result: dict) -> None:
     msg = json.dumps({"jsonrpc": "2.0", "id": id_, "result": result})
     sys.stdout.write(msg + "\n")
     sys.stdout.flush()
+
+
+def request(method: str, params: dict, req_id: int) -> None:
+    msg = json.dumps({"jsonrpc": "2.0", "id": req_id, "method": method, "params": params})
+    sys.stdout.write(msg + "\n")
+    sys.stdout.flush()
+
+
+def _ask_user_blocking(
+    question: str,
+    options: list,
+    allow_text: bool = False,
+    timeout: float = 15.0,
+) -> str:
+    """Send on_ask_user request and block until the TUI answers."""
+    global _NEXT_ASK_ID
+    with _ASK_LOCK:
+        req_id = _NEXT_ASK_ID
+        _NEXT_ASK_ID += 1
+        evt = threading.Event()
+        _PENDING_ASK[req_id] = {"event": evt, "answer": ""}
+
+    request("on_ask_user", {
+        "question": question,
+        "options": options,
+        "allow_text": allow_text,
+    }, req_id)
+
+    if not evt.wait(timeout=timeout):
+        with _ASK_LOCK:
+            _PENDING_ASK.pop(req_id, None)
+        return ""
+
+    with _ASK_LOCK:
+        entry = _PENDING_ASK.pop(req_id, {})
+    return entry.get("answer", "")
 
 
 def main() -> None:
@@ -43,7 +87,7 @@ def main() -> None:
         "session_id": "mock-session-001",
     })
 
-    # Read JSON-RPC requests from stdin and respond
+    # Read JSON-RPC requests/responses from stdin
     for line in sys.stdin:
         line = line.strip()
         if not line:
@@ -56,12 +100,28 @@ def main() -> None:
         method = req.get("method", "")
         req_id = req.get("id")
 
+        # Response to a mock-initiated request (on_ask_user answer)
+        if method == "" and req_id is not None and "result" in req:
+            with _ASK_LOCK:
+                entry = _PENDING_ASK.get(req_id)
+            if entry is not None:
+                result = req.get("result") or {}
+                entry["answer"] = result.get("answer", "") if isinstance(result, dict) else ""
+                entry["event"].set()
+            continue
+
         if method == "chat":
-            # Simulate a chat turn: token stream + done
-            threading.Thread(target=_handle_chat, args=(req_id,), daemon=True).start()
+            params = req.get("params") or {}
+            message = ""
+            if isinstance(params, dict):
+                message = params.get("message", "") or ""
+            threading.Thread(
+                target=_handle_chat,
+                args=(req_id, message),
+                daemon=True,
+            ).start()
 
         elif method in ("session.resume", "steer", "fork_session", "session.fork"):
-            # Acknowledge without side effects
             if req_id is not None:
                 respond(req_id, {"ok": True})
 
@@ -74,9 +134,38 @@ def main() -> None:
             respond(req_id, {"ok": True})
 
 
-def _handle_chat(req_id: int | None) -> None:
+def _handle_chat(req_id: int | None, message: str) -> None:
     time.sleep(0.1)
-    tokens = ["Hello", " from", " the", " mock", " backend", "!"]
+
+    # Phase 2 Scenario 2: ask_user trigger.
+    if "__ASK_USER__" in message:
+        answer = _ask_user_blocking(
+            question="Please choose how to proceed:",
+            options=["Continue", "Abort", "Retry"],
+            allow_text=False,
+        )
+        tokens = [f"You chose: {answer or '(cancelled)'}"]
+    elif "__WARNING__" in message:
+        # Phase 2 Scenario 3: emit a WARNING to stderr mid-chat. The
+        # TUI should render it as a dim scrollback line, NOT as a red
+        # `Error:` banner.
+        print(
+            "WARNING: deliberate mid-session warning from mock backend",
+            file=sys.stderr,
+            flush=True,
+        )
+        time.sleep(0.1)
+        tokens = ["Warning", " emitted", "."]
+    elif "__SLOW__" in message:
+        # Phase 2 Scenario 5: hold the spinner for multiple ticks by
+        # inserting a longer gap before the tokens. autocode's braille
+        # spinner rotates ~10Hz; >1s of quiescence gives pyte multiple
+        # distinct frames.
+        time.sleep(2.0)
+        tokens = ["Done", " after", " a", " slow", " pause", "."]
+    else:
+        tokens = ["Hello", " from", " the", " mock", " backend", "!"]
+
     for tok in tokens:
         send("on_token", {"text": tok})
         time.sleep(0.05)

@@ -22,7 +22,7 @@ import termios
 import time
 
 # ── Config ────────────────────────────────────────────────────────────────────
-GO_TUI = "/home/bs01763/projects/ai/lowrescoder/autocode/cmd/autocode-tui/autocode-tui"
+GO_TUI = "/home/bs01763/projects/ai/lowrescoder/autocode/build/autocode-tui"
 PY_CHAT = ["/home/bs01763/.local/bin/autocode", "chat"]
 COLS, ROWS = 160, 50
 ANSI = re.compile(r'\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
@@ -116,7 +116,16 @@ def info(label: str, detail: str = "") -> None:
 def check(label: str, raw: bytes, *,
           must_contain: list[str] | None = None,
           must_not_contain: list[str] | None = None,
-          severity: str = "HIGH") -> str:
+          severity: str = "HIGH",
+          expect_model_picker: bool = False,
+          expect_provider_picker: bool = False) -> str:
+    """Scan captured PTY output for bugs.
+
+    `expect_model_picker=True` / `expect_provider_picker=True` tell the
+    universal-check guard that the caller has intentionally triggered the
+    picker (e.g. via `/model`), so seeing "Select a model:" is expected
+    rather than an unsolicited pop-up.
+    """
     text = strip(raw)
 
     for pat in (must_contain or []):
@@ -127,12 +136,12 @@ def check(label: str, raw: bytes, *,
         if pat in text:
             bug(f"{label}: unexpected '{pat}'", f"Output ({len(raw)}B): {text[:300]}", severity)
 
-    # Universal checks
-    if "Select a model" in text:
+    # Universal checks — only fire for UNSOLICITED pickers.
+    if not expect_model_picker and "Select a model" in text:
         bug(f"{label}: model picker appeared unexpectedly",
             f"Output: {text[:300]}", "CRITICAL")
 
-    if "Select a provider" in text:
+    if not expect_provider_picker and "Select a provider" in text:
         bug(f"{label}: provider picker appeared unexpectedly",
             f"Output: {text[:300]}", "HIGH")
 
@@ -236,7 +245,8 @@ def suite_go_tui() -> None:
         send(fd, "/model\n", delay=0.2)
         raw = read_until(fd, quiet=1.5, maxwait=10.0, stop_on="Select a model")
         text = check("A3_model_picker", raw,
-                     must_not_contain=["panic"])
+                     must_not_contain=["panic"],
+                     expect_model_picker=True)
         if "Select a model" in text:
             ok("A3_model_picker", "picker opened as expected")
             send(fd, "\x1b", delay=0.3)  # Escape
@@ -372,11 +382,16 @@ def suite_go_tui() -> None:
             send(fd, "cod", delay=0.3)
             raw2 = read_until(fd, quiet=1.0, maxwait=3.0)
             t2 = strip(raw2)
-            if "coding" not in t2 and "cod" not in t2.lower():
+            # After Slice 1: filter header `[filter: cod]` should appear, and
+            # the visible list should narrow. Accept either as proof of filter.
+            if "filter: cod" in t2 or "[filter:" in t2:
+                ok("A14_model_filter", "filter header visible in model picker")
+            elif "coding" in t2:
+                # Either exactly the filtered result, or at least proof 'cod' narrowed the list
+                ok("A14_model_filter", "coding visible after filter 'cod'")
+            else:
                 bug("A14_model_filter: typing in picker doesn't filter",
                     f"After typing 'cod': {t2[:200]}", "HIGH")
-            else:
-                ok("A14_model_filter", "filter works in model picker")
             # Escape
             send(fd, "\x1b", delay=0.3)
             read_until(fd, quiet=0.5, maxwait=2.0)
@@ -445,12 +460,18 @@ def suite_py_chat() -> None:
         log("\n[B5] /model in Python inline")
         send(fd, "/model\n", delay=0.2)
         raw = read_until(fd, quiet=2.0, maxwait=10.0)
-        text = check("B5_model_py", raw)
+        text = check("B5_model_py", raw, expect_model_picker=True)
         if any(w in text for w in ["model", "Model", "current", "available"]):
             ok("B5_model_py", "model responded")
         else:
             bug("B5_model_py: /model returned nothing in Python inline",
                 f"Output: {text[:200]}", "MEDIUM")
+        # Close the picker before the next scenario so its text doesn't
+        # leak into the picker's filter box. Two-stroke: first Esc clears
+        # any filter, second Esc exits the picker.
+        send(fd, "\x1b", delay=0.1)
+        send(fd, "\x1b", delay=0.1)
+        read_until(fd, quiet=1.0, maxwait=3.0)
 
         # ── B6: @file expansion ───────────────────────────────────────────────
         log("\n[B6] @file mention expansion")
@@ -530,7 +551,7 @@ def main() -> None:
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w") as f:
         f.write("# PTY TUI Bug Report\n\n")
-        f.write("**Date:** 2026-04-13  \n")
+        f.write(f"**Date:** {time.strftime('%Y-%m-%d')}  \n")
         f.write("**Tester:** PTY automated (pty_tui_bugfind.py)  \n")
         f.write(f"**Go TUI binary:** `{GO_TUI}`  \n")
         f.write(f"**Python chat:** `{' '.join(PY_CHAT)}`  \n\n")

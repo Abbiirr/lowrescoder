@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
@@ -9,8 +8,11 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
+// Composer height: start at 1 row (single `❯` prompt — Claude Code / Pi
+// shape) and grow up to composerMaxH as the user adds multi-line content
+// via Alt+Enter.
 const (
-	composerMinH = 3
+	composerMinH = 1
 	composerMaxH = 8
 )
 
@@ -78,9 +80,10 @@ func composerSetWidth(ta *textarea.Model, totalWidth int) {
 }
 
 // composerAutoHeight adjusts composer height based on content.
+// Height tracks line count exactly (clamped to [composerMinH, composerMaxH])
+// so a single-line prompt shows one `❯` row, not two.
 func composerAutoHeight(m *model) {
-	lines := m.composer.LineCount()
-	h := lines + 1 // extra line for typing room
+	h := m.composer.LineCount()
 	if h < composerMinH {
 		h = composerMinH
 	}
@@ -121,26 +124,6 @@ func renderComposer(m model) string {
 	// Bottom bar
 	b.WriteString(bar)
 
-	return b.String()
-}
-
-// renderQueuePreview renders pending queued messages above the composer.
-func renderQueuePreview(m model) string {
-	if len(m.messageQueue) == 0 {
-		return ""
-	}
-
-	var b strings.Builder
-	b.WriteString(dimStyle.Render(" Queued:"))
-	b.WriteString("\n")
-	for _, msg := range m.messageQueue {
-		preview := msg
-		if len(preview) > 60 {
-			preview = preview[:57] + "..."
-		}
-		b.WriteString(dimStyle.Render(fmt.Sprintf("  \u2022 %s", preview)))
-		b.WriteString("\n")
-	}
 	return b.String()
 }
 

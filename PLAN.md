@@ -20,18 +20,21 @@ Purpose: detailed implementation plan for the active post-Phase-8 frontier. `EXE
 
 Follow this order unless the user explicitly redirects:
 
-1. Section 1f: Unified TUI Consolidation (supersedes "Claude Code primary TUI parity")
-2. Section 1: Large Codebase Comprehension
-3. Section 2: Native External-Harness Orchestration
-4. Section 3: Terminal-Bench / Harness Engineering
-5. Section 5: Documentation Discipline
-6. Section 4: Research Corpus Maintenance
-7. Section 0: Harness Architecture Refinement From Proposal v2 as a landed foundation / policy reference
+1. **Section 1g: TUI Testing Strategy (ACTIVE SLICE as of 2026-04-17 late-session)**
+2. Section 1f: Unified TUI Consolidation — residual milestones C/D/E/F (deferred, see `DEFERRED_PENDING_TODO.md` §3)
+3. Section 1: Large Codebase Comprehension
+4. Section 2: Native External-Harness Orchestration
+5. Section 3: Terminal-Bench / Harness Engineering
+6. Section 5: Documentation Discipline
+7. Section 4: Research Corpus Maintenance
+8. Section 0: Harness Architecture Refinement From Proposal v2 as a landed foundation / policy reference
 
 Current practical rule:
 
+- **treat Section 1g (TUI Testing Strategy) as the current active slice until user approves move-on**
+- keep deferred items visible in `DEFERRED_PENDING_TODO.md`; do NOT dismiss anything
 - treat Section 0 as landed foundation unless a new gap is discovered
-- treat Section 1f (Unified TUI) as the current primary UX workstream
+- treat Section 1f (Unified TUI) residuals as paused, not cancelled
 - do not broaden B30 work while the higher-leverage comprehension/adapter items are still moving
 
 ---
@@ -259,299 +262,1210 @@ Make the retrieval dependency/runtime contract explicit rather than half-optiona
 
 ---
 
-## 1f. Unified TUI Consolidation
+## 1f. Stable TUI Program
 
-**Last updated: 2026-04-15**
+**Last updated: 2026-04-17**
 
 ### Goal
 
-Close the Unified TUI migration truthfully. Go BubbleTea (`autocode-tui`) is already the default interactive frontend, and the focused closeout gates for PTY evidence and the CLI/inline contract are now green. Backend parity for `steer`, `session.fork`, and per-turn `on_cost_update` is landed. Remaining work is commit-scope cleanup plus prioritizing what follows Section 1f. Build the Go TUI to be best-in-class, drawing on every `research-components/` TUI plus web research.
+Lock a research-backed stable-v1 TUI program for AutoCode.
 
-### Architecture Direction
+This section is no longer a short “closeout slice.” It is the source-of-truth execution plan for shipping a stable, migration-friendly coding-agent TUI that:
+
+- is predictable and boring in the best way under real terminal use
+- preserves the migration-critical contracts users already expect from Claude Code / Pi style workflows
+- remains safe-by-default instead of “YOLO by default”
+- treats verification as part of the product, not an optional afterthought
+
+### Primary Research Basis
+
+This plan is locked from these inputs, in priority order:
+
+1. `deep-research-report.md`
+2. repo-local implementation and QA evidence under `autocode/docs/qa/test-results/`
+3. repo-local comparative audits under `research-components/`
+4. `docs/tests/tui-testing-strategy.md` and `docs/tests/pty-testing.md`
+
+If a future implementation decision conflicts with those sources, update the research basis first and only then change the execution plan.
+
+### Locked Decisions
+
+These decisions are now fixed unless the user explicitly redirects:
+
+1. **Go BubbleTea is the default interactive frontend.**
+   `autocode chat` continues to route to `autocode/build/autocode-tui` when available.
+
+2. **Python inline remains an explicit fallback, not the default.**
+   `--inline` stays supported until the migration surface is fully covered and explicitly retired.
+
+3. **Stable v1 is about compatibility and predictability, not feature maximalism.**
+   The target is a strong Levels 1-4 product:
+   prompt loop, project memory, skills, hooks, verification, permissions, durable sessions.
+   Multi-agent orchestration and remote multi-client expansion are post-v1.
+
+4. **Migration contracts matter more than visual mimicry.**
+   `CLAUDE.md`, skills, hooks, session history, queue semantics, and permission gates are the core compatibility surface.
+
+5. **Safe-by-default is the default posture.**
+   Read-only / workspace-write / full-access modes and allow/ask/deny policy must be explicit, testable, and explainable.
+
+6. **Verification is a ship gate.**
+   PTY evidence, deterministic mock-harness tests, focused unit coverage, and verification-profile execution are mandatory for TUI milestones.
+
+### Research Synthesis
+
+The stable-v1 plan is derived from `deep-research-report.md`, plus the repo-local research components already audited.
+
+Research conclusions that now drive implementation order:
+
+- **Progressive disclosure wins.**
+  Do not stuff the entire repo or every skill body into context. Load concise catalogs first, then bodies on demand.
+- **Message queue semantics are a first-class usability feature.**
+  Mid-stream steering and queued follow-ups must remain deterministic across interactive and headless paths.
+- **Filesystem contracts beat cosmetic parity.**
+  `CLAUDE.md`, skill folders, hooks, and session trees are the migration-critical surface.
+- **Permissions must be both safe and legible.**
+  Users need to understand which rule matched, why a tool call was allowed/blocked, and what sandbox mode they are in.
+- **Compaction is a correctness and security boundary.**
+  Provenance must survive summarization so file/tool text cannot silently become user instruction.
+- **Verification needs explicit product support.**
+  Hook-driven lint/typecheck/test gates, deterministic mocks, PTY evidence, transcripts, and rollback-friendly diffs are all part of the product.
+
+### Current State Snapshot
+
+Already landed and verified on the current tree:
+
+- Go TUI is the default interactive path.
+- `--inline` exists as explicit fallback.
+- BubbleTea v2 / Mode 2026 migration is done.
+- Steering queue, follow-up queue, session fork RPC, multiline input, editor launch, frecency history, task dashboard, `/plan`, and status-bar additions are landed.
+- Backend parity for `steer`, `session.fork`, and per-turn `on_cost_update` is landed.
+- PTY regression gates are currently green via:
+  - `autocode/docs/qa/test-results/20260415-080003-tui-backend-parity-pty-smoke-deterministic-v3-20260415.md`
+  - `autocode/docs/qa/test-results/20260415-150741-pty-phase1-fixes.md`
+- Focused validation artifacts are green for:
+  - Go TUI tests
+  - backend/factory/tools Python tests
+  - focused Ruff on touched Python surfaces
+
+What remains open is not “closeout honesty”; it is the stable-v1 roadmap below.
+
+### Stable V1 Definition
+
+For AutoCode, “stable v1 TUI” means all of the following are true at the same time:
+
+- the interactive loop is stable under PTY and real terminal use
+- migration-critical artifacts from Claude Code / Pi style setups work predictably
+- sessions are durable, branchable, exportable, and crash-recoverable
+- permissions and sandboxing are explicit, auditable, and enforced
+- verification runs are easy to trigger and hard to skip
+- the TUI remains usable on large repos without whole-context stuffing
+
+### Stable V1 Product Surface
+
+The stable-v1 TUI must include these surfaces as first-class product commitments:
+
+- interactive streaming transcript
+- multi-line composer
+- file references and completion
+- explicit approval prompts
+- message queue for steering and follow-up
+- durable sessions with resume, export, and branching
+- project memory loading
+- skills discovery and invocation
+- hooks lifecycle and verification profiles
+- permission / sandbox controls
+- repo-map style context index and post-edit diagnostics
+
+### Out Of Scope For Stable V1
+
+These are explicitly post-v1 unless the user reprioritizes:
+
+- multi-client remote attach / server-first TUI model
+- generalized subagent orchestration as a default path
+- worktree fleets and Level-5 orchestration UX
+- broad ecosystem automation beyond narrow, safe integrations
+- “parity because another tool has it” features that do not strengthen stability, compatibility, or verification
+
+### 1f.1 Milestone A — Runtime Stability And Deterministic TUI Loop
+
+**Why this milestone exists**
+
+The deep research report is clear that stable v1 starts with a predictable loop: rendering, input routing, queue behavior, and session persistence must be boring and reliable before larger migration features matter.
+
+**Status (2026-04-17)**
+
+Runtime gates are green on 2026-04-17. The deterministic mock harness landed as `autocode/cmd/autocode-tui/milestone_a_test.go` (1109 LOC, 62 tests covering startup, palette, inline/alt-screen, warning/error routing, crash recovery, cost/session/fork, editor, task state, theme, queue priority, resize during overlays, rapid key sequences, tool output, unsolicited-picker prevention). Fresh PTY artifacts `20260417-061442-slice0-pty-phase1.md` (10/10, 0 bugs) and `20260417-061444-slice0-pty-smoke.md` (5/5, 0 bugs) confirm runtime behavior against a real TTY. The only remaining Milestone A gap is the three-picker filter bug (`/model`, `/provider`, `/session` pickers drop non-navigation keystrokes with no filter support despite 40+ model entries). That bug is queued as Slice 1 of the 2026-04-17 implementation plan at `/home/bs01763/.claude/plans/virtual-booping-hoare.md`.
+
+**Work to complete**
+
+1. Keep current landed behaviors stable:
+   - startup timeout fallback
+   - no unsolicited model picker
+   - no queue leakage in visible output
+   - warning/error classification
+   - steering queue and follow-up queue
+   - inline vs alt-screen behavior
+2. Harden keyboard routing:
+   - rapid Enter / Esc / Ctrl+C sequences
+   - slash completion focus retention
+   - palette open/close and command routing
+   - `/model` and `/provider` picker focus behavior
+3. Harden rendering behavior:
+   - rapid terminal resize
+   - long tool output truncation / expansion policy
+   - streaming interleaved with tool cards
+   - scrollback stability after flushes
+4. Harden crash/recovery expectations:
+   - append-only session writes
+   - no session corruption on backend death or forced quit
+   - resume after interrupted run
+
+**Testing strategy**
+
+- Go unit tests for model/update/view state transitions.
+- Deterministic mock-backend tests for queue semantics, picker behavior, warning classification, and done-event routing.
+- PTY regression scenarios for:
+  - startup
+  - normal chat
+  - `/model`
+  - Ctrl+K
+  - warning classification
+  - inline mode
+  - alt-screen mode
+- Narrow manual smoke only when PTY cannot prove a behavior.
+
+**Verification criteria**
+
+- No broken rendering under rapid resize or large outputs.
+- Message queue works during streaming and tool execution.
+- Slash menus and pickers do not lose focus or appear unsolicited.
+- Session transcript remains readable and exportable.
+- Forced shutdown does not corrupt the current session.
+
+**Exit gates**
+
+- focused `go test -count=1 ./...` green
+- PTY regression artifact shows `0 bugs`
+- no open runtime bug reproduced by deterministic mock harness
+- updated artifact stored under `autocode/docs/qa/test-results/`
+
+### 1f.2 Milestone B — Compatibility And Migration Contracts
+
+**Why this milestone exists**
+
+The research report identifies migration compatibility as the main reason a stable v1 can replace or sit beside Claude Code / Pi workflows. The goal is filesystem and lifecycle compatibility, not brand mimicry.
+
+**Status**
+
+Partial. `--inline`, queue semantics, and some session behaviors align, but the migration surface is not yet explicitly finished or verified.
+
+**Work to complete**
+
+1. **Project memory contract**
+   - support `CLAUDE.md` directory walk
+   - support `CLAUDE.local.md`
+   - support bounded `@imports`
+   - gate external imports behind approval
+   - document `AGENTS.md` import guidance so teams avoid duplication
+2. **Skills contract**
+   - Claude-style skill directories
+   - progressive disclosure scan: name/description first, body on demand
+   - live skill reload in the current session
+   - clear support boundary for frontmatter fields that are honored vs ignored
+3. **Hooks contract**
+   - SessionStart
+   - PreToolUse
+   - PostToolUse
+   - Stop
+   - StopFailure
+   - stable payload shape and event names
+4. **Session expectations for Pi-style users**
+   - branching semantics
+   - message queue consistency
+   - explicit export/share-ready transcripts
+
+**Testing strategy**
+
+- Fixture repos with synthetic `CLAUDE.md`, `CLAUDE.local.md`, imported files, and skills directories.
+- Golden tests for hook event names and payload shapes.
+- Skill reload tests that edit a skill mid-session and prove the session observes the update.
+- Session branch/export tests with expected file layout and replay behavior.
+
+**Verification criteria**
+
+- A Claude Code style repo can be dropped in without rewriting memory and skill layout.
+- Hook event names and payload schemas are deterministic and documented.
+- Skill discovery is predictable and does not eagerly flood context.
+- Pi-style message queue and branch behavior remain consistent.
+
+**Exit gates**
+
+- migration fixture suite green
+- hook schema tests green
+- skills reload tests green
+- docs explicitly state the supported migration contract and unsupported edge cases
+
+### 1f.3 Milestone C — Permissions, Sandbox, And Hook Enforcement
+
+**Why this milestone exists**
+
+Research strongly favors explicit permission controls and hook-enforced workflow safety over implicit trust. Stable v1 must be safe-by-default but still provide explicit escalation paths.
+
+**Status**
+
+Partial. The product already has some approval surfaces, but the stable-v1 contract for permissions and sandboxing is not yet fully locked and verified.
+
+**Work to complete**
+
+1. Define user-visible sandbox modes:
+   - read-only
+   - workspace-write
+   - full access / danger mode
+2. Define per-tool policy surface:
+   - allow
+   - ask
+   - deny
+   - wildcard and pattern matching for shell commands
+3. Make rule decisions explainable:
+   - which rule matched
+   - why the call was blocked or approved
+   - what escalation would allow it
+4. Make hooks part of enforcement:
+   - PreToolUse can block
+   - PostToolUse can verify
+   - Stop / StopFailure can fail the turn or require remediation
+5. Add diff-first guardrails for larger multi-file writes unless explicitly escalated.
+
+**Testing strategy**
+
+- Table-driven policy tests covering representative tool calls and shell patterns.
+- Negative tests for workspace escape attempts and destructive command paths.
+- Hook pass/fail tests proving a blocked tool does not execute.
+- Approval-flow tests for escalation from lower-trust to higher-trust modes.
+
+**Verification criteria**
+
+- Given any tool call, the matched permission rule is deterministic and explainable.
+- Sandbox modes behave exactly as described.
+- Hook enforcement can block or require verification without undefined behavior.
+- Large file mutations do not slip through without a review/approval path.
+
+**Exit gates**
+
+- policy matrix tests green
+- sandbox escape regression tests green
+- hook enforcement tests green
+- docs include user-facing permission rules and agent-facing implementation rules
+
+### 1f.4 Milestone D — Sessions, Compaction, Provenance, And Recovery
+
+**Why this milestone exists**
+
+Stable v1 must survive long-running work. Research explicitly calls out append-only sessions, branchable history, transparent compaction, and provenance-aware summarization as both usability and security requirements.
+
+**Status**
+
+Partial. Session features and fork support exist, but stable-v1 requirements around provenance, crash recovery, circuit breakers, and export discipline still need to be locked.
+
+**Work to complete**
+
+1. Keep sessions append-only and replayable.
+2. Guarantee branch integrity:
+   - valid parent linkage
+   - no silent history rewrite
+   - export works for branched sessions
+3. Make compaction transparent:
+   - explicit summaries
+   - manual compact path
+   - auto-compact path
+   - visible provenance labels
+4. Add compaction safety features:
+   - instruction provenance preservation
+   - retry circuit breakers
+   - metrics/logging for repeated compaction failure
+5. Decide whether `log.jsonl` / `context.jsonl` split is needed now or intentionally deferred post-v1.
+
+**Testing strategy**
+
+- Crash-injection tests during write, flush, and compact flows.
+- Branch/replay/export invariant tests.
+- Red-team tests where tool/file output attempts to become instruction text across compaction.
+- Long-session simulations with repeated tool output and compact/recover cycles.
+
+**Verification criteria**
+
+- Session files are recoverable after forced interruption.
+- Branching never corrupts history.
+- Compaction is explicit and reversible via session tree navigation.
+- Provenance survives summarization and prevents instruction smuggling.
+
+**Exit gates**
+
+- crash/recovery tests green
+- branch/export invariants green
+- compaction provenance tests green
+- explicit documented policy for compaction retry/circuit-break behavior
+
+### 1f.5 Milestone E — Context Intelligence Baseline
+
+**Why this milestone exists**
+
+The research plan is explicit that stable v1 must avoid naive whole-repo stuffing. A bounded repo map and diagnostics-after-edit path are the baseline, with deeper LSP features later.
+
+**Status**
+
+Partially landed in the broader product. For the stable TUI program, this milestone is about wiring those capabilities into a trustworthy interactive contract.
+
+**Work to complete**
+
+1. Ensure repo-map style context selection is available on the interactive path.
+2. Ensure `@path` and file completion remain cheap and predictable.
+3. Run post-edit diagnostics through LSP or equivalent deterministic diagnostics.
+4. Surface diagnostics in a way that helps the user verify changes without overwhelming the stream.
+5. Validate behavior on large repos where whole-context loading is obviously non-viable.
+
+**Testing strategy**
+
+- Retrieval/repo-map regressions on representative medium and large repos.
+- Completion tests for `@path` and shell/file contexts.
+- Diagnostics-after-edit tests using deterministic fixture repos with known errors.
+- Measurement runs for latency, context growth, and compaction frequency.
+
+**Verification criteria**
+
+- The first relevant file/symbol is found quickly on large repos.
+- Diagnostics appear after edits without disrupting the main loop.
+- Context growth stays bounded under long sessions.
+- The TUI does not regress into whole-repo context stuffing.
+
+**Exit gates**
+
+- large-repo validation artifact stored
+- diagnostics-after-edit tests green
+- retrieval/working-set regressions green
+- explicit latency and context-growth measurements recorded
+
+### 1f.6 Milestone F — Verification Profiles, Release Gate, And Measurement
+
+**Why this milestone exists**
+
+Stable v1 is only stable if the product makes verification easy and skipping it difficult. The research report treats “verification of verification” as part of readiness, not just one more test run.
+
+**Status**
+
+Open as a formalized release gate, even though several focused artifacts already exist.
+
+**Work to complete**
+
+1. Publish verification profiles:
+   - formatter profile
+   - lint profile
+   - typecheck profile
+   - targeted-test profile
+2. Ensure hooks can trigger those profiles at PostToolUse / Stop / StopFailure.
+3. Track operational metrics:
+   - skill trigger accuracy
+   - hook success/failure rate
+   - retry counts / loop counts
+   - compaction failure counts
+4. Make transcript and rollback discipline explicit:
+   - every tool action is transcripted
+   - diffs are reviewable
+   - exported history is inspectable
+5. Keep a separate-review step available for code review style workflows.
+
+**Testing strategy**
+
+- Deterministic mock-provider harness for tool calling, queue semantics, and hook decisions.
+- Verification-profile tests using fixture repos with expected formatter/lint/typecheck/test outcomes.
+- Transcript/export tests proving actions remain reviewable.
+- Reviewer-mode or second-pass tests where available.
+
+**Verification criteria**
+
+- Verification profiles are reproducible and documented.
+- Hook-triggered verification can fail a turn deterministically.
+- Retry loops and skipped checks are visible in metrics/artifacts.
+- The product makes independent verification easier, not harder.
+
+**Exit gates**
+
+- deterministic mock-harness suite green
+- verification-profile suite green
+- transcript/export checks green
+- release note includes stable-v1 validation matrix and current known limitations
+
+### Cross-Cutting Testing Matrix For Stable V1
+
+Every stable-v1 milestone must specify which rows of this matrix it exercises:
+
+| Test Layer | Purpose | Minimum Requirement |
+|---|---|---|
+| Go unit tests | model/update/view correctness | green on every TUI behavior change |
+| Python unit tests | backend parity, loaders, policies, hooks | green on every backend or contract change |
+| Deterministic mock harness | queue semantics, tool routing, hook decisions | required for all stateful loop changes |
+| PTY regression | real terminal behavior | required for all interactive TUI changes |
+| Migration fixtures | `CLAUDE.md`, skills, hooks, sessions | required for compatibility milestones |
+| Security/policy tests | sandbox and allow/ask/deny correctness | required for permission milestones |
+| Crash/replay tests | session durability and compaction safety | required for session milestone |
+| Large-repo validation | context growth, retrieval latency, recovery | required for context milestone |
+
+### Stable V1 Acceptance Criteria
+
+AutoCode should not declare “stable TUI v1” until all of these are true:
+
+- UI stability:
+  - no broken rendering on resize
+  - no broken keyboard routing under queue/picker/palette use
+  - large outputs degrade gracefully
+- Session integrity:
+  - append-only, replayable, crash-recoverable session files
+  - branch/export invariants hold
+  - compaction is explicit and provenance-preserving
+- Security and permissions:
+  - permission rules are deterministic and explainable
+  - sandbox modes behave as promised
+  - large writes and destructive actions follow explicit approval rules
+- Migration correctness:
+  - Claude-style memory/skills/hooks load predictably
+  - Pi-style queue/session expectations hold
+- Verification discipline:
+  - deterministic mock harness is green
+  - PTY evidence is green
+  - verification profiles run and fail correctly
+  - transcripts and diffs are inspectable
+
+### Explicit Non-Goals During Stable V1 Work
+
+While this program is active, do not derail into:
+
+- remote-client architecture work
+- broad subagent UX
+- orchestration-first features that multiply state complexity
+- parity-only features with no stability, compatibility, or verification value
+
+### Next Starting Point
+
+The next implementation work for Section 1f starts at **Milestone A**:
+
+1. lock the runtime stability matrix
+2. enumerate missing runtime acceptance cases
+3. convert those into deterministic mock tests and PTY checks before adding new TUI surface area
+
+After Milestone A, move in order:
+
+1. Milestone B — migration contracts
+2. Milestone C — permissions and hooks
+3. Milestone D — sessions and compaction
+4. Milestone E — context intelligence
+5. Milestone F — release gate and measurement
+
+---
+
+## 1g. TUI Testing Strategy (Active Slice)
+
+**Last updated:** 2026-04-18 (Phase 1 Track 1 substrate landed).
+**Status:** Architecture APPROVED by Codex Entry 1141 + doc-polish
+delta APPROVED by Codex Entry 1144. Phase 1 Track 1 substrate
+implemented under `autocode/tests/tui-comparison/` with positive +
+negative control tests green and end-to-end `make tui-regression`
+target producing the 5 artifacts per scenario. Track 2 + Track 3
+remain open for follow-up slices per the three-track architecture
+below.
+
+### Post-Codex-1138 Three-Track Architecture (AUTHORITATIVE)
+
+Codex Entry 1138 correctly flagged that the earlier §1g conflated three
+separate jobs into one pipeline. Split cleanly:
+
+#### Track 1 — `tui-regression` (autocode-only, deterministic, CI-eligible)
+
+- Scope: autocode only. **Backend model: deterministic mock by default**
+  (`autocode/tests/pty/mock_backend.py` via `AUTOCODE_PYTHON_CMD`).
+  CI-eligible lane MUST use the mock — no external gateway dependency,
+  no rate-limit exposure, no LLM-quality variance in the regression
+  signal. Live-gateway / real-backend coverage is the responsibility
+  of the existing `autocode/tests/pty/` suites
+  (`pty_phase1_fixes_test.py`, `pty_smoke_backend_parity.py`, etc.),
+  not Track 1. Updated per Codex Entry 1151 Suggested Change #1.
+- Substrate: `autocode/tests/vhs/` extended with minimal DSR shim.
+- Scenarios: the full 16-scenario catalog (§Scenario Catalog below).
+- Predicates: only **hard-invariant** predicates (see
+  §"Predicate Classification" below). Soft-style predicates are NOT
+  gating in this track.
+- Artifacts per run: `.raw` (raw ANSI bytes), `.txt` (stripped),
+  `.png` (rendered), `.profile.yaml` (terminal profile: TERM,
+  COLORTERM, rows, cols, boot_budget_s, dsr_shim_version,
+  dsr_responses_served).
+- CI hook: `make tui-regression` runs Track 1 only.
+- Exit gate (for this slice's DoD):
+  - Track 1 produces truthful hard-invariant verdicts for autocode.
+  - No false passes (i.e., the test doesn't claim green when autocode
+    is visibly broken).
+  - No false failures on the known-good autocode startup scenario.
+
+#### Track 2 — `tui-reference-capture` (manual, non-CI, ad hoc)
+
+- Scope: reference TUIs (claude, codex, opencode, goose, forge, pi)
+  for visual comparison only.
+- Substrate: same capture driver as Track 1, but the **isolation
+  contract is weaker** because these tools write state on
+  startup/exit. Run under strong tmpdir isolation where feasible; for
+  tools that refuse to run isolated, mark as "reference capture only
+  from user's real `$HOME`".
+- Scenarios: **5-scenario portable subset only** — see §"Portable
+  Reference Scenarios" below. The 16-scenario autocode catalog is NOT
+  used here; those scenarios are not portable.
+- Predicates: none applied. Track 2 produces artifacts (PNG + text +
+  profile) that Track 3 consumes; it does not itself assert
+  correctness.
+- Invocation: `make tui-reference-capture` — never runs in CI. User
+  triggers manually when baselines need refreshing (e.g., reference
+  tool version bump).
+- Isolation tiers:
+  - Tier A (CI-safe): autocode (Track 1 only; not Track 2).
+  - Tier B (strong-isolated, acceptable for Track 2): pi with
+    read-only copy of `~/.pi/agent/models.json`, snapshot-before and
+    diff-after to verify no writes escaped.
+  - Tier C (manual-only, user's real `$HOME`): claude, codex,
+    opencode, goose, forge — explicitly allowed to write state,
+    captured once per reference-version bump.
+- **Tier C "documented N/A on blocker" policy** (per Codex Entry 1141
+  Suggested Change #4): if a Tier C tool is blocked on the capture day
+  by auth churn, forced updater behavior, rate-limit, or other
+  environmental issue, the capture run MUST document the blocker in
+  the run's `_index.md` as `status: N/A — <reason>` and move on. No
+  unbounded waits, no retry loops. A blocked Tier C tool does NOT
+  fail Track 2; Track 2 only requires ≥2 reference TUIs captured total
+  (pi at Tier B + any one Tier C). If more Tier C tools capture
+  cleanly, great; if they don't on that day, they go on the next
+  attempt.
+
+#### Track 3 — `tui-style-gap-backlog` (non-slice)
+
+- Scope: the downstream UX work of making autocode look/feel more
+  like Claude Code.
+- Inputs: Entry 1136's 11-item gap list + predicates labeled as
+  "soft-style target" (see §"Predicate Classification").
+- Output: a prioritized backlog in
+  `docs/plan/tui-style-gap-backlog.md` (new file, to be created
+  during implementation). Each item gets HIGH/MED/LOW with
+  before/after PNG references.
+- **Not part of this slice's DoD.** This track is produced BY the
+  slice, not required to close the slice.
+
+### Predicate Classification
+
+Codex 1138 Concern #3 and Suggested Change #8 require predicates to
+be labeled. Resolving the earlier contradictions:
+
+**Hard invariants (autocode correctness — Track 1 gates)**
+
+Per Codex Entry 1151 Suggested Change #2, the hard-invariant list is
+split into two tiers: a **Phase 1 enforced subset** (the 6 gates
+currently enforced by `make tui-regression` for the `startup` +
+`first-prompt-text` scenarios) and a **full Track 1 target set** that
+will be filled in across Phase 2+ as more scenarios come online.
+
+**Phase 1 + Phase 2 (so far) enforced subset (11 — currently gating `make tui-regression`)**
+
+1. `no_crash_during_capture` — raw buffer ≥ 32 bytes (more than just
+   terminal queries)
+2. `composer_present` — composer-specific markers only (`Ask AutoCode`,
+   `❯ Ask`, `> Ask`, `│ > `, `│ ❯ `) visible in rendered frame. Bare
+   `>` / `❯` are **not** sufficient (they collide with picker selection
+   rows). Returns PASS with `N/A` detail on scenarios that intentionally
+   replace the composer: `{model-picker, provider-picker,
+   session-picker}` and `{ask-user-prompt}`.
+3. `no_queue_debug_leak` — no `<<STEER`, `steering_queue`,
+   `queue_debug`, `[queue]` markers in scrollback
+4. `basic_turn_returns_to_usable_input` — scenario-aware; for turn
+   scenarios, composer must still be visible after the turn; for
+   non-turn scenarios (e.g. `startup`), returns PASS with
+   `detail="N/A — scenario has no turn"`. Aligns with
+   `docs/tests/tui-testing-strategy.md` "Basic Chat Turn" requirement.
+5. `spinner_observed_during_turn` — scenario-aware; for turn
+   scenarios, at least one braille spinner char
+   (`⠙⠹⠸⠼⠴⠦⠧⠇⠏⠋⠛⠓`) OR a verb marker (`Thinking`, `Pondering`,
+   `Working`, `Creating`, `Reasoning`, `Connecting`, `Synthesizing`,
+   `Processing`) must appear in captured stream; else PASS with N/A.
+6. `response_followed_user_prompt` — scenario-aware; for turn
+   scenarios, substantive non-chrome content must follow the user
+   prompt line; else PASS with N/A.
+7. **`picker_filter_accepts_input`** — Phase 2 Scenario 1 unlock;
+   scenario-aware over `{model-picker, provider-picker, session-picker}`;
+   verifies picker header visible AND `[filter:` token present after
+   user types filter chars; else PASS with N/A.
+8. **`approval_prompt_keyboard_interactive`** — Phase 2 Scenario 2
+   unlock; scenario-aware over `{ask-user-prompt}`; verifies the modal
+   renders a question line AND option markers (`❯`/`●`/`○` or a
+   ``^\s*\d+\.\s+\S`` enumerated list — bare option words in prose are
+   NOT sufficient) AND a keyboard hint (`Enter`, `Esc`, …); else PASS
+   with N/A. Also flips `composer_present` to N/A for ask-user
+   scenarios, since the modal replaces the composer.
+9. **`warnings_render_dim_not_red_banner`** — Phase 2 Scenario 3
+   unlock; scenario-aware over `{error-state}`; verifies backend
+   WARNINGs render as a dim ``⚠`` scrollback line AND do NOT end up
+   wrapped inside the red ``Error:`` banner; else PASS with N/A.
+10. **`startup_timeout_fires_when_backend_absent`** — Phase 2 Scenario
+    4 unlock; scenario-aware over `{orphaned-startup}`; runs against
+    `tests/pty/silent_backend.py` (never emits `on_status`); verifies
+    the 15s ``startupTimeoutDuration`` path surfaces the canonical
+    ``Backend not connected (startup timeout)`` banner; else PASS with
+    N/A.
+11. **`spinner_frame_updates_over_time`** — Phase 2 Scenario 5 unlock;
+    scenario-aware over `{spinner-cadence}`; scans the full raw ANSI
+    byte stream (not just the final pyte frame) for ≥2 distinct
+    braille glyphs, proving the spinner actually rotates over time;
+    else PASS with N/A.
+
+**Full Track 1 target set (deferred to Phase 2+)** — each comes online
+as the matching scenario lands in the runnable catalog:
+
+- `cursor_visible` — pyte cursor row/col within screen bounds in
+  rendered frame
+
+Rule: the full target set is the stable-v1 Track 1 contract. The
+Phase 1 enforced subset is what `make tui-regression` actually runs
+today. Every phase bump must document which target predicate became
+enforced in that phase's completion report.
+
+**Soft style targets (Track 3 backlog — NOT Track 1 gates)**
+
+- composer has rounded Unicode border
+- status bar is BELOW composer (current autocode has it ABOVE — this
+  is the contradiction Codex flagged; resolving: current ordering is
+  NOT a hard invariant; the target is BELOW but moving there is
+  Track 3 work, not Track 1 failure)
+- spinner includes `esc to interrupt` hint
+- welcome box spans ≥3 rows and ≥40 cols
+- version displayed inline in top border
+- composer prefix character (`>` vs `❯`)
+- 16-color vs 256-color palette choices
+- mode hint text content (`/help for help...` vs
+  `! for bash · / for commands · esc to undo`)
+
+### Portable Reference Scenarios (Track 2, 5 items)
+
+Codex 1138 Suggested Change #4. The 16-scenario catalog is too broad
+for cross-tool. Portable subset:
+
+1. `startup` — empty state after launch
+2. `command-discovery` — typing `/` or `?` (each tool's equivalent)
+3. `simple-prompt` — send "hello", capture response rendering
+4. `narrow-terminal` — cols=60 rendering
+5. `error-state` — induced gateway 429 OR manual 401-style error
+   (only where safely inducible per tool)
+
+Full 16-scenario catalog stays in Track 1 (autocode-only) — see
+existing §"Scenario Catalog" below for the full list.
+
+### Storage Schema (revised per Codex 1138 Suggested Change #2)
 
 ```
-BEFORE:                              AFTER:
-autocode chat  → Python inline REPL  autocode (interactive) → Go BubbleTea TUI
-autocode-tui   → Go BubbleTea TUI   autocode -p "..."      → headless/piped
-                → Python backend     autocode serve         → Python backend daemon
+autocode/tests/tui-comparison/
+  capture.py              # extends tests/vhs/capture.py with DSR shim
+  dsr_responder.py        # minimal responder: [6n, [c, [?u, OSC 10;?
+  launchers/<tui>.py
+  predicates.py           # hard vs soft labeled
+  scenarios/              # 16 for Track 1
+  portable_scenarios.py   # 5 for Track 2
+  profile.py              # terminal-profile YAML emitter
+
+autocode/docs/qa/tui-comparison/
+  regression/<run-id>/<scenario>/       # Track 1 artifacts (autocode only)
+    autocode.raw          # raw ANSI bytes
+    autocode.txt          # stripped text
+    autocode.png          # pyte-rendered
+    autocode.profile.yaml # TERM, COLORTERM, rows, cols, boot_s, dsr_shim_v, dsr_responses_served
+    predicates.json       # {"hard": {pred: pass/fail}, "soft": {pred: pass/fail}}
+  reference/<date>-baseline/            # Track 2 artifacts (manual only)
+    <tool>/<scenario>/
+      {raw,txt,png,profile.yaml}
+    _index.md             # tool versions + tier labels + any warnings
 ```
 
-Live-tree clarification:
-- `autocode chat` defaults to the Go TUI today
-- `autocode/src/autocode/cli.py` still exposes `--inline`, so the Python inline path is not removed yet
-- docs must describe the target state separately from the current state until that cleanup is actually done
-
-**Key rationale:**
-- Pi-mono (research reference) is Go+BubbleTea with one TUI
-- BubbleTea v2 supports Mode 2026 natively (`tea.EnableMode2026()`)
-- Python inline REPL has no feature advantage worth maintaining a parallel frontend for
-- Go TUI already has significant investment; fixing its bugs is cheaper than maintaining two codebases
-- Inline mode (no alternate screen) is achievable in Go and preserves user scrollback
-
-### Research Basis
-
-| Source | Features extracted |
-|--------|-------------------|
-| `research-components/pi-mono` | Differential rendering, steering queues, JSONL branching, log/context split, skills as shell scripts |
-| `research-components/claude-code` (kuberwastaken spec) | Ink diff-engine, inline mode, status bar, Ctrl+K palette, permission dialogs, memory consolidation |
-| `research-components/aider` | Sliding window streaming, token-aware summarization, multiline input, external editor, lazy tokenization |
-| `research-components/opencode` | Solid.js reactive TUI, frecency history, timeline fork, background theme detection, leader-key shortcuts |
-| `research-components/goose` | Task dashboard emojis, thinking randomization, theme persistence, full output toggle, `/plan` mode |
-| `research-components/gastown` | charmbracelet stack, agent-mode awareness, adaptive lipgloss colors, pager support |
-| `research-components/claw-code` | Box-drawn tool borders, syntect highlighting, TUI Enhancement Plan |
-| `research-components/t3code` | Context-aware keybindings (when-clause), diff worker pool |
-| BubbleTea v2 (web) | `tea.EnableMode2026()`, native Mode 2026 support, Elm MVU architecture |
-
-### PTY Bug Report
-
-Historical PTY findings are documented at `autocode/docs/qa/pty-tui-bug-report.md`. That report is useful as debugging context, but the current closeout gate is the newer stored PTY artifact set. Original fix order:
-1. C3: Go TUI PTY startup (backend subprocess deadlock)
-2. C1: Model picker after every chat (unsolicited `backendModelListMsg`)
-3. C2: "(queued N pending)" text leak in stream area
-4. M3: Python inline session not self-healing after gateway timeout (fix in backend for headless mode)
-5. H4: @file expansion context guard
-
-### Already Landed (do not redo)
-
-- `stagePalette` + Ctrl+K palette with 24 commands
-- 187 rotating spinner verbs + `verbTicks` 8-tick rotation
-- `❯` prompt, compact branded header, braille thinking spinner
-- footer-first status bar, compact tool-row styling
-- `/undo`, `/diff`, `/cost`, `/export` commands in `tui/commands.py`
-- `todo_write`, `todo_read`, `glob_files`, `grep_content` tools
-- palette entries for new commands
-- `todo_write`/`todo_read` in `CORE_TOOL_NAMES`
-- `load_project_memory_content()` shared RulesLoader in `agent/factory.py`
-- **Phase 1 bug fixes (2026-04-13):**
-  - C3: `startupTimeoutMsg` type (`messages.go`), 15s timeout constant + cmd (`model.go`), handler in `update.go`, spinner in `view.go` — `stageInit` unblocks after timeout with error shown
-  - C2: `_RULES_MAX_CHARS = 3000` cap in `load_project_memory_content()` (`agent/factory.py`) — prevents LLM reproducing status text from large CLAUDE.md injections
-  - C1: Regression tests in `model_picker_test.go` — `TestModelPickerDoesNotAppearAfterChatDone`, `TestModelPickerDoesNotAppearAfterStatus`, `TestStartupTimeoutTransitionsToInput`, `TestStartupTimeoutNoopAfterBackendConnects`
-- **Phase 2 (wired, 2026-04-13):** `autocode chat` already launches Go TUI via `_find_go_tui_binary()` in `cli.py`; binary at `autocode/build/autocode-tui`
-
-### 1f.1 Phase 1 — Fix Critical Bugs ✅ DONE
-
-(See Already Landed above.)
-
-### 1f.2 Phase 2 — TUI Consolidation: default routing done, contract cleanup pending
-
-What is true now:
-- `autocode chat` already prefers the Go TUI through `_find_go_tui_binary()` in `cli.py`
-- the Go binary is the default interactive entrypoint on machines where it is present
-
-What is still open:
-- ~~`--inline` remains a live Python fallback path in `cli.py`~~ **DECIDED**: `--inline` is kept as an explicit documented fallback. Docs updated.
-- ~~docs currently overstate that the Python inline REPL is removed~~ **FIXED**: docs now accurately describe `--inline` as an explicit fallback.
-- the binary/install naming contract is still split between `autocode` and `autocode-tui`
-
-### 1f.3 Phase 3 — Mode 2026 + Differential Rendering ✅ GO SIDE DONE
-
-**Implementation completed (2026-04-13):**
-
-1. **BubbleTea v2 migration** — Migrated from v1.3.4 to v2.0.2. All 22+ Go source files and 10 test files updated. Import paths changed to `charm.land/*` vanity domains. `View()` returns `tea.View` struct (not string). Key messages use `tea.KeyPressMsg`. Mode 2026 is enabled by default in BubbleTea v2 — no manual ANSI sequences needed.
-
-2. **Rendering model** — user-space differential-rendering scaffolding was removed after review. View() renders full content each frame and BubbleTea v2 Mode 2026 handles terminal-level diffing. Stable scrollback lines are flushed via `tea.Println` and never redrawn.
-
-3. **Inline mode** — `--inline` flag added to `main.go`. In inline mode, no alternate screen is used, preserving user scrollback.
-
-4. **Sliding window streaming** — `tickMsg` handler flushes completed lines to `stableScrollbackLines` via `tea.Println`. Only the last `maxLiveLines` (default 10) lines remain in the live `streamBuf`. `renderStreamArea` shows a `[N lines above]` indicator for flushed content.
-
-**Files:** `model.go`, `view.go`, `update.go`, `main.go`, `go.mod`, all 22+ source files
-
-**Tests:** 350+ Go tests passing. Sliding window tests (`TestTickFlushesStableLinesToScrollback`, `TestTickNoFlushWhenBelowMaxLiveLines`, `TestViewStreamBufSlidingWindow`).
-
-### 1f.4 Phase 4 — Pi-mono Features ✅ DONE
-
-**Implementation completed (2026-04-13):**
-
-1. **Steering queue** — `Ctrl+C` during `stageStreaming` enters `stageSteer` instead of cancelling. User types steer message, Enter sends `steer` RPC to backend. Esc exits steer mode (continues streaming). Second `Ctrl+C` force-quits. `handleSteerKey` in `update.go`, `steerSendMsg` in `messages.go`, `SteerParams` in `protocol.go`.
-
-2. **Follow-up queue** — `/followup <msg>` slash command queues a message via `followupQueue`. After `backendDoneMsg`, followup queue drains first, then message queue. `followupDrainMsg` processes the next queued message.
-
-3. **JSONL session branching** — `/fork` slash command sends `session.fork` RPC to backend. `ForkSessionParams` and `ForkSessionResult` protocol types defined. `backendForkResultMsg` updates session ID on response.
-
-4. **log.jsonl + context.jsonl split** — still open (Python/session-store change, not Go TUI)
-
-5. **Backend RPC for `steer` and `session.fork`** — landed in `autocode/src/autocode/backend/server.py` with explicit dispatch handling and targeted backend tests covering happy-path and no-active-run / fork-contract cases
-
-**Files:** `update.go`, `model.go`, `view.go`, `messages.go`, `protocol.go`
-
-**Tests:** `TestSteerModeEnterOnCtrlC`, `TestSteerModeEscapeReturnsToStreaming`, `TestSteerModeCtrlCQuitsOnSecondPress`, `TestSteerModeEnterSendsMessage`, `TestFollowupQueueCommand`, `TestCtrlCEntersSteerDuringStreaming`
-
-### 1f.5 Phase 5 — Best-of-All Features ✅ GO SIDE DONE
-
-**Implementation completed (2026-04-13):**
-
-1. **Multiline input** — `Alt+Enter` / `Ctrl+J` inserts newline (already in composer via `textarea.KeyMap`). `Enter` submits. Visual hint in composer footer.
-
-2. **External editor** — `Ctrl+E` keybinding in `handleInputKey` triggers `openEditorCmd()`, which opens `$EDITOR` with current composer content in a temp file. `editorDoneMsg` loads the result back.
-
-3. **Frecency-based prompt history** — `historyEntry` type with `frecencyScore()`, `sortByFrecency()`, `historyAddFrecency()`. `loadFrecencyHistory()` / `saveFrecencyHistory()` for persistence to `~/.autocode/prompt_history`.
-
-4. **Task dashboard** — `renderTaskDashboard()` shows pending/running/done/failed counts from `taskPanelTasks`. Footer shows `⏳ N running` etc. only when tasks exist.
-
-5. **`/plan` mode** — `/plan` slash command toggles `planMode` boolean. `planModeStyle` renders `[PLAN MODE]` indicator in view.
-
-6. **Background theme detection** — `detectThemeCmd()` reads `COLORFGBG` environment variable at startup. `bgColorMsg` sets `themeDetected`="dark"/"light" and `bgColorR`/`bgColorG`/`bgColorB` for adaptive styling.
-
-**Files:** `update.go`, `model.go`, `view.go`, `history.go`, `composer.go`
-
-**Tests:** `TestFrecencyAddNewEntry`, `TestFrecencyAddExistingEntry`, `TestFrecencySortByScore`, `TestCtrlEInInputStage`, `TestThemeDetectionDarkDefault`, `TestPlanModeToggle`
-
-### 1f.6 Phase 6 — Status Bar Enhancements ✅ DONE
-
-**Implementation completed (2026-04-13):**
-
-1. **Live cost display** — `totalCost` field on model, updated by `backendCostMsg`. Displayed in status bar via `statusBar.Cost`.
-
-2. **Live token count** — `totalTokensIn` + `totalTokensOut` accumulated in `handleDone`. Status bar shows "X.Xk tokens" or "N tokens" depending on magnitude.
-
-3. **Provider/model display** — Always visible in status bar via `backendStatusMsg` setting `statusBar.Model` and `statusBar.Provider`.
-
-4. **Session ID display** — `sessionID` field set from `backendStatusMsg`. Shown in status bar via `statusBar.SessionID`.
-
-5. **Background task indicator** — `backgroundTasks` count on model, shown as "⏳ N bg" in status bar via `statusBar.BackgroundTasks`.
-
-6. **Backend `on_cost_update` event** — Go-side notification parsing is wired and the Python backend now emits per-turn `on_cost_update` snapshots with targeted backend-server tests covering payload shape and accumulation
-
-**Files:** `statusbar.go`, `view.go`, `model.go`, `messages.go`
-
-**Tests:** `TestStatusBarSessionID`, `TestStatusBarBackgroundTasks`, `TestStatusBarNoBackgroundTasks`
-
-### 1f.7 Immediate Next Slice — Closeout
-
-#### Goal
-
-Finish the work required to call Section 1f complete without overstating the live tree.
-
-#### Task A — PTY Validation Artifact Refresh ✅ DONE
-
-**Starting point**
-- `autocode/tests/pty/pty_smoke_backend_parity.py`
-- `autocode/tests/pty/pty_tui_bugfind.py`
-- `autocode/build/autocode-tui`
-
-**Implementation instructions**
-1. Rebuild `autocode/build/autocode-tui` from the current tree before running PTY checks so the artifact reflects the live code.
-2. Run the narrow PTY smoke or an equivalent scripted PTY probe against the real Go TUI entrypoint.
-3. Capture startup, Ctrl+K, `/model`, warning classification, and queue-cleanliness behavior.
-4. Store the artifact under `autocode/docs/qa/test-results/`.
-
-**Testing strategy**
-- Real-terminal or PTY-backed validation only; unit tests are not sufficient for this gate.
-- Prefer the focused PTY smoke first, then escalate to the deeper PTY bugfind script if the smoke exposes a regression.
-- Keep the command reproducible via `./autocode/scripts/store_test_results.sh <label> -- ...`.
-
-**Verification criteria**
-- startup reaches a usable prompt or timeout fallback
-- Ctrl+K opens the palette
-- `/model` opens only when invoked, not unsolicited
-- no queue/debug text leaks into the visible stream
-- backend warnings do not render as fatal red error banners
-- no panic or traceback appears in the transcript
-
-**Exit gates**
-- stored PTY artifact exists under `autocode/docs/qa/test-results/`
-- artifact is from the rebuilt current-tree binary, not a stale build
-- any failures found by the PTY run are either fixed or explicitly documented as blocking Section 1f closeout
-
-**Completed artifact**
-- `autocode/docs/qa/test-results/20260415-080003-tui-backend-parity-pty-smoke-deterministic-v3-20260415.md`
-- companion log: `autocode/docs/qa/test-results/20260415-080003-tui-backend-parity-pty-smoke-deterministic-v3-20260415.log`
-
-#### Task B — CLI / Inline Contract Cleanup ✅ DONE
-
-**Starting point**
-- `autocode/src/autocode/cli.py`
-- any user-facing docs that describe the interactive entrypoint
-
-**Implementation instructions**
-1. Keep `--inline` only if it remains a deliberate documented fallback.
-2. Make sure CLI help text, source-of-truth docs, and tests all describe the same contract.
-3. Do not claim the Python inline path is removed while the flag still exists.
-
-**Testing strategy**
-- Targeted CLI tests for branch selection and help text.
-- One smoke on the chosen interactive path if behavior changes.
-
-**Verification criteria**
-- code, tests, and docs all agree on whether `--inline` is supported
-- `autocode chat` still launches the Go TUI by default
-
-**Exit gates**
-- no stale docs claim the inline fallback is gone if the code still ships it
-- focused CLI tests are green
-
-**Completed state**
-- `--inline` remains an explicit documented fallback
-- source-of-truth docs describe Go TUI as default interactive path and Python inline as fallback, not removed
-
-#### Task C — Commit-Scope Cleanup
-
-**Starting point**
-- repo root and worktree status
-- docs/comms churn from the Unified TUI push
-
-**Implementation instructions**
-1. Keep the commit boundary intentional.
-2. Separate ephemeral or reference-only files from the commit scope.
-3. Do not delete user materials blindly; prefer exclusion, relocation, or explicit documentation of what is out of scope.
-
-**Testing strategy**
-- `git status --short` before and after cleanup
-- verify that only intended files remain in the commit-ready slice
-
-**Verification criteria**
-- no loose root-level artifacts are accidentally treated as part of the product change
-- unrelated churn is either preserved outside scope or clearly called out
-
-**Exit gates**
-- the remaining diff is small enough to describe and commit intentionally
-
-### 1f.8 Phase 7 — Feature Completeness Backlog
-
-**Feature audit source**: `research-components/` audit completed 2026-04-13 (see agent output). Covers 69 features across Aider, Claude Code, Codex, Claw Code, Gastown, Goose, OpenAI Codex, OpenCode, Pi, and others.
-
-**Current coverage: 35 DONE (51%), 8 PARTIAL (12%), 26 MISSING (38%)**
-
-Remaining work is ordered by ROI — quick wins first, then medium effort, then larger changes. With 1f.7 Tasks A-E closed, this backlog is now the forward-looking follow-up queue after commit-scope cleanup.
-
-#### Tier 1 — Quick Wins (1-2h each, high visibility)
-
-| # | Feature | Source | What to add |
-|---|---------|--------|-------------|
-| QW1 | Double-press Ctrl+C quit | Codex | On first Ctrl+C at `stageInput`, show "Press Ctrl+C again to quit" hint in the footer for 3s; only quit on second Ctrl+C within that window. Prevents accidental exits. |
-| QW2 | Turn duration timer | Claw Code | Track turn-start time in model, show elapsed ("3.2s") in status bar while streaming; show final duration in `on_done` handler. Add `turnStartTime time.Time` to model, render as `statusBar.Duration`. |
-| QW3 | Pager for long output | Claw Code | Commands like `/help`, `/config`, `/memory` that produce static multi-screen text should open a minimal pager (j/k scroll, q/Esc exit) rather than dumping to the stream area. Add `stagePager` and `pagerContent string` to model. |
-
-#### Tier 2 — Medium Effort (half-day each, meaningfully better UX)
-
-| # | Feature | Source | What to add |
-|---|---------|--------|-------------|
-| ME1 | Collapsible tool output | Claw Code | Tool call rows with output > N lines (e.g. 8) show a `[+N more]` truncation indicator. Tab or Enter on the row expands it. Add `expanded bool` to `toolCallEntry`. |
-| ME2 | Tool timeline summary | Claw Code | After `on_done`, emit a single summary line: `bash → ✓ \| read_file → ✓ \| write_file → ✓ (3 tools, 2.1s)`. Render via `tea.Println` so it lands in the scrollback. |
-| ME3 | Colored diff display | Claw Code | For tool calls where `Name == "edit_file"` and `Result` contains a unified diff, render `+` lines in green and `-` lines in red/dim. Detect unified diff by `--- a/` prefix in result. |
-| ME4 | File path tab completion | Codex, Claw Code | Extend `completion.go` to also complete file paths: after `@` or within `/shell <partial>`, suggest local files via `os.ReadDir`. Requires knowing the `@file` expansion convention. |
-| ME5 | Live markdown rendering in stream | Codex, Claw Code | Apply `glamour.Render()` (already a dep via `markdown.go`) to `streamBuf` content at tick time, not just in tool results. Use a line-by-line approach so partial code blocks don't break rendering. |
-| ME6 | External editor ($EDITOR) | Codex | `Ctrl+E` at `stageInput` opens `$EDITOR` with current composer content in a temp file; on editor exit, load the content back into the composer. Already architected in Phase 5 (`editorDoneMsg` in `messages.go`) — wire it up if not already wired. |
-
-#### Tier 3 — Larger Changes (multi-session, more design work)
-
-| # | Feature | Source | What to add |
-|---|---------|--------|-------------|
-| L1 | /export command rendering | Claw Code, Aider | `/export` (already in `commands.go`) should write the current conversation (scrollback + tool calls) to a Markdown file. Path: `~/.autocode/exports/<session_id>-<timestamp>.md`. Show confirmation in status bar. |
-| L2 | Session fork/branch UI | Codex, Gastown | `/fork` already emits `session.fork` RPC (Phase 4). Backend support is landed; the remaining UI work is adding a confirmation showing the new session ID and a "you are now in branch `<id>`" status bar indicator. |
-| L3 | Help overlay (Ctrl+?) | Claw Code | `?` or `Ctrl+/` at any non-streaming stage shows a scrollable overlay with all keybindings. Add `stageHelp` and `helpContent string` generated from `knownCommands`. Close with Esc/q. |
-| L4 | Dark/light theme variants | Claw Code | Use the already-detected `themeDetected` field to switch between two `lipgloss.Style` palettes (dark: current amber, light: muted blue accent). Gate behind a flag or `AUTOCODE_THEME=light` env var for now. |
-| L5 | Syntax highlighting (code blocks) | Claw Code, Pi | Wrap `streamBuf` code block extraction (triple-backtick) through `chroma` or `syntect`-equivalent (Go: `alecthomas/chroma`). Render highlighted blocks lazily at tick time. High complexity; add as a `AUTOCODE_SYNTAX=1` opt-in first. |
-
-#### Verification for Phase 7 items
-
-Each Tier 1 and Tier 2 item must:
-- have a unit test or PTY regression scenario
-- not break the 350+ existing Go tests
-- not degrade the Phase 1-6 behaviors confirmed by PTY artifact
-
-Tier 3 items require a design note in a doc comment or a short addendum to this section before implementation begins.
+### Exit Gates (revised per Codex 1138 Suggested Change #6)
+
+This slice closes when:
+- [ ] Track 1 substrate exists and runs deterministically against
+      autocode
+- [ ] Track 1 hard-invariant predicates produce TRUTHFUL verdicts
+      (pass on known-good state, fail on injected regression)
+- [ ] Track 2 capture pipeline works on the 5 portable scenarios for
+      at least 2 reference TUIs (pi as Tier B + one Tier C tool)
+- [ ] Gap report is generated truthfully for Track 3 consumption
+      (lists observed soft-style deltas without claiming them as
+      failures)
+- [ ] `make tui-regression` is CI-eligible; `make tui-reference-capture`
+      is user-triggered only
+- [ ] `docs/plan/tui-style-gap-backlog.md` exists and enumerates
+      HIGH/MED/LOW style items from Entry 1136 + predicates-soft
+
+NOT required to close this slice:
+- autocode already passing soft-style target predicates (that's Track
+  3 work)
+- all 6 reference TUIs captured (minimum 2)
+- LLM vision narrator running (optional add-on)
+
+### Supporting detail below
+
+The remaining sections below ("Open Design Questions (closed)",
+"Scenario Catalog (full 16)", "Look-and-Feel Criteria", "Phases",
+"Current vs Target Layout", etc.) remain as the supporting
+implementation detail for Track 1 and Track 3. Where those sections
+conflict with the three-track architecture above, the three-track
+architecture wins.
+
+### Goal
+
+Build a repeatable pipeline that spins up each candidate TUI under
+identical prompts on the shared LiteLLM gateway, captures visual state,
+stores snapshots alongside reference baselines, and analyzes/compares
+them so:
+
+1. fidelity regressions in autocode are caught quickly
+2. side-by-side feedback against reference tools (pi, claude-code,
+   opencode, codex CLI, aider, goose) is concrete
+3. "this does not feel like Claude Code" becomes a testable claim
+   instead of a recurring screenshot back-and-forth
+
+### Why Now
+
+The user surfaced three separate rendering issues this session (image
+#7, #8, #9) that unit tests and pyte-based PTY tests missed. My prior
+"all green" claims were based on state-transition coverage, not visible
+end-state. This pipeline replaces opinion with evidence.
+
+### Dependencies Already Satisfied
+
+- Pi coding agent is wired at `http://localhost:4000/v1` via
+  `~/.pi/agent/models.json` (8 gateway aliases, LITELLM_MASTER_KEY
+  env-persistent). Entry 1124 in AGENTS_CONVERSATION.MD captures the
+  wiring.
+- VHS-shape pyte + Pillow substrate exists for autocode at
+  `autocode/tests/vhs/` — renderer, differ, scenarios,
+  run_visual_suite.py, and reference PNGs.
+- Mirror of claude-code, pi-mono, opencode, openai-codex, aider,
+  claw-code, goose, open-swe exists under `research-components/`.
+- Feature-audit checklist exists at
+  `docs/plan/research-components-feature-checklist.md`.
+
+### Out Of Scope
+
+- Pixel-perfect parity with claude-code or pi (goal is legible,
+  functional equivalence, not byte-for-byte mimicry).
+- Building the pipeline on top of a proprietary SaaS — everything
+  must run locally.
+- Replacing the existing VHS substrate — extend it.
+
+### Closed Design Decisions (as of 2026-04-18)
+
+Each question below has a concrete answer. Implementation proceeds
+against these choices.
+
+### 1. Capture strategy per TUI — **pyte + Pillow (Python-native)**
+
+- **Choice:** extend the existing `autocode/tests/vhs/` pipeline
+  (pyte + Pillow) to accept any TUI binary as a parameter.
+- **Rationale:** no new deps — vhs, asciinema, agg, tmux are all
+  absent from the system; adding them adds packaging risk. Pyte
+  is already proven for autocode regression and is plenty for
+  block/layout/color comparison at the 160x50 or 80x24 grid level.
+- **Escape hatch:** if a specific reference TUI uses rendering
+  that pyte can't parse (e.g. sixel graphics), fall back to the
+  native binary's `--print` / non-TUI mode for that scenario, OR
+  add asciinema+agg at that point. Treat as a per-scenario escape,
+  not a default.
+- **Files that exist and are reused:**
+  - `autocode/tests/vhs/capture.py` — PTY spawn + ANSI collect
+  - `autocode/tests/vhs/renderer.py` — pyte Screen → PNG via PIL
+  - `autocode/tests/vhs/differ.py` — per-cell semantic diff
+  - `autocode/tests/vhs/scenarios.py` — scenario DSL
+
+### 2. Driving identical prompts across different TUIs — **per-tool launcher scripts**
+
+- **Choice:** `autocode/tests/tui-comparison/launchers/<tui>.py`
+  files, each exposing a `launch(scenario, workdir, env)` callable
+  that knows how to spawn that TUI, wait for ready, send prompt,
+  drain output, clean-exit.
+- **Substrate status (2026-04-18 audit):** `autocode/tests/vhs/capture.py`
+  already accepts a generic `binary: Path` via `_spawn(argv=[str(binary)])`.
+  Multi-TUI extension is minimal: add `argv_suffix: list[str]` so we can
+  pass e.g. `["session"]` for goose, add per-tool `env_extra` patterns,
+  extend the ready-marker wait logic. No substrate rewrite needed.
+- **Per-TUI invocation (from 2026-04-18 `--help` audit):**
+
+| Tool | argv for interactive | env notes | Ready marker (regex hint) |
+|---|---|---|---|
+| autocode | `["autocode"]` | `AUTOCODE_PYTHON_CMD` auto-discovered; `LITELLM_MASTER_KEY` passed through | `AutoCode` |
+| claude | `["claude"]` | uses `~/.claude/` subscription state; don't mutate | `Claude Code` or `claude>` |
+| codex | `["codex"]` | uses `~/.codex/auth.json`; don't mutate | `codex` banner |
+| opencode | `["opencode"]` | uses `~/.opencode/` + providers config | ASCII art "OPENCODE" banner |
+| goose | `["goose", "session"]` | uses `~/.config/goose/config.yaml` | `goose session` prompt |
+| pi | `["pi"]` | uses `~/.pi/agent/models.json` (LiteLLM-wired) + `LITELLM_MASTER_KEY` env var | `pi` prompt |
+| forge | `["forge"]` | uses `~/.forge/` if present | `forge` banner |
+
+- **Scenario DSL** reused from existing `autocode/tests/vhs/scenarios.py`:
+  each scenario is a list of `(delay_s | bytes_to_send)` steps.
+- **`graceful_exit=False` everywhere** — BubbleTea and many other TUIs
+  restore the saved primary buffer on Ctrl+D, hiding the running state
+  from pyte. Use SIGTERM mid-alt-screen to freeze pyte on live frame
+  (pattern already proven in autocode scenarios).
+
+### 3. Storage layout — **scenario-first, date-versioned**
+
+```
+autocode/docs/qa/tui-comparison/
+  reference/                         # one-time baseline captures
+    20260418-baseline/
+      _index.md                      # tool versions + scenarios tested
+      startup/
+        autocode.png
+        autocode.txt                 # pyte Screen.display text
+        claude.png
+        claude.txt
+        ...
+      first-prompt-text/
+        ...
+  regression/                        # continuous autocode captures
+    20260418-<run-id>/
+      _index.md
+      _diff.md                       # rule-based + optional vision verdict
+      startup/
+        autocode.png
+        autocode.txt
+        diff-vs-reference.png        # if regression caught
+```
+
+### 4. Diff layer — **semantic per-cell (intra) + image tolerance (cross)**
+
+- **Intra-autocode regression** (autocode now vs autocode baseline):
+  per-cell semantic diff in `tests/vhs/differ.py` with small
+  tolerance for color/attr drift. Already works.
+- **Cross-TUI comparison** (autocode vs claude-code baseline):
+  layouts differ by design; use (a) pyte Screen.display text diff
+  for gross layout sanity, (b) image diff with tolerance via PIL
+  `ImageChops` for "how different do they look", (c) LLM vision
+  narrator for qualitative description.
+- **Pixel diff threshold:** 5% default; configurable per scenario.
+
+### 5. Analysis layer — **rules (hard gate) + LLM vision (narrator)**
+
+> **[SUPERSEDED by "Post-Codex-1138 Three-Track Architecture" at the top of §1g.]**
+> The predicates listed below were a single undifferentiated bag. The authoritative
+> version splits them into **hard invariants** (Track 1 gates) and **soft style
+> targets** (Track 3 backlog). See §"Predicate Classification" at the top for the
+> canonical list. Preserved here for historical reference only.
+
+- **Rule-based predicates** (Python, operate on pyte Screen + text):
+  - `composer_at_bottom(screen)` — cursor or `>`/`❯` in last 2 rows
+  - `status_bar_styled(screen)` — row above composer has dim fg
+  - `branch_pill_right(screen)` — colored bg cell at status-bar right
+  - `welcome_hidden_after_turn(screen, turn_n)` — welcome absent when n≥1
+  - `tool_card_bullet(screen)` — ● or ○ at start of tool-call line
+  - `spinner_has_elapsed(screen)` — `(Ns)` suffix near "Thinking..."
+  - `mode_hint_last_row(screen)` — last row has dim-italic mode hint
+  - `picker_filter_header(screen)` — when picker open, shows `[filter: …]`
+  - additional predicates as the scenario set grows
+- **LLM vision narrator** (optional, uses `vision` gateway alias):
+  - Input: 2 PNGs (autocode + reference)
+  - Output: 0-100 similarity score + enumerated differences + fix suggestions
+  - Called only when rules disagree OR user explicitly requests
+  - Budget: ~1 call per scenario at refresh time; not on every regression run
+- **Human review surface**: side-by-side stitched PNG written to
+  `regression/<run>/<scenario>/side-by-side.png` whenever rule-based
+  verdict is WARN or FAIL.
+
+### 6. Environment isolation — **fresh `$HOME`/tmpdir per capture + read-only of user state**
+
+- **Rule:** NEVER mutate the user's real `~/.claude/`, `~/.codex/`,
+  `~/.opencode/`, `~/.config/goose/`, `~/.pi/`, or
+  `~/.forge/` during a capture.
+- **Reference-baseline captures** (one-time, manual): use user's
+  existing auth state in read-only mode. Just spawn, capture, exit.
+  Don't let the TUI write sessions to disk where possible; if it
+  does, clean up after.
+- **Continuous regression captures** (autocode only): per-capture
+  `tmpdir = mkdtemp("autocode-tui-")`; set `HOME=$tmpdir`,
+  `XDG_CONFIG_HOME=$tmpdir/.config`; copy minimal skeleton if the
+  launcher needs one; inherit `LITELLM_MASTER_KEY` from parent env.
+- **Exit-state check**: after each capture, assert that no files
+  were written outside the tmpdir. If any were, flag and fail.
+
+### 7. Failure modes — explicit handling
+
+| Failure | Handling |
+|---|---|
+| TUI crashes (non-zero exit, SIGSEGV) | capture partial buffer; write `crash.log`; verdict = FAIL |
+| TUI hangs waiting for auth | timeout N seconds; capture "auth-required" state as its own scenario; verdict = N/A for auth-gated scenarios |
+| Gateway returns 429 | capture the error-rendering; that IS a useful scenario (`error-state` fixture) |
+| Empty/black frame | retry once with +2s warmup; if still empty, verdict = FAIL |
+| Alt-screen leaves stale buffer after exit | use `graceful_exit=False` + SIGTERM to freeze pyte screen mid-TUI (pattern proven in existing `tests/vhs/`) |
+| Scenario not supported by this TUI (e.g. `/model` on a tool without pickers) | scenario produces `skipped.txt` with reason; verdict = N/A |
+
+### 8. Reference-TUI version pinning — captured in `_index.md` header
+
+Every baseline run records the exact binary versions:
+
+```yaml
+# _index.md (YAML frontmatter)
+run_id: 20260418-baseline-001
+captured_at: 2026-04-18T00:00:00Z
+tools:
+  autocode: "0.1.0"
+  claude: "2.1.112 (Claude Code)"
+  codex: "codex-cli 0.121.0"
+  opencode: "1.4.7"
+  goose: "1.30.0"
+  pi: "0.67.6"
+  forge: "2.9.1"
+scenarios_attempted: [startup, first-prompt-text, ...]
+terminal: {cols: 160, rows: 50}
+```
+
+On version bump of any reference TUI: re-run the baseline scenario
+set under a fresh `reference/<date>-baseline/` folder; keep older
+baselines for historical comparison.
+
+### Scenario Catalog (canonical set; extensible)
+
+| # | Scenario | Tests |
+|---|---|---|
+| 1 | `startup` | empty-state layout, header, composer position, status bar chrome |
+| 2 | `help` | `/help` or `?` affordance visibility |
+| 3 | `first-prompt-text` | "hello" → short text response rendering |
+| 4 | `first-prompt-code` | "write fizzbuzz in python" → code-block rendering |
+| 5 | `streaming-mid-frame` | snapshot during a deliberately slow response |
+| 6 | `thinking-display` | reasoning trace rendering (if tool exposes it) |
+| 7 | `tool-call-read` | read-file tool card rendering |
+| 8 | `tool-call-bash` | bash/shell tool card rendering |
+| 9 | `slash-list` | typing `/` to see command list |
+| 10 | `model-picker` | `/model` picker layout + keyboard nav |
+| 11 | `queue-mid-stream` | Enter pressed mid-response, queue indicator |
+| 12 | `ask-user-prompt` | clarification prompt rendering (if applicable) |
+| 13 | `narrow-terminal` | cols=60 rendering |
+| 14 | `error-state` | induced 429 or tool-error rendering |
+| 15 | `multiline-compose` | Alt+Enter, multi-line composer |
+| 16 | `session-resume` | quit + relaunch, history surface |
+
+Tools that don't support a given scenario: skipped with N/A.
+
+### Current vs Target Layout (2026-04-18 observation)
+
+Visual inspection of `autocode/tests/vhs/reference/startup.png` (captured 2026-04-17) shows the current autocode row ordering:
+
+1. Welcome header (orange `AutoCode`)
+2. Welcome subtitle (dim)
+3. Empty transcript space
+4. Status bar (`tools · openrouter · suggest · mock-session-001`)
+5. Composer (`> Ask AutoCode…`)
+6. Hint row (`/help for help, /model to switch, Ctrl+D to quit`)
+7. Mode indicator (`◆ AutoCode`)
+8. (In mock captures) backend warning
+
+**Claude-Code target row order:**
+1. Welcome (turn 0 only)
+2. Transcript
+3. Composer (rounded/framed)
+4. Status bar (below composer, branch pill right)
+5. Mode hint (last row, dim italic)
+
+**Gap:** autocode places the status bar ABOVE the composer and has multiple
+chrome rows below. The target is status bar + mode hint BELOW composer, and
+the composer itself visually framed.
+
+**Implication for predicates:** Phase 4 hard-gate tests must encode the
+target ordering. Running the current tree against those tests should FAIL
+on predicates 1, 2, and possibly 3 until the rendering is adjusted. That
+is the correct "regression caught" outcome for the current slice — it will
+show us exactly what needs to change to achieve Claude-Code-like feel.
+
+**Also observed:** the `◆ AutoCode` row's orange diamond is unexpected —
+likely a mode-indicator artifact. Flag as a separate finding in the
+regression run.
+
+### Live capture evidence (2026-04-18)
+
+Built `/tmp/tui_probe.py` (100 LOC PTY + select) and captured 7 TUIs. Full
+detail in `AGENTS_CONVERSATION.MD` Entry 1136. Headline findings:
+
+- **6 of 7 TUIs capture cleanly** (autocode, pi, claude, opencode, goose, forge).
+- **codex blocks** on terminal-query responses (`[6n`, `[c`, `[?u`, `OSC 10;?`).
+  Fix: add a DSR responder shim to the capture driver using pyte's own
+  terminal state. ~30 LOC addition to Phase 1.
+- **Claude Code real specs** extracted from `research-components/claude-code-sourcemap/src/`:
+  - `Logo.tsx` — rounded border box, `✻ Welcome`, sub-block with `/help` and `cwd`
+  - `Spinner.tsx` — 12-frame sparkle rotation at 120ms, 55 verbs, format `{char} {verb}… ({Ns} · esc to interrupt)`
+  - `PromptInput.tsx` + `screens/REPL.tsx` — rounded composer box, `>` prefix in 3-wide gutter, hint row below with `! for bash · / for commands · esc to undo` + right-aligned `shift+⏎ for newline`
+- **Spinner-interrupt format is cross-tool** (Claude + forge both use `(Ns · key to interrupt)`). Autocode + pi omit the interrupt hint — gap.
+- **Welcome richness gradient**: autocode (2 lines) < pi (3 lines) < forge (cheatsheet box) < opencode (logo+placeholder+mode+keybinds) < claude (full dashboard with recent activity).
+
+### Concrete gap list: autocode vs Claude Code today
+
+| # | Dimension | autocode today | Claude Code | Priority |
+|---|---|---|---|---|
+| 1 | Composer border | none | rounded dim box | HIGH |
+| 2 | Composer prefix | `❯` | `>` | LOW |
+| 3 | Bash mode (`!` prefix) | not present | `! for bash mode` | MED |
+| 4 | Spinner interrupt hint | missing | `esc to interrupt` | HIGH |
+| 5 | Spinner char set | Braille dots | sparkle chars | LOW |
+| 6 | Welcome richness | 2 lines | dashboard box | MED |
+| 7 | Version in top border | no | yes | LOW |
+| 8 | Hint row content | `/help, /model, Ctrl+D` | `! / esc · shift+⏎` | MED |
+| 9 | Orange diamond `◆ AutoCode` position | before spinner | n/a | HIGH (remove or relocate) |
+| 10 | Mode-below-composer | mode hint pre-composer | n/a pattern | MED |
+| 11 | Rounded Unicode border chars usage | not used | used | HIGH |
+
+### Phase 1 additions (capture driver requirements, beyond earlier §1g)
+
+- **DSR responder**: embed a small state machine in the capture driver that watches child output for `ESC[6n`, `ESC[c`, `ESC[?u`, `OSC 10;?` and writes back minimal valid responses so codex + other query-first TUIs render.
+- **Longer per-tool timeouts**: goose needs >10s boot for its extension system. Parameterize per-tool `boot_budget_s` in launcher config.
+- **Self-updater awareness**: forge auto-updates on every launch. Either cache the binary or skip forge captures on fresh runs. Document in launcher.
+
+### New hard-gate predicates (add to §Look-and-Feel)
+
+- `composer_has_rounded_border(screen)` — composer's top-left corner char in `{╭, ┌, ╒, ╓}`
+- `spinner_has_interrupt_hint(screen)` — spinner line contains token `interrupt` or `esc` while loading
+- `welcome_scoped_to_init(screen, turn_n)` — when `turn_n == 0`, welcome box spans ≥3 rows and ≥40 cols
+
+### Look-and-Feel Criteria
+
+Encoded as machine-checkable predicates under
+`autocode/tests/tui-comparison/predicates.py`:
+
+**Must match Claude-Code baseline (hard gates for autocode):**
+1. Composer occupies bottom 1-2 rows with `>` or `❯` prefix
+2. Status bar is row above composer, dim foreground
+3. Branch pill on right of status bar (when in git repo)
+4. Transcript above composer, inline mode preserves scrollback
+5. Tool cards start with ● bullet + optional └ continuation
+6. Spinner shows elapsed-seconds suffix `(Ns)`
+7. Welcome header shown only at `stageInit` (turn 0)
+8. Pickers support keyboard nav + type-to-filter + two-stroke Esc
+9. Thinking text rendered dim + italic prefix (▸ or ·:)
+10. Warnings render dim (⚠), not red banner, unless fatal
+11. Queue indicator appears in scrollback + status-bar count, NOT a live panel (per image #9 fix)
+12. Mode hint visible on last row, dim italic
+
+**Taking best from research-components/ (non-blocking improvements):**
+- From **pi-mono**: theme customizability + skill slots + progressive-disclosure discovery
+- From **opencode**: `/sandbox` mode switch + LSP 9-op surface
+- From **openai-codex**: `/resume <id>` symmetric session API + `fork` subcommand
+- From **claude-code-sourcemap**: sourcemap navigation hint
+- From **goose**: plan mode affordance
+- From **open-swe**: session branch tree UI (already partially present via `/fork`)
+- From **forge**: agent specification via `--agent` and sandbox via `--sandbox`
+
+### Implementation Phases
+
+> **[SUPERSEDED — old 6-phase single-pipeline model.]**
+> The canonical phase/gate model is in §"Post-Codex-1138 Three-Track
+> Architecture" at the top of §1g. Track 1 Phase 1 corresponds to
+> "Phase 1 — substrate" below but with narrower scope (autocode-only,
+> 2 scenarios). Preserved below for historical context.
+
+**Phase 1 — substrate (tests/tui-comparison/):** extend existing
+pyte pipeline to accept arbitrary binary; add per-tool launchers
+for autocode + pi first; define scenario DSL. ~300 LOC.
+Exit gate: capture `startup` + `first-prompt-text` for autocode + pi.
+
+**Phase 2 — scenario catalog:** add 14 more scenarios from §Catalog.
+Exit gate: all 16 scenarios capturable for autocode; pi skips
+scenarios it doesn't support with documented N/A reasons.
+
+**Phase 3 — reference baselines:** run each reference TUI (claude,
+codex, opencode, goose, forge) through the scenarios once; commit
+PNG+text baselines to `docs/qa/tui-comparison/reference/<date>-baseline/`.
+Exit gate: `_index.md` with versions + all captured scenarios.
+
+**Phase 4 — rules + diff:** implement predicates from §Look-and-Feel;
+run rules on autocode captures vs claude-code baseline; generate
+diff report.
+Exit gate: rules pass on current autocode against at least the
+hard-gate predicates 1-12.
+
+**Phase 5 — LLM vision narrator (optional):** gate behind
+`--with-vision` flag; uses `vision` alias on localhost:4000.
+Exit gate: one annotated diff report stored.
+
+**Phase 6 — CI integration:** `make tui-compare` target that runs
+Phases 1-4 headlessly; fails on hard-gate predicate failures;
+stores artifacts.
+
+### Exit Gates (overall) — SUPERSEDED
+
+> **[SUPERSEDED — see "Exit Gates (revised per Codex 1138 Suggested
+> Change #6)" at the top of §1g. The list below contains the
+> pre-revision single-pipeline gates that conflict with the three-track
+> architecture.]**
+
+- [ ] design review by Codex (this PLAN.md §1g + Entry 1135 in comms)
+- [ ] Phase 1 substrate green: autocode + pi baseline captures stored
+- [ ] Phase 3 reference baselines stored for ≥ 3 reference TUIs (claude, codex, one more)
+- [ ] Phase 4 hard-gate predicates pass for autocode's current state
+- [ ] session-isolation test proves no writes to user's real `~/.claude/`, `~/.codex/`, `~/.opencode/`, `~/.config/goose/`, `~/.pi/`, `~/.forge/`
+- [ ] `DEFERRED_PENDING_TODO.md` §2 "side-by-side pi ↔ autocode smoke test" replaced by artifact citation
+- [ ] Codex APPROVE on the implementation before any commit decision
+
+### Proposed Research + Design Work (Pre-Implementation)
+
+1. Survey the 4 capture-tool candidates against one scenario
+   (autocode startup) and record: fidelity score, setup cost,
+   per-capture latency, portability, license.
+2. Write per-TUI launch scripts as standalone executables that take
+   a scenario name + prompt and produce a predictable output file.
+3. Define the scenario schema: what does "capture startup" mean
+   across 7 different TUIs? Needs a canonical input set.
+4. Prototype against autocode + pi (both already wired) before
+   extending to claude-code / opencode / codex / aider / goose.
+
+### Implementation Checklist (SUPERSEDED)
+
+> **[SUPERSEDED by Track 1 Phase 1 scope in Entry 1139 / the
+> three-track architecture at the top of §1g.]** The list below
+> reflects the pre-revision single-pipeline implementation plan.
+> Authoritative Phase 1 deliverables: capture.py, dsr_responder.py,
+> launchers/autocode.py, predicates.py (hard+soft classified),
+> profile.py, scenarios/startup + scenarios/first-prompt-text, and
+> `make tui-regression` CI target. See the top section's Track 1.
+
+- [ ] design choices 1-8 closed in this section
+- [ ] per-TUI launch script set committed under
+      `autocode/tests/tui-comparison/launchers/`
+- [ ] capture layer committed under
+      `autocode/tests/tui-comparison/capture.py` (or extends
+      `autocode/tests/vhs/capture.py`)
+- [ ] scenario library under
+      `autocode/tests/tui-comparison/scenarios/`
+- [ ] analysis layer (rule-based + LLM narrator) under
+      `autocode/tests/tui-comparison/analyze.py`
+- [ ] one stored comparison run artifact under
+      `autocode/docs/qa/tui-comparison/<date>-baseline/`
+
+### Verification (SUPERSEDED)
+
+> **[SUPERSEDED by "Exit Gates (revised per Codex 1138 Suggested
+> Change #6)" at the top of §1g.]**
+
+- Pipeline produces comparable captures for at least autocode + pi
+  on the "startup" and "first prompt response" scenarios.
+- Rule-based analyzer runs clean; LLM narrator produces a compact
+  side-by-side description suitable for a comms entry.
+- Nothing in `~/.pi/`, `~/.claude/`, `~/.autocode/` is mutated
+  during a capture run.
+
+### Exit Gates (SUPERSEDED — see top of §1g)
+
+- [ ] all 8 open design questions answered in this section
+- [ ] working prototype on autocode + pi
+- [ ] stored artifacts under `autocode/docs/qa/tui-comparison/`
+- [ ] `DEFERRED_PENDING_TODO.md` §2 entry for "Side-by-side pi ↔
+      autocode smoke test" removed and replaced by an artifact
+      citation
+- [ ] Codex review verdict on the design (post review request once
+      design questions 1-8 are closed)
 
 ---
 

@@ -1,10 +1,10 @@
 # Current Directives
 
-> Last updated: 2026-04-15
+> Last updated: 2026-04-17
 
 ## Active Phase
 
-**Phase 7 COMPLETE. Phase 8 COMPLETE. Current work is the post-Phase-8 frontier. Immediate active slice: Unified TUI Consolidation (`Section 1f`). After that: large-codebase validation, deeper native external-harness orchestration, and Terminal-Bench improvement.**
+**Phase 7 COMPLETE. Phase 8 COMPLETE. Current work is the post-Phase-8 frontier. Immediate active slice: Stable TUI Program (`PLAN.md` Section `1f`). After Stable TUI: large-codebase validation, deeper native external-harness orchestration, and Terminal-Bench improvement.**
 
 ## Status
 
@@ -23,52 +23,51 @@
 - **`/loop` UX:** COMPLETE
   - recurring loop command landed
   - smoke artifact exists: `autocode/docs/qa/test-results/20260403-173500-loop-smoke.md`
-- **Unified TUI Consolidation:** Go TUI Phases 1-6 are landed and the focused closeout gates are green; remaining work is commit-scope cleanup plus follow-up prioritization.
-  - **Direction:** One TUI only — Go BubbleTea (`autocode-tui`) is the primary interactive frontend target
-  - **Why:** Pi-mono architecture (Go+BubbleTea) is the research-validated best approach; BubbleTea v2 supports Mode 2026 natively; Go TUI is what the user actually uses
-  - **Live state today:** `autocode chat` defaults to the Go TUI binary, but `autocode/src/autocode/cli.py` still exposes `--inline`, so the Python inline fallback is not removed yet
-  - **Python side target:** backend-only (`autocode serve`) remains the long-term target, but the current contract keeps Python inline as an explicit fallback via `--inline`
-  - Historical PTY bug report: `autocode/docs/qa/pty-tui-bug-report.md` (kept as a research/debug log, not the current gate status)
-  - **Phase 1 — DONE** (critical bug fixes):
-    - ✓ C3: `startupTimeoutMsg` 15s fallback unblocks `stageInit`; spinner shows "Connecting to backend…" immediately
-    - ✓ C1: Regression tests added in `model_picker_test.go`; no unsolicited trigger found in current code
-    - ✓ C2: `_RULES_MAX_CHARS = 3000` cap in `factory.py` stops LLM reproducing internal status text
-  - **Phase 2 — DONE** (consolidation wired):
-    - ✓ `autocode chat` already launches Go TUI via `_find_go_tui_binary()` in `cli.py`
-    - ✓ Binary at `autocode/build/autocode-tui`; `--inline` flag available as explicit fallback
-  - **Phase 3 — DONE** (Mode 2026 + differential rendering):
-    - ✓ BubbleTea v2 migration (v1.3.4 → v2.0.2, charm.land vanity imports, tea.KeyPressMsg, tea.View struct)
-    - ✓ Mode 2026 enabled by default in BubbleTea v2
-    - ✓ Rendering model corrected: BubbleTea v2 handles terminal diffing; stable completed lines still flush via `tea.Println`
-    - ✓ Sliding window streaming: stable lines flushed to scrollback, last N lines in live panel
-    - ✓ `--inline` flag for scrollback-friendly mode
-  - **Phase 4 — DONE** (Pi-mono features, backend parity landed):
-    - ✓ Steering queue: `Ctrl+C` during streaming → steer input mode → `steer` RPC; Esc cancels; second Ctrl+C force-quits
-    - ✓ Follow-up queue: `/followup <msg>` queues message after current tool
-    - ✓ JSONL session branching: `/fork` command, `session.fork` RPC, `ForkSessionParams`/`ForkSessionResult`
-    - ✗ log.jsonl + context.jsonl split: Python backend change — deferred
-    - ✓ Backend RPC handlers for `steer` and `session.fork` landed in `autocode/src/autocode/backend/server.py` with targeted tests in `autocode/tests/unit/test_backend_server.py`
-  - **Phase 5 — DONE** (best-of-all features):
-    - ✓ Multiline input: `Alt+Enter`/`Ctrl+J` inserts newline, `Enter` submits
-    - ✓ External editor: `Ctrl+E` opens `$EDITOR` with current input
-    - ✓ Frecency-based prompt history: `historyEntry`, `frecencyScore()`, `loadFrecencyHistory()`/`saveFrecencyHistory()`
-    - ✓ Task dashboard: `renderTaskDashboard()` shows pending/running/done/failed counts
-    - ✓ `/plan` mode: toggles `planMode`, renders `[PLAN MODE]` indicator
-    - ✓ Background theme detection: `detectThemeCmd()` reads `COLORFGBG`, sets `themeDetected` dark/light
-  - **Phase 6 — DONE** (status bar enhancements):
-    - ✓ Live cost display: `totalCost` via `backendCostMsg`
-    - ✓ Token count: `totalTokensIn`+`totalTokensOut`, displayed as "X.Xk tokens"
-    - ✓ Provider/model: always visible via `backendStatusMsg`
-    - ✓ Session ID: from `backendStatusMsg`, shown in status bar
-    - ✓ Background task indicator: `backgroundTasks` count, "⏳ N bg" in status bar
-    - ✓ Backend `on_cost_update` emission landed; Python backend now emits per-turn cost snapshots and targeted tests cover the producer path
-  - Focused `go test` is green on the current tree.
-  - Fresh PTY artifacts:
-    - focused smoke: `autocode/docs/qa/test-results/20260415-080003-tui-backend-parity-pty-smoke-deterministic-v3-20260415.md`
-    - phase-fix regression: `autocode/docs/qa/test-results/20260415-150741-pty-phase1-fixes.md`
-  - Immediate remaining work is commit-scope cleanup and deciding whether the deferred `log.jsonl` / `context.jsonl` split should stay follow-up or move back into the active queue.
-  - research basis: `autocode/docs/qa/pty-tui-bug-report.md` + all TUIs in `research-components/` + web research
-  - plan details: `PLAN.md` Section 1f
+- **Stable TUI Program:** Section `1f` is now a research-locked stable-v1 program, not a short closeout slice.
+  - **Direction:** Go BubbleTea (`autocode-tui`) remains the default interactive frontend; Python `--inline` remains the explicit fallback until the migration surface is fully closed.
+  - **Why:** `deep-research-report.md` concludes that stable replacement value comes from predictable runtime behavior, migration-compatible filesystem/lifecycle contracts, explicit permissions, durable sessions, and verification discipline rather than feature maximalism.
+  - **Current verified foundation:**
+    - Go TUI default routing is live.
+    - BubbleTea v2 / Mode 2026 migration is done.
+    - Steering queue, follow-up queue, `/fork`, multiline input, editor launch, frecency history, `/plan`, task dashboard, and status-bar enhancements are landed.
+    - Backend parity for `steer`, `session.fork`, and per-turn `on_cost_update` is landed.
+    - Focused PTY artifacts are green:
+      - `autocode/docs/qa/test-results/20260415-080003-tui-backend-parity-pty-smoke-deterministic-v3-20260415.md`
+      - `autocode/docs/qa/test-results/20260415-150741-pty-phase1-fixes.md`
+  - **Execution order is fixed unless the user reprioritizes:**
+    - **Milestone A:** runtime stability and deterministic TUI loop
+      - lock startup, keyboard routing, palette/picker, resize, stream/tool interleave, inline/alt-screen, and crash-recovery acceptance cases
+      - required verification: Go unit tests, deterministic mock harness, fresh PTY artifact
+      - exit gate: no open runtime regressions; stored PTY runtime artifact proves the matrix
+    - **Milestone B:** compatibility and migration contracts
+      - finish `CLAUDE.md` / `CLAUDE.local.md` / bounded `@imports`, skill progressive disclosure + reload, hook lifecycle payloads, and migration-friendly export/session behavior
+      - required verification: migration fixtures, hook-schema tests, skill reload tests, branch/export tests
+      - exit gate: docs explicitly state supported contracts and unsupported edges
+    - **Milestone C:** permissions, sandbox, and hook enforcement
+      - lock read-only / workspace-write / full-access semantics, allow/ask/deny policy, explainable rule matching, and hook-blocked execution
+      - required verification: policy matrix tests, sandbox escape regressions, hook enforcement tests, approval-flow tests
+      - exit gate: every tested tool call has a deterministic and explainable permission result
+    - **Milestone D:** sessions, compaction, provenance, and recovery
+      - lock append-only sessions, branch/export invariants, explicit compaction behavior, provenance preservation, and compaction circuit breakers
+      - required verification: crash-injection tests, branch/export invariants, compaction red-team tests, long-session simulations
+      - exit gate: forced interruption cannot corrupt history and compaction cannot silently convert tool/file text into instruction text
+    - **Milestone E:** context intelligence baseline
+      - ensure repo-map path, cheap `@path` completion, deterministic post-edit diagnostics, and bounded-context behavior on larger repos
+      - required verification: retrieval regressions, diagnostics-after-edit tests, large-repo validation artifacts, latency/context-growth measurements
+      - exit gate: interactive path no longer depends on whole-repo stuffing to stay useful
+    - **Milestone F:** verification profiles, release gate, and measurement
+      - publish formatter/lint/typecheck/targeted-test profiles, hook-driven verification points, transcript/diff reviewability, and operational metrics
+      - required verification: deterministic mock-harness suite, verification-profile suite, transcript/export tests
+      - exit gate: stable-v1 release note can cite a complete validation matrix and known limitations
+  - **Non-goals while Section 1f is active:**
+    - remote-client architecture work
+    - broad subagent UX
+    - orchestration-first features that increase state complexity
+    - parity-only features with no stability, compatibility, or verification value
+  - **Status (2026-04-17, late-session):** Stable TUI v1 Slices 0-8 landed. Milestone A CLOSED, B CLOSED, D ~65%, F ~75%. On top of Entries 1114–1123, late-session work (Entry 1124) added: image #9 duplicate-queue-preview removal, system-prompt guardrail against tool-calls on trivial greetings, PTY bugfind binary-path + B5→B6 Esc cleanup, and pi coding agent wired at localhost:4000 (see `~/.pi/agent/models.json`) with 8 gateway aliases exposed for side-by-side TUI comparison. No commit yet.
+  - **Immediate next task (ACTIVE SLICE):** TUI Testing Strategy — research + plan a pipeline that spins up multiple TUIs (autocode, pi coding agent, claude-code, opencode, codex CLI, aider, goose), captures their visual state, stores snapshots, and analyzes/compares them. Pi coding agent is already wired at `~/.pi/agent/models.json` with 8 gateway aliases. Detailed plan lands in `PLAN.md` §1g and `EXECUTION_CHECKLIST.md` §"TUI Testing Strategy (Active Slice)". Do NOT pick up Milestone C/D/E/F, benchmarks, or other deferred items during this slice.
+  - **All other pending items:** see `DEFERRED_PENDING_TODO.md` at repo root. Walk that file top-to-bottom after the TUI Testing Strategy slice closes. Nothing there is dismissed — just temporarily set aside.
+  - **Canonical references:** `PLAN.md` Section `1f`, `EXECUTION_CHECKLIST.md` Section `1f`, `deep-research-report.md`, `docs/tests/tui-testing-strategy.md`, `docs/tests/pty-testing.md`
 - **Tests:** 1778 passed, 4 skipped
 - **Benchmarks:** 23/23 GREEN (120/120, 100%)
 - **B30 Terminal-Bench:** best confirmed score `40% (4/9)` with the `terminal_bench` alias; Harbor adapter baseline recovery is complete, score-improvement work remains open

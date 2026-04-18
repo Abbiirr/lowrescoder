@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
@@ -62,9 +63,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.SessionID != "" {
 			m.sessionID = msg.SessionID
 		}
+		m.lastError = "" // clear any startup-timeout error once backend connects
 		if m.stage == stageInit {
 			m.stage = stageInput
-			m.lastError = "" // clear any startup-timeout error once backend connects
 		}
 		return m, nil
 
@@ -439,6 +440,13 @@ func (m model) handleStreamingKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if text != "" && len(m.messageQueue) < m.queueMax {
 			m.messageQueue = append(m.messageQueue, text)
 			composerClear(&m)
+			preview := text
+			if len(preview) > 60 {
+				preview = preview[:57] + "..."
+			}
+			return m, tea.Println(dimStyle.Render(fmt.Sprintf(
+				"  \u21b3 queued (%d pending): %s", len(m.messageQueue), preview,
+			)))
 		}
 		return m, nil
 
@@ -455,8 +463,10 @@ func (m model) sendChat(text string) (tea.Model, tea.Cmd) {
 	// Add to history
 	historyAdd(text)
 
-	// Echo user turn to scrollback
-	echoCmd := tea.Println(userTurnStyle.Render("You: ") + text)
+	// Echo user turn to scrollback — Claude Code flows use a single ">"
+	// prefix on one line and then the assistant response follows. Match
+	// that pattern so the chat reads as a clean transcript.
+	echoCmd := tea.Println(userTurnStyle.Render("> ") + text)
 
 	// Reset per-turn state
 	m.streamBuf.Reset()
@@ -471,6 +481,7 @@ func (m model) sendChat(text string) (tea.Model, tea.Cmd) {
 
 	// Send to backend — keep composer focused for parallel typing
 	m.stage = stageStreaming
+	m.turnStart = time.Now()
 	if m.backend != nil {
 		m.backend.SendRequest("chat", ChatParams{
 			Message:   text,

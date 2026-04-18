@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -18,14 +19,13 @@ func (m model) View() tea.View {
 
 	var b strings.Builder
 
-	// 0. Header (compact branded header or startup indicator)
-	if m.stage == stageInit || (m.stage == stageInput && len(m.toolCalls) == 0 && m.streamBuf.Len() == 0) {
+	// 0. Header — only during stageInit so the user sees a connecting
+	// spinner. Once the backend is connected, `main.go` already printed
+	// the "AutoCode — Edge-native AI coding assistant" banner to
+	// scrollback, so re-rendering it inside the TUI view would double up.
+	if m.stage == stageInit {
 		b.WriteString(accentStyle.Render("\u25c6") + " AutoCode\n")
-		if m.stage == stageInit {
-			b.WriteString(m.spin.View() + " " + dimStyle.Render("Connecting to backend…"))
-		} else {
-			b.WriteString(dimStyle.Render("/help for help, /model to switch, Ctrl+D to quit"))
-		}
+		b.WriteString(m.spin.View() + " " + dimStyle.Render("Connecting to backend…"))
 		b.WriteString("\n")
 	}
 
@@ -87,14 +87,9 @@ func (m model) View() tea.View {
 	case stageSteer:
 		// steer view already rendered above
 	default:
-		if m.claudeLike {
-			b.WriteString(renderQueuePreview(m))
-			b.WriteString(renderComposer(m))
-		} else {
-			b.WriteString(separator(m.width))
-			b.WriteString("\n")
-			b.WriteString(m.composer.View())
-		}
+		b.WriteString(separator(m.width))
+		b.WriteString("\n")
+		b.WriteString(m.composer.View())
 	}
 	b.WriteString("\n")
 
@@ -112,10 +107,15 @@ func (m model) View() tea.View {
 	m.statusBar.SessionID = m.sessionID
 	m.statusBar.BackgroundTasks = m.backgroundTasks
 	b.WriteString(m.statusBar.View())
+	b.WriteString("\n")
+
+	// 12. Bottom mode hint — matches Claude Code's
+	// "bypass permissions on (shift+tab to cycle)" line.
+	b.WriteString(modeHintStyle.Render(renderModeHint(m)))
 
 	v := tea.NewView(b.String())
 	v.MouseMode = tea.MouseModeCellMotion
-	v.AltScreen = !m.inlineMode // default: alt-screen; --inline: scrollback-preserving inline mode
+	v.AltScreen = !m.inlineMode // default: inline (scrollback-preserving); --altscreen opts into alt-screen
 	return v
 }
 
@@ -150,39 +150,119 @@ func renderThinking(m model) string {
 	return b.String()
 }
 
-// renderToolArea renders the tool call log for the current turn.
+// renderToolArea renders tool calls in Claude-Code-style cards:
+//   ● Name(arg-summary)
+//     └ result preview
 func renderToolArea(m model) string {
 	if len(m.toolCalls) == 0 {
 		return ""
 	}
 	var b strings.Builder
 	for _, tc := range m.toolCalls {
-		icon := toolIcon(tc.Status)
-		line := fmt.Sprintf(" \u23bf %s %s", icon, toolCallStyle.Render(tc.Name))
-		if tc.Status == "error" && tc.Result != "" {
-			errText := tc.Result
-			maxResult := m.width - len(tc.Name) - 10
-			if maxResult < 20 {
-				maxResult = 20
-			}
-			if len(errText) > maxResult {
-				errText = errText[:maxResult-3] + "..."
-			}
-			line += " " + errorStyle.Render(errText)
-		} else if tc.Status == "completed" && tc.Result != "" {
-			result := tc.Result
-			maxResult := m.width - len(tc.Name) - 10
-			if maxResult < 20 {
-				maxResult = 20
-			}
-			if len(result) > maxResult {
-				result = result[:maxResult-3] + "..."
-			}
-			line += " " + dimStyle.Render(result)
+		// Header line: bullet + name + compact arg summary
+		bullet := toolBullet(tc.Status)
+		header := fmt.Sprintf("%s %s", bullet, toolCallStyle.Render(tc.Name))
+		if summary := toolArgSummary(tc.Name, tc.Args); summary != "" {
+			header += dimStyle.Render("(" + summary + ")")
 		}
-		b.WriteString(line)
+		b.WriteString(header)
 		b.WriteString("\n")
+
+		// Preview line: └ <truncated result or error>
+		if tc.Result != "" {
+			preview := tc.Result
+			maxW := m.width - 6
+			if maxW < 40 {
+				maxW = 40
+			}
+			// First line only, truncated
+			if nl := strings.Index(preview, "\n"); nl >= 0 {
+				preview = preview[:nl]
+			}
+			if len(preview) > maxW {
+				preview = preview[:maxW-3] + "..."
+			}
+			previewStyle := dimStyle
+			if tc.Status == "error" {
+				previewStyle = errorStyle
+			}
+			b.WriteString("  \u2514 ")
+			b.WriteString(previewStyle.Render(preview))
+			b.WriteString("\n")
+		}
 	}
+	return b.String()
+}
+
+// renderModeHint builds the Claude-Code-style bottom line showing the
+// active approval/sandbox mode and a "shift+tab to cycle" hint.
+func renderModeHint(m model) string {
+	mode := m.statusBar.Mode
+	if mode == "" {
+		mode = "suggest"
+	}
+	if m.planMode {
+		mode = "plan-only"
+	}
+	return "  " + mode + " \u00b7 shift+tab to cycle modes"
+}
+
+// toolBullet returns a Claude-Code-style bullet glyph per status.
+func toolBullet(status string) string {
+	switch status {
+	case "error":
+		return errorStyle.Render("\u25cf") // red dot
+	case "completed":
+		return accentStyle.Render("\u25cf") // orange dot
+	case "running":
+		return approvalActiveStyle.Render("\u25cb") // open circle
+	default:
+		return dimStyle.Render("\u25cb")
+	}
+}
+
+// toolArgSummary extracts a short one-liner from JSON args so the tool
+// card header reads like "Bash(curl -sS …)" instead of a huge JSON blob.
+func toolArgSummary(name, args string) string {
+	if args == "" {
+		return ""
+	}
+	trimmed := strings.TrimSpace(args)
+	if len(trimmed) > 80 {
+		trimmed = trimmed[:77] + "..."
+	}
+	trimmed = strings.ReplaceAll(trimmed, "\n", " ")
+	return trimmed
+}
+
+// spinnerStatusLine builds the rich Claude-Code-style spinner line:
+//   ✢ <verb>… (12.3s · ↑ 847 tokens · <mode>)
+func spinnerStatusLine(m model) string {
+	var b strings.Builder
+	b.WriteString(m.spin.View())
+	b.WriteString(" ")
+	b.WriteString(accentStyle.Render(m.currentVerb + "…"))
+
+	var parts []string
+	if !m.turnStart.IsZero() {
+		elapsed := time.Since(m.turnStart).Seconds()
+		if elapsed >= 60 {
+			parts = append(parts, fmt.Sprintf("%dm %ds", int(elapsed)/60, int(elapsed)%60))
+		} else {
+			parts = append(parts, fmt.Sprintf("%.0fs", elapsed))
+		}
+	}
+	if m.totalTokensOut > 0 {
+		parts = append(parts, fmt.Sprintf("\u2191 %d tokens", m.totalTokensOut))
+	}
+	if m.statusBar.Mode != "" && m.statusBar.Mode != "suggest" {
+		parts = append(parts, m.statusBar.Mode)
+	}
+	if len(parts) > 0 {
+		b.WriteString(" ")
+		b.WriteString(dimStyle.Render("(" + strings.Join(parts, " \u00b7 ") + ")"))
+	}
+	b.WriteString("\n")
 	return b.String()
 }
 
@@ -194,7 +274,7 @@ func renderStreamArea(m model) string {
 	var b strings.Builder
 	content := m.streamBuf.String()
 	if content == "" && m.tokenBuf.Len() == 0 {
-		b.WriteString(m.spin.View() + " " + accentStyle.Render(m.currentVerb+"…") + "\n")
+		b.WriteString(spinnerStatusLine(m))
 	} else {
 		displayed := content
 		if m.tokenBuf.Len() > 0 {
@@ -205,6 +285,8 @@ func renderStreamArea(m model) string {
 		}
 		b.WriteString(streamStyle.Render(displayed))
 		b.WriteString("\n")
+		// Keep the elapsed-time pill visible under streaming text too.
+		b.WriteString(spinnerStatusLine(m))
 	}
 	return b.String()
 }

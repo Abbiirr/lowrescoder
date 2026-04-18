@@ -1,0 +1,2 @@
+Failed to start backend: start backend: fork/exec python3 /home/bs01763/projects/ai/lowrescoder/autocode/tests/pty/mock_backend.py: no such file or directory
+hello

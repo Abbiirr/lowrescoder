@@ -14,6 +14,7 @@ from typing import Any
 from autocode.agent.approval import ApprovalManager, ApprovalMode
 from autocode.agent.context import ContextEngine
 from autocode.agent.event_recorder import EventRecorder
+from autocode.agent.hooks import HookEvent
 from autocode.agent.prompts import build_dynamic_suffix, build_static_prefix
 from autocode.agent.tools import ToolRegistry
 from autocode.core.logging import log_debug_prompt, log_event
@@ -100,6 +101,7 @@ class AgentLoop:
         delegation_policy: Any | None = None,
         tool_shim: Any | None = None,
         layer2_config: Any | None = None,
+        hook_registry: Any | None = None,
     ) -> None:
         self.provider = provider
         self.tool_registry = tool_registry
@@ -119,6 +121,8 @@ class AgentLoop:
         self._delegation_policy = delegation_policy
         self._tool_shim = tool_shim
         self._layer2_config = layer2_config
+        self._hook_registry = hook_registry
+        self._hook_session_started = False
         self._current_episode_id: str | None = None
         self._cancelled = False
         self._mode: AgentMode = AgentMode.NORMAL
@@ -127,11 +131,71 @@ class AgentLoop:
         self._cached_tool_schemas: list[dict[str, Any]] | None = None
         self._environment_snapshot: str | None = None
 
+    # ----- Hook lifecycle helpers -----
+    # All three wrap hook_registry.fire in a try/except so a broken hook
+    # cannot crash the agent loop; any exception is swallowed at DEBUG level.
+
+    def _fire_session_start(self) -> None:
+        """Fire SessionStart hooks once per AgentLoop instance.
+
+        The `_hook_session_started` guard prevents re-fires when `run()` is
+        called multiple times on the same loop (once per user turn).
+        """
+        if self._hook_registry is None or self._hook_session_started:
+            return
+        self._hook_session_started = True
+        try:
+            self._hook_registry.fire(
+                HookEvent.SESSION_START,
+                {"session_id": self.session_id},
+            )
+        except Exception:  # noqa: BLE001
+            logger.debug("SessionStart hook run failed", exc_info=True)
+
+    def _fire_pre_tool_use(self, tc: Any) -> str | None:
+        """Fire PreToolUse hooks. Return a block reason if blocked, else None."""
+        if self._hook_registry is None:
+            return None
+        try:
+            results = self._hook_registry.fire(
+                HookEvent.PRE_TOOL_USE,
+                {"session_id": self.session_id, "arguments": dict(tc.arguments)},
+                tool_name=tc.name,
+            )
+        except Exception:  # noqa: BLE001
+            logger.debug("PreToolUse hook run failed", exc_info=True)
+            return None
+        for result in results:
+            if result.blocked:
+                reason = result.block_reason or "hook denied"
+                return f"Blocked by PreToolUse hook: {reason}"
+        return None
+
+    def _fire_stop(
+        self, final_text: str, *, outcome: str, failure: bool = False,
+    ) -> None:
+        """Fire Stop or StopFailure hooks at end of turn. Advisory only."""
+        if self._hook_registry is None:
+            return
+        try:
+            event = HookEvent.STOP_FAILURE if failure else HookEvent.STOP
+            self._hook_registry.fire(
+                event,
+                {
+                    "session_id": self.session_id,
+                    "outcome": outcome,
+                    "final_text_preview": final_text[:200] if final_text else "",
+                },
+            )
+        except Exception:  # noqa: BLE001
+            logger.debug("Stop hook run failed", exc_info=True)
+
     def _resolve_project_root(self) -> Path:
         """Return the current project root for environment bootstrap."""
         session = self.session_store.get_session(self.session_id)
-        if session and getattr(session, "project_dir", ""):
-            return Path(str(session.project_dir)).expanduser().resolve()
+        project_dir = getattr(session, "project_dir", "") if session else ""
+        if project_dir:
+            return Path(str(project_dir)).expanduser().resolve()
         return Path.cwd()
 
     def _build_environment_snapshot(self) -> str:
@@ -213,10 +277,10 @@ class AgentLoop:
 
             tool_names = [tool.name for tool in self.tool_registry.get_all()]
             if tool_names:
-                preview = ", ".join(tool_names[:8])
+                tools_preview = ", ".join(tool_names[:8])
                 if len(tool_names) > 8:
-                    preview += ", ..."
-                lines.append(f"- Available tools: {preview}")
+                    tools_preview += ", ..."
+                lines.append(f"- Available tools: {tools_preview}")
 
             self._environment_snapshot = "\n".join(lines)
 
@@ -328,6 +392,8 @@ class AgentLoop:
         self._cancelled = False
         _run_start = time.monotonic()
         logger.debug("AgentLoop.run start: %s", user_message[:80])
+
+        self._fire_session_start()
 
         # Store user message
         self.session_store.add_message(self.session_id, "user", user_message)
@@ -692,6 +758,7 @@ class AgentLoop:
                             _episode_id, final_text, "tool_terminated",
                             {"iterations": _iteration + 1, "total_duration_ms": _total_ms},
                         )
+                    self._fire_stop(final_text, outcome="tool_terminated")
                     return final_text
 
             # Nudge: if iteration 2+ and no todo_write yet, inject planning prompt
@@ -732,6 +799,7 @@ class AgentLoop:
                 _episode_id, final_text, "max_iterations",
                 {"iterations": self.MAX_ITERATIONS, "total_duration_ms": _total_ms},
             )
+        self._fire_stop(final_text, outcome="max_iterations", failure=True)
         return final_text
 
     async def _handle_ask_user(
@@ -817,6 +885,13 @@ class AgentLoop:
             return await self._handle_ask_user(
                 tc, msg_id, on_tool_call=on_tool_call, callback=ask_user_callback,
             )
+
+        # PreToolUse hooks can abort the tool call via blocking result.
+        blocking = self._fire_pre_tool_use(tc)
+        if blocking is not None:
+            if on_tool_call:
+                on_tool_call(tc.name, "blocked", blocking)
+            return ToolExecutionOutcome((blocking, None))
 
         logger.debug("Executing tool: %s(%s)", tc.name, list(tc.arguments.keys()))
         if self._event_recorder and self._current_episode_id:

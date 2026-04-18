@@ -1,0 +1,11 @@
+⚠ [backend] WARNING: mock backend starting — this is a test warning
+> __SLOW__ hold the spinner
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+  Done after a slow pause.
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ Ask AutoCode…
+tools · openrouter · suggest · 11 tokens · mock-session-001                                                                                              master
+  suggest · shift+tab to cycle modes

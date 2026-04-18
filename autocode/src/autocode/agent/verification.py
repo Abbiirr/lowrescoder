@@ -82,6 +82,11 @@ class VerifyResult:
             "total_duration_ms": self.total_duration_ms,
         }
 
+    def write_to(self, path: Path) -> None:
+        """Write this result as indented JSON at ``path`` (creates parents)."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
+
 
 VERIFY_JSON_SCHEMA: dict[str, Any] = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

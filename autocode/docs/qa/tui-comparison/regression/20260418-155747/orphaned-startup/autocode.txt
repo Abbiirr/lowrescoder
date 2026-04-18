@@ -1,0 +1,8 @@
+AutoCode — Edge-native AI coding assistant
+Type a message to start. Use /help for commands, Ctrl+D to quit.
+
+Error: Backend not connected (startup timeout). Commands requiring the backend will fail.
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ Ask AutoCode…
+suggest                                                                                                                                                  master
+  suggest · shift+tab to cycle modes

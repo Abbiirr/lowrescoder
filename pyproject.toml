@@ -21,3 +21,8 @@ markers = [
     "integration: marks tests requiring external services",
     "benchmark: marks benchmark tests",
 ]
+
+[dependency-groups]
+dev = [
+    "pillow>=12.1.1",
+]

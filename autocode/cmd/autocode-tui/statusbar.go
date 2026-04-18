@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os/exec"
 	"strings"
 )
 
@@ -14,7 +15,28 @@ type statusBarModel struct {
 	Queue           int
 	SessionID       string
 	BackgroundTasks int
+	Branch          string // git branch, populated once at startup
 	Width           int
+}
+
+// detectGitBranch returns the current git branch (or "" if not a repo).
+// Called once at startup; the result is cached on the statusBar.
+func detectGitBranch() string {
+	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	branch := strings.TrimSpace(string(out))
+	if branch == "HEAD" {
+		// Detached HEAD: fall back to short SHA
+		shaOut, shaErr := exec.Command("git", "rev-parse", "--short", "HEAD").Output()
+		if shaErr == nil {
+			return strings.TrimSpace(string(shaOut))
+		}
+		return ""
+	}
+	return branch
 }
 
 func (s statusBarModel) View() string {
@@ -55,10 +77,47 @@ func (s statusBarModel) View() string {
 		result += fmt.Sprintf(" · ⏳ %d bg", s.BackgroundTasks)
 	}
 
-	maxLen := s.Width - 2
+	// Git branch pill, right-justified when width allows it.
+	var rightPill string
+	if s.Branch != "" {
+		rightPill = branchPillStyle.Render(" " + s.Branch + " ")
+	}
+
+	maxLen := s.Width - 2 - lipglossWidth(rightPill) - 2
 	if len(result) > maxLen && maxLen > 10 {
 		result = result[:maxLen-1] + "…"
 	}
 
-	return statusBarStyle.Render(result)
+	rendered := statusBarStyle.Render(result)
+	if rightPill != "" {
+		pad := s.Width - lipglossWidth(rendered) - lipglossWidth(rightPill)
+		if pad < 1 {
+			pad = 1
+		}
+		rendered = rendered + strings.Repeat(" ", pad) + rightPill
+	}
+	return rendered
+}
+
+// lipglossWidth is a crude visible-width approximation that strips ANSI
+// escapes so we can right-align the branch pill without the escape bytes
+// being counted as characters.
+func lipglossWidth(s string) int {
+	// Strip CSI ... m sequences using a minimal state machine.
+	width := 0
+	inEsc := false
+	for _, r := range s {
+		if inEsc {
+			if r == 'm' {
+				inEsc = false
+			}
+			continue
+		}
+		if r == 0x1b {
+			inEsc = true
+			continue
+		}
+		width++
+	}
+	return width
 }

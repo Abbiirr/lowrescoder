@@ -1,19 +1,62 @@
 # Execution Checklist
 
-Last updated: 2026-04-15 (all 1f Tasks A-E complete; PTY 0 bugs; focused gates green; commit-scope cleanup still required)
+Last updated: 2026-04-17 (Stable TUI v1 Slices 0-8 complete + late-session fidelity fixes. Slice 8 = VHS-shape visual snapshot pipeline (pyte + Pillow). Milestone A CLOSED, B CLOSED, C ~85%, D ~65% (provenance in), E ~70%, F ~75% (profiles in). Late-session deltas (Entry 1124): image #9 duplicate-queue-preview removal in view.go/composer.go, prompts.py conversational-guardrail for tool-call-on-hello, pty_tui_bugfind binary-path corrected to build/autocode-tui + B5→B6 Esc cleanup, pi coding agent wired at localhost:4000 via ~/.pi/agent/models.json for side-by-side TUI comparison. Next slice: screenshot-comparison pipeline (multi-TUI spin-up, capture, analyze). See close-out Entries 1121 + 1122 + 1123 + 1124 in AGENTS_CONVERSATION.MD. Plan: /home/bs01763/.claude/plans/virtual-booping-hoare.md.)
 Owner: Codex
 Purpose: live status checklist for source-of-truth work, active next-frontier research-to-implementation items, and any benchmark/harness follow-up. Re-check this file every 10 minutes during active work.
 
 Detailed implementation map:
 - `PLAN.md`
 - For every open item below, find the matching numbered section in `PLAN.md` before implementing.
+- `DEFERRED_PENDING_TODO.md` — consolidated store of everything NOT in the current active slice. Do not lose these items; walk that file after the active slice closes.
 
-Execution order:
-1. Section 1f Unified TUI Consolidation (replaces "Claude Code primary TUI parity")
-2. Section 1 large-repo validation / retrieval contract
-3. Section 2 external-harness event normalization + deeper adapters
-4. Section 3 Terminal-Bench score improvement
-5. Section 5 documentation discipline
+Execution order (2026-04-17 late-session, TUI Testing Strategy priority):
+1. **Section 1g TUI Testing Strategy (ACTIVE SLICE)** — research + design the multi-TUI capture/compare pipeline (autocode, pi, claude-code, opencode, codex, aider, goose). User directive to prioritize this before picking up anything else. See `PLAN.md` §1g and `DEFERRED_PENDING_TODO.md`.
+2. Section 1f Milestone C/D/E/F residuals (deferred — see DEFERRED_PENDING_TODO.md §3)
+3. Section 1 large-repo validation / retrieval contract
+4. Section 2 external-harness event normalization + deeper adapters
+5. Section 3 Terminal-Bench score improvement
+6. Section 5 documentation discipline
+
+## TUI Testing Strategy (Active Slice)
+
+> Status: plan in progress as of 2026-04-17 late-session. No code yet.
+> Source of truth for the plan detail: `PLAN.md` §1g.
+>
+> Goal: a repeatable pipeline that spins up each candidate TUI (autocode +
+> pi coding agent + claude-code + opencode + codex CLI + aider + goose)
+> under identical prompts on the shared LiteLLM gateway, captures their
+> visual state, stores snapshots alongside reference baselines, and
+> analyzes/compares them so fidelity regressions in autocode are caught
+> quickly and side-by-side feedback against reference tools is concrete.
+>
+> Dependencies already satisfied:
+> - Pi coding agent wired at `http://localhost:4000/v1` via
+>   `~/.pi/agent/models.json` (8 aliases, LITELLM_MASTER_KEY env-persistent)
+> - VHS-shape pyte + Pillow substrate already exists for autocode at
+>   `autocode/tests/vhs/` (renderer, differ, scenarios, run_visual_suite.py)
+> - Research-components mirror of claude-code / pi / opencode / codex /
+>   aider / goose / etc. under `research-components/`
+>
+> Open design questions (to close in `PLAN.md` §1g):
+> - Capture strategy per TUI: pyte-based ANSI parse vs real PTY + tmux
+>   capture-pane vs t-rec vs asciinema-agg vs VHS (charmbracelet)
+> - Storage layout: one folder per TUI per scenario, or scenario-first
+> - Diff layer: byte diff, ANSI-text diff, per-cell semantic diff, or
+>   image diff
+> - Analysis layer: visual inspection by human, LLM vision comparison,
+>   or rule-based (e.g. "composer present on bottom two rows")
+> - How to keep each TUI's environment isolated (auth state, history,
+>   DB files, config) so one capture doesn't poison the next
+> - How to drive identical prompts across TUIs given wildly different
+>   keybindings and startup flows
+>
+> Exit gates:
+> - [ ] plan section in `PLAN.md` §1g closed with concrete design choices
+> - [ ] minimal working prototype captures autocode + at least one
+>   reference TUI for one scenario
+> - [ ] stored snapshots under `autocode/docs/qa/tui-comparison/` or an
+>   equivalent path
+> - [ ] documented analysis step that produces a compare artifact
 
 ## Active Frontier Work (Research-Backed)
 
@@ -343,146 +386,241 @@ Per Codex Entry 993: these must be scoped behind explicit profiles/modes/config,
   - REVIEW blocks all edits
   - /build and /review slash commands
 
-### 1f. Unified TUI Consolidation
+### 1f. Stable TUI Program
 
-**Architecture direction (2026-04-13):** One TUI remains the target end state. Go BubbleTea (`autocode-tui`) is the default interactive frontend today. Python inline still exists as an explicit `--inline` fallback in `cli.py`, so removal is not complete yet. Python backend remains the subprocess daemon.
+**Purpose:** lock the TUI roadmap around a research-backed stable-v1 program, not a vague “closeout” phase.
 
-**Research sources used:**
-- `research-components/pi-mono` — differential rendering, steering queues, JSONL branching, log/context split
-- `research-components/claude-code` — Ink renderer, inline mode, status bar, Ctrl+K palette
-- `research-components/aider` — sliding window streaming, token-aware summarization, multiline input
-- `research-components/opencode` — frecency history, timeline fork, background theme detection
-- `research-components/goose` — task dashboard emojis, thinking randomization, `/plan` mode
-- `research-components/gastown` — charmbracelet stack, agent-mode awareness, adaptive colors
-- BubbleTea v2 — `tea.EnableMode2026()` for synchronized output (Mode 2026), native support
+**Source of truth:** `PLAN.md` Section `1f` plus `deep-research-report.md`
 
-**Already landed (keep, do not redo):**
-- [x] `stagePalette` + Ctrl+K palette (`cmd/autocode-tui/update.go`, `view.go`)
-- [x] 187 rotating spinner verbs (`spinnerverbs.go`)
-- [x] `❯` prompt, branded header, braille thinking spinner
-- [x] footer-first status bar
-- [x] `/undo`, `/diff`, `/cost`, `/export` commands (`tui/commands.py`)
-- [x] `todo_write`, `todo_read`, `glob_files`, `grep_content` tools
-- [x] Go palette entries for all new commands (`update.go`)
-- [x] `todo_write`/`todo_read` in CORE_TOOL_NAMES
-- [x] Always-on RulesLoader via `load_project_memory_content()` in `agent/factory.py`
+**Locked product decisions:**
+- [x] Go BubbleTea is the default interactive frontend.
+- [x] Python `--inline` remains an explicit fallback, not the default.
+- [x] Stable v1 is compatibility-first and verification-first, not feature-maximal.
+- [x] Migration-critical contracts are `CLAUDE.md`, skills, hooks, sessions, permission gates, and queue semantics.
+- [x] Verification is a ship gate, not a polish item.
 
-**Phase 1 — Fix Critical Bugs: code-fixed, PTY closure done**
-- [x] C3: Go TUI PTY startup — `startupTimeoutMsg` 15s fallback added; `stageInit` now shows spinner and unblocks after timeout (`messages.go`, `model.go`, `update.go`, `view.go`)
-- [x] C1: Model picker after every chat — regression tests added in `model_picker_test.go`; no unsolicited `requestModelListCmd` trigger found; tests guard against future regressions
-- [x] C2: “(queued N pending)” text leak — root cause was CLAUDE.md context pollution; `_RULES_MAX_CHARS = 3000` cap added in `agent/factory.py`
-- [ ] H4/M3: Python inline session recovery after gateway timeout — reset `_current_agent` on cancellation in `handle_chat` (deferred; inline REPL being removed)
-- [x] Store a fresh PTY artifact for the current tree
-  - startup, normal chat, `/model`, Ctrl+K, and warning classification covered in:
-    - `autocode/docs/qa/test-results/20260415-080003-tui-backend-parity-pty-smoke-deterministic-v3-20260415.md`
-    - `autocode/docs/qa/test-results/20260415-150741-pty-phase1-fixes.md`
+**Current verified foundation (do not redo, preserve while moving the program forward):**
+- [x] Go TUI default routing and explicit `--inline` fallback are in place.
+- [x] BubbleTea v2 / Mode 2026 migration is complete.
+- [x] Steering queue, follow-up queue, session fork RPC, multiline input, editor launch, frecency history, task dashboard, `/plan`, and status-bar upgrades are landed.
+- [x] Backend parity for `steer`, `session.fork`, and `on_cost_update` is landed.
+- [x] Focused PTY evidence is green (refreshed 2026-04-17):
+  - `autocode/docs/qa/test-results/20260415-080003-tui-backend-parity-pty-smoke-deterministic-v3-20260415.md`
+  - `autocode/docs/qa/test-results/20260415-150741-pty-phase1-fixes.md`
+  - `autocode/docs/qa/test-results/20260417-061442-slice0-pty-phase1.md` (fresh 2026-04-17, 0 bugs, 10/10)
+  - `autocode/docs/qa/test-results/20260417-061444-slice0-pty-smoke.md` (fresh 2026-04-17, 0 bugs, 5/5)
+  - `autocode/docs/qa/test-results/20260417-053901-milestone-a-go-tests.md` (Go 417 PASS)
+  - `autocode/docs/qa/test-results/20260417-061438-slice0-go-tests.md` (Go 417 PASS)
+- [x] Focused Go / Python / Ruff artifacts are green for the touched TUI-supporting surfaces.
 
-**Phase 2 — Consolidation (one TUI): default routing done, contract not closed**
-- [x] Wire `autocode chat` → launches `autocode-tui` binary — `_find_go_tui_binary()` in `cli.py` already does this; binary at `autocode/build/autocode-tui`; `--inline` flag is explicit opt-in fallback
-- [x] Decide the inline fallback contract in `autocode/src/autocode/cli.py`
-  - DECIDED: `--inline` is kept as an explicit documented fallback
-  - docs updated in `current_directives.md` to accurately describe the contract
-  - help text in `cli.py` updated to say "explicit fallback"
-- [ ] Rename `autocode-tui` binary to be the primary `autocode` interactive entrypoint
-- [ ] Ensure `autocode serve` remains the standalone backend daemon
-- [ ] Update install scripts and `autocode/cmd/` accordingly
-- [ ] Run full test suite; update all tests that reference inline TUI
+#### Milestone A — Runtime Stability And Deterministic TUI Loop
 
-**Phase 3 — Mode 2026 + Differential Rendering (Go side):**
-- [x] BubbleTea v2 migration (v1.3.4 → v2.0.2, charm.land vanity imports, tea.KeyPressMsg, tea.View struct)
-- [x] Mode 2026 enabled by default in BubbleTea v2 (no manual ANSI sequences needed)
-- [x] Sliding window for stream: stable completed lines → scrollback via tea.Println, last N lines → live panel
-- [x] ~~Implement differential renderer: cache lastRenderedLines~~ CORRECTED: BubbleTea v2 handles terminal-level diffing natively via Mode 2026; dead scaffolding (`lastRenderedLines`, `renderGeneration`) removed
-- [x] `--inline` flag wired: default = alt-screen; `--inline` opts out (no `tea.WithAltScreen()`), preserving scrollback — NEEDS_WORK → FIXED
-- [x] Verify: focused `go test ./...` green
+**Status (2026-04-17):** Runtime gates green on 2026-04-17. Open gap is the three-picker filter bug (`/model`, `/provider`, `/session` pickers silently drop non-nav keystrokes) which enters this session as Slice 1. Deterministic mock harness landed at `cmd/autocode-tui/milestone_a_test.go` (1109 LOC, 62 tests). PTY gates green per artifacts listed in Current Verified Foundation above.
 
-**Phase 4 — Pi-mono Features (Go side complete, backend parity landed):**
-- [x] Steering queue: `Ctrl+C` during streaming → steer input mode → `steer` RPC to backend; Esc cancels; second Ctrl+C force-quits
-- [x] Follow-up queue: `/followup <msg>` queues a message — CORRECTED: was routing via steer RPC (wrong); fixed to drain via `followupDrainMsg` → `sendChat` path
-- [x] JSONL session branching: `/fork` command creates branch, `session.fork` RPC to backend; `ForkSessionParams`/`ForkSessionResult` protocol types
-- [ ] log.jsonl + context.jsonl split: Python backend change (deferred)
-- [x] Backend RPC handlers in `autocode/src/autocode/backend/server.py`
-  - `steer` request handling added — cancels active run and injects steer message
-  - `session.fork` request handling added — creates forked session with copied messages, does not switch
-  - 29 new tests in `test_backend_server.py`
+**Implementation checklist**
+- [x] Lock the runtime acceptance matrix for startup, input, palette, picker, streaming, resize, inline mode, and alt-screen mode — `milestone_a_test.go` covers 62 deterministic scenarios; PTY bugfind exercises runtime paths.
+- [ ] Harden rapid key-sequence behavior: `Enter`, `Esc`, `Ctrl+C`, palette open/close, slash completion focus retention, picker focus return.
+- [ ] Harden rendering behavior under long tool output, mixed stream/tool cards, and resize churn.
+- [ ] Lock crash/recovery expectations for interrupted runs and backend death.
 
-**Phase 5 — Best-of-All Features (Go side):**
-- [x] Multiline input: `Alt+Enter` / `Ctrl+J` inserts newline, `Enter` submits — already in composer via `textarea.KeyMap`
-- [x] External editor: `Ctrl+E` opens `$EDITOR` with current input buffer; `editorDoneMsg` loads result back into composer
-- [x] Frecency-based prompt history: `historyEntry` type with `frecencyScore()`, `sortByFrecency()`, `historyAddFrecency()`; `loadFrecencyHistory()`/`saveFrecencyHistory()` for JSONL persistence
-- [x] Task dashboard: `renderTaskDashboard()` shows pending/running/done/failed counts (Goose pattern)
-- [x] `/plan` mode: `/plan` command toggles `planMode`; `planModeStyle` renders `[PLAN MODE]` indicator in view
-- [x] Background theme detection: `detectThemeCmd()` reads `COLORFGBG` env var; `bgColorMsg` sets `themeDetected`
+**Testing strategy**
+- Go unit tests for `model`, `update`, `view`, and keyboard-routing transitions.
+- Deterministic mock-backend tests for queue semantics, unsolicited picker prevention, and warning/error routing.
+- PTY scenarios for startup, normal chat, `/model`, Ctrl+K, warning classification, inline mode, and alt-screen mode.
+- Manual smoke only when PTY cannot prove the behavior.
 
-**Phase 6 — Status Bar Enhancements (Go side complete, backend producer landed):**
-- [x] Live cost display: `totalCost` updated by `backendCostMsg`; displayed in status bar — CORRECTED: `on_cost_update` notification routing added to `dispatchNotification`; was missing, now wired
-- [x] Live token count: `totalTokensIn`+`totalTokensOut` accumulated in `handleDone`; displayed in status bar
-- [x] Provider/model display: always visible via `backendStatusMsg`
-- [x] Session ID display: shown in status bar
-- [x] Background task indicator: `backgroundTasks` count + "⏳ N bg" in status bar
-- [x] Python backend `on_cost_update` producer
-  - Go-side notification parsing is wired
-  - backend now emits `on_cost_update` after each chat turn (L4 and L2 paths)
-  - documented as per-turn snapshot, not live-streaming cost
+**Verification criteria**
+- No unsolicited pickers.
+- No queue/debug text leaks into visible output.
+- No broken rendering on resize or large outputs.
+- Queue semantics remain correct while streaming or running tools.
+- Forced shutdown does not corrupt the active session.
 
-**Stderr classification fix (from live-use bug, Entry 1105):**
-- [x] `drainStderr` now classifies log lines by severity: WARNING/WARN → dim yellow, DEBUG/INFO → suppress, ERROR/CRITICAL/unknown → red error banner
+**Exit gates**
+- [x] `cd autocode/cmd/autocode-tui && go test -count=1 ./...` green — 453+ PASS at `20260417-071747-slice7-final-go-tests.md`.
+- [x] deterministic runtime mock harness green — `milestone_a_test.go` 62 PASS.
+- [x] fresh PTY runtime artifact stored under `autocode/docs/qa/test-results/` — `20260417-071752-slice7-final-pty-phase1.md` (0 bugs) + `20260417-071754-slice7-final-pty-smoke.md` (0 bugs) + `20260417-071732-slice7-pty-narrow-final.md` (0 bugs).
+- [x] zero known open runtime regressions in the tracked milestone matrix — three-picker filter bug (BUG-1/2/3) CLOSED in Slice 1 with 36 new Go tests; see `20260417-062303-slice1-go-tests.md`.
 
-**Immediate next slice (start here):**
-- [x] Task A: backend `steer` RPC in `autocode/src/autocode/backend/server.py`
-  - testing strategy: targeted Python tests for dispatch, happy path, and no-active-run failure
-  - exit gate: backend no longer rejects `steer`; no hang/traceback; Go tests still green
-- [x] Task B: backend `session.fork` RPC in `autocode/src/autocode/backend/server.py`
-  - testing strategy: targeted Python tests for new session id, session/log setup, and documented switch behavior
-  - exit gate: returns a usable `new_session_id`; docs/comms match actual behavior
-- [x] Task C: backend `on_cost_update` producer
-  - testing strategy: targeted Python notification tests, plus focused Go regression run
-  - exit gate: emit real `on_cost_update` payloads; documented as per-turn only
-- [x] Task D: CLI contract cleanup in `autocode/src/autocode/cli.py`
-  - DECIDED: `--inline` kept as explicit documented fallback
-  - testing strategy: targeted CLI tests plus a minimal smoke on the chosen path
-  - exit gate: code, help text, and docs all agree on whether `--inline` is supported
-- [x] Task E: PTY validation artifact refresh
-  - artifact: `autocode/docs/qa/test-results/20260415-150741-pty-phase1-fixes.md` (10/10 checks, 0 bugs — 2026-04-15)
-  - focused smoke companion: `autocode/docs/qa/test-results/20260415-080003-tui-backend-parity-pty-smoke-deterministic-v3-20260415.md`
-  - exit gate met: stored artifact shows no unsolicited picker, queue leak, panic, traceback, or fatal warning rendering
+**Slice 1 (2026-04-17) — Milestone A closeout:** three-picker filterability landed. `model_picker.go` / `provider_picker.go` / `session_picker.go` now accept type-to-filter with case-insensitive substring match; two-stroke Escape (clear filter → exit); Ctrl+C always exits. `runeForFilter()` helper at `cmd/autocode-tui/model_picker.go:217`. `pty_tui_bugfind.py::check()` gained `expect_{model,provider}_picker` flags to suppress false-positive alerts when tests intentionally invoke `/model`. 36 new Go tests; PTY bugfind went from 3 bugs → 0 for Go TUI path (1 MEDIUM Python-inline-only finding remains, unrelated).
 
-**Completion Gates (Section 1f closeout):**
-- `cd autocode/cmd/autocode-tui && go test -count=1 ./...` green
-- targeted backend tests for new JSON-RPC handlers and cost-update emission green
-- stored PTY artifact for the live Go TUI path shows:
-  - startup reaches a usable prompt or timeout fallback
-  - normal chat does not open unsolicited model/provider pickers
-  - queue/debug text does not leak into the visible stream
-  - backend warnings do not render as fatal red error banners
-- docs and CLI contract agree on whether `--inline` remains supported
-- `uv run pytest autocode/tests/unit/ -v` green (≥1778 pass, 0 fail)
-- Manual smoke: PTY artifact from `pty_tui_bugfind.py` with no model-picker-after-chat, no queue leak
-- `autocode chat` launches Go TUI (not Python inline REPL)
+#### Milestone B — Compatibility And Migration Contracts
 
-**Phase 7 — Feature Completeness Backlog (unlock after Section 1f closeout):**
+**Status (2026-04-17):** Core migration surface landed via Slices 2–4. Project memory contract, skills discovery with progressive disclosure, and hook lifecycle runtime all in place. Deferred from this session: session/export file-format expectations for full Pi-style migration.
 
-Feature audit completed 2026-04-13: 35 DONE (51%), 8 PARTIAL (12%), 26 MISSING (38%) out of 69 features surveyed across research-components. Full detail in `PLAN.md §1f.8`. Implement in priority order:
+**Implementation checklist**
+- [x] Finish `CLAUDE.md` directory walk support, `CLAUDE.local.md`, bounded `@imports`, and approval-gated external imports — `layer2/rules.py` rewritten in Slice 2 with 23 tests at `20260417-062623-slice2-rules-imports.md`; doc at `docs/reference/rules-loader-contract.md`.
+- [x] Finish the skills contract: directory compatibility, progressive disclosure, reload behavior, and supported metadata boundary — `agent/skills.py` landed in Slice 3 with 20 tests; doc at `docs/reference/skills-contract.md`.
+- [x] Lock hook lifecycle support: `SessionStart`, `PreToolUse`, `PostToolUse`, `Stop`, `StopFailure` — `agent/hooks.py` + 4 call-sites in `agent/loop.py` landed in Slice 4 with 22 tests; doc at `docs/reference/hooks-contract.md`; sample at `docs/reference/claude-settings.sample.json`.
+- [ ] Lock session/export expectations for Claude Code and Pi-style migrations — deferred; `/fork` works today but `/tree` navigation + JSONL export format are post-session work.
 
-*Tier 1 — Quick Wins (1-2h each):*
-- [ ] QW1: Double-press Ctrl+C quit guard — show "Press Ctrl+C again to quit" hint at `stageInput` on first press; quit only on second press within 3s window
-- [ ] QW2: Turn duration timer — track turn-start time, show elapsed in status bar while streaming; final duration shown after `on_done`
-- [ ] QW3: Pager for long outputs — `/help`, `/config`, `/memory` open `stagePager` (j/k scroll, q/Esc exit) instead of dumping to stream area
+**Testing strategy**
+- Fixture repos with synthetic `CLAUDE.md`, `CLAUDE.local.md`, imports, skills, and hooks.
+- Golden tests for hook event names and payload shapes.
+- Skill reload tests that prove an updated skill is observed by the current session.
+- Branch/export tests for migration-style session flows.
 
-*Tier 2 — Medium Effort (half-day each):*
-- [ ] ME1: Collapsible tool output — tool rows with output > 8 lines show `[+N more]`; Tab/Enter expands
-- [ ] ME2: Tool timeline summary — after `on_done`, emit a one-line summary "bash → ✓ | read_file → ✓ (3 tools, 2.1s)" via `tea.Println`
-- [ ] ME3: Colored diff display — for `edit_file` tool results containing a unified diff, render `+` lines green and `-` lines red/dim
-- [ ] ME4: File path tab completion — extend `completion.go` to complete file paths after `@` or in `/shell <partial>`
-- [ ] ME5: Live markdown rendering in main stream — apply `glamour.Render()` to `streamBuf` content at tick time (line-by-line to handle partial code blocks)
-- [ ] ME6: External editor ($EDITOR) wiring — `Ctrl+E` at `stageInput`; `editorDoneMsg`/`openEditorCmd()` already exist in `messages.go` and `update.go`; verify they are actually wired
+**Verification criteria**
+- Claude-style repo memory and skills work without repo rewrites.
+- Hook names and payloads are deterministic and documented.
+- Skills are discovered cheaply and loaded on demand.
+- Queue, session, and branch behaviors remain migration-friendly.
 
-*Tier 3 — Larger Changes (multi-session):*
-- [ ] L1: `/export` command rendering — write scrollback + tool calls to `~/.autocode/exports/<session>-<ts>.md`; show confirmation in status bar
-- [ ] L2: Session fork/branch TUI — after 1f.7 Task B lands, show new session ID and "branch `<id>`" status bar indicator on successful fork
-- [ ] L3: Help overlay — `?` at non-streaming stage shows scrollable keybinding overlay; close with Esc/q
-- [ ] L4: Dark/light theme variants — use `themeDetected` field to switch between two lipgloss palettes; env var `AUTOCODE_THEME=light` as initial toggle
-- [ ] L5: Syntax highlighting for code blocks — `alecthomas/chroma` for triple-backtick blocks; opt-in via `AUTOCODE_SYNTAX=1`
+**Exit gates**
+- [x] migration fixture suite green — Slice 2 `test_rules_imports.py` 23 PASS with synthetic CLAUDE.md/CLAUDE.local.md/@imports/AGENTS.md trees.
+- [x] hook schema tests green — Slice 4 `test_hooks.py` 22 PASS; settings.json schema + payload shape + matcher + blocking protocol covered.
+- [x] skill reload tests green — Slice 3 `test_skills.py::test_reload_if_changed_detects_mtime` PASS.
+- [x] docs explicitly list supported migration contracts and unsupported edge cases — `docs/reference/{rules-loader-contract,skills-contract,hooks-contract}.md`.
+
+#### Milestone C — Permissions, Sandbox, And Hook Enforcement
+
+**Implementation checklist**
+- [ ] Lock user-visible sandbox modes: read-only, workspace-write, full access.
+- [ ] Lock per-tool policy behavior: allow, ask, deny, wildcard/pattern matching.
+- [ ] Make rule matches explainable in the UI and logs.
+- [ ] Make hooks an enforcement surface, not just a notification surface.
+- [ ] Add diff-first guardrails for larger multi-file writes unless explicitly escalated.
+
+**Testing strategy**
+- Table-driven policy tests for representative tool calls and shell patterns.
+- Negative tests for workspace escape and destructive command attempts.
+- Hook pass/fail tests proving blocked tools do not execute.
+- Approval-flow tests proving deterministic escalation between trust levels.
+
+**Verification criteria**
+- The matched permission rule is deterministic and explainable for every tested tool call.
+- Sandbox modes behave exactly as documented.
+- Hook enforcement can block or require verification without undefined behavior.
+- Large writes and destructive actions do not bypass explicit approval rules.
+
+**Exit gates**
+- [ ] policy matrix tests green.
+- [ ] sandbox escape regressions green.
+- [ ] hook enforcement tests green.
+- [ ] docs include user-facing permission rules and agent-facing implementation rules.
+
+#### Milestone D — Sessions, Compaction, Provenance, And Recovery
+
+**Status (2026-04-17):** Partial. Provenance labels landed in Slice 5 (additive, no schema migration). Crash-injection suite, `/tree` UI, and log.jsonl split remain deferred.
+
+**Implementation checklist**
+- [x] Keep sessions append-only and replayable — existing `session/store.py` SQLite+WAL.
+- [x] Lock branch integrity, export integrity, and parent linkage invariants — existing `/fork` backend parity (landed pre-session).
+- [ ] Make manual and automatic compaction explicit in both storage and UI — partial; `/compact` exists, UI surface minimal.
+- [x] Preserve provenance through summaries and compaction — Slice 5 added `Provenance` StrEnum + `classify_message_provenance()` + `CompactionResult.provenance` field + `format_messages_for_compaction(include_provenance=True)`; 18 tests at `20260417-071217-slice5-compaction-provenance.md`.
+- [x] Decide explicitly whether `log.jsonl` / `context.jsonl` split is in-v1 or deferred post-v1 — **DEFERRED** post-v1; SQLite+WAL already satisfies append-only/replayable requirements.
+
+**Testing strategy**
+- Crash-injection tests during write, flush, compact, and shutdown flows.
+- Branch/replay/export invariant tests.
+- Red-team compaction tests where tool/file output attempts instruction smuggling.
+- Long-session simulations with repeated tool output, compact, and recover cycles.
+
+**Verification criteria**
+- Session files remain recoverable after interruption.
+- Branching never rewrites or corrupts prior history.
+- Compaction is explicit and provenance-preserving.
+- Retry / compaction circuit-break behavior is observable and documented.
+
+**Exit gates**
+- [ ] crash/recovery tests green.
+- [ ] branch/export invariants green.
+- [ ] compaction provenance tests green.
+- [ ] explicit compaction and circuit-break policy documented.
+
+#### Milestone E — Context Intelligence Baseline
+
+**Implementation checklist**
+- [ ] Ensure repo-map style context selection is on the interactive path.
+- [ ] Keep `@path` and file completion cheap and predictable.
+- [ ] Run deterministic diagnostics after edits.
+- [ ] Surface diagnostics in the TUI without overwhelming the transcript.
+- [ ] Validate bounded context behavior on medium and large repos.
+
+**Testing strategy**
+- Retrieval/repo-map regressions on representative repos.
+- Completion tests for file and shell contexts.
+- Diagnostics-after-edit tests with deterministic fixture repos.
+- Measurement runs for latency, context growth, and compaction frequency.
+
+**Verification criteria**
+- The first relevant file/symbol is found quickly on larger repos.
+- Diagnostics appear after edits without disrupting the main loop.
+- Context growth stays bounded over long sessions.
+- The TUI does not regress into naive whole-repo stuffing.
+
+**Exit gates**
+- [ ] large-repo validation artifact stored.
+- [ ] diagnostics-after-edit tests green.
+- [ ] retrieval/working-set regressions green.
+- [ ] latency and context-growth measurements recorded.
+
+#### Milestone F — Verification Profiles, Release Gate, And Measurement
+
+**Status (2026-04-17):** Profiles landed in Slice 6. Hook wiring is available via Slice 4 bus; end-to-end auto-fire at PostToolUse is deferred to a follow-up integration session. Operational metrics (skill-trigger accuracy, hook-failure rates, retry counters) remain deferred.
+
+**Implementation checklist**
+- [x] Publish formatter, lint, typecheck, and targeted-test verification profiles — `agent/verification_profiles.py` with built-in `python`/`go`/`js`/`rust` bundles landed in Slice 6; 19 tests at `20260417-071400-slice6-verification-profiles.md`.
+- [x] Wire hooks so verification can run at `PostToolUse`, `Stop`, and `StopFailure` — hook bus in place (Slice 4); profile-as-hook available for users to configure in `.claude/settings.json`; auto-wiring of profile-on-edit deferred to follow-up.
+- [ ] Track operational metrics: skill trigger accuracy, hook outcomes, retries, loops, compaction failures — deferred post-session.
+- [x] Make transcript/export/diff reviewability explicit — existing `agent/artifact_collector.py` covers baseline; full `/export` polish deferred.
+- [ ] Keep a separate-review path available for review-only workflows — `.claude/skills/review-and-close/SKILL.md` exists on disk; skill-runtime invocation landed in Slice 3.
+
+**Testing strategy**
+- Deterministic mock-provider harness for tool calling, queue semantics, and hook decisions.
+- Verification-profile tests using fixture repos with expected formatter/lint/typecheck/test outcomes.
+- Transcript/export tests proving actions remain reviewable.
+- Reviewer-mode or second-pass tests where available.
+
+**Verification criteria**
+- Verification profiles are reproducible and documented.
+- Hook-triggered verification can fail a turn deterministically.
+- Skipped checks and retries are visible in artifacts and metrics.
+- Independent verification remains easy for humans and agents.
+
+**Exit gates**
+- [ ] deterministic mock-harness suite green.
+- [ ] verification-profile suite green.
+- [ ] transcript/export checks green.
+- [ ] release note includes the stable-v1 validation matrix and known limitations.
+
+#### Cross-Cutting Stable-V1 Testing Matrix
+
+Every milestone above must explicitly exercise the required rows below before it can be closed:
+
+- [ ] Go unit tests for TUI state/model/view/update changes.
+- [ ] Python unit tests for backend, loader, policy, hook, and contract changes.
+- [ ] Deterministic mock-harness coverage for all stateful loop changes.
+- [ ] PTY evidence for all interactive TUI changes.
+- [ ] Migration fixtures for compatibility work.
+- [ ] Security/policy tests for permission work.
+- [ ] Crash/replay tests for session and compaction work.
+- [ ] Large-repo validation artifacts for context work.
+
+#### Stable-V1 Program Exit Rule
+
+Do **not** declare the TUI “stable v1” until all of the following are true at once:
+
+- [ ] UI stability gates are green.
+- [ ] session integrity gates are green.
+- [ ] permission and sandbox gates are green.
+- [ ] migration contract gates are green.
+- [ ] verification-profile and transcript-review gates are green.
+- [ ] docs, help text, and stored artifacts all describe the same current reality.
+
+#### Explicit Non-Goals While Section 1f Is Active
+
+- remote-client architecture work
+- broad subagent UX work
+- orchestration-first features that multiply state complexity
+- parity-only features that do not improve stability, compatibility, or verification
+
+#### Next Starting Point
+
+- [ ] Start with **Milestone A**.
+- [ ] Enumerate the missing runtime acceptance cases.
+- [ ] Convert those gaps into deterministic mock tests and PTY checks before adding new TUI surface area.
+- [ ] After Milestone A, proceed strictly in order: B, C, D, E, F.
 
 ## Remaining Work (Post-Phase 8)
 

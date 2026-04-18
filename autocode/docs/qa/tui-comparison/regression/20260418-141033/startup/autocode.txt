@@ -1,0 +1,7 @@
+AutoCode — Edge-native AI coding assistant
+Type a message to start. Use /help for commands, Ctrl+D to quit.
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ Ask AutoCode…
+tools · openrouter · suggest · a7db2678-20d1-48a3-954a-401797826cf2                                                                                      master
+  suggest · shift+tab to cycle modes

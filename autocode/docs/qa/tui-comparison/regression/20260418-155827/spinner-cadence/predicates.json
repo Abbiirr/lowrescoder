@@ -1,0 +1,65 @@
+{
+  "hard": {
+    "approval_prompt_keyboard_interactive": {
+      "detail": "N/A \u2014 scenario 'spinner-cadence' has no ask-user modal",
+      "passed": true
+    },
+    "basic_turn_returns_to_usable_input": {
+      "detail": "N/A \u2014 scenario 'spinner-cadence' has no turn",
+      "passed": true
+    },
+    "composer_present": {
+      "detail": "composer-specific marker present",
+      "passed": true
+    },
+    "no_crash_during_capture": {
+      "detail": "raw_bytes=8001",
+      "passed": true
+    },
+    "no_queue_debug_leak": {
+      "detail": "clean",
+      "passed": true
+    },
+    "picker_filter_accepts_input": {
+      "detail": "N/A \u2014 scenario 'spinner-cadence' is not a picker scenario",
+      "passed": true
+    },
+    "response_followed_user_prompt": {
+      "detail": "N/A \u2014 scenario 'spinner-cadence' has no turn",
+      "passed": true
+    },
+    "spinner_frame_updates_over_time": {
+      "detail": "saw 10 distinct braille frames: \u2807\u280b\u280f\u2819\u2826\u2827\u2834\u2838\u2839\u283c",
+      "passed": true
+    },
+    "spinner_observed_during_turn": {
+      "detail": "N/A \u2014 scenario 'spinner-cadence' has no turn",
+      "passed": true
+    },
+    "startup_timeout_fires_when_backend_absent": {
+      "detail": "N/A \u2014 scenario 'spinner-cadence' is not an orphaned-startup scenario",
+      "passed": true
+    },
+    "warnings_render_dim_not_red_banner": {
+      "detail": "N/A \u2014 scenario 'spinner-cadence' is not an error-state scenario",
+      "passed": true
+    }
+  },
+  "soft": {
+    "composer_has_rounded_border": {
+      "detail": "no rounded-border characters found (Track 3 gap H1)",
+      "passed": false
+    },
+    "spinner_has_interrupt_hint": {
+      "detail": "no interrupt-hint text found (Track 3 gap H2)",
+      "passed": false
+    }
+  },
+  "summary": {
+    "all_hard_passed": true,
+    "hard_passed": 11,
+    "hard_total": 11,
+    "soft_passed": 0,
+    "soft_total": 2
+  }
+}

@@ -47,7 +47,7 @@ type model struct {
 	width      int
 	height     int
 	quitting   bool
-	inlineMode bool // --inline flag: scrollback-friendly, no alternate screen
+	inlineMode bool // inline is the default (scrollback-friendly); --altscreen opts into alt-screen
 	claudeLike bool // claude_like profile gate — enables composer frame
 
 	// Streaming buffers (pointers to avoid copy-by-value panic)
@@ -100,11 +100,13 @@ type model struct {
 	modelPickerEntries []string
 	modelPickerCursor  int
 	modelPickerCurrent string // model that was active when the picker opened
+	modelPickerFilter  string // type-to-filter query (case-insensitive substring)
 
 	// Provider picker state (opened from /provider)
 	providerPickerEntries []string
 	providerPickerCursor  int
 	providerPickerCurrent string // provider that was active when the picker opened
+	providerPickerFilter  string // type-to-filter query (case-insensitive substring)
 
 	// Command palette state (Ctrl+K)
 	paletteFilter  string
@@ -113,10 +115,15 @@ type model struct {
 
 	// Session picker state
 	sessionPickerEntries []sessionEntry
+	sessionPickerFilter  string // type-to-filter query (case-insensitive substring)
 
 	// --- Phase 3: Sliding window streaming ---
 	stableScrollbackLines []string // lines flushed to scrollback (never redrawn)
 	maxLiveLines          int      // max lines kept in the live stream panel (default 10)
+
+	// turnStart is the wall-clock time the current streaming turn began,
+	// used by renderStreamArea to show elapsed seconds next to the spinner.
+	turnStart time.Time
 
 	// --- Phase 4: Steering queue ---
 	stageSteer  bool   // true when user pressed Ctrl+C during streaming to type a steer message
@@ -159,8 +166,9 @@ func initialModel(backend *Backend) model {
 		composer:   newComposer(60),
 		claudeLike: claudeLike,
 		statusBar: statusBarModel{
-			Model: "...",
-			Mode:  "suggest",
+			Model:  "...",
+			Mode:   "suggest",
+			Branch: detectGitBranch(),
 		},
 		spin:            sp,
 		stage:           stageInit,

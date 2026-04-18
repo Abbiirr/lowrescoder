@@ -1,0 +1,10 @@
+⚠ [backend] WARNING: mock backend starting — this is a test warning
+> __ASK_USER__ please continue
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Please choose how to proceed:
+  ❯ 1. Continue
+    2. Abort
+    3. Retry
+
+tools · openrouter · suggest · mock-session-001                                                                                                          master
+  suggest · shift+tab to cycle modes

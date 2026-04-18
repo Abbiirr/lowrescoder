@@ -1,0 +1,49 @@
+{
+  "hard": {
+    "basic_turn_returns_to_usable_input": {
+      "detail": "N/A \u2014 scenario 'startup' has no turn",
+      "passed": true
+    },
+    "composer_present": {
+      "detail": "composer-specific marker present",
+      "passed": true
+    },
+    "no_crash_during_capture": {
+      "detail": "raw_bytes=1876",
+      "passed": true
+    },
+    "no_queue_debug_leak": {
+      "detail": "clean",
+      "passed": true
+    },
+    "picker_filter_accepts_input": {
+      "detail": "N/A \u2014 scenario 'startup' is not a picker scenario",
+      "passed": true
+    },
+    "response_followed_user_prompt": {
+      "detail": "N/A \u2014 scenario 'startup' has no turn",
+      "passed": true
+    },
+    "spinner_observed_during_turn": {
+      "detail": "N/A \u2014 scenario 'startup' has no turn",
+      "passed": true
+    }
+  },
+  "soft": {
+    "composer_has_rounded_border": {
+      "detail": "no rounded-border characters found (Track 3 gap H1)",
+      "passed": false
+    },
+    "spinner_has_interrupt_hint": {
+      "detail": "no interrupt-hint text found (Track 3 gap H2)",
+      "passed": false
+    }
+  },
+  "summary": {
+    "all_hard_passed": true,
+    "hard_passed": 7,
+    "hard_total": 7,
+    "soft_passed": 0,
+    "soft_total": 2
+  }
+}

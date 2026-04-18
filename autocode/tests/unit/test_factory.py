@@ -77,13 +77,21 @@ def test_create_agent_loop_bootstraps_task_board_when_missing(tmp_path: Path) ->
 
 
 def test_load_project_memory_content_merges_rules_and_memory(tmp_path: Path) -> None:
-    """Always-on rules should be prepended ahead of project memory."""
+    """Always-on rules should be prepended ahead of project memory.
+
+    Skill catalog section is orthogonal to this test — mock it empty so the
+    rules-vs-memory ordering is the only thing asserted.
+    """
     memory_dir = tmp_path / ".autocode"
     memory_dir.mkdir()
     (memory_dir / "memory.md").write_text("project memory", encoding="utf-8")
 
-    with patch("autocode.layer2.rules.RulesLoader") as mock_rules:
+    with (
+        patch("autocode.layer2.rules.RulesLoader") as mock_rules,
+        patch("autocode.agent.skills.default_catalog") as mock_catalog,
+    ):
         mock_rules.return_value.load.return_value = "rule A\nrule B"
+        mock_catalog.return_value.scan.return_value = []
         result = load_project_memory_content(tmp_path)
 
     assert result == "rule A\nrule B\n\nproject memory"
