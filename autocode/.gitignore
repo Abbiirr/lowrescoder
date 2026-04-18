@@ -50,6 +50,8 @@ logs/
 docs/qa/test-results/
 docs/qa/e2e-test-results/
 docs/qa/phase3-benchmarks/
+docs/qa/tui-comparison/regression/
+docs/qa/vhs/candidates/
 
 
 toolsharbor-cli/
