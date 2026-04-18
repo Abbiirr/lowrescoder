@@ -924,7 +924,7 @@ When documents conflict, the following authority order applies:
 | Priority | Document | Scope | Updates |
 |----------|----------|-------|---------|
 | 1 (highest) | `docs/plan/phase5-agent-teams.md` | Phase 5 sprint scope, gates, exit criteria, tech decisions | Canonical for Phase 5 implementation |
-| 2 | `docs/plan.md` | Project-wide roadmap, milestone summaries, cross-phase gates | References Phase 5 plan, does not override it |
+| 2 | `PLAN.md` (repo root) | Project-wide roadmap, milestone summaries, cross-phase gates. Absorbed `docs/plan.md` on 2026-04-18 (§6 carries the MVP Acceptance checklist). | References Phase 5 plan, does not override it |
 | 3 | `docs/requirements_and_features.md` | Feature catalog, sprint listing, status tracking | Derived from Phase 5 plan |
 | 4 | `CLAUDE.md` | Agent instructions, tech stack summary, testing rules | Summarizes; defers to Phase 5 plan on conflict |
 

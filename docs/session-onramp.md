@@ -11,7 +11,7 @@ This is the fastest way to rebuild correct working context in a new session.
 3. `AGENT_COMMUNICATION_RULES.md` — required before reading active comms
 4. `AGENTS_CONVERSATION.MD` — only the active tail, not archives
 5. `EXECUTION_CHECKLIST.md` — live open work; the Claude Code primary TUI parity item is currently first
-6. `PLAN.md` — detailed implementation map for each open item, including Section `1f` for the TUI parity work
+6. `PLAN.md` — detailed implementation map for each open item, including Section `1f` (TUI runtime stability) and Section `1g` (TUI testing strategy, four-dimension matrix)
 7. `benchmarks/benchmarks/STATUS.md` — benchmark scoreboard and lane notes
 
 ## 2) Current Execution Focus
@@ -29,6 +29,7 @@ This is the fastest way to rebuild correct working context in a new session.
 
 Important current detail:
 - Section `1f` already has a partial Go TUI parity slice landed in the worktree
+- Section `1g` owns the TUI testing strategy (four dimensions — runtime invariants, design-target ratchet, self-vs-self PNG regression, PTY smoke). Canonical guide: `docs/tests/tui-testing-strategy.md`.
 - resume from that diff; do not restart the TUI workstream from scratch
 
 Do not treat `docs/plan/phase5-agent-teams.md` as the current execution target.
@@ -76,6 +77,15 @@ at the superproject root.
 - `EXECUTION_CHECKLIST.md`
 - `PLAN.md`
 - `PROJECT_STATUS.md`
+
+### TUI testing matrix
+
+- `docs/tests/tui-testing-strategy.md` — canonical four-dimension guide
+- `autocode/tests/vhs/README.md` — self-vs-self PNG regression
+- `autocode/tests/tui-comparison/README.md` — Track 1 runtime invariants
+- `autocode/tests/tui-references/README.md` — Track 4 design-target ratchet
+- `autocode/tests/pty/README.md` — live-PTY smoke harnesses
+- Make targets: `make tui-regression` (Track 1), `make tui-references` (Track 4)
 
 ## 5) Commands You Actually Need
 

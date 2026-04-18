@@ -1,83 +1,96 @@
-# Repository Guidelines
-
-## Project Structure & Module Organization
-The live interactive path is the Go TUI (`cmd/autocode-tui/`) with Python backend support under `src/autocode/`. Legacy Python UI frontends still exist in-tree, but the current contract is: Go TUI by default, Python inline only as explicit `--inline` fallback. Key paths:
-- `src/autocode/` — application code
-- `cmd/autocode-tui/` — Go TUI client (JSON-RPC frontend)
-- `tests/` — unit, integration, and benchmark tests
-- `docs/` — plans and research documents
-- `CLAUDE.md` — collaboration principles and the "LLM as last resort" rule
-- `AGENT_COMMUNICATION_RULES.md` — cross-agent communication protocol
-- `AGENTS_CONVERSATION.MD` — active message log between agents
-
-Current layout has these UI surfaces:
-- **Go TUI (default):** `autocode/cmd/autocode-tui/` — BubbleTea JSON-RPC frontend, launched by `autocode chat`
-- **Python inline fallback:** `autocode/src/autocode/inline/` — Rich + prompt_toolkit REPL, launched via `autocode chat --inline`
-- **Legacy Textual UI code:** `autocode/src/autocode/tui/` — still present in-tree, not the primary interactive path
+# Repository Guidelines — AutoCode
 
 ## Session Context (Read First)
-For fast session startup and current-state context, read in this order:
-- `current_directives.md` — **active sprint, what to work on next, pending decisions**
-- `docs/session-onramp.md` — compact codebase + plan + command context
-- `docs/plan/phase5-agent-teams.md` — Phase 5 plan (active phase)
-- `docs/archive/plan/phase3-execution-brief.md` — Phase 3 completion summary (archived)
+
+1. `current_directives.md` — active sprint, what to work on next, pending decisions.
+2. `EXECUTION_CHECKLIST.md` — live open work items and their exit gates.
+3. `PLAN.md` — detailed implementation map (see §1f TUI runtime stability and §1g TUI testing strategy).
+
+## Roles
+
+- **Builders (default): OpenCode and any other coding agent** onboarded to the repo. Write implementation, run tests, store artifacts.
+- **Reviewers / Architects (default): Claude and Codex.** Review code and docs, validate architecture, design approaches. **Rarely build** — do not assign implementation work to Claude or Codex unless the user explicitly redirects.
+- **Director: User.** Sets direction, approves changes, commits.
+
+The user can redirect any agent to any role per task. Full protocol and participant table: `AGENT_COMMUNICATION_RULES.md`.
+
+## Commit Policy
+
+**Coding agents do not commit.** Never run `git commit`, `git push`, `git reset`, or any tree-mutating git command. Propose changes, run tests, store artifacts; the human user commits.
 
 ## Build, Test, and Development Commands
-Current commands (run from superproject root):
-- `uv sync` — install workspace deps
-- `uv run pytest autocode/tests/unit/ benchmarks/tests/ -v` — all tests
-- `uv run pytest autocode/tests/unit/ -v --cov=src/autocode` — autocode tests
-- `uv run pytest benchmarks/tests/ -v` — benchmark tests
-- `cd autocode && uv run ruff check src/ tests/` — lint
-- `cd autocode && uv run mypy src/autocode/` — type check
-- `uv run python -m autocode` or `uv run autocode chat` — run autocode
-- `make test` and `make lint` — via Makefile delegator
 
-## Coding Style & Naming Conventions
-- Python 3.11+.
-- 4-space indentation, PEP 8 conventions.
+Run from superproject root:
+
+- `uv sync` — install workspace deps
+- `make test` / `make lint` — via Makefile delegator
+- `uv run pytest autocode/tests/unit/ -v --cov=src/autocode` — autocode unit tests
+- `uv run pytest -m integration autocode/tests/integration/` — integration (self-skips without API keys / gateway)
+- `uv run autocode chat` — run autocode
+
+Full command reference: `autocode/TESTING.md`.
+
+## TUI Testing
+
+Four complementary dimensions: runtime invariants · design-target ratchet · self-vs-self PNG regression · live PTY smoke.
+
+- **Canonical guide:** `docs/tests/tui-testing-strategy.md`
+- **Make targets:** `make tui-regression` (Track 1) and `make tui-references` (Track 4)
+- **Track 4** scenes are `strict=True` xfail by design — **never remove the `xfail` decorator** unless you shipped the UI feature that closes the gap.
+- **Every TUI change** requires real-terminal/PTY evidence plus a stored artifact at `autocode/docs/qa/test-results/<YYYYMMDD-HHMMSS>-<label>.md` (hand-written; capture the entrypoint, inputs, expected vs observed, pass/fail per check).
+
+## Repository Structure
+
+| Directory | Contents |
+|---|---|
+| `autocode/` | Python backend (`src/autocode/`), Go TUI (`cmd/autocode-tui/`), product tests |
+| `benchmarks/` | Benchmark harness, adapters, e2e fixtures, benchmark tests |
+| `docs/` | All documentation |
+| `training-data/` | Training data for models |
+
+Root keeps: `CLAUDE.md`, `AGENTS.md`, `AGENTS_CONVERSATION.MD`, `AGENT_COMMUNICATION_RULES.md`, `PLAN.md`, `EXECUTION_CHECKLIST.md`, `current_directives.md`, `pyproject.toml`, `Makefile`.
+
+## Where to Find What (Session Index)
+
+| What you need | Where to find it |
+|---|---|
+| **Active sprint / what to do next** | **`current_directives.md`** |
+| Live open work + exit gates | `EXECUTION_CHECKLIST.md` |
+| Full product roadmap | `PLAN.md` |
+| Fast session startup | `docs/session-onramp.md` |
+| Testing & evaluation overview | `autocode/TESTING.md` |
+| **TUI testing strategy (all four dimensions)** | `docs/tests/tui-testing-strategy.md` |
+| **TUI visual snapshot pipeline (VHS)** | `autocode/tests/vhs/README.md` |
+| **TUI runtime-invariant harness (Track 1)** | `autocode/tests/tui-comparison/README.md` |
+| **TUI design-target ratchet (Track 4)** | `autocode/tests/tui-references/README.md` |
+| **TUI live-PTY smoke harnesses** | `autocode/tests/pty/README.md` |
+| MVP acceptance checklist | `PLAN.md` §6.2 |
+| Feature catalog (built vs planned) | `docs/requirements_and_features.md` |
+| Agent communication protocol | `AGENT_COMMUNICATION_RULES.md` |
+| Agent message log | `AGENTS_CONVERSATION.MD` |
+| Message format examples | `docs/reference/comms-examples.md` |
+| **Feature audit** (pi-mono / claude-code / opencode / codex / aider / claw-code / goose / open-swe) | `docs/plan/research-components-feature-checklist.md` |
+| Archived conversations | `docs/communication/old/` (read only when explicitly asked) |
+| Archived/superseded docs | `docs/archive/` |
+
+## Coding Style & Naming
+
+- Python 3.11+, 4-space indentation, PEP 8.
 - `snake_case` for functions/variables, `PascalCase` for classes.
 - Package naming follows the architecture (`layer1`, `layer2`, `layer3`, `layer4`, `edit`, `git`, `core`).
-If you introduce a formatter/linter (for example, ruff or black), document it here and add the config files.
 
-## Testing Guidelines
-- Framework: `pytest`. Run with `uv run pytest tests/ -v` or `make test`.
-- Tests are organized under `tests/unit/`, `tests/integration/`, and `tests/benchmark/`.
-- Name test files `test_*.py`.
-- Integration tests are deselected by default via pytest config (`-m 'not integration'` in `pyproject.toml`). Run them explicitly with `uv run pytest -m integration tests/integration/`.
-- Add or update tests for every functional change.
-- If you change interactive terminal behavior, you must follow [docs/tests/tui-testing-strategy.md](/home/bs01763/projects/ai/lowrescoder/docs/tests/tui-testing-strategy.md) and run the full checklist in that file before calling the work done.
-- For TUI work, unit tests alone are not sufficient. You must produce real-terminal or PTY-backed evidence, plus a stored artifact under `docs/qa/test-results/`.
-- Use [docs/tests/pty-testing.md](/home/bs01763/projects/ai/lowrescoder/docs/tests/pty-testing.md) for the PTY harness/how-to details, and [docs/tests/tui-testing-strategy.md](/home/bs01763/projects/ai/lowrescoder/docs/tests/tui-testing-strategy.md) for the required validation matrix and exit gates.
-- **Visual regression pipeline (VHS shape)** — for any change to TUI layout, color, alt-screen, pickers, palette, scrollback, or composer: run [`autocode/tests/vhs/run_visual_suite.py`](/home/bs01763/projects/ai/lowrescoder/autocode/tests/vhs/run_visual_suite.py) and compare against the committed reference PNGs in `autocode/tests/vhs/reference/`. Full guide: [`autocode/tests/vhs/README.md`](/home/bs01763/projects/ai/lowrescoder/autocode/tests/vhs/README.md). Runner usage: `uv run python autocode/tests/vhs/run_visual_suite.py` (regression) or `--update` (refresh baselines when a visual change is intentional).
-- **Feature audit reference** — before adding a new TUI/agent feature, skim [`docs/plan/research-components-feature-checklist.md`](/home/bs01763/projects/ai/lowrescoder/docs/plan/research-components-feature-checklist.md) to see whether an equivalent pattern has been ported or queued from pi-mono / claude-code / opencode / codex / aider / claw-code / goose / open-swe sources in `research-components/`.
-- **Side-by-side TUI comparison** — the pi coding agent (`pi` on PATH, v0.67.6) is pre-wired at `http://localhost:4000/v1` via `~/.pi/agent/models.json` with 8 gateway aliases (`coding`, `tools`, `thinking`, `fast`, `big`, `default`, `swebench`, `terminal_bench`). Use `pi --provider litellm --model <alias>` for parity prompts. API key is resolved from the persistent `LITELLM_MASTER_KEY` env var (set in `~/.bashrc` and `~/.profile`). Screenshot-comparison pipeline is the active next slice.
-- If any required TUI check cannot be run, state that explicitly and do not claim the TUI work is complete without user acknowledgment.
-- Always store test/lint/typecheck output artifacts with `./scripts/store_test_results.sh <label> -- <command>` (writes to `docs/qa/test-results/`).
+## Agent Communication
 
-## Commit & Pull Request Guidelines
-- Current history uses short, sentence-case summaries (for example, "Bootstraps project"). No formal convention yet.
-- Use imperative, concise subjects; add a body when behavior changes.
-- PRs should include: summary, rationale, affected files, and test results (or why tests were not run). Link issues if applicable.
+All agent-to-agent communication goes through `AGENTS_CONVERSATION.MD`. Protocol: `AGENT_COMMUNICATION_RULES.md`.
+
+- **Before any action:** check `AGENTS_CONVERSATION.MD` for pending items directed to you.
+- **Never run another agent's CLI directly.** Write messages in `AGENTS_CONVERSATION.MD`; the user launches other agents.
+- **Never read from `docs/communication/old/`** unless the user explicitly asks — archives are off-limits by default.
+- **Reviews:** focus on technical risks, behavior, and architecture — not grammar/style nitpicks.
+
+Invocation: Claude Code uses the `/comms` slash command; other agents follow `.claude/commands/comms.md` or the protocol in `AGENT_COMMUNICATION_RULES.md` directly.
 
 ## Security & Configuration
+
 - Keep secrets out of the repo. Config is expected in `~/.autocode/config.yaml`.
-- Maintain local-first defaults; network access should be explicit and opt-in.
-
-## Architecture Notes
-- The system is layered: deterministic analysis first, LLMs last. Read `CLAUDE.md` before making architectural changes.
-
-## Agent Communication (Required)
-
-Full protocol: `AGENT_COMMUNICATION_RULES.md`. Message log: `AGENTS_CONVERSATION.MD`. Use `/comms` (Claude Code) or follow `.claude/commands/comms.md` (other agents).
-
-- **Before any action**: check `AGENTS_CONVERSATION.MD` for pending items directed to you
-- **Reviews**: focus on technical risks, behavior, and architecture — not grammar/style nitpicks
-- **Archives** (`docs/communication/old/`): OFF-LIMITS unless user explicitly asks
-
-## Agent Roles & Review Verification
-
-- **Codex role:** Reviewer / Architect.
-- For **Codex review-only tasks** (no implementation changes), Codex does **not** need to rerun tests if valid artifacts already exist under `docs/qa/test-results/`.
-- In those review-only cases, Codex may cite existing stored test/lint/typecheck/benchmark artifacts as verification evidence.
-- If Codex (or any agent) makes implementation changes, follow normal testing guidance and generate fresh artifacts with `./scripts/store_test_results.sh <label> -- <command>`.
+- Local-first defaults; network access is explicit and opt-in.

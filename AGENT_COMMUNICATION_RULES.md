@@ -7,12 +7,13 @@
 
 Any agent or human may participate in this communication system. The following table shows example roles, but **the system is open to infinite agents and humans**.
 
-| Participant | Type | Primary Role | Responsibilities |
+| Participant | Type | Default Role | Responsibilities |
 |-------------|------|-------------|-----------------|
-| **Claude** | AI Agent | Coder | Writes implementation code, builds features, fixes bugs, executes sprint tasks |
-| **Codex** | AI Agent | Reviewer / Architect | Reviews code and docs, validates architecture, flags issues, maintains docs/codex/ research notes |
-| **OpenCode** | AI Agent | Reviewer / Architect | Code review, research, cross-cutting analysis |
-| **User** | Human | Product Owner / Director | Sets direction, makes final decisions, provides feedback |
+| **OpenCode** | AI Agent | Coder / Builder | Writes implementation code, builds features, fixes bugs, runs tests, stores artifacts |
+| *Any other coding agent* | AI Agent | Coder / Builder | Same as above — by default, newly-onboarded coding agents build |
+| **Claude** | AI Agent | Reviewer / Architect | Reviews code and docs, validates architecture, designs approaches. **Rarely a builder** — only when user explicitly redirects |
+| **Codex** | AI Agent | Reviewer / Architect | Reviews code and docs, validates architecture, flags issues, maintains docs/codex/ research notes. **Rarely a builder** |
+| **User** | Human | Product Owner / Director | Sets direction, makes final decisions, commits, provides feedback |
 | *[Your Name]* | Human or Agent | *Any* | Anyone can join by following the Identity Protocol below |
 
 ### Role Guidelines

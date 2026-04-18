@@ -1,4 +1,4 @@
-.PHONY: setup test lint format clean clean-runtime tui go-test bench tui-regression tui-reference-capture
+.PHONY: setup test lint format clean clean-runtime tui go-test bench tui-regression tui-reference-capture tui-references
 
 setup:
 	cd autocode && uv sync --all-extras
@@ -61,3 +61,22 @@ tui-regression:
 tui-reference-capture:
 	@echo "Not yet implemented — Phase 3 work. See PLAN.md §1g Track 2."
 	@false
+
+# -- TUI reference-driven testing (Slice 1 landed; Slice 2 in roadmap) --
+#
+# `tui-references` runs the design-target ratchet: structural predicates
+# on the Go TUI's live pyte render, contrasted against the canonical
+# scene contract extracted from `tui-references/AutoCode TUI _standalone_.html`.
+#
+# Expected outcome today: 4 XFAILED (strict=True). Each xfail is a
+# design-to-implementation gap that will flip to a hard regression
+# check the moment the matching UI feature ships — see
+# `autocode/tests/tui-references/README.md`.
+#
+# The unit tests for the extractor + predicates do NOT require the Go
+# binary and run in ~0.12s.
+
+tui-references:
+	cd autocode && uv run python tests/tui-references/extract_scenes.py
+	cd autocode && uv run pytest tests/unit/test_tui_reference_extractor.py tests/unit/test_tui_reference_predicates.py -v
+	cd autocode && uv run pytest tests/tui-references/ -v

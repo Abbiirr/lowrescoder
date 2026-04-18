@@ -3,6 +3,8 @@
 > How to test, evaluate, and interpret results for AutoCode.
 > Last updated: 2026-02-28
 
+> **For TUI testing specifically** (the 4-dimension matrix — runtime invariants, design-target ratchet, self-vs-self PNG regression, live PTY smoke), see `docs/tests/tui-testing-strategy.md`. This guide's `Go TUI tests` row below is only the Go unit-test slice.
+
 ---
 
 ## Quick Reference

@@ -1,19 +1,18 @@
 # PTY TUI Bug Report
 
-**Date:** 2026-04-13  
+**Date:** 2026-04-18  
 **Tester:** PTY automated (pty_tui_bugfind.py)  
 **Go TUI binary:** `/home/bs01763/projects/ai/lowrescoder/autocode/build/autocode-tui`  
 **Python chat:** `/home/bs01763/.local/bin/autocode chat`  
 
 ## Summary
 
-1 bugs found.
+2 bugs found.
 
 | # | Severity | Label | Detail |
 |---|---------|-------|--------|
-| 1 | MEDIUM | B7_todo_write: old 'Thinking…' spinner text still present (verb rotation not applied) | 
-  ↳ queued (1 pending): use todo_write to plan: step 1, step 2
- · queue: 1⠙  |
+| 1 | HIGH | B6_file_expansion: @file mention not expanded | Output: show me @  |
+| 2 | MEDIUM | B8_rules_loader: model doesn't seem to know project invariants | Output:  |
 
 ## Full Findings Log
 
@@ -39,7 +38,7 @@ SUITE A — Go TUI (autocode-tui)
   ✓ A3_model_picker — picker opened as expected
 
 [A4] /diff command
-  ✓ A4_diff — got diff content (3296 bytes)
+  ✓ A4_diff — got diff content (3355 bytes)
 
 [A5] /cost command
   ✓ A5_cost — usage info returned
@@ -91,26 +90,27 @@ SUITE B — Python inline chat (autocode chat)
   ✓ B5_model_py — model responded
 
 [B6] @file mention expansion
-  ✓ B6_file_expansion — @file expanded into message
+
+  ❌ [HIGH] B6_file_expansion: @file mention not expanded
+     Output: show me @ 
 
 [B7] todo_write tool registration check
-
-  ❌ [MEDIUM] B7_todo_write: old 'Thinking…' spinner text still present (verb rotation not applied)
-     
-  ↳ queued (1 pending): use todo_write to plan: step 1, step 2
- · queue: 1⠙ ⠹ ⠸ ⠼ Think⠴ ⠦ ⠧ ⠇ ⠏ Thinking… (13⠋ ⠙ ⠹ Shipp⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏ ⠋ Reinventing… (13s)⠙ Reinventing… (14⠹ 
-  ✓ B7_todo_write — todo_write appears to be wired
+  ℹ B7_todo_write: inconclusive (0B): 
 
 [B8] RulesLoader — rules injected at session start?
-  ✓ B8_rules_loader — model knows CLAUDE.md invariants — RulesLoader active
+
+  ❌ [MEDIUM] B8_rules_loader: model doesn't seem to know project invariants
+     Output: 
 
 ══════════════════════════════════════════════════════════════════════
-DONE — 1 bugs found
+DONE — 2 bugs found
 ══════════════════════════════════════════════════════════════════════
+
+  HIGH (1)
+    • B6_file_expansion: @file mention not expanded
+      Output: show me @ 
 
   MEDIUM (1)
-    • B7_todo_write: old 'Thinking…' spinner text still present (verb rotation not applied)
-      
-  ↳ queued (1 pending): use todo_write to plan: step 1, step 2
- · queue: 1⠙ ⠹ ⠸ ⠼ Think⠴ ⠦ ⠧ ⠇ ⠏ Thinking… (
+    • B8_rules_loader: model doesn't seem to know project invariants
+      Output: 
 ```

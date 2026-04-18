@@ -765,14 +765,17 @@ After Milestone A, move in order:
 
 ## 1g. TUI Testing Strategy (Active Slice)
 
-**Last updated:** 2026-04-18 (Phase 1 Track 1 substrate landed).
+**Last updated:** 2026-04-18 (Phase 1 Track 1 substrate landed; Track 4
+reference-driven Slice 1 APPROVED by Codex Entry 1197).
 **Status:** Architecture APPROVED by Codex Entry 1141 + doc-polish
 delta APPROVED by Codex Entry 1144. Phase 1 Track 1 substrate
 implemented under `autocode/tests/tui-comparison/` with positive +
 negative control tests green and end-to-end `make tui-regression`
 target producing the 5 artifacts per scenario. Track 2 + Track 3
 remain open for follow-up slices per the three-track architecture
-below.
+below. Track 4 (reference-driven design-target ratchet against the
+`tui-references/` mockup bundle) landed Slice 1 on 2026-04-18 with
+Codex APPROVE via Entry 1197 — see §Track 4 below.
 
 ### Post-Codex-1138 Three-Track Architecture (AUTHORITATIVE)
 
@@ -841,6 +844,61 @@ separate jobs into one pipeline. Split cleanly:
   (pi at Tier B + any one Tier C). If more Tier C tools capture
   cleanly, great; if they don't on that day, they go on the next
   attempt.
+
+#### Track 4 — `tui-references` (design-target ratchet, added 2026-04-18)
+
+- **Scope:** Deterministic, structural parity between the live Go TUI
+  and the 14-scene mockup bundle under `tui-references/`. Distinct from
+  Track 1 (which checks runtime *invariants*) and Track 2 (which
+  captures *other* TUIs for visual comparison). Track 4 checks whether
+  the live autocode TUI layout matches the product owner's design
+  target on a per-scene basis.
+- **Substrate:** `autocode/tests/tui-references/` — reuses the Track 1
+  PTY capture driver, DSR responder, and pyte render helper; does not
+  duplicate process-launch code.
+- **Source of truth:** the HTML bundle
+  `tui-references/AutoCode TUI _standalone_.html`. The JPG exports are
+  human-readable artifacts only; the `<template id="t-<scene>">`
+  subtrees are the contract. Extracted into `manifest.yaml` (14 scenes,
+  4 populated: `ready`, `active`, `recovery`, `narrow`; 10 stubbed).
+- **Contract:** structural predicates on a pyte Screen — HUD presence,
+  composer presence, keybind footer, scene-specific markers (recovery
+  action cards, narrow-layout fit, active-turn indicator),
+  capture-sanity floor. No image metrics, no OCR, no content-anchor
+  matching against demo values.
+- **Xfail ratchet semantics:** every MVP test is
+  `@pytest.mark.xfail(strict=True)`. Tests are expected to FAIL today
+  because the UI does not yet render the design-target layout.
+  `strict=True` turns any unexpected XPASS (= UI feature landed) into a
+  suite failure, forcing the developer to remove the decorator and
+  promote the scene to a hard regression gate. Each xfail reason names
+  the concrete gap blocking promotion.
+- **CI hook:** `make tui-references` runs the extractor + predicate
+  unit tests (stdlib only, ~0.12s) plus the live PTY ratchet
+  (~16s, all currently XFAIL). Green in CI because XFAIL counts as
+  success under `strict=True`.
+- **Slice status:**
+  - **Slice 1 — LANDED 2026-04-18, APPROVED by Codex Entry 1197.**
+    Files: `autocode/tests/tui-references/{__init__.py, extract_scenes.py,
+    manifest.yaml, predicates.py, test_reference_scenes.py, README.md}` +
+    `autocode/tests/unit/test_tui_reference_{extractor,predicates}.py`.
+    43 unit tests + 4 live PTY xfail tests.
+  - **Slice 2 — pending user authorization.** Scope: themed parallel
+    renderer (Tokyo Night + vendored JetBrains Mono) under Track 4,
+    side-by-side HTML artifact report per scene, region-SSIM as
+    non-blocking reporting metric, mock-backend `__HALT_FAILURE__`
+    trigger for the recovery scene. Adds `scikit-image` + `imagehash`
+    dev-deps.
+  - **Slice 3 (optional, later):** Headless Chromium + xterm.js
+    live-side rendering for defensible pixel-level diff. Opt-in via
+    `make tui-references-highfi`.
+- **DoD for closing Track 4:** every MVP scene promoted out of xfail.
+  That happens one scene at a time as the matching UI feature ships —
+  HUD chip row closes `ready`, tool-chain panel + diff hunks close
+  `active`, narrow-layout branch closes `narrow`, recovery action cards
+  + halt trigger close `recovery`. Track 4 remains "open" until all
+  four xfails are flipped off.
+- **Review chain:** `AGENTS_CONVERSATION.MD` Entries 1182 → 1200.
 
 #### Track 3 — `tui-style-gap-backlog` (non-slice)
 
@@ -1627,3 +1685,52 @@ Keep the live docs coherent while this frontier evolves.
 ### Rule
 
 If implementation or research changes the true next step, update these in the same session.
+
+
+## 6. MVP Acceptance & Targets (absorbed from docs/plan.md)
+
+### 6.1 Success Metrics
+
+| Metric | Target | Verification |
+|---|---|---|
+| LLM call reduction | 60–80% vs naive approach | Instrumentation logging |
+| Edit success rate (first attempt) | >40% | Aider polyglot benchmark subset |
+| Edit success rate (with retry) | >75% | Aider polyglot benchmark subset |
+| Simple query latency | <500 ms | Automated timing tests |
+| Agentic task completion | >50% on custom test suite | Manual + automated |
+| Memory usage (idle) | <2 GB RAM (stretch: <500 MB) | System monitoring |
+| Memory usage (inference) | <8 GB VRAM | System monitoring |
+
+### 6.2 MVP Acceptance Checklist
+
+All 12 must pass for MVP release.
+
+| # | Criterion | Pass Condition |
+|---|---|---|
+| 1 | CLI operational | `autocode chat`, `ask`, `edit`, `config`, `--help` all work |
+| 2 | Local LLM integration | LLM Gateway streams responses with <2 s to first token |
+| 3 | Edit success rate | >40% pass@1 on 50-task Aider benchmark subset |
+| 4 | Edit with retry | >75% success after up to 3 retries |
+| 5 | No data loss | 0 file corruptions across 100 edit operations |
+| 6 | Rollback works | 100% of failed edits restore original file state |
+| 7 | Layer 1 accuracy | 100% correct on deterministic query test suite (find refs, go-to-def, list symbols) |
+| 8 | Search relevance | >60% precision@3 on custom retrieval test suite |
+| 9 | Latency targets | Layer 1 <50 ms; hybrid search <200 ms; simple query <500 ms |
+| 10 | Memory limits | Idle <2 GB RAM; inference <8 GB VRAM |
+| 11 | Sandbox enforced | Blocked commands rejected; timeout kills long-running processes |
+| 12 | Git safety | Every successful edit creates a commit; `/undo` reverts cleanly |
+
+### 6.3 Sandbox Default Policy
+
+Executable in §1f.3 "Permissions, Sandbox, And Hook Enforcement". Concrete baseline:
+
+- **Allowed by default:** `pytest`, `python`, `pip`, `mvn`, `gradle`, `java`, `javac`, `git status`, `git diff`.
+- **Blocked by default:** `rm -rf`, `sudo`, `curl`, `wget`, network commands.
+- **Working directory:** restricted to project root.
+- **Timeout:** 30 s default, 300 s max.
+- **User override:** `~/.autocode/config.yaml` → `shell.allowed_commands`, `shell.blocked_commands`, `shell.allow_network`.
+
+### 6.4 Observability Requirements
+
+- Per-request logs: latency, tokens, model, retries.
+- Debug log with full prompts and responses (local only, opt-in).

@@ -490,14 +490,20 @@ spinner/clock cells (not implemented today; future work).
 
 ### Binary not found at `build/autocode-tui`
 
-**Cause:** the Go binary wasn't built after a source change.
+**Cause:** the Go binary wasn't built after a source change, or the
+canonical output path is stale.
 
-**Fix:**
+**Fix:** rebuild into `autocode/build/autocode-tui` (the same binary path
+the PTY / Track 1 / Track 4 harnesses use):
 
 ```bash
 cd /home/bs01763/projects/ai/lowrescoder/autocode/cmd/autocode-tui
-GOROOT=/usr/lib/go-1.24 PATH=/usr/lib/go-1.24/bin:$PATH go build -o autocode-tui .
+GOROOT=/usr/lib/go-1.24 PATH=/usr/lib/go-1.24/bin:$PATH \
+  go build -o /home/bs01763/projects/ai/lowrescoder/autocode/build/autocode-tui .
 ```
+
+Override the resolved path with `AUTOCODE_TUI_BIN=<path>` when running
+the suite — matches the PTY harness convention.
 
 ### Visual suite is slow
 

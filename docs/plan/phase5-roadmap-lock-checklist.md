@@ -46,7 +46,7 @@ If blocked (network/deps/runtime), artifact must include:
 
 Docs must be internally consistent for roadmap authority:
 - `docs/plan/phase5-agent-teams.md`
-- `docs/plan.md`
+- `PLAN.md` (repo root; absorbed the former `docs/plan.md` on 2026-04-18 — MVP acceptance lives in §6)
 - `docs/requirements_and_features.md`
 - `docs/session-onramp.md`
 - `docs/plan/benchmark-hardening-phase1.md`

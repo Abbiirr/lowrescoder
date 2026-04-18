@@ -4,6 +4,42 @@ This is the required validation policy for interactive terminal UI changes in th
 
 `docs/tests/pty-testing.md` explains how to run PTY checks. This file defines what must be tested before a TUI-affecting change is considered done.
 
+---
+
+## TUI Testing Matrix (fresh-agent onramp)
+
+The repo has **four complementary TUI testing dimensions**. They answer different questions; use the right one for the change you made. Each has its own tree with its own README.
+
+| # | Dimension | Question it answers | Entry command | Substrate + README |
+|---|---|---|---|---|
+| 1 | **Runtime invariants** (Track 1) | Does the TUI start, accept input, render warnings correctly, and not leak debug state? | `make tui-regression` | `autocode/tests/tui-comparison/README.md` |
+| 2 | **Design-target ratchet** (Track 4) | Does the live TUI render the layout the mockup bundle specifies? Each scene is a `strict=True` xfail that flips to a hard gate when the matching UI feature ships. | `make tui-references` | `autocode/tests/tui-references/README.md` |
+| 3 | **Self-vs-self PNG regression** (VHS) | Did today's TUI render pixel-identical to yesterday's committed baseline? | `uv run python autocode/tests/vhs/run_visual_suite.py` | `autocode/tests/vhs/README.md` |
+| 4 | **PTY smoke** (live gateway or mock) | Does the real binary + real backend path work end-to-end in a real terminal? | `uv run python autocode/tests/pty/<script>.py` (see README) | `autocode/tests/pty/README.md` |
+
+**When to use which:**
+
+- **Changed runtime invariants (crash, composer, warnings, pickers, queues)** → Track 1.
+- **Implementing a UI feature that matches a mockup scene** → Track 4 (the ratchet's XPASS is the signal you're done; flip the `xfail` off).
+- **Changed layout / color / palette / alt-screen / scrollback** → VHS self-regression (commit new baseline or prove no drift).
+- **Changed backend/TUI JSON-RPC contract or startup timeout** → PTY smoke.
+
+**Architecture source of truth:** `PLAN.md` §1g (all four tracks are documented there; §1g Track 4 is the canonical spec for the design-target ratchet).
+
+**Review chain for Track 4:** `AGENTS_CONVERSATION.MD` Entries 1182 → 1200.
+
+### Do not confuse the dimensions
+
+A fresh agent landing on a failing test needs to know which dimension it belongs to before "fixing" it:
+
+- Track 1 failure → actual runtime regression; fix the TUI code.
+- Track 4 `xfail` → **expected** until the matching UI feature ships; **do not remove the decorator** unless you shipped the feature.
+- VHS diff → either intentional layout change (re-baseline with `--update` and explain) or unintentional regression (fix).
+- PTY smoke failure → probably a backend contract change or gateway issue; check `docs/tests/pty-testing.md`.
+
+---
+
+
 ## Rule
 
 If you change interactive terminal behavior, you must run the full checklist in this file.

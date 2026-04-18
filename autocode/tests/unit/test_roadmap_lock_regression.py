@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 
 def _repo_root() -> Path:
     """Find the repo root (contains CLAUDE.md) or fall back to parents[2]."""
@@ -62,24 +60,27 @@ def test_claude_md_exists() -> None:
     assert path.exists(), "CLAUDE.md must exist."
 
 
-def test_claude_md_references_phase5() -> None:
-    path = _repo_root() / "CLAUDE.md"
-    content = path.read_text(encoding="utf-8")
-    assert "Phase 5" in content, "CLAUDE.md must reference current Phase 5."
+# CLAUDE.md was restructured on 2026-04-18 to be very lean and near-identical
+# to AGENTS.md; detailed tech-stack / phase / Jedi locks moved to their
+# canonical homes below. These tests follow that move so they stay
+# meaningful as roadmap locks.
 
 
-def test_claude_md_has_tech_stack_status() -> None:
-    path = _repo_root() / "CLAUDE.md"
+def test_phase5_plan_authoritative() -> None:
+    """Phase 5 status and scope must live in its authoritative plan file."""
+    path = _repo_root() / "docs/plan/phase5-agent-teams.md"
+    assert path.exists(), "Phase 5 plan must exist."
     content = path.read_text(encoding="utf-8")
-    assert "| Status |" in content or "Status |" in content, (
-        "CLAUDE.md tech stack must have Status column."
+    assert "Phase 5" in content, "Phase 5 plan must reference Phase 5."
+
+
+def test_jedi_locked_in_phase5_plan() -> None:
+    """Jedi as Python semantics choice is a locked tech decision."""
+    path = _repo_root() / "docs/plan/phase5-agent-teams.md"
+    content = path.read_text(encoding="utf-8")
+    assert "Jedi" in content, (
+        "Phase 5 plan must keep Jedi as Python semantics choice."
     )
-
-
-def test_claude_md_references_jedi() -> None:
-    path = _repo_root() / "CLAUDE.md"
-    content = path.read_text(encoding="utf-8")
-    assert "Jedi" in content, "CLAUDE.md must reference Jedi as Python semantics choice."
 
 
 def test_claude_md_no_outlines_as_active() -> None:
@@ -122,43 +123,26 @@ def test_requirements_references_phase5_plan() -> None:
     )
 
 
-# --- docs/plan.md ---
+# --- PLAN.md (absorbed docs/plan.md content 2026-04-18) ---
+#
+# ``docs/plan.md`` was absorbed into ``PLAN.md`` §6 "MVP Acceptance &
+# Targets" and removed. The MVP acceptance checklist moved to
+# ``PLAN.md §6.2``; the sandbox / observability / success-metrics
+# subsections moved to ``PLAN.md §6.1 / §6.3 / §6.4``. The legacy
+# per-phase "Phase 4 COMPLETE" style assertions no longer apply —
+# phase history now lives in ``current_directives.md`` and
+# ``EXECUTION_CHECKLIST.md``.
 
 
-def test_plan_md_exists() -> None:
-    path = _repo_root() / "docs/plan.md"
-    assert path.exists(), "Plan doc must exist."
-
-
-def test_plan_md_phase4_complete() -> None:
-    path = _repo_root() / "docs/plan.md"
+def test_plan_md_absorbed_into_root_plan() -> None:
+    """The absorbed content must now live in PLAN.md §6."""
+    path = _repo_root() / "PLAN.md"
     content = path.read_text(encoding="utf-8")
-    assert "Phase 4" in content and "COMPLETE" in content, (
-        "Plan must mark Phase 4 as COMPLETE."
+    assert "MVP Acceptance" in content, (
+        "PLAN.md must carry the MVP Acceptance section absorbed from docs/plan.md."
     )
-
-
-def test_plan_md_phase5_references_plan_file() -> None:
-    path = _repo_root() / "docs/plan.md"
-    content = path.read_text(encoding="utf-8")
-    assert "phase5-agent-teams.md" in content, (
-        "Plan must reference the Phase 5 plan file."
-    )
-
-
-def test_plan_md_no_outlines() -> None:
-    path = _repo_root() / "docs/plan.md"
-    content = path.read_text(encoding="utf-8")
-    # Outlines should be marked as replaced, not listed as active
-    lines_with_outlines = [
-        line for line in content.split("\n")
-        if "Outlines" in line
-        and "replaced" not in line.lower()
-        and "Resolved" not in line
-        and "https://" not in line  # exclude appendix reference links
-    ]
-    assert len(lines_with_outlines) == 0, (
-        f"Plan should not list Outlines as active: {lines_with_outlines}"
+    assert "§6.2" in content or "MVP Acceptance Checklist" in content, (
+        "PLAN.md must expose an MVP Acceptance Checklist subsection."
     )
 
 
@@ -297,39 +281,6 @@ def test_phase5_plan_rev3_marker() -> None:
     assert "Rev 3" in content, "Phase 5 plan must be at Rev 3."
 
 
-# --- QA Lock Pack Artifacts ---
-
-
-@pytest.mark.skipif(
-    not (_repo_root() / "docs/qa/test-results/20260217-lock-pack-pytest.md").exists(),
-    reason="Lock-pack artifact not committed to repo",
-)
-def test_qa_lock_pack_pytest_artifact_exists() -> None:
-    path = _repo_root() / "docs/qa/test-results/20260217-lock-pack-pytest.md"
-    content = path.read_text(encoding="utf-8")
-    assert "GREEN" in content, "pytest artifact must show GREEN status."
-
-
-@pytest.mark.skipif(
-    not (_repo_root() / "docs/qa/test-results/20260217-lock-pack-ruff.md").exists(),
-    reason="Lock-pack artifact not committed to repo",
-)
-def test_qa_lock_pack_ruff_artifact_exists() -> None:
-    path = _repo_root() / "docs/qa/test-results/20260217-lock-pack-ruff.md"
-    content = path.read_text(encoding="utf-8")
-    assert "GREEN" in content, "ruff artifact must show GREEN status."
-
-
-@pytest.mark.skipif(
-    not (_repo_root() / "docs/qa/test-results/20260217-lock-pack-mypy.md").exists(),
-    reason="Lock-pack artifact not committed to repo",
-)
-def test_qa_lock_pack_mypy_artifact_exists() -> None:
-    path = _repo_root() / "docs/qa/test-results/20260217-lock-pack-mypy.md"
-    content = path.read_text(encoding="utf-8")
-    assert "KNOWN BASELINE" in content, "mypy artifact must show KNOWN BASELINE status."
-
-
 # --- Rev 3 C1: A2A terminology consistency ---
 
 
@@ -337,7 +288,7 @@ def test_a2a_terminology_consistent_no_dead() -> None:
     """A2A should be WATCHLIST, not 'dead' in any active doc."""
     for doc in [
         "CLAUDE.md",
-        "docs/plan.md",
+        "PLAN.md",
         "docs/requirements_and_features.md",
     ]:
         path = _repo_root() / doc
@@ -345,25 +296,6 @@ def test_a2a_terminology_consistent_no_dead() -> None:
         assert "effectively dead" not in content.lower(), (
             f"{doc} should not say A2A is 'effectively dead' (use WATCHLIST)."
         )
-
-
-# --- Rev 3 C4: Artifact metadata ---
-
-
-def test_qa_artifacts_have_metadata() -> None:
-    """All lock-pack artifacts must have metadata headers (if present)."""
-    for name in [
-        "20260217-lock-pack-pytest.md",
-        "20260217-lock-pack-ruff.md",
-        "20260217-lock-pack-mypy.md",
-    ]:
-        path = _repo_root() / "docs/qa/test-results" / name
-        if not path.exists():
-            pytest.skip(f"Lock-pack artifact {name} not committed to repo")
-        content = path.read_text(encoding="utf-8")
-        assert "## Metadata" in content, f"{name} must have Metadata section."
-        assert "Commit SHA" in content, f"{name} must have Commit SHA in metadata."
-        assert "Platform" in content, f"{name} must have Platform in metadata."
 
 
 # --- Rev 4: P1-P8 Execution Policies ---

@@ -25,6 +25,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -42,7 +43,25 @@ from scenarios import SCENARIOS  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 AUTOCODE_ROOT = REPO_ROOT / "autocode"
-GO_TUI = AUTOCODE_ROOT / "cmd" / "autocode-tui" / "autocode-tui"
+
+
+def _resolve_go_tui() -> Path:
+    """Return the Go TUI binary path.
+
+    Matches the contract used by the PTY / Track 1 / Track 4 harnesses:
+    ``$AUTOCODE_TUI_BIN`` override → ``autocode/build/autocode-tui`` →
+    legacy in-place build at ``autocode/cmd/autocode-tui/autocode-tui``.
+    """
+    override = os.environ.get("AUTOCODE_TUI_BIN", "")
+    if override:
+        return Path(override)
+    build_path = AUTOCODE_ROOT / "build" / "autocode-tui"
+    if build_path.exists():
+        return build_path
+    return AUTOCODE_ROOT / "cmd" / "autocode-tui" / "autocode-tui"
+
+
+GO_TUI = _resolve_go_tui()
 MOCK_BACKEND = AUTOCODE_ROOT / "tests" / "pty" / "mock_backend.py"
 REFERENCE_DIR = AUTOCODE_ROOT / "tests" / "vhs" / "reference"
 CANDIDATE_ROOT = AUTOCODE_ROOT / "docs" / "qa" / "vhs" / "candidates"
