@@ -5,8 +5,8 @@ Interactive terminal bugs regularly escape mocked unit tests. If a change affect
 ## When To Use PTY Tests
 
 Run a PTY-backed check when you touch any of these:
-- Go Bubble Tea TUI startup, rendering, keyboard handling, palette behavior, queueing, streaming, status bar, or backend wiring
-- Python inline chat or Textual TUI behavior that depends on real terminal input/output
+- Rust TUI (`autocode-tui`) startup, rendering, keyboard handling, palette behavior, queueing, streaming, status bar, or backend wiring
+- Textual fullscreen TUI behavior that depends on real terminal input/output
 - ANSI rendering, scrollback, alternate-screen behavior, cursor movement, or terminal resize handling
 - Any bug report that came from a screenshot, transcript, or "it looks wrong in the terminal" feedback
 

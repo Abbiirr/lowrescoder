@@ -93,7 +93,7 @@ AutoCode is a git submodule superproject:
 
 | Submodule | Contents |
 |-----------|----------|
-| `autocode/` | Python backend, Go TUI, tests |
+| `autocode/` | Python backend, Rust TUI (`rtui/`), tests |
 | `benchmarks/` | Benchmark harness, fixtures |
 | `docs/` | Documentation |
 | `training-data/` | Training data |

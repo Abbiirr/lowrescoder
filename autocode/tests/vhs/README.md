@@ -1,7 +1,7 @@
 # AutoCode TUI Visual Snapshot Pipeline
 
 Pure-Python (`pyte` + `Pillow`) pipeline for capturing and diffing PNG
-snapshots of the AutoCode Go BubbleTea TUI. Named after upstream
+snapshots of the AutoCode Rust TUI (`autocode-tui`). Named after upstream
 [charm.sh/vhs](https://github.com/charmbracelet/vhs) for familiarity — the
 VHS tool itself needs `ttyd` which couldn't be installed without root on
 this host, so we built the same shape with lighter deps.
@@ -68,7 +68,7 @@ to PNG and comparing against a committed baseline.
   subpixel antialias, cursor block shape). Cross-tool comparison is
   **structural**, not pixel-perfect — see caveats below.
 - **Capture alt-screen teardown state.** When the TUI exits via Ctrl+D,
-  BubbleTea restores the saved primary buffer and the pyte Screen shows
+  The alt-screen backend restores the saved primary buffer and the pyte Screen shows
   that post-exit state instead of the running TUI. All scenarios run
   with `graceful_exit=False` for this reason; the process is SIGTERM'd
   while still in alt-screen.
@@ -493,13 +493,13 @@ spinner/clock cells (not implemented today; future work).
 **Cause:** the Go binary wasn't built after a source change, or the
 canonical output path is stale.
 
-**Fix:** rebuild into `autocode/build/autocode-tui` (the same binary path
+**Fix:** rebuild into `autocode/rtui/target/release/autocode-tui` (the same binary path
 the PTY / Track 1 / Track 4 harnesses use):
 
 ```bash
 cd /home/bs01763/projects/ai/lowrescoder/autocode/cmd/autocode-tui
 GOROOT=/usr/lib/go-1.24 PATH=/usr/lib/go-1.24/bin:$PATH \
-  go build -o /home/bs01763/projects/ai/lowrescoder/autocode/build/autocode-tui .
+  cd autocode/rtui && cargo build --release
 ```
 
 Override the resolved path with `AUTOCODE_TUI_BIN=<path>` when running

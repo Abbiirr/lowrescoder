@@ -8,7 +8,7 @@ AutoCode runs on consumer hardware (8GB VRAM, 16GB RAM) with no cloud dependency
 
 - Python 3.11+
 - [uv](https://docs.astral.sh/uv/) package manager
-- Go 1.22+ (for the TUI frontend)
+- Rust toolchain (for the TUI frontend) — `rustup install stable`
 - [LLM Gateway](http://localhost:4001/docs) running at `http://localhost:4000/v1` (OpenAI-compatible, 9 free providers with auto-failover)
 
 ## Quick Start
@@ -19,16 +19,17 @@ git clone https://github.com/your-username/autocode.git
 cd autocode
 uv sync --all-extras
 
-# Build the Go TUI frontend
-make tui                  # Linux
-build.bat tui             # Windows
+# Build the Rust TUI frontend
+cd autocode/rtui && cargo build --release && cd -
 
 # Ensure the LLM Gateway is running at http://localhost:4000/v1
 # (see http://localhost:4001/docs for setup)
 
 # Start chatting
-uv run autocode chat
+autocode
 ```
+
+Linux is the current supported platform. macOS is out of scope. Windows is post-v1 (architecture is ConPTY-capable via `portable-pty`).
 
 ## Installation
 
@@ -49,79 +50,75 @@ uv sync --extra layer4   # LLM Gateway client (OpenAI-compatible)
 uv sync --extra dev      # pytest, ruff, mypy
 ```
 
-### Go TUI frontend
+### Rust TUI frontend
 
 ```bash
-# Linux
-make tui
-
-# Windows
-build.bat tui
-
-# Or directly (any platform):
-cd cmd/autocode-tui && go build -o ../../build/autocode-tui .
+cd autocode/rtui
+cargo build --release
+# Binary at autocode/rtui/target/release/autocode-tui (~2.4 MB)
 ```
 
-The binary is placed in `build/autocode-tui` (or `build/autocode-tui.exe` on Windows).
+The CLI (`autocode`) auto-discovers the binary. For manual overrides:
+
+```bash
+export AUTOCODE_TUI_BIN=autocode/rtui/target/release/autocode-tui
+```
 
 ## Usage
 
 ### Interactive chat (default)
 
 ```bash
-uv run autocode chat
+autocode
 ```
 
-The default mode uses the Go Bubble Tea TUI (if built) or falls back to the Python inline REPL. Features:
+Bare `autocode` launches the Rust TUI. Features:
 
-- Streaming output with fixed input bar at the bottom
-- Type while the assistant is generating — your message is queued
-- Arrow-key tool approval selector (Yes / Yes for session / No)
-- Slash command autocomplete (type `/` then Tab)
-- Persistent command history (Up/Down arrows)
-- Native terminal scrollback preserved after exit
-- Markdown-rendered responses (on completion)
+- Streaming output with a fixed composer
+- Type while the assistant is generating — messages queue for the next turn
+- Slash commands with autocomplete dropdown (planned — see `docs/tui-testing/`)
+- Arrow-key pickers for `/model`, `/provider`, `/sessions`
+- Ctrl+K command palette
+- Ctrl+C multi-stage cancel / steer
+- Ctrl+E to edit the composer in `$EDITOR`
+- Frecency-ranked input history (Up/Down arrows in Idle)
+- Bracketed paste support
+- Inline mode by default; `--altscreen` opt-in via binary flag
 
 ### Explicit mode selection
 
 ```bash
-uv run autocode chat --go-tui      # Force Go TUI
-uv run autocode chat --legacy       # Python Rich REPL (no agent loop)
-uv run autocode chat --tui          # Fullscreen Textual TUI
-uv run autocode chat --sequential   # Disable parallel input
+autocode chat                  # Rust TUI (default)
+autocode chat --tui            # Fullscreen Textual TUI (fallback)
+autocode chat --legacy         # Python Rich REPL (no agent loop)
 ```
 
 ### Single question
 
 ```bash
-uv run autocode ask "How do I reverse a list in Python?"
+autocode ask "How do I reverse a list in Python?"
+autocode ask "What does this function do?" --file src/myapp/utils.py
 ```
 
-### Ask with file context
+### Configuration
 
 ```bash
-uv run autocode ask "What does this function do?" --file src/myapp/utils.py
+autocode config show    # display current config
+autocode config check   # validate config and show warnings
+autocode config path    # show config file location
 ```
 
-### View configuration
+### Backend server (used internally by the TUI)
 
 ```bash
-uv run autocode config show    # display current config
-uv run autocode config check   # validate config and show warnings
-uv run autocode config path    # show config file location
-```
-
-### Backend server (used internally by Go TUI)
-
-```bash
-uv run autocode serve           # JSON-RPC server on stdin/stdout
-uv run autocode serve --verbose # with debug logging
+autocode serve           # JSON-RPC server on stdin/stdout
+autocode serve --verbose # with debug logging
 ```
 
 ### Version
 
 ```bash
-uv run autocode version
+autocode --version
 ```
 
 ## Configuration
@@ -170,51 +167,48 @@ Set `AUTOCODE_LLM_MODEL` to one of these aliases:
 | `AUTOCODE_LLM_MODEL` | Model alias: `coding`, `default`, `fast`, `thinking`, etc. |
 | `AUTOCODE_LLM_API_BASE` | Gateway URL (default: `http://localhost:4000`) |
 | `AUTOCODE_LLM_TEMPERATURE` | Sampling temperature (0.0-2.0) |
-| `OLLAMA_HOST` | Legacy: gateway URL (default: `http://localhost:4000`) |
+| `AUTOCODE_TUI_BIN` | Override path to the Rust TUI binary |
 
 ## Development
 
 ### Setup
 
 ```bash
-make setup       # Linux
-build.bat setup  # Windows
+make setup
 # Or directly: uv sync --all-extras
 ```
 
 ### Run tests
 
 ```bash
-# All tests (1054 unit tests across autocode + benchmarks)
-uv run pytest autocode/tests/unit/ benchmarks/tests/ -v
+# Python unit tests
+uv run pytest autocode/tests/unit/ -v
 
-# Autocode tests only
-uv run pytest autocode/tests/unit/ -v --cov=src/autocode
-
-# Go tests (93 tests)
-cd autocode && make go-test
-# Or: cd autocode/cmd/autocode-tui && go test ./... -v
+# Rust TUI unit + integration tests
+cd autocode/rtui && cargo test
 ```
 
 ### Run linting
 
 ```bash
-make lint            # Linux
-build.bat lint       # Windows
+# Python
+cd autocode && uv run ruff check src/ tests/
+
+# Rust
+cd autocode/rtui && cargo clippy -- -D warnings
+cd autocode/rtui && cargo fmt -- --check
 ```
 
-### Format code
+### TUI testing
+
+Four complementary dimensions — see [`docs/tui-testing/`](docs/tui-testing/) for the strategy and enforced checklist.
 
 ```bash
-make format          # Linux
-build.bat format     # Windows
-```
-
-### Build Go TUI
-
-```bash
-make tui             # Linux
-build.bat tui        # Windows
+make tui-regression       # Track 1 runtime invariants
+make tui-references       # Track 4 design-target ratchet
+AUTOCODE_TUI_BIN=autocode/rtui/target/release/autocode-tui \
+  uv run python autocode/tests/vhs/run_visual_suite.py   # VHS self-regression
+python3 autocode/tests/pty/pty_smoke_rust_comprehensive.py   # PTY smoke
 ```
 
 ### Integration tests
@@ -231,13 +225,13 @@ uv run pytest -m integration tests/integration/test_ollama.py
 
 ## Architecture
 
-AutoCode uses a **Go TUI frontend** + **Python backend** split, communicating via JSON-RPC 2.0 over stdin/stdout:
+AutoCode uses a **Rust TUI frontend** + **Python backend** split, communicating via JSON-RPC 2.0 over stdin/stdout (via PTY):
 
 ```
-Go TUI (Bubble Tea)  ←── JSON-RPC ──►  Python Backend (agent loop, tools, LLM)
+Rust TUI (crossterm + ratatui + tokio)  ←── JSON-RPC ──►  Python Backend (agent loop, tools, LLM)
 ```
 
-The Go frontend handles all terminal interaction (rendering, input, approvals, autocomplete). The Python backend handles intelligence: agent loop, tool execution, LLM providers, session storage, and slash commands.
+The Rust frontend handles all terminal interaction (rendering, input, approvals, autocomplete). The Python backend handles intelligence: agent loop, tool execution, LLM providers, session storage, and slash commands.
 
 ### 4-Layer Intelligence Model
 
@@ -252,7 +246,7 @@ Each layer adds capability at increasing cost:
 
 The system always tries the cheapest layer first and only escalates when necessary.
 
-See [docs/architecture.md](docs/architecture.md) for detailed architecture documentation including the JSON-RPC protocol, file structure, and stage machine.
+See [docs/architecture.md](docs/architecture.md) for detailed architecture documentation, [docs/reference/rust-tui-architecture.md](docs/reference/rust-tui-architecture.md) for the Rust TUI internals, and [docs/reference/rust-tui-rpc-contract.md](docs/reference/rust-tui-rpc-contract.md) for the JSON-RPC protocol.
 
 ## License
 

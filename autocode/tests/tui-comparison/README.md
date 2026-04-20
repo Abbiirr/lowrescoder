@@ -4,7 +4,7 @@
 `docs/tests/tui-testing-strategy.md` for the matrix and how to pick
 between them.
 
-This tree answers: **"Does the Go TUI still satisfy its runtime
+This tree answers: **"Does the Rust TUI still satisfy its runtime
 invariants?"** — no crash, composer visible, warnings not rendered as
 errors, pickers filterable, spinners tick, queues not leaking, etc.
 

@@ -1,6 +1,6 @@
 # AutoCode TUI Reference-Driven Testing
 
-Deterministic **design-target ratchet** that checks the live Go TUI against
+Deterministic **design-target ratchet** that checks the live Rust TUI against
 the canonical design bundle at
 `tui-references/AutoCode TUI _standalone_.html`.
 
@@ -10,7 +10,7 @@ Not to be confused with:
   output (pixel-diff against committed baselines, our own pipeline).
 - `autocode/tests/tui-comparison/` — Phase 1/2 PTY substrate that proves
   **runtime invariants** (no crash, composer visible, picker filter
-  works, etc.) against the real Go TUI binary.
+  works, etc.) against the real Rust TUI binary.
 
 This tree adds a third dimension: "does the live TUI match the **design
 target** the product owner handed us in the mockup bundle?"
@@ -44,7 +44,7 @@ of how the TUI should look in 14 named scenarios (`01 Ready`, `02 Active`,
    from the bundle's embedded `<template id="t-<scene>">` elements.
 2. Encodes a **structural contract** per scene: required layout regions
    (HUD, composer, keybind footer, scene-specific elements).
-3. Drives the real Go TUI into each scene's plausible state via the
+3. Drives the real Rust TUI into each scene's plausible state via the
    existing `tests/tui-comparison/` PTY substrate and asserts the
    contract against the captured pyte Screen.
 
@@ -60,7 +60,7 @@ automatically.
 
 - Extract deterministic scene structure from the HTML bundle (no OCR, no
   PyYAML, no `lxml` — stdlib only).
-- Run a live PTY capture of the real Go TUI against each of the 4 MVP
+- Run a live PTY capture of the real Rust TUI against each of the 4 MVP
   scenes and assert the scene's structural predicates.
 - Signal via pytest **XPASS** the instant a UI feature lands that closes
   one of the design-to-implementation gaps. `strict=True` xfail turns
@@ -150,7 +150,7 @@ autocode/docs/qa/test-results/
 - **pyte + Pillow** — reused from `tests/tui-comparison/`; not added by
   this slice.
 - **pytest** — test runner.
-- **Go TUI binary** at `autocode/build/autocode-tui` or `$AUTOCODE_TUI_BIN`.
+- **Rust TUI binary** at `autocode/rtui/target/release/autocode-tui` or `$AUTOCODE_TUI_BIN`.
   Tests skip cleanly if the binary is missing.
 - **Rust TUI binary**: set `$AUTOCODE_TUI_BIN=autocode/rtui/target/release/autocode-tui` to retarget the harness at the Rust implementation. All 4 `strict=True` xfails will be re-evaluated at M11 cutover per the Rust migration plan.
 - **Mock backend** at `autocode/tests/pty/mock_backend.py` — already in
@@ -182,7 +182,7 @@ uv run pytest autocode/tests/unit/test_tui_reference_extractor.py \
 
 43 tests, ~0.12 s.
 
-### Run the live PTY ratchet (requires the Go TUI binary)
+### Run the live PTY ratchet (requires the Rust TUI binary)
 
 ```bash
 make tui-references

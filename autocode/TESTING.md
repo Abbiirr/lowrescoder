@@ -1,9 +1,9 @@
 # Testing & Evaluation Guide
 
 > How to test, evaluate, and interpret results for AutoCode.
-> Last updated: 2026-02-28
+> Last updated: 2026-04-20
 
-> **For TUI testing specifically** (the 4-dimension matrix — runtime invariants, design-target ratchet, self-vs-self PNG regression, live PTY smoke), see `docs/tests/tui-testing-strategy.md`. This guide's `Go TUI tests` row below is only the Go unit-test slice.
+> **For TUI testing specifically** (the 4-dimension matrix — runtime invariants, design-target ratchet, self-vs-self PNG regression, live PTY smoke), see `docs/tui-testing/tui-testing-strategy.md` and the enforced checklist at `docs/tui-testing/tui_testing_checklist.md`. This guide's `Rust TUI tests` row below is only the `cargo test` unit-test slice.
 
 ---
 
@@ -16,7 +16,10 @@
 | Lint | `uv run ruff check src/ tests/` | ~5s |
 | Type check | `uv run mypy src/autocode/` | ~15s |
 | Sprint verification | `uv run pytest tests/test_sprint_verify.py -v` | ~10s |
-| Go TUI tests | `cd cmd/autocode-tui && go test ./... -v` | ~1s |
+| Rust TUI tests | `cd autocode/rtui && cargo test` | ~1s |
+| Rust TUI lint | `cd autocode/rtui && cargo clippy -- -D warnings` | ~10s |
+| Rust TUI fmt | `cd autocode/rtui && cargo fmt -- --check` | ~1s |
+| Rust TUI release build | `cd autocode/rtui && cargo build --release` | ~30s (first) / ~2s (cached) |
 | Integration tests | `uv run pytest -m integration tests/integration/` | Varies |
 | External project benchmark | `uv run pytest tests/benchmark/test_project_creation.py::test_project_creation_real_life_task_external_project -v` | ~5s |
 | E2E Calculator benchmark | `uv run python scripts/run_calculator_benchmark.py` | 10-30 min |
@@ -92,7 +95,7 @@ If tree-sitter tests fail with `ImportError`, your environment is broken — do 
 | `tests/benchmark/` | Performance + quality rubrics (6 files) | ~60+ tests |
 | `tests/integration/` | External services (3 files) | Self-skip when unavailable |
 | `tests/test_sprint_verify.py` | Sprint exit criteria | Phase-specific |
-| `cmd/autocode-tui/*_test.go` | Go TUI tests | 184 tests |
+| `autocode/rtui/src/**/*.rs` (inline `#[cfg(test)]`) + `autocode/rtui/tests/*.rs` | Rust TUI tests | 59 tests |
 
 **When to run:** After every code change. Non-negotiable.
 
@@ -119,36 +122,34 @@ uv run mypy src/autocode/
 
 ---
 
-## 2b. Go TUI Tests
+## 2b. Rust TUI Tests
 
-**What they test:** Go TUI frontend — Bubble Tea model updates, key handling, approval/ask-user flows, JSON-RPC protocol, session picker, completions, backend detection fallback chain.
+**What they test:** Rust TUI frontend — reducer state transitions, JSON-RPC serde round-trips (16 message types), streaming state machine, composer editing, picker filter logic, history frecency, palette filtering, PTY framing.
 
 **How to run:**
 ```bash
-cd cmd/autocode-tui && go test ./... -v
+cd autocode/rtui && cargo test
 ```
 
 **What the results mean:**
-- **184 passed** = Go TUI works correctly
-- Includes 4 tests for `findPythonBackend()` fallback chain (env vars → uv dev mode → PATH → uv fallback)
+- **59 passed** = Rust TUI unit + integration tests green
+- 57 inline unit tests in `src/**/*.rs` under `#[cfg(test)]`
+- 1 LinesCodec integration test in `tests/spike_linescodec.rs` (1MB no-truncation proof)
+- 1 design-record test in `tests/decision_tui_textarea.rs` (why tui-textarea was rejected in M1)
 
-**Building and running the TUI:**
+**Building the TUI:**
 ```bash
-# Windows
-build.bat          # Build + run
-build.bat tui      # Build only
-build.bat go-test  # Run Go tests only
-
-# Unix
-make tui           # Build Go TUI
-make go-test       # Run Go tests
+make tui-build                                        # canonical
+cd autocode/rtui && cargo build --release             # direct
 ```
+Binary lands at `autocode/rtui/target/release/autocode-tui` (~2.4 MB stripped).
 
-**Backend detection:** The Go TUI auto-discovers the Python backend:
-1. `AUTOCODE_PYTHON_CMD` env var (highest priority)
-2. `uv run autocode serve` if `pyproject.toml` found nearby (dev mode)
-3. `autocode` or `hybridcoder` binary on PATH
-4. `uv run autocode serve` (final fallback)
+**Backend detection:** The Rust TUI auto-discovers the Python backend:
+1. `AUTOCODE_PYTHON_CMD` env var (highest priority) — script appends `serve` as argv[1]
+2. `autocode` binary on PATH (runs `autocode serve`)
+3. Fails fast with a clear error if neither is reachable
+
+For full TUI testing (beyond `cargo test`), see [`docs/tui-testing/`](../docs/tui-testing/) — the four-dimension matrix, the enforced verification checklist, and the 21-issue known-failure inventory.
 
 ---
 

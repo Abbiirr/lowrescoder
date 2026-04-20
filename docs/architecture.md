@@ -4,34 +4,41 @@
 
 AutoCode is a local-first AI coding assistant that runs on consumer hardware. It uses a **4-layer intelligence model** where classical AI techniques handle the majority of operations, invoking LLMs only when necessary.
 
-The system is split into a **Go TUI frontend** and a **Python backend**, communicating via JSON-RPC 2.0 over stdin/stdout.
+The system is split into a **Rust TUI frontend** and a **Python backend**, communicating via JSON-RPC 2.0 over PTY stdin/stdout.
 
 ```
-┌─────────────────────────────────────┐
-│         Go TUI Frontend             │
-│  (Bubble Tea, inline mode)          │
-│                                     │
-│  Input ─ Streaming ─ Approvals      │
-│  Autocomplete ─ History ─ Markdown  │
-└──────────────┬──────────────────────┘
+┌──────────────────────────────────────────┐
+│         Rust TUI Frontend                │
+│  (crossterm + ratatui + tokio,           │
+│   inline mode by default)                │
+│                                          │
+│  Input ─ Streaming ─ Approvals           │
+│  Autocomplete ─ History ─ Markdown       │
+└──────────────┬───────────────────────────┘
                │ JSON-RPC 2.0
-               │ (stdin/stdout, newline-delimited)
-┌──────────────┴──────────────────────┐
-│         Python Backend              │
-│  (autocode serve)                │
-│                                     │
-│  Agent Loop ─ Tools ─ LLM Providers │
-│  Session Store ─ Config ─ Commands  │
-└─────────────────────────────────────┘
+               │ (PTY stdin/stdout, newline-delimited)
+┌──────────────┴───────────────────────────┐
+│         Python Backend                   │
+│  (autocode serve)                        │
+│                                          │
+│  Agent Loop ─ Tools ─ LLM Providers      │
+│  Session Store ─ Config ─ Commands       │
+└──────────────────────────────────────────┘
 ```
+
+The Go BubbleTea TUI and the Python `--inline` fallback were the previous frontends; both were deleted at M11 cutover (2026-04-19). See `docs/decisions/ADR-001-rust-tui-migration.md` for the decision record.
 
 ---
 
-## Frontend: Go Bubble Tea TUI
+## Frontend: Rust TUI
 
-**Location:** `cmd/autocode-tui/`
+**Location:** `autocode/rtui/`
+**Binary:** `autocode/rtui/target/release/autocode-tui` (~2.4 MB stripped)
+**Stack:** `crossterm` 0.28 + `ratatui` 0.29 + `tokio` 1.x + `portable-pty` 0.8 + `serde_json` + `anyhow` + `tracing`
 
-The Go frontend handles all terminal interaction using Charm's [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework (Elm Architecture). It runs in **inline mode** (no alternate screen) to preserve native terminal scrollback.
+The Rust frontend handles all terminal interaction using ratatui (immediate-mode widgets over crossterm). It runs in **inline mode by default** (no alternate screen) to preserve native terminal scrollback; `--altscreen` opts into full-screen mode.
+
+**Reference docs:** [`docs/reference/rust-tui-architecture.md`](reference/rust-tui-architecture.md) and [`docs/reference/rust-tui-rpc-contract.md`](reference/rust-tui-rpc-contract.md).
 
 ### Key Design Decisions
 
@@ -252,60 +259,63 @@ The system always tries the cheapest layer first and only escalates when necessa
 
 ```
 autocode/
-├── cmd/
-│   └── autocode-tui/       # Go TUI frontend (25 files)
-│       ├── go.mod
-│       ├── main.go             # Entry point
-│       ├── model.go            # Root model
-│       ├── view.go             # Rendering
-│       ├── update.go           # Message handling
-│       ├── backend.go          # Python subprocess manager
-│       ├── protocol.go         # JSON-RPC types
-│       ├── messages.go         # Bubble Tea messages
-│       ├── approval.go         # Tool approval UI
-│       ├── askuser.go          # Ask-user prompt UI
-│       ├── commands.go         # Slash command parsing
-│       ├── completion.go       # Autocomplete
-│       ├── history.go          # Command history
-│       ├── markdown.go         # Glamour rendering
-│       ├── styles.go           # Lip Gloss styles
-│       ├── statusbar.go        # Status bar
-│       ├── detect.go           # Terminal detection
-│       ├── backend_windows.go  # Windows process mgmt
-│       ├── backend_unix.go     # Unix process mgmt
-│       └── *_test.go           # Tests (7 files)
+├── rtui/                          # Rust TUI frontend
+│   ├── Cargo.toml                 # crossterm + ratatui + tokio + portable-pty
+│   ├── Cargo.lock
+│   ├── src/
+│   │   ├── main.rs                # Entry, arg parsing, raw-mode guard, effect dispatch
+│   │   ├── backend/
+│   │   │   ├── pty.rs             # portable-pty spawn
+│   │   │   └── process.rs         # Child lifecycle + kill-on-drop
+│   │   ├── rpc/
+│   │   │   ├── codec.rs           # encode/decode JSON lines
+│   │   │   ├── protocol.rs        # 16 serde structs
+│   │   │   └── bus.rs             # PTY reader + writer tasks (spawn_blocking)
+│   │   ├── state/
+│   │   │   ├── model.rs           # AppState, Stage, scrollback
+│   │   │   ├── effects.rs         # Effect enum
+│   │   │   ├── reducer.rs         # Pure reduce() function
+│   │   │   └── reducer_tests.rs   # Unit tests
+│   │   ├── commands/mod.rs        # Slash-command router
+│   │   ├── ui/
+│   │   │   ├── composer.rs        # Hand-roll multi-line editor
+│   │   │   ├── history.rs         # Frecency history
+│   │   │   ├── spinner.rs         # 194 verbs × 4 braille frames
+│   │   │   └── event_loop.rs      # crossterm EventStream → Event
+│   │   └── render/
+│   │       ├── view.rs            # ratatui layout
+│   │       └── markdown.rs        # Inline markdown
+│   └── tests/                     # LinesCodec spike + design records
 ├── src/autocode/
-│   ├── cli.py                  # CLI entry point (Typer)
-│   ├── config.py               # Configuration (Pydantic)
+│   ├── cli.py                     # CLI entry point (Typer) — launches Rust TUI
+│   ├── config.py                  # Configuration (Pydantic)
 │   ├── agent/
-│   │   ├── loop.py             # Agent loop (multi-turn)
-│   │   ├── tools.py            # Tool definitions
-│   │   ├── approval.py         # Approval system
-│   │   └── prompts.py          # System prompts
+│   │   ├── loop.py                # Agent loop (multi-turn)
+│   │   ├── tools.py               # Tool definitions
+│   │   ├── approval.py            # Approval system
+│   │   └── prompts.py             # System prompts
 │   ├── backend/
-│   │   └── server.py           # JSON-RPC server
+│   │   └── server.py              # JSON-RPC server (stdin/stdout)
 │   ├── layer4/
-│   │   └── llm.py              # LLM providers (Ollama, OpenRouter)
+│   │   └── llm.py                 # LLM providers
 │   ├── session/
-│   │   └── store.py            # SQLite session store
+│   │   └── store.py               # SQLite session store (WAL)
 │   ├── tui/
-│   │   ├── app.py              # Textual TUI (alternate screen)
-│   │   └── commands.py         # Slash command router
-│   ├── inline/
-│   │   └── app.py              # Python inline REPL (legacy)
+│   │   ├── app.py                 # Textual fullscreen fallback (--tui)
+│   │   └── commands.py            # Slash command router (Python side)
 │   └── utils/
-│       └── file_tools.py       # File read/write utilities
+│       └── file_tools.py          # File read/write utilities
 ├── tests/
-│   ├── unit/                   # Python unit tests
-│   └── integration/            # Integration tests (require servers)
-├── docs/
-│   ├── architecture.md         # This file
-│   ├── plan.md                 # Product roadmap
-│   ├── archive/                # Superseded/historical docs
-│   └── plan/                   # Implementation plans
-├── Makefile                    # Build targets
-├── pyproject.toml              # Python project config
-└── CLAUDE.md                   # AI assistant guidelines
+│   ├── unit/                      # Python unit tests
+│   ├── integration/               # Integration tests (require gateway)
+│   ├── pty/                       # PTY smoke harnesses + backend stubs
+│   ├── tui-comparison/            # Track 1 runtime-invariant harness
+│   ├── tui-references/            # Track 4 design-target ratchet
+│   └── vhs/                       # Self-vs-self PNG regression
+├── docs/qa/                       # Stored verification artifacts
+├── Makefile                       # Build targets (make tui-build / tui-regression / tui-references)
+├── pyproject.toml                 # Python project config
+└── CLAUDE.md                      # AI assistant guidelines
 ```
 
 ---
@@ -315,8 +325,8 @@ autocode/
 ### Prerequisites
 
 - Python 3.11+ with [uv](https://docs.astral.sh/uv/)
-- Go 1.22+
-- [Ollama](https://ollama.com/) (for local LLM inference)
+- Rust toolchain (`rustup install stable`)
+- LLM Gateway at `http://localhost:4000/v1` (optional but recommended)
 
 ### Build
 
@@ -324,37 +334,47 @@ autocode/
 # Python
 uv sync --all-extras
 
-# Go TUI
-make tui
-# Or directly:
-cd cmd/autocode-tui && go build -o ../../build/autocode-tui .
+# Rust TUI
+cd autocode/rtui && cargo build --release
+# Binary at autocode/rtui/target/release/autocode-tui
 ```
 
 ### Test
 
 ```bash
-# Python tests (569+ tests)
-make test
+# Python unit tests
+uv run pytest autocode/tests/unit/ -v
 
-# Go tests (93 tests)
-make go-test
+# Rust TUI tests (59 tests)
+cd autocode/rtui && cargo test
 
-# Linting
-make lint
+# Rust TUI lint
+cd autocode/rtui && cargo clippy -- -D warnings
+cd autocode/rtui && cargo fmt -- --check
+
+# Python lint
+cd autocode && uv run ruff check src/ tests/
+
+# Full TUI matrix (four dimensions — see docs/tui-testing/)
+make tui-regression
+make tui-references
 ```
 
 ### Run
 
 ```bash
-# Default: Go TUI (if built) or Python inline REPL
-uv run autocode chat
+# Default: Rust TUI
+autocode
 
-# Force Go TUI
-uv run autocode chat --go-tui
+# Or via explicit chat subcommand
+autocode chat
 
-# Force Python inline REPL (legacy)
-uv run autocode chat --legacy
+# Textual fullscreen fallback
+autocode chat --tui
 
-# Python backend only (for Go TUI subprocess)
+# Rich REPL fallback
+autocode chat --legacy
+
+# Python backend only (used internally by the Rust TUI via PTY)
 uv run autocode serve
 ```

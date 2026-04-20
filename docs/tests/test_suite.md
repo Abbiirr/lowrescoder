@@ -1,62 +1,49 @@
 # AutoCode Test Suite — Master Catalog
 
-> Last verified: 2026-02-08 — **275 Go tests, 0 failures** (`go test ./... -count=1`, 0.24s)
+> Last verified: 2026-04-20 — Rust TUI: **59 cargo tests, 0 failures** (`cargo test`). Python unit suite: 1985 collectible (subset of 155 focused green).
+>
+> The Go TUI (`autocode/cmd/autocode-tui/`) was deleted at M11 cutover (2026-04-19). All frontend tests are now Rust cargo tests or Python PTY/VHS/Track-1/Track-4 harnesses.
 
 ## How to Test
 
 ### Prerequisites
 
-- **Go 1.21+** installed (for Go TUI tests)
-- **Python 3.11+** with `uv` package manager (for Python backend tests)
-- All dependencies installed: `go mod tidy` in `cmd/autocode-tui/` and `uv sync` at project root
+- **Rust toolchain** (`rustup install stable`) — for Rust TUI tests
+- **Python 3.11+** with `uv` package manager — for Python backend tests
+- Dependencies: `uv sync` at project root; Rust deps auto-resolved by `cargo`
 
 ### Running All Tests
 
 ```bash
-# Quick: run everything
-make test-all
+# 1. Rust TUI tests (fast, ~1s)
+cd autocode/rtui && cargo test
 
-# Or step by step:
+# 2. Rust TUI lint + fmt
+cd autocode/rtui && cargo clippy -- -D warnings && cargo fmt -- --check
 
-# 1. Go TUI tests (fast, ~2s)
-cd cmd/autocode-tui && go test ./... -v -count=1
+# 3. Python backend + unit tests
+uv run pytest autocode/tests/unit/ -v
 
-# 2. Python backend + unit tests
-uv run pytest tests/ -v --cov=src/autocode
-
-# 3. Lint
-uv run ruff check src/ tests/
+# 4. Python lint
+cd autocode && uv run ruff check src/ tests/
 ```
 
-### Running Individual Test Categories
+For the full TUI test matrix (runtime invariants, design-target ratchet, VHS, PTY smoke) see [`docs/tui-testing/`](../tui-testing/).
+
+### Running Individual Rust TUI Test Categories
 
 ```bash
-# Go: Only view tests
-cd cmd/autocode-tui && go test -run "TestView" -v
+# Serde round-trip only
+cd autocode/rtui && cargo test --test rpc_protocol
 
-# Go: Only display pipeline tests
-cd cmd/autocode-tui && go test -run "TestTokens|TestStreamBuf|TestDone" -v
+# Reducer state machine only
+cd autocode/rtui && cargo test reducer_tests
 
-# Go: Only backend IPC tests
-cd cmd/autocode-tui && go test -run "TestDispatch|TestRoute|TestSend|TestMalformed" -v
+# Composer
+cd autocode/rtui && cargo test composer
 
-# Go: Only command parsing tests
-cd cmd/autocode-tui && go test -run "TestParseCommand|TestKnownCommands|TestSlashCommand" -v
-
-# Go: Only ask-user tests
-cd cmd/autocode-tui && go test -run "TestAskUser|TestEnterAskUser|TestRenderAskUser" -v
-
-# Go: Only e2e flow tests
-cd cmd/autocode-tui && go test -run "TestFull" -v
-
-# Go: Only approval tests
-cd cmd/autocode-tui && go test -run "TestApproval|TestEnterApproval" -v
-
-# Go: Only completion/autocomplete tests
-cd cmd/autocode-tui && go test -run "TestCompletions" -v
-
-# Go: Only history tests
-cd cmd/autocode-tui && go test -run "TestHistory" -v
+# History frecency
+cd autocode/rtui && cargo test history
 
 # Go: Only markdown tests
 cd cmd/autocode-tui && go test -run "TestRenderMarkdown" -v
