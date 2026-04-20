@@ -53,7 +53,7 @@ Rust-M1 (scaffold) → M2 (RPC conformance) → M3 (streaming) → M4 (composer)
 - **Stable TUI Program (§1f — COMPLETE):** Section `1f` was a research-locked stable-v1 program.
   - **Historical note:** Go BubbleTea was the default interactive frontend through 2026-04-18. Python `--inline` was the explicit fallback. Both have been deleted as of 2026-04-19 (§1h M11).
   - **Current state:** Rust TUI (`autocode/rtui/target/release/autocode-tui`) is the sole interactive frontend. Go TUI and Python inline fallback are gone. §1f Milestones A/B/C/D/E/F are superseded by the Rust migration milestones (§1h M1–M11).
-  - **Canonical references (historical):** `PLAN.md` Section `1f`, `docs/tests/tui-testing-strategy.md`, `docs/tests/pty-testing.md`
+  - **Canonical references (historical):** `PLAN.md` Section `1f`, `docs/tui-testing/tui-testing-strategy.md`, `docs/tests/pty-testing.md`
 - **Tests:** 1778 passed, 4 skipped
 - **Benchmarks:** 23/23 GREEN (120/120, 100%)
 - **B30 Terminal-Bench:** best confirmed score `40% (4/9)` with the `terminal_bench` alias; Harbor adapter baseline recovery is complete, score-improvement work remains open

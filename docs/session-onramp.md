@@ -1,183 +1,116 @@
-# Session Onramp (Current State)
+# Session Onramp
 
-Last updated: 2026-04-10
+Last updated: 2026-04-20
 
-This is the fastest way to rebuild correct working context in a new session.
+Fastest way to rebuild working context in a new session.
 
 ## 1) Read Order
 
 1. `AGENTS.md` — repo rules, testing commands, comms protocol
-2. `current_directives.md` — live phase, benchmark status, what is still open
+2. `current_directives.md` — live phase and open work
 3. `AGENT_COMMUNICATION_RULES.md` — required before reading active comms
-4. `AGENTS_CONVERSATION.MD` — only the active tail, not archives
-5. `EXECUTION_CHECKLIST.md` — live open work; the Claude Code primary TUI parity item is currently first
-6. `PLAN.md` — detailed implementation map for each open item, including Section `1f` (TUI runtime stability) and Section `1g` (TUI testing strategy, four-dimension matrix)
-7. `benchmarks/benchmarks/STATUS.md` — benchmark scoreboard and lane notes
+4. `AGENTS_CONVERSATION.MD` — active tail only (not archives)
+5. `EXECUTION_CHECKLIST.md` — live open work with exit gates
+6. `PLAN.md` — detailed implementation map
+7. `rust_tui_migration_status.md` — Rust TUI migration close-out checklist
 
-## 2) Current Execution Focus
+## 2) Current State
 
-- Phase 5: complete
-- Phase 6: complete
-- Phase 7: complete
-- Phase 8: complete, including live frontend switch-over
-- Rust TUI Migration (M1-M11): complete
-- Immediate work: post-migration frontier
-  - Claude Code primary TUI parity
-  - large-codebase comprehension validation
-  - native external-harness orchestration
-  - Terminal-Bench improvement
-
-Important current detail:
-- The Rust TUI (`autocode/rtui/`) is the sole interactive frontend. Go TUI and Python inline fallback have been deleted.
-- Section `1g` owns the TUI testing strategy (four dimensions — runtime invariants, design-target ratchet, self-vs-self PNG regression, PTY smoke). Canonical guide: `docs/tests/tui-testing-strategy.md`.
-- All test harnesses retarget via `$AUTOCODE_TUI_BIN=autocode/rtui/target/release/autocode-tui`
-
-Do not treat `docs/plan/phase5-agent-teams.md` as the current execution target.
-That is historical planning context now.
+- Phase 5–8: complete
+- Rust TUI migration (M1–M11): code-complete; close-out items tracked in `rust_tui_migration_status.md`
+- Rust TUI (`autocode/rtui/target/release/autocode-tui`) is the sole interactive frontend; Go TUI and Python inline are deleted
+- `autocode` (bare) launches the Rust TUI via `cli.py`
 
 ## 3) Repository Layout
-
-This is now a multi-repo superproject:
 
 | Path | Role |
 |------|------|
 | `autocode/` | Product runtime, CLI, Rust TUI (`rtui/`), backend, tests |
-| `benchmarks/` | Harness, manifests, adapters, fixtures, benchmark tests |
+| `benchmarks/` | Harness, adapters, fixtures, benchmark tests |
 | `docs/` | Documentation and stored verification artifacts |
 | `training-data/` | Training data |
 
-Important consequence: most code changes happen inside the `autocode` or
-`benchmarks` submodules, but top-level comms and current directives still live
-at the superproject root.
+## 4) TUI Testing Strategy (four dimensions)
 
-## 4) High-Value Paths
+Canonical guide: [`docs/tui-testing/tui-testing-strategy.md`](tui-testing/tui-testing-strategy.md)
 
-### Product runtime
+| Dimension | Lives in | Purpose |
+|---|---|---|
+| Runtime invariants (Track 1) | `autocode/tests/tui-comparison/` | Hard predicates on captured output; `make tui-regression` |
+| Design-target ratchet (Track 4) | `autocode/tests/tui-references/` | Scene predicates vs spec; `make tui-references` |
+| Self-vs-self PNG regression (VHS) | `autocode/tests/vhs/` | pyte + Pillow baselines; user-gated rebaseline |
+| Live-PTY smoke | `autocode/tests/pty/` | End-to-end binary + backend via `pty.fork()` |
 
-- `autocode/src/autocode/agent/loop.py`
-- `autocode/src/autocode/agent/factory.py`
-- `autocode/src/autocode/agent/tools.py`
-- `autocode/src/autocode/inline/app.py`
-- `autocode/src/autocode/backend/server.py`
-- `autocode/src/autocode/config.py`
-- `autocode/src/autocode/packaging/installer.py`
-- `autocode/autocode.spec`
+All four resolve the binary via `$AUTOCODE_TUI_BIN` → `autocode/rtui/target/release/autocode-tui`. The Track 1 launcher auto-discovers it without the env var.
 
-### Benchmarks
+## 5) High-Value Paths
 
-- `benchmarks/benchmark_runner.py`
-- `benchmarks/adapters/autocode_adapter.py`
-- `benchmarks/e2e/external/`
-- `benchmarks/benchmarks/STATUS.md`
-- `benchmarks/benchmarks/EVALUATION.md`
+**Product runtime:** `autocode/src/autocode/{agent/loop.py, agent/factory.py, agent/tools.py, backend/server.py, config.py, cli.py}`
 
-### Source-of-truth docs
+**Rust TUI:** `autocode/rtui/src/{main.rs, state/reducer.rs, rpc/, ui/, render/}`
 
-- `current_directives.md`
-- `EXECUTION_CHECKLIST.md`
-- `PLAN.md`
-- `PROJECT_STATUS.md`
+**Benchmarks:** `benchmarks/benchmark_runner.py`, `benchmarks/adapters/`, `benchmarks/benchmarks/STATUS.md`
 
-### TUI testing matrix
+**Source-of-truth docs:** `current_directives.md`, `EXECUTION_CHECKLIST.md`, `PLAN.md`, `rust_tui_migration_status.md`
 
-- `docs/tests/tui-testing-strategy.md` — canonical four-dimension guide
-- `autocode/tests/vhs/README.md` — self-vs-self PNG regression
-- `autocode/tests/tui-comparison/README.md` — Track 1 runtime invariants
-- `autocode/tests/tui-references/README.md` — Track 4 design-target ratchet
-- `autocode/tests/pty/README.md` — live-PTY smoke harnesses
-- Make targets: `make tui-regression` (Track 1), `make tui-references` (Track 4)
+## 6) Commands
 
-## 5) Commands You Actually Need
-
-Run from the superproject root unless noted otherwise.
-
-### Workspace
+Run from superproject root.
 
 ```bash
+# Workspace
 uv sync
-```
 
-### Main test commands
+# Build Rust TUI
+cd autocode/rtui && cargo build --release
 
-```bash
-uv run pytest autocode/tests/unit/ benchmarks/tests/ -v
+# Tests
 uv run pytest autocode/tests/unit/ -v
-uv run pytest benchmarks/tests/ -v
-```
+cd autocode/rtui && cargo test
 
-### Lint / typing
-
-```bash
+# Lint
 cd autocode && uv run ruff check src/ tests/
-cd autocode && uv run mypy src/autocode/
-```
+cd autocode/rtui && cargo clippy -- -D warnings
 
-### Store artifacts
+# Run locally
+autocode                    # bare → launches Rust TUI
+autocode --version
+autocode doctor
 
-```bash
-cd autocode
-./scripts/store_test_results.sh <label> -- <command>
-```
+# TUI tests
+AUTOCODE_TUI_BIN=autocode/rtui/target/release/autocode-tui \
+  uv run python autocode/tests/vhs/run_visual_suite.py
+make tui-regression
+make tui-references
 
-### Run product locally
+# Store artifacts
+cd autocode && ./scripts/store_test_results.sh <label> -- <command>
 
-```bash
-uv run autocode chat
-uv run autocode doctor
-uv run autocode setup
-```
-
-### Benchmark commands
-
-```bash
+# Benchmarks
 uv run python benchmarks/benchmark_runner.py --list-lanes
-uv run python benchmarks/benchmark_runner.py --agent autocode --lane B9-PROXY --model swebench
-bash benchmarks/run_all_benchmarks.sh
+bash benchmarks/run_b7_b30_sweep.sh   # all 23 lanes
 ```
 
-## 6) Verification Artifacts
+## 7) Verification Artifacts
 
-Primary artifact location:
+- `autocode/docs/qa/test-results/` — per-run artifacts (primary)
+- `docs/qa/test-results/` — legacy; still used for some artifacts
 
-- `docs/qa/test-results/`
-- `autocode/docs/qa/test-results/`
+## 8) Benchmark Baseline
 
-Recent Phase 7 closeout artifacts:
+- B7–B29: 120/120 (100%) — 23/23 lanes green on last canonical run
+- Treat as canonical quality signal unless a reproducible regression appears
 
-- `autocode/docs/qa/test-results/20260329-131654-phase7-closeout-focused-pytest.md`
-- `autocode/docs/qa/test-results/20260329-131825-phase7-closeout-focused-ruff.md`
-- `autocode/docs/qa/test-results/20260329-131744-phase7-pyinstaller-build.md`
-- `autocode/docs/qa/test-results/20260329-132046-phase7-pyinstaller-setup-smoke.md`
-
-## 7) Benchmark Reality
-
-Canonical internal closeout:
-
-- B7-B14: `50/50` (100%)
-- B15-B29: `70/70` (100%)
-- Combined: `120/120` (100%) — all 23 lanes green
-
-Exploratory B30 / Terminal-Bench runs may show lower scores due to provider,
-harness, or model-strategy limitations. Treat the internal 23/23 green state as
-the canonical quality signal unless a
-reproducible capability regression is confirmed.
-
-## 8) Communication Rules
+## 9) Communication Rules
 
 - Read `AGENT_COMMUNICATION_RULES.md` before reading `AGENTS_CONVERSATION.MD`
-- Log a pre-task intent before code or doc changes
-- Post verification artifacts and concrete outcomes in `AGENTS_CONVERSATION.MD`
+- Log pre-task intent before code or doc changes
 - Do not read `docs/communication/old/` unless explicitly directed
+- Agents never commit — user commits
 
-## 9) Fresh-Session Checklist
+## 10) Fresh-Session Checklist
 
-1. Read `current_directives.md`
-2. Read the active tail of `AGENTS_CONVERSATION.MD`
-3. Confirm which frontier item is active now:
-   - Claude Code primary TUI parity
-   - large-repo validation
-   - external-harness orchestration
-   - Terminal-Bench improvement
-4. Check `PLAN.md` for the exact implementation steps behind that frontier item
-5. Check `git status` in the superproject and touched submodules
-6. Use stored artifacts before rerunning expensive work
+1. Read `current_directives.md` + active tail of `AGENTS_CONVERSATION.MD`
+2. Check `rust_tui_migration_status.md` for open close-out items
+3. `git status` in superproject
+4. Use stored artifacts before rerunning expensive work

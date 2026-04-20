@@ -37,10 +37,12 @@ Full command reference: `autocode/TESTING.md`.
 
 Four complementary dimensions: runtime invariants · design-target ratchet · self-vs-self PNG regression · live PTY smoke.
 
-- **Canonical guide:** `docs/tests/tui-testing-strategy.md`
+- **Canonical guide:** `docs/tui-testing/tui-testing-strategy.md` — rules, required validation matrix, triage workflow
+- **Enforced checklist:** `docs/tui-testing/tui_testing_checklist.md` — copy per-change, fill in, store as artifact
+- **Known-bug inventory:** `bugs/codex-tui-issue-inventory.md` — 21 patterns cross-referenced in the checklist
 - **Make targets:** `make tui-regression` (Track 1) and `make tui-references` (Track 4)
 - **Track 4** scenes are `strict=True` xfail by design — **never remove the `xfail` decorator** unless you shipped the UI feature that closes the gap.
-- **Every TUI change** requires real-terminal/PTY evidence plus a stored artifact at `autocode/docs/qa/test-results/<YYYYMMDD-HHMMSS>-<label>.md` (hand-written; capture the entrypoint, inputs, expected vs observed, pass/fail per check).
+- **Every TUI change** requires the filled-in checklist stored at `autocode/docs/qa/test-results/<YYYYMMDD-HHMMSS>-tui-verification.md`. Unchecked boxes or missing evidence paths = not done.
 
 ## Repository Structure
 
@@ -62,7 +64,7 @@ Root keeps: `CLAUDE.md`, `AGENTS.md`, `AGENTS_CONVERSATION.MD`, `AGENT_COMMUNICA
 | Full product roadmap | `PLAN.md` |
 | Fast session startup | `docs/session-onramp.md` |
 | Testing & evaluation overview | `autocode/TESTING.md` |
-| **TUI testing strategy (all four dimensions)** | `docs/tests/tui-testing-strategy.md` |
+| **TUI testing strategy (all four dimensions)** | `docs/tui-testing/tui-testing-strategy.md` |
 | **TUI visual snapshot pipeline (VHS)** | `autocode/tests/vhs/README.md` |
 | **TUI runtime-invariant harness (Track 1)** | `autocode/tests/tui-comparison/README.md` |
 | **TUI design-target ratchet (Track 4)** | `autocode/tests/tui-references/README.md` |

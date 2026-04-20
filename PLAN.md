@@ -284,7 +284,7 @@ This plan is locked from these inputs, in priority order:
 1. `deep-research-report.md`
 2. repo-local implementation and QA evidence under `autocode/docs/qa/test-results/`
 3. repo-local comparative audits under `research-components/`
-4. `docs/tests/tui-testing-strategy.md` and `docs/tests/pty-testing.md`
+4. `docs/tui-testing/tui-testing-strategy.md` and `docs/tests/pty-testing.md`
 
 If a future implementation decision conflicts with those sources, update the research basis first and only then change the execution plan.
 
@@ -942,7 +942,7 @@ will be filled in across Phase 2+ as more scenarios come online.
    scenarios, composer must still be visible after the turn; for
    non-turn scenarios (e.g. `startup`), returns PASS with
    `detail="N/A — scenario has no turn"`. Aligns with
-   `docs/tests/tui-testing-strategy.md` "Basic Chat Turn" requirement.
+   `docs/tui-testing/tui-testing-strategy.md` "Basic Chat Turn" requirement.
 5. `spinner_observed_during_turn` — scenario-aware; for turn
    scenarios, at least one braille spinner char
    (`⠙⠹⠸⠼⠴⠦⠧⠇⠏⠋⠛⠓`) OR a verb marker (`Thinking`, `Pondering`,
@@ -2155,7 +2155,7 @@ Created/updated as part of the migration:
 - `docs/decisions/ADR-002-rust-async-runtime.md` — tokio vs async-std choice (M1 spike output)
 - `docs/decisions/ADR-003-ratatui-vs-raw-crossterm.md` — layering choice (M1 spike output)
 - `autocode/rtui/README.md` — build + run + contributor setup
-- Update `docs/tests/tui-testing-strategy.md` — Rust binary resolution path
+- Update `docs/tui-testing/tui-testing-strategy.md` — Rust binary resolution path
 - Update `autocode/tests/tui-comparison/README.md` — binary retargeting note
 - Update `autocode/tests/tui-references/README.md` — Rust-cutover re-baseline policy
 - Update `CLAUDE.md` + `AGENTS.md` — frontend language reference (at M11 cutover only, NOT before)
