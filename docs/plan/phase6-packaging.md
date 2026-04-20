@@ -23,7 +23,7 @@ and enhanced with advanced editing features.
 
 | # | Task | Description | Priority |
 |---|------|-------------|----------|
-| 1 | PyInstaller packaging | Build single-file executable for Linux/macOS/Windows | P0 |
+| 1 | PyInstaller packaging | Build single-file executable for Linux/Windows | P0 |
 | 2 | First-run model bootstrap | Detect missing Ollama, prompt install, pull models | P0 |
 | 3 | Platform detection | Auto-detect OS, GPU, VRAM, and configure accordingly | P0 |
 | 4 | Offline mode | Full operation with local models only, no network required | P0 |
@@ -95,6 +95,6 @@ and enhanced with advanced editing features.
 | Risk | Mitigation |
 |------|-----------|
 | PyInstaller bloat (>100MB) | Use --onefile with UPX compression |
-| Platform-specific bugs | CI matrix: Linux x64, macOS arm64, Windows x64 |
+| Platform-specific bugs | CI matrix: Linux x64, Windows x64 |
 | Ollama install complexity | Detect + guide, don't auto-install system packages |
 | Multi-file edit correctness | Extensive TDD, git rollback safety net |

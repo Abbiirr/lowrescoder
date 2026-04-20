@@ -1,0 +1,12 @@
+{"jsonrpc":"2.0","method":"on_status","params":{"model":"tools","provider":"openrouter","mode":"suggest","session_id":"mock-session-001"}}
+{"jsonrpc":"2.0","id":1,"method":"session.resume","params":{"session_id":"mock-session-001"}}
+{"jsonrpc":"2.0","id":1,"result":{"ok":true}}
+{"jsonrpc":"2.0","id":2,"method":"chat","params":{"message":"hi"}}
+{"jsonrpc":"2.0","method":"on_token","params":{"text":"Hello"}}
+{"jsonrpc":"2.0","method":"on_token","params":{"text":" from"}}
+{"jsonrpc":"2.0","method":"on_token","params":{"text":" the"}}
+{"jsonrpc":"2.0","method":"on_token","params":{"text":" mock"}}
+{"jsonrpc":"2.0","method":"on_token","params":{"text":" backend"}}
+{"jsonrpc":"2.0","method":"on_token","params":{"text":"!"}}
+{"jsonrpc":"2.0","method":"on_done","params":{"tokens_in":5,"tokens_out":6,"cancelled":false,"layer_used":4}}
+{"jsonrpc":"2.0","id":2,"result":{"ok":true}}

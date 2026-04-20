@@ -1,6 +1,6 @@
 # PTY TUI Bug Report
 
-**Date:** 2026-04-18  
+**Date:** 2026-04-19  
 **Tester:** PTY automated (pty_tui_bugfind.py)  
 **Go TUI binary:** `/home/bs01763/projects/ai/lowrescoder/autocode/build/autocode-tui`  
 **Python chat:** `/home/bs01763/.local/bin/autocode chat`  
@@ -38,7 +38,7 @@ SUITE A — Go TUI (autocode-tui)
   ✓ A3_model_picker — picker opened as expected
 
 [A4] /diff command
-  ✓ A4_diff — got diff content (3355 bytes)
+  ✓ A4_diff — got diff content (3300 bytes)
 
 [A5] /cost command
   ✓ A5_cost — usage info returned

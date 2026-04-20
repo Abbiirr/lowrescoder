@@ -152,6 +152,7 @@ autocode/docs/qa/test-results/
 - **pytest** — test runner.
 - **Go TUI binary** at `autocode/build/autocode-tui` or `$AUTOCODE_TUI_BIN`.
   Tests skip cleanly if the binary is missing.
+- **Rust TUI binary**: set `$AUTOCODE_TUI_BIN=autocode/rtui/target/release/autocode-tui` to retarget the harness at the Rust implementation. All 4 `strict=True` xfails will be re-evaluated at M11 cutover per the Rust migration plan.
 - **Mock backend** at `autocode/tests/pty/mock_backend.py` — already in
   tree; no edits needed for Slice 1.
 

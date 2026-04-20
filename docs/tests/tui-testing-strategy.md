@@ -1,8 +1,13 @@
 # TUI Testing Strategy
 
-This is the required validation policy for interactive terminal UI changes in this repo. Use it for Go Bubble Tea TUI, Python inline chat, Textual TUI, and any terminal-driven interactive path.
+This is the required validation policy for interactive terminal UI changes in this repo. Use it for Go Bubble Tea TUI, Python inline chat, Textual TUI, Rust TUI, and any terminal-driven interactive path.
 
 `docs/tests/pty-testing.md` explains how to run PTY checks. This file defines what must be tested before a TUI-affecting change is considered done.
+
+**Rust TUI binary resolution:** All four testing dimensions support `$AUTOCODE_TUI_BIN`. For the Rust implementation, set:
+```bash
+export AUTOCODE_TUI_BIN=autocode/rtui/target/release/autocode-tui
+```
 
 ---
 

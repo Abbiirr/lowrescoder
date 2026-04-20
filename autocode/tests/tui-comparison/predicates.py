@@ -127,10 +127,16 @@ def _pred_composer_present(text: str, scenario: str) -> PredicateResult:
             detail=f"N/A — ask-user scenario {scenario!r} replaces the composer with a modal",
         )
     # Composer-specific markers — each anchored to a composer-line shape,
-    # not a bare selection glyph.
+    # not a bare selection glyph. Includes both Go-era markers and the
+    # Rust TUI's minimal `> ` prompt at end-of-line.
     markers = ("Ask AutoCode", "❯ Ask", "> Ask", "│ > ", "│ ❯ ")
     lines = text.split("\n")
     passed = any(any(m in line for m in markers) for line in lines)
+    # Rust TUI uses a minimal `> ` prompt at the end of the last line
+    # (after the status bar). Check for `> ` in the line or `>` at end of
+    # stripped line as a fallback.
+    if not passed:
+        passed = any("> " in line or line.rstrip().endswith(">") for line in lines)
     return PredicateResult(
         name="composer_present",
         classification=PredicateClass.HARD,

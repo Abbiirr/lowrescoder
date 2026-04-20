@@ -1,4 +1,4 @@
-.PHONY: setup test lint format clean tui tui-spike go-test
+.PHONY: setup test lint format clean tui-build tui-test
 
 setup:
 	uv sync --all-extras
@@ -16,12 +16,9 @@ format:
 clean:
 	rm -rf .venv __pycache__ .pytest_cache .mypy_cache .ruff_cache dist build
 
-# Go TUI targets
-tui:
-	cd cmd/autocode-tui && go build -o ../../build/autocode-tui$(if $(filter Windows_NT,$(OS)),.exe,) .
+# Rust TUI targets
+tui-build:
+	cd rtui && cargo build --release
 
-tui-spike:
-	cd cmd/hybridcoder-tui-spike && go build -o ../../build/hybridcoder-tui-spike$(if $(filter Windows_NT,$(OS)),.exe,) .
-
-go-test:
-	cd cmd/autocode-tui && go test ./... -v
+tui-test:
+	cd rtui && cargo test

@@ -1,0 +1,9 @@
+{"jsonrpc":"2.0","id":3,"method":"session.fork","params":{}}
+{"jsonrpc":"2.0","id":3,"result":{"new_session_id":"forked-session-abc123"}}
+{"jsonrpc":"2.0","id":4,"method":"config.set","params":{"key":"model","value":"coding"}}
+{"jsonrpc":"2.0","id":4,"result":{"ok":true}}
+{"jsonrpc":"2.0","id":5,"method":"session.list","params":{}}
+{"jsonrpc":"2.0","id":5,"result":{"sessions":[{"id":"sess-1","title":"First session","model":"tools","provider":"openrouter"},{"id":"sess-2","title":"Second session","model":"coding","provider":"openrouter"}]}}
+{"jsonrpc":"2.0","id":6,"method":"command","params":{"cmd":"/compact"}}
+{"jsonrpc":"2.0","id":6,"result":{"ok":true}}
+{"jsonrpc":"2.0","method":"on_cost_update","params":{"cost":"$0.0042","tokens_in":100,"tokens_out":50}}

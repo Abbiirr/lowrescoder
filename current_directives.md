@@ -1,10 +1,37 @@
 # Current Directives
 
-> Last updated: 2026-04-17
+> Last updated: 2026-04-19
 
 ## Active Phase
 
-**Phase 7 COMPLETE. Phase 8 COMPLETE. Current work is the post-Phase-8 frontier. Immediate active slice: Stable TUI Program (`PLAN.md` Section `1f`). After Stable TUI: large-codebase validation, deeper native external-harness orchestration, and Terminal-Bench improvement.**
+**Phase 7 COMPLETE. Phase 8 COMPLETE. §1g TUI Testing Strategy committed (`a9cc315`, `e3038b9`). §1h Rust TUI Migration COMPLETE (2026-04-19). Go TUI and Python inline deleted. Rust binary (`autocode/rtui/target/release/autocode-tui`) is the sole interactive frontend. Linux-first scope is locked; macOS is out of scope; Windows remains post-v1.**
+
+## ACTIVE SLICE: §1h Rust TUI Migration — COMPLETE
+
+**Status:** M1–M11 complete. Go TUI and Python inline fallback deleted. Rust binary is sole frontend.
+
+**Locked stack (baseline):** `crossterm` + `ratatui` + `tokio` + `portable-pty` + `serde_json` + `anyhow` + `tracing` (file only — stdout is the RPC channel).
+**M1 spike candidates (not yet locked):** `tui-textarea` (keybinding collision risk), `tokio-util::LinesCodec` (max-length truncation policy).
+
+**Locked constraints:**
+- Binary: `autocode-tui` (single name; Go binary removed at cutover)
+- Inline by default; `--altscreen` opt-in
+- Linux first; macOS out of scope; Windows post-v1 (keep architecture ConPTY-capable)
+- Python `--inline` fallback deleted at cutover
+- §1f Go milestones C/D/E/F frozen; gates absorbed into Rust-M5 through Rust-M10
+- Track 4 xfail decorators re-baselined at cutover (permission to improve)
+- Builder: flexible per milestone (user decides per slice)
+
+**Milestone sequence (see `PLAN.md` §1h.8):**
+Rust-M1 (scaffold) → M2 (RPC conformance) → M3 (streaming) → M4 (composer) → M5 (status bar/spinner) → M6 (commands/palette) → M7 (pickers) → M8 (approval/steer/fork) → M9 (editor/plan/tasks/markdown) → M10 (perf/release gate) → M11 (delete Go TUI + Python inline)
+
+**All milestones COMPLETE.**
+
+## Other Open Items
+
+- VHS baseline refresh — 4 scenes drift 1.85–3.46%; rebaseline decision pending (low priority during Rust migration).
+- Slice 2 (themed parallel renderer) — deferred.
+- 3 pre-session cruft files (`DEFERRED_PENDING_TODO.md`, `deep-research-report.md`, `benchmarks/run_b7_b30_sweep.sh`) — disposition pending.
 
 ## Status
 
@@ -23,51 +50,10 @@
 - **`/loop` UX:** COMPLETE
   - recurring loop command landed
   - smoke artifact exists: `autocode/docs/qa/test-results/20260403-173500-loop-smoke.md`
-- **Stable TUI Program:** Section `1f` is now a research-locked stable-v1 program, not a short closeout slice.
-  - **Direction:** Go BubbleTea (`autocode-tui`) remains the default interactive frontend; Python `--inline` remains the explicit fallback until the migration surface is fully closed.
-  - **Why:** `deep-research-report.md` concludes that stable replacement value comes from predictable runtime behavior, migration-compatible filesystem/lifecycle contracts, explicit permissions, durable sessions, and verification discipline rather than feature maximalism.
-  - **Current verified foundation:**
-    - Go TUI default routing is live.
-    - BubbleTea v2 / Mode 2026 migration is done.
-    - Steering queue, follow-up queue, `/fork`, multiline input, editor launch, frecency history, `/plan`, task dashboard, and status-bar enhancements are landed.
-    - Backend parity for `steer`, `session.fork`, and per-turn `on_cost_update` is landed.
-    - Focused PTY artifacts are green:
-      - `autocode/docs/qa/test-results/20260415-080003-tui-backend-parity-pty-smoke-deterministic-v3-20260415.md`
-      - `autocode/docs/qa/test-results/20260415-150741-pty-phase1-fixes.md`
-  - **Execution order is fixed unless the user reprioritizes:**
-    - **Milestone A:** runtime stability and deterministic TUI loop
-      - lock startup, keyboard routing, palette/picker, resize, stream/tool interleave, inline/alt-screen, and crash-recovery acceptance cases
-      - required verification: Go unit tests, deterministic mock harness, fresh PTY artifact
-      - exit gate: no open runtime regressions; stored PTY runtime artifact proves the matrix
-    - **Milestone B:** compatibility and migration contracts
-      - finish `CLAUDE.md` / `CLAUDE.local.md` / bounded `@imports`, skill progressive disclosure + reload, hook lifecycle payloads, and migration-friendly export/session behavior
-      - required verification: migration fixtures, hook-schema tests, skill reload tests, branch/export tests
-      - exit gate: docs explicitly state supported contracts and unsupported edges
-    - **Milestone C:** permissions, sandbox, and hook enforcement
-      - lock read-only / workspace-write / full-access semantics, allow/ask/deny policy, explainable rule matching, and hook-blocked execution
-      - required verification: policy matrix tests, sandbox escape regressions, hook enforcement tests, approval-flow tests
-      - exit gate: every tested tool call has a deterministic and explainable permission result
-    - **Milestone D:** sessions, compaction, provenance, and recovery
-      - lock append-only sessions, branch/export invariants, explicit compaction behavior, provenance preservation, and compaction circuit breakers
-      - required verification: crash-injection tests, branch/export invariants, compaction red-team tests, long-session simulations
-      - exit gate: forced interruption cannot corrupt history and compaction cannot silently convert tool/file text into instruction text
-    - **Milestone E:** context intelligence baseline
-      - ensure repo-map path, cheap `@path` completion, deterministic post-edit diagnostics, and bounded-context behavior on larger repos
-      - required verification: retrieval regressions, diagnostics-after-edit tests, large-repo validation artifacts, latency/context-growth measurements
-      - exit gate: interactive path no longer depends on whole-repo stuffing to stay useful
-    - **Milestone F:** verification profiles, release gate, and measurement
-      - publish formatter/lint/typecheck/targeted-test profiles, hook-driven verification points, transcript/diff reviewability, and operational metrics
-      - required verification: deterministic mock-harness suite, verification-profile suite, transcript/export tests
-      - exit gate: stable-v1 release note can cite a complete validation matrix and known limitations
-  - **Non-goals while Section 1f is active:**
-    - remote-client architecture work
-    - broad subagent UX
-    - orchestration-first features that increase state complexity
-    - parity-only features with no stability, compatibility, or verification value
-  - **Status (2026-04-17, late-session):** Stable TUI v1 Slices 0-8 landed. Milestone A CLOSED, B CLOSED, D ~65%, F ~75%. On top of Entries 1114–1123, late-session work (Entry 1124) added: image #9 duplicate-queue-preview removal, system-prompt guardrail against tool-calls on trivial greetings, PTY bugfind binary-path + B5→B6 Esc cleanup, and pi coding agent wired at localhost:4000 (see `~/.pi/agent/models.json`) with 8 gateway aliases exposed for side-by-side TUI comparison. No commit yet.
-  - **Immediate next task (ACTIVE SLICE):** TUI Testing Strategy — research + plan a pipeline that spins up multiple TUIs (autocode, pi coding agent, claude-code, opencode, codex CLI, aider, goose), captures their visual state, stores snapshots, and analyzes/compares them. Pi coding agent is already wired at `~/.pi/agent/models.json` with 8 gateway aliases. Detailed plan lands in `PLAN.md` §1g and `EXECUTION_CHECKLIST.md` §"TUI Testing Strategy (Active Slice)". Do NOT pick up Milestone C/D/E/F, benchmarks, or other deferred items during this slice.
-  - **All other pending items:** see `DEFERRED_PENDING_TODO.md` at repo root. Walk that file top-to-bottom after the TUI Testing Strategy slice closes. Nothing there is dismissed — just temporarily set aside.
-  - **Canonical references:** `PLAN.md` Section `1f`, `EXECUTION_CHECKLIST.md` Section `1f`, `deep-research-report.md`, `docs/tests/tui-testing-strategy.md`, `docs/tests/pty-testing.md`
+- **Stable TUI Program (§1f — COMPLETE):** Section `1f` was a research-locked stable-v1 program.
+  - **Historical note:** Go BubbleTea was the default interactive frontend through 2026-04-18. Python `--inline` was the explicit fallback. Both have been deleted as of 2026-04-19 (§1h M11).
+  - **Current state:** Rust TUI (`autocode/rtui/target/release/autocode-tui`) is the sole interactive frontend. Go TUI and Python inline fallback are gone. §1f Milestones A/B/C/D/E/F are superseded by the Rust migration milestones (§1h M1–M11).
+  - **Canonical references (historical):** `PLAN.md` Section `1f`, `docs/tests/tui-testing-strategy.md`, `docs/tests/pty-testing.md`
 - **Tests:** 1778 passed, 4 skipped
 - **Benchmarks:** 23/23 GREEN (120/120, 100%)
 - **B30 Terminal-Bench:** best confirmed score `40% (4/9)` with the `terminal_bench` alias; Harbor adapter baseline recovery is complete, score-improvement work remains open
@@ -92,7 +78,7 @@ Treat this as the canonical internal quality signal unless a fresh reproducible 
 
 | Submodule | Contents | Tests |
 |-----------|----------|-------|
-| `autocode/` | Python backend, Go TUI, Phase 5+6+7 modules | ~1200 |
+| `autocode/` | Python backend, Rust TUI (`rtui/`), Phase 5+6+7 modules | ~1200 |
 | `benchmarks/` | Harness, adapters, 77 fixtures, benchmark tests | ~200 |
 | `docs/` | All documentation | — |
 | `training-data/` | Training data | — |
@@ -127,7 +113,7 @@ Total: **1777+ tests, 0 failures in the latest stored full-suite artifact, 4 ski
 1. **Canonical benchmark model:** internal benchmark lanes are green; B30 remains a separate external benchmark track
 2. **Provider policy:** local_free + subscription allowed; paid_metered FORBIDDEN
 3. **Parity validity:** same harness + same subset + same budgets
-4. **Packaged frontend:** Go TUI (`autocode-tui`) is the primary interactive frontend; Python inline REPL is available as an explicit `--inline` fallback; Python backend serves as the JSON-RPC subprocess daemon
+4. **Packaged frontend:** Rust TUI (`autocode/rtui/target/release/autocode-tui`) is the sole interactive frontend. Go TUI and Python inline REPL have been deleted.
 
 ## Next Work (Active Frontier — per EXECUTION_CHECKLIST.md)
 
@@ -244,17 +230,17 @@ Total: **1777+ tests, 0 failures in the latest stored full-suite artifact, 4 ski
 - [x] `/loop` smoke artifact stored — `autocode/docs/qa/test-results/20260403-173500-loop-smoke.md`
 
 ### 5. Unified TUI Consolidation — ACTIVE (Immediate Top Queue)
-- **Target end state:** one interactive TUI, Go BubbleTea first.
-- **Live state:** Go TUI is the default interactive path, but the Python inline fallback still exists behind `--inline`.
-- Existing Go TUI work already landed (keep, do not redo):
-  - `cmd/autocode-tui/model.go` — stagePalette, verbTicks, currentVerb
-  - `cmd/autocode-tui/view.go` — renderPaletteView, renderThinking, spinner verbs
-  - `cmd/autocode-tui/update.go` — Ctrl+K palette, handlePaletteKey
-  - `cmd/autocode-tui/spinnerverbs.go` — 187 rotating verbs
-  - `cmd/autocode-tui/statusbar.go`, `styles.go`, `commands.go`
+- **Target end state:** one interactive TUI, Rust binary.
+- **Live state:** Rust TUI (`autocode/rtui/target/release/autocode-tui`) is the sole interactive frontend. Go TUI and Python inline fallback deleted.
+- Rust TUI work completed (keep, do not redo):
+  - `autocode/rtui/src/` — all modules (state, rpc, backend, ui, render, commands)
+  - `autocode/rtui/Cargo.toml` — locked baseline stack
+  - `docs/reference/rust-tui-{architecture,rpc-contract}.md` — architecture and RPC spec
+  - `docs/decisions/ADR-00{1,2,3}-*.md` — migration decisions
+  - `.github/workflows/rust-tui-ci.yml` — CI workflow
   - All closeout gates now green — Section 1f is closeable:
     - ✓ PTY artifact: `autocode/docs/qa/test-results/20260415-150741-pty-phase1-fixes.md` (0 bugs, 5/5 scenarios)
-    - ✓ CLI contract: `--inline` kept as explicit documented fallback; Go TUI is default; docs agree
+    - ✓ CLI contract: Rust binary is sole frontend; no `--inline` fallback
     - ✓ Backend parity: `steer`, `session.fork`, `on_cost_update` landed in `server.py` with tests
     - ✓ Ruff: all 12 changed files clean (`20260415-150744-ruff-focused-20260415.md`)
   - Follow-up (not blocking commit): `log.jsonl` / `context.jsonl` split, Phase 7 feature backlog

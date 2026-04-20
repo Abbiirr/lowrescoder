@@ -33,10 +33,15 @@ htmlcov/
 # Linting
 .ruff_cache/
 
-# Go
+# Go (legacy — Go TUI deleted at M11)
 build/
 *.exe
 cmd/hybridcoder-tui-spike/
+
+# Rust
+target/
+**/target/
+*.rs.bk
 
 # OS
 Thumbs.db
@@ -67,3 +72,5 @@ research-components/
 
 # Scheduled-job runner output
 jobs/
+
+wiki/

@@ -2,7 +2,7 @@
 """PyInstaller spec file for AutoCode single-file executable.
 
 Build: pyinstaller autocode.spec
-Output: dist/autocode (Linux/macOS) or dist/autocode.exe (Windows)
+Output: dist/autocode (Linux) or dist/autocode.exe (Windows)
 """
 
 import sys

@@ -84,7 +84,7 @@ uv run pytest tests/ -v --cov=src/autocode --cov-report=html
 # Windows
 build.bat
 
-# Unix/macOS
+# Linux
 chmod +x build.sh && ./build.sh
 ```
 

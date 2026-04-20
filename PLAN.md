@@ -1734,3 +1734,462 @@ Executable in §1f.3 "Permissions, Sandbox, And Hook Enforcement". Concrete base
 
 - Per-request logs: latency, tokens, model, retries.
 - Debug log with full prompts and responses (local only, opt-in).
+
+---
+
+## 1h. Rust TUI Migration Program (ACTIVE)
+
+> **Status (2026-04-19):** **ACTIVE** — all 12 decisions in §1h.1 locked by user (Entry 1220). Active implementation slice: **Rust-M1**. Go TUI frozen (maintenance-only). Source research: `deep-research-report (1).md` at repo root (treat as draft; §1h.2 corrections authoritative).
+>
+> **Scope in one sentence:** Replace the Go BubbleTea frontend (`autocode/cmd/autocode-tui/`, 13,102 LOC across ~30 files) with a Rust inline TUI binary that speaks the **existing** JSON-RPC protocol (`protocol.go`) over PTY to the **unchanged** Python backend at `autocode/src/autocode/backend/server.py`.
+
+### 1h.0 Mission And Strategic Rationale
+
+**Why migrate.** The Go BubbleTea frontend is a working foundation, but Rust delivers three concrete gains:
+1. **Richer terminal control depth** — `crossterm` exposes raw-mode, cursor, synchronized-update, and bracketed-paste primitives that BubbleTea v2 abstracts away, making fine-grained rendering and future capability additions easier.
+2. **Linux-first PTY with a Windows path later** — `portable-pty` gives us a credible route from Linux now to Windows ConPTY later, without tying the product to BubbleTea long-term.
+3. **Smaller long-tail maintenance surface** — a pure-Rust binary with explicit PTY ownership eliminates the Go runtime, CGO concerns, and BubbleTea version-churn as the dependency surface shrinks to `Cargo.lock`.
+
+Note: **inline-by-default mode is NOT a new Rust benefit**. The Go TUI already defaults to inline scrollback-preserving mode (`main.go:13-20`, `--altscreen` is opt-in). The Rust port preserves this behavior, it does not introduce it.
+
+**What stays.**
+- Python backend (`autocode/src/autocode/backend/server.py`, agent loop, session store, tool surface, hooks).
+- JSON-RPC protocol as defined in `autocode/cmd/autocode-tui/protocol.go` — Rust must be semantically indistinguishable on the wire (same method, id, params/result, event order).
+- Four-dimension TUI testing matrix (Track 1 runtime invariants · Track 4 design-target ratchet · VHS self-regression · PTY smoke) — all four retarget the Rust binary via `$AUTOCODE_TUI_BIN`.
+- Artifact storage policy (`autocode/docs/qa/test-results/` + per-track subdirs).
+- Agent communication protocol, commit policy, role defaults.
+
+**What goes (at Rust-M11 cutover).**
+- Go TUI: `autocode/cmd/autocode-tui/` deleted.
+- Python `--inline` REPL fallback: `autocode/src/autocode/inline/app.py` + `renderer.py` + `completer.py` deleted.
+- No coexistence period. No selector env var. One binary: `autocode-tui`.
+
+### 1h.1 Pre-Implementation Decisions Required (BLOCKING)
+
+No code is written until every item below is answered in writing by the user. These are recorded here for the review pass.
+
+**All 12 decisions LOCKED 2026-04-19 (user, Entry 1220).**
+
+| # | Decision | **Locked Answer** |
+|---|---|---|
+| a | Strategic go/no-go | **YES — migrate Go → Rust** |
+| b | Crate stack — locked baseline | **`crossterm` + `ratatui` + `tokio` + `portable-pty` + `serde_json` + `anyhow` + `tracing`**. M1 spike candidates (not yet locked): `tui-textarea`, `tokio-util::LinesCodec` — see §1h.1 spike table |
+| c | PTY vs plain pipe | **PTY via `portable-pty`** |
+| d | Stable-V1 timing | **FREEZE** — §1f Go milestone C/D/E/F work stopped; gates absorbed into Rust milestones |
+| e | Binary naming | **`autocode-tui`** — single name from day one; Go removed, no coexistence period |
+| f | Inline vs alt-screen default | **INLINE by default**; `--altscreen` opt-in flag |
+| g | Windows | **Linux only for v1; architecture keeps ConPTY path open for later** |
+| h | Selection mechanism | **N/A** — one binary; no selector needed |
+| i | Track 4 fidelity | **Permission to improve** — re-baseline xfail decorators at Rust cutover |
+| j | Builder agent | **Flexible** — OpenCode or Claude per slice; user decides per milestone |
+| k | Python `--inline` fallback | **DELETE** at cutover (git preserves history) |
+| l | Research report | **DRAFT** — §1h.2 corrections are authoritative |
+
+**Crate stack — locked baseline (M1+):**
+
+| Layer | Crate | Rationale |
+|---|---|---|
+| Terminal I/O | `crossterm` | Cross-platform; async `EventStream` (requires `event-stream` feature); ratatui's default backend; ConPTY-capable. **Pin to ratatui's semver range** — mismatched versions create separate raw-mode state |
+| Layout + widgets | `ratatui` | Frame/Widget tree; List, Paragraph, Block; used in gitui/bottom; 2–3× less render code vs raw |
+| Async runtime | `tokio` | Industry standard; `spawn_blocking` for blocking PTY handles; `mpsc` channels for internal bus |
+| PTY spawn | `portable-pty` | WezTerm's crate; blocking `try_clone_reader()`/`take_writer()` — wrap in `spawn_blocking`, not async |
+| JSON codec | `serde` + `serde_json` | Standard; struct-per-message mirrors `protocol.go` |
+| Errors | `anyhow` | Ergonomic; no perf overhead |
+| Logging | `tracing` + `tracing-subscriber` (file only) | **Stdout is RPC channel** — accidental stdout log = protocol corruption |
+
+**M1 spike candidates (prove in Rust-M1 before committing):**
+
+| Crate | Risk | Spike question |
+|---|---|---|
+| `tui-textarea` | Default bindings collide: `Ctrl+K` (palette), `Ctrl+C` (cancel/steer), `Ctrl+J`, `Ctrl+U`, `Ctrl+R` | Can every key route through app reducer first with all crate defaults suppressed? |
+| `tokio-util::LinesCodec` | Silently discards bytes after `max_length` violation until next newline | What is the max RPC message size? Set explicit cap or use manual line-split instead |
+
+### 1h.2 Research Report Integration And Accuracy Audit
+
+**Source of truth:** `deep-research-report (1).md` at repo root (357 lines; executive summary + 14 numbered sections).
+
+**Verified claims (repo-ground-truth confirmed):**
+- ✅ Go TUI source tree matches report §1 Table 1 (plus additional files the report omits: `backend_unix.go`, `backend_windows.go`, `detect.go`, `completion.go`, `markdown.go`, `spinnerverbs.go`, `styles.go`, `taskpanel.go`, `milestone_a_test.go`, `palette_test.go`).
+- ✅ JSON-RPC message catalog in report §2 Table 2 matches `protocol.go` lines 1-180.
+- ✅ `tests/pty/` layout matches report §9 expectations.
+- ✅ `crossterm` + `portable-pty` + `serde_json` crate stack is sound per current crate docs.
+
+**Corrections and omissions:**
+- ⚠️ Report §1 cites `autocode/server.py`; actual path is `autocode/src/autocode/backend/server.py`.
+- ⚠️ Report §2 Table 2 omits `CostUpdateParams` (notification `on_cost_update`, see `protocol.go:181-186`).
+- ⚠️ Report §1 Table 1 lists `inline/app.py` + `renderer.py` as "will be replaced by Rust"; **actually** those files are flagged for deletion (memory `feedback_inline_is_shipping_frontend.md`). Migration deletes them, it does not port them.
+- ⚠️ Report §8 migration steps ignore the existing 4-dimension testing matrix (Track 1/4, VHS, PTY smoke) — §1h.7 fills that gap.
+- ⚠️ Report §6-7 frame "inline-by-default scrollback preservation" as a new Rust capability. **Incorrect** — the Go TUI already defaults to inline mode (`main.go:13-20`, `--altscreen` is opt-in since at least commit `b113adb`). Rust preserves this behavior; it does not introduce it.
+- ⚠️ Report §11-12 assumes a coexistence period with `AUTOCODE_FRONTEND=rust|go` selector and a gradual rollout. **Rejected** — user decision: single binary `autocode-tui`, Go removed at M11 cutover, no coexistence period.
+- ⚠️ Report §4 does not qualify `tui-textarea` as an unproven spike candidate. It has app-hostile default keybindings (`Ctrl+K`, `Ctrl+C`, `Ctrl+J`, `Ctrl+U`, `Ctrl+R`) that collide with app-owned controls. Treat as M1 spike, not locked foundation.
+- ⚠️ Report §11 rollback plan does not account for Claude-Code-style settings (hooks, skills) landed in Slices 3-4 — §1h.9 preserves these via JSON-RPC contract, no Rust-side logic needed.
+- ⚠️ Report §12 suggests a separate Git branch/repo; this plan keeps the Rust code in-tree under `autocode/rtui/` for monorepo continuity.
+
+**Citations the report leaves unresolved (non-blocking, track for M1 spike):**
+- Tokio vs async-std choice — both viable; tokio is stdlib-adjacent for most teams.
+- Ratatui layering — whether we adopt ratatui's layout/widgets or stay closer to raw crossterm for rendering control (report implies raw).
+
+### 1h.3 Target Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Rust TUI (autocode-tui)                   │
+│                                                             │
+│  ┌──────────────┐   ┌────────────┐   ┌──────────────────┐   │
+│  │ Input Router │──▶│ State / FSM│──▶│ Render Pipeline  │   │
+│  │ (crossterm)  │   │ (ReducerFn)│   │ (ratatui/direct) │   │
+│  └──────┬───────┘   └─────┬──────┘   └────────┬─────────┘   │
+│         │                 │                   │             │
+│         ▼                 ▼                   ▼             │
+│  ┌────────────────────────────────────────────────────┐     │
+│  │              RPC Bus (tokio channels)              │     │
+│  └────────┬───────────────────────────┬───────────────┘     │
+│           │ outbound                  │ inbound             │
+│           ▼                           ▼                     │
+│  ┌────────────────┐           ┌────────────────┐            │
+│  │ JSON-RPC Codec │           │ JSON-RPC Codec │            │
+│  │   (encode)     │           │   (decode)     │            │
+│  └────────┬───────┘           └────────▲───────┘            │
+│           │                            │                    │
+│           ▼                            │                    │
+│  ┌───────────────────────────────────────────────────┐      │
+│  │         PTY Channel (portable-pty master)         │      │
+│  └─────────────────────┬─────────────────────────────┘      │
+└────────────────────────┼────────────────────────────────────┘
+                         │ framed JSON, 1 msg/line
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Python backend (UNCHANGED): autocode/backend/server.py     │
+│  • agent loop  • session store  • tools  • hooks  • skills  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key architectural invariants:**
+1. **The RPC wire format is frozen.** Any Rust-side change that alters a field name, type, or ordering breaks Python. Conformance tests (§1h.7) enforce this.
+2. **The Rust process owns stdin/stdout raw mode;** the Python child runs inside a PTY and produces JSON on its stdout.
+3. **The state machine is a pure reducer** — `(State, Event) -> (State, Vec<Effect>)` — to make it testable without a terminal.
+4. **Rendering is pull-based from state** — no render calls from inside the input router or RPC decoder.
+5. **PTY resize events** propagate from the host terminal → Rust → PTY child.
+
+### 1h.4 File And Module Inventory (Go → Rust Port Map)
+
+Current Go TUI: 30 files, 13,102 LOC (measured 2026-04-18). Port map:
+
+| Go source (LOC) | Rust target | Notes |
+|---|---|---|
+| `main.go` | `src/main.rs` | CLI flags, runtime init |
+| `model.go` | `src/state/model.rs` | `AppState` struct, reducer entry |
+| `view.go` (450) | `src/render/view.rs` | Ratatui widget tree or direct crossterm |
+| `update.go` (913) | `src/event_loop.rs` + `src/state/reducer.rs` | Split: IO loop vs pure reducer |
+| `commands.go` | `src/commands/mod.rs` + `src/commands/*.rs` | One slash-command per file |
+| `composer.go` | `src/ui/composer.rs` | Multi-line input, Alt+Enter, history |
+| `messages.go` | `src/rpc/msg.rs` | `tea.Msg` equivalent — internal event enum |
+| `protocol.go` (187) | `src/rpc/protocol.rs` | `serde` structs, semantic/canonical wire parity |
+| `backend.go` + `backend_unix.go` + `backend_windows.go` | `src/backend/mod.rs` + `src/backend/pty.rs` | `portable-pty` spawn/monitor |
+| `approval.go` + `askuser.go` | `src/ui/prompts/approval.rs` + `src/ui/prompts/askuser.rs` | Blocking modal widgets |
+| `history.go` | `src/history.rs` | Frecency scoring (port verbatim) |
+| `statusbar.go` (123) | `src/ui/statusbar.rs` | Model · provider · mode · session · tokens · cost · bg |
+| `styles.go` (114) | `src/ui/styles.rs` | Color palette (Tokyo Night per memory) |
+| `spinnerverbs.go` (202) | `src/ui/spinner.rs` | 187 rotating verbs (literal port) |
+| `detect.go` | `src/terminal_detect.rs` | Terminal capability probe |
+| `completion.go` | `src/ui/completion.rs` | `@path` expansion + fuzzy match |
+| `markdown.go` | `src/render/markdown.rs` | Inline code/bold/italic rendering |
+| `taskpanel.go` | `src/ui/taskpanel.rs` | `on_tasks` visualization |
+| `model_picker.go` (276) + `provider_picker.go` (185) + `session_picker.go` (162) | `src/ui/pickers/` | Arrow-key + type-to-filter (per memory `feedback_arrow_key_pickers.md`) |
+| `milestone_a_test.go` (1109) | `tests/milestone_a/` | Runtime invariant harness — port test scenarios, not Go test framework |
+| `*_test.go` (unit) | `tests/unit/` or `#[cfg(test)]` modules | Per-file; some consolidate |
+| `palette_test.go` | `tests/palette/` | Ctrl+K palette scenarios |
+
+**Not ported (deleted at cutover):**
+- `autocode/src/autocode/inline/app.py` (+ `renderer.py`, `completer.py`, `__init__.py`) — Python REPL fallback.
+- `autocode/src/autocode/tui/commands.py` if it exists purely for the inline path (verify before deletion).
+
+**Retained (test harness, retargets at Rust binary):**
+- `autocode/tests/pty/*.py` — retargets via `$AUTOCODE_TUI_BIN`.
+- `autocode/tests/tui-comparison/` — retargets via `$AUTOCODE_TUI_BIN`.
+- `autocode/tests/tui-references/` — retargets via `$AUTOCODE_TUI_BIN`; all 4 `strict=True` xfails re-evaluated at Rust cutover per §1h.1 Decision (i).
+- `autocode/tests/vhs/` — retargets via `$AUTOCODE_TUI_BIN`.
+
+### 1h.5 JSON-RPC Contract (Frozen, Verbatim)
+
+**Notifications (Python → Rust).** Rust MUST accept without rejection.
+
+| Method | Params | Source |
+|---|---|---|
+| `on_token` | `{text: string}` | `protocol.go:43-46` |
+| `on_thinking` | `{text: string}` | `protocol.go:48-51` |
+| `on_done` | `{tokens_in: int, tokens_out: int, cancelled?: bool, layer_used?: int}` | `protocol.go:53-59` |
+| `on_tool_call` | `{name, status, result?, args?}` | `protocol.go:61-67` |
+| `on_error` | `{message: string}` | `protocol.go:69-72` |
+| `on_status` | `{model, provider, mode, session_id?}` | `protocol.go:74-80` |
+| `on_tasks` | `{tasks: [...], subagents: [...]}` | `protocol.go:82-86` |
+| `on_cost_update` | `{cost: string, tokens_in: int, tokens_out: int}` | `protocol.go:181-186` — **omitted in research report** |
+
+**Requests (Python → Rust, ID set).** Rust MUST respond with matching ID.
+
+| Method | Params | Response |
+|---|---|---|
+| `approval` | `{tool: string, args: string}` | `{approved: bool, session_approve?: bool}` |
+| `ask_user` | `{question: string, options?: [string], allow_text?: bool}` | `{answer: string}` |
+
+**Requests (Rust → Python, ID set).** Rust MUST await response.
+
+| Method | Params | Result |
+|---|---|---|
+| `chat` | `{message, session_id?}` | ack |
+| `cancel` | `{}` | ack |
+| `command` | `{cmd}` | ack |
+| `session.new` | `{title?}` | — |
+| `session.list` | `{}` | `{sessions: [SessionInfo]}` |
+| `session.resume` | `{session_id}` | `{session_id, title, error?}` |
+| `session.fork` | `{session_id?}` | `{new_session_id}` |
+| `config.set` | `{key, value}` | — |
+| `steer` | `{message}` | ack |
+
+**Framing invariants:**
+- One JSON object per line, UTF-8, LF-terminated (not CRLF).
+- `"jsonrpc": "2.0"` required on every message.
+- Response has `id` set and `method` empty.
+- Notification has `id` null and `method` set.
+- Error responses use standard JSON-RPC `{"error": {code, message}}` shape.
+
+**Conformance suite (§1h.7):** capture Go wire traffic → replay against Rust → **semantic/canonical parity check** (same method, id, params/result/error content, same event order). Raw byte-diff is advisory only — JSON field ordering across serializers is not meaningful. Any semantic divergence fails the gate.
+
+### 1h.6 UI Feature Parity Checklist
+
+Every visible behavior of the current Go TUI must be accounted for before cutover. If a feature is explicitly dropped, it gets a decision row in §1h.1.
+
+- [ ] Composer multi-line input, Alt+Enter newline
+- [ ] Frecency history with up/down recall
+- [ ] `/` slash command router + typeahead
+- [ ] Ctrl+K command palette
+- [ ] Model picker (arrow keys + type-to-filter)
+- [ ] Provider picker (arrow keys + type-to-filter)
+- [ ] Session picker (arrow keys + type-to-filter)
+- [ ] Streaming token display with sliding-window flush to scrollback
+- [ ] Thinking-token display (dim/separate style)
+- [ ] Tool call cards (`on_tool_call` status updates)
+- [ ] Status bar: Model · Provider · Mode · Session · Tokens · Cost · bg tasks
+- [ ] Spinner with 187 rotating verbs (literal verb list port from `spinnerverbs.go`)
+- [ ] Approval modal (blocking, keyboard-accept-only)
+- [ ] Ask-user modal (options + free-text)
+- [ ] Ctrl+C first-press → steer-mode, second-press → cancel
+- [ ] Ctrl+C third-press → hard exit (memory: two-press escape pattern for pickers)
+- [ ] `/fork` → session fork with new session ID display
+- [ ] `/plan` → plan mode toggle, status-bar indicator
+- [ ] `/compact` → manual compaction trigger
+- [ ] `/resume` / `/sessions` → picker flow
+- [ ] `/model` / `/provider` → picker flow (per memory: MUST be arrow-key, not text dump)
+- [ ] `/clear` → scrollback-aware clear
+- [ ] `/exit` → graceful shutdown
+- [ ] Ctrl+E → `$EDITOR` launch, re-read temp file as composer buffer
+- [ ] `@path` file reference completion
+- [ ] Markdown inline rendering (code, bold, italic, links)
+- [ ] Task dashboard (`on_tasks` → panel)
+- [ ] Followup queue (messages queued during streaming auto-send on `on_done`)
+- [ ] Resize handling (propagate to PTY child)
+- [ ] Inline mode (default; preserves scrollback)
+- [ ] `--altscreen` flag (opt-in alt-screen mode)
+- [ ] Queue semantics while streaming / tool-calling (no UI events dropped)
+- [ ] Warning/error classification routing
+- [ ] Unsolicited picker prevention (Track 1 invariant)
+- [ ] Debug overlay (if Go TUI has one — verify)
+- [ ] Bracketed paste support
+
+### 1h.7 Testing Strategy Integration (Four Dimensions Preserved)
+
+All four existing dimensions retarget the Rust binary via `$AUTOCODE_TUI_BIN`. No harness rewrites; only binary path changes.
+
+| Dimension | Current path | Rust binary retargeting | New Rust-specific additions |
+|---|---|---|---|
+| **Track 1 — runtime invariants** | `autocode/cmd/autocode-tui/milestone_a_test.go` (Go, 1109 LOC, 62 scenarios) | Port scenarios to Rust `#[test]` fns under `tests/milestone_a/` | Same 62 scenarios; add Rust-only invariants (async task cancellation, tokio channel close-on-error) |
+| **Track 4 — design-target ratchet** | `autocode/tests/tui-references/` (Python + live PTY) | `$AUTOCODE_TUI_BIN` → `autocode/rtui/target/release/autocode-tui` | Re-baseline `strict=True` xfails at cutover; document intentional design changes |
+| **VHS self-regression** | `autocode/tests/vhs/` (pyte + Pillow) | `$AUTOCODE_TUI_BIN` retarget (already env-driven) | VHS baselines regenerated at cutover (user-gated per memory `feedback_vhs_rebaseline_user_gated.md`) |
+| **PTY smoke** | `autocode/tests/pty/` (pty.fork + select + DSR responder) | `$AUTOCODE_TUI_BIN` retarget | Add new scenario: RPC conformance replay (§1h.5) |
+
+**New Rust-native test layers:**
+- `cargo test` — unit + integration.
+- **JSON-RPC conformance harness** (new): capture Go wire traffic → replay → **semantic/canonical parity check** (same method, id, params/result/error content, same event order). Raw byte-diff is a secondary advisory fixture only — JSON field ordering across serializers is not meaningful. Harness lives at `autocode/rtui/tests/rpc-conformance/`.
+- **Crossterm render-function tests** — pure state → render-string tests without a real terminal.
+- **Tokio channel stress tests** — backpressure, dropped-message, close-on-error, PTY EOF handling.
+
+**Evidence artifacts** continue to land at `autocode/docs/qa/test-results/<YYYYMMDD-HHMMSS>-<label>.md` per CLAUDE.md discipline.
+
+### 1h.8 Migration Milestones (Rust-M1 → Rust-M10)
+
+Each milestone has: **goal · dependencies · exit gate · stored artifact**. Do not start Milestone N+1 until Milestone N artifact is green.
+
+#### Rust-M1 — Scaffolding, PTY launch, minimal RPC echo, spike validation
+- **Goal:** `autocode-tui` Rust binary (at `autocode/rtui/`) spawns `autocode backend` via `portable-pty`, reads `on_status` line, prints it raw, exits on Ctrl+C. Also: **spike `tui-textarea` keybinding override** and **spike `tokio-util::LinesCodec` size policy** — verdict on whether both are promoted to locked stack or replaced.
+- **Dependencies:** All §1h.1 decisions locked (done). Codex architecture APPROVE (Entry 1223 NEEDS_WORK resolved by this remediation — re-review gated).
+- **Exit gate:** PTY artifact proves startup + status-line read + clean shutdown. `cargo build --release` green. Spike verdicts documented in ADR-001/002/003.
+- **Artifact:** `autocode/docs/qa/test-results/<ts>-rust-m1-scaffold.md`.
+
+#### Rust-M2 — JSON-RPC codec parity + conformance harness
+- **Goal:** All 16 message types (8 notifications + 2 inbound requests + 9 outbound requests + `on_cost_update`) round-trip with **semantic/canonical parity** — same method, id, params/result/error content, and event order. Unit tests for every serde struct.
+- **Dependencies:** Rust-M1.
+- **Exit gate:** Conformance harness green (100+ Go wire trace replays pass semantic comparison; raw byte-diff advisory fixtures stored but not blocking). Unit tests for all 16 types.
+- **Artifact:** `<ts>-rust-m2-rpc-conformance.md`.
+
+#### Rust-M3 — Raw input loop + streaming display
+- **Goal:** Raw-mode keyboard input; Enter sends `chat`; `on_token` renders with sliding-window flush; `on_done` commits to scrollback.
+- **Dependencies:** Rust-M2.
+- **Exit gate:** PTY smoke passes startup + "hi<Enter>" + streamed response + scrollback preservation scenario.
+- **Artifact:** `<ts>-rust-m3-streaming.md`.
+
+#### Rust-M4 — Composer (line editing, history, multi-line)
+- **Goal:** Backspace, left/right, Alt+Enter newline, up/down history, frecency sort.
+- **Dependencies:** Rust-M3.
+- **Exit gate:** Composer unit tests + PTY scenario for multi-line entry and history recall.
+- **Artifact:** `<ts>-rust-m4-composer.md`.
+
+#### Rust-M5 — Status bar + spinner
+- **Goal:** Status bar updates on `on_status` / `on_done` / `on_cost_update`; 187-verb rotating spinner on 100ms tick.
+- **Dependencies:** Rust-M4.
+- **Exit gate:** Track 4 `ready` + `active` scenes XPASS (or remain xfail with documented pixel-diff rationale).
+- **Artifact:** `<ts>-rust-m5-statusbar.md`.
+
+#### Rust-M6 — Slash command router + Ctrl+K palette
+- **Goal:** `/clear /exit /fork /compact /plan /sessions /resume /model /provider /help` routed; Ctrl+K opens palette; typeahead filters.
+- **Dependencies:** Rust-M5.
+- **Exit gate:** Palette unit tests + PTY palette scenario green.
+- **Artifact:** `<ts>-rust-m6-commands.md`.
+
+#### Rust-M7 — Pickers (model / provider / session, arrow + filter)
+- **Goal:** Three picker modals with arrow-key navigation AND type-to-filter (per memory). Two-stroke Escape. Ctrl+C always exits.
+- **Dependencies:** Rust-M6.
+- **Exit gate:** Per-picker unit tests mirror `model_picker_test.go` / `provider_picker_test.go` / `session_picker_test.go` structure; PTY picker scenario green; `pty_tui_bugfind.py` finds 0 picker-related bugs.
+- **Artifact:** `<ts>-rust-m7-pickers.md`.
+
+#### Rust-M8 — Approval / ask-user / steer / fork
+- **Goal:** Approval modal blocks tool execution until answered; ask-user supports options + free-text; first Ctrl+C mid-stream → steer prompt; `/fork` exchanges `ForkSessionParams` → `ForkSessionResult`.
+- **Dependencies:** Rust-M7.
+- **Exit gate:** Backend-parity PTY smoke (`pty_smoke_backend_parity.py`) green; steer + fork scenarios green.
+- **Artifact:** `<ts>-rust-m8-approval-steer-fork.md`.
+
+#### Rust-M9 — Editor launch + plan mode + task panel + followup queue + markdown
+- **Goal:** Ctrl+E suspends raw-mode, spawns `$EDITOR` on temp file, resumes with buffer contents; `/plan` toggles plan mode + status indicator; `on_tasks` renders task panel; followup queue sends on `on_done`; markdown inline rendering.
+- **Dependencies:** Rust-M8.
+- **Exit gate:** Full Track 4 scene suite (ready/active/narrow/recovery + 10 stubbed scenes newly populated); all VHS scenes green against rebaselined PNGs.
+- **Artifact:** `<ts>-rust-m9-final-features.md`.
+
+#### Rust-M10 — Linux release hardening + performance gate
+- **Goal:** Linux release hardening complete. Redraw latency <50ms. Key-to-render <16ms. Windows remains post-v1.
+- **Dependencies:** Rust-M9.
+- **Exit gate:** Performance measurement artifact; Linux CI green; `docs/reference/rust-tui-architecture.md` + `docs/reference/rust-tui-rpc-contract.md` published.
+- **Artifact:** `<ts>-rust-m10-release-gate.md`.
+
+#### Rust-M11 — Cutover (remove Go TUI, remove Python inline)
+- **Goal:** Delete `autocode/cmd/autocode-tui/`; delete `autocode/src/autocode/inline/`; update all docs to reflect Rust-only frontend. Binary is already named `autocode-tui` from M1.
+- **Dependencies:** Rust-M10 green. Full 23-lane benchmark regression green with Rust frontend. User explicit sign-off.
+- **Exit gate:** User-authored commit (per commit policy); release note published; no Go or Python inline references in non-archive docs.
+- **Artifact:** `<ts>-rust-m11-cutover.md`.
+
+### 1h.9 Build-And-Replace Strategy (No Coexistence)
+
+**No coexistence period. No selector env var. One binary: `autocode-tui`.**
+
+Per user decision: Go TUI is removed at Rust-M11 cutover. There is no extended period where both exist as alternatives. During development (M1–M10), Go TUI remains frozen (maintenance-only) but is still the production binary — the Rust binary is not shipped until M10 is green. At M11, Go is removed, Rust is the only binary.
+
+**During development (Rust-M1 through Rust-M10):**
+- Go TUI: `autocode/cmd/autocode-tui/` — frozen; maintenance-only (critical bugs only, no new features).
+- Rust TUI: `autocode/rtui/` — in development; tested but not production default.
+- No `AUTOCODE_FRONTEND` env var. Testers run the Rust binary directly via `$AUTOCODE_TUI_BIN`.
+- `$AUTOCODE_TUI_BIN` is already how all 4 testing dimensions select the binary.
+
+**At M11 cutover:**
+- Go TUI deleted from repo.
+- Python inline fallback deleted from repo.
+- `autocode-tui` binary (Rust) is the only frontend.
+- Git history preserves Go code if ever needed.
+
+**If Rust-M1 through M9 reveal a blocking problem:**
+- The fix is to address the blocking problem, not to restore coexistence.
+- Go TUI is still frozen — it does not receive new features to compensate.
+- If the problem is fatal to the migration, the user decides whether to abandon §1h entirely and unfreeze Go, or continue with the fix.
+
+**Schedule risk acknowledgment:** freezing Go C/D/E/F while Rust is speculative is a deliberate schedule bet. If Rust-M1/M2 slip materially, the project has stopped closing known Go gaps with no replacement ready. Accepted per user decision (d).
+
+### 1h.10 Performance And Cross-Platform Requirements
+
+| Target | Value | Measurement |
+|---|---|---|
+| First-token render latency | <50ms after `on_token` arrival | Timestamped log + PTY artifact |
+| Keystroke-to-render | <16ms (1 frame @60Hz) | Synthetic key injection in conformance harness |
+| Idle CPU | <1% on Linux | `top -p $(pidof autocode-tui)` sampling |
+| Memory footprint | <50MB RSS | `/proc/self/status` sampling |
+| Scrollback ring | Bounded to 10,000 lines | Ring buffer assertion in unit tests |
+| Startup time | <200ms cold (excluding Python backend spawn) | `time autocode-tui --version` |
+
+**Platforms:**
+- **Linux:** xterm, Ghostty, kitty, alacritty, gnome-terminal, tmux. ← the supported v1 platform.
+- **Windows:** post-v1 when ready; keep architecture ConPTY-capable but do not build toward it during §1h.
+
+**CI matrix (GitHub Actions):**
+- Linux x86_64 (required).
+- Windows x86_64 (post-v1, added when Windows work begins).
+
+### 1h.11 Risk Register
+
+| ID | Severity | Risk | Mitigation |
+|---|---|---|---|
+| R1 | HIGH | PTY framing differences cause RPC deadlocks on Windows ConPTY | Post-v1 Windows; extensive conformance harness before enabling |
+| R2 | HIGH | Rust ecosystem for complex TUI overlays (pickers, palette) less mature than BubbleTea | M7 picker slice has explicit spike budget; ratatui vendoring allowed if upstream blocks |
+| R3 | MED | Async Rust + stdin/stdout blocking is a known footgun | Dedicated blocking I/O thread per stream; tokio channels for internal dispatch; decision recorded as ADR |
+| R4 | MED | Pixel-for-pixel parity constraint freezes UX improvements | §1h.1 decision (i) defaults to permission-to-improve; Track 4 re-baseline at cutover |
+| R5 | MED | Migration freezes Section 1f Milestones C/D/E/F | §1h.1 decision (d) + plan explicitly absorbs stable-v1 gates into Rust-M5 through Rust-M10 |
+| R6 | MED | Contributor onboarding needs Rust toolchain | Document `rustup install stable`, `cargo build`, platform deps in `autocode/rtui/README.md` |
+| R7 | LOW | Claude/Codex have less Rust-specific review context than Go | Reviewer-agent prompts updated with Rust idiom references; Codex-specific Rust checklist in `AGENT_COMMUNICATION_RULES.md` |
+| R8 | LOW | Go TUI frozen while Rust is speculative — known gaps stay open | Accepted schedule bet per user decision (d); fatal Rust blocker = user decision on whether to abandon §1h |
+| R9 | LOW | Binary size >10MB may surprise users | Strip + LTO + cargo config minimal-deps profile; document target in M10 |
+| R10 | MED | `tui-textarea` default keybindings (`Ctrl+K`, `Ctrl+C`, `Ctrl+J`, `Ctrl+U`, `Ctrl+R`) collide with app-owned controls | M1 spike proves the crate can be used with all defaults suppressed; if not, hand-roll composer |
+| R11 | MED | `crossterm` semver skew in dep graph (ratatui + direct crossterm dep) causes lost events or broken raw-mode restore | Pin crossterm to ratatui's required range from day one; no direct crossterm dep outside of what ratatui re-exports |
+
+### 1h.12 Documentation Deliverables
+
+Created/updated as part of the migration:
+
+- `docs/reference/rust-tui-architecture.md` — architecture overview (lands in M1)
+- `docs/reference/rust-tui-rpc-contract.md` — frozen JSON-RPC spec (lands in M2)
+- `docs/decisions/ADR-001-rust-tui-migration.md` — decisions (a)–(l) recorded with rationale
+- `docs/decisions/ADR-002-rust-async-runtime.md` — tokio vs async-std choice (M1 spike output)
+- `docs/decisions/ADR-003-ratatui-vs-raw-crossterm.md` — layering choice (M1 spike output)
+- `autocode/rtui/README.md` — build + run + contributor setup
+- Update `docs/tests/tui-testing-strategy.md` — Rust binary resolution path
+- Update `autocode/tests/tui-comparison/README.md` — binary retargeting note
+- Update `autocode/tests/tui-references/README.md` — Rust-cutover re-baseline policy
+- Update `CLAUDE.md` + `AGENTS.md` — frontend language reference (at M11 cutover only, NOT before)
+- Update `docs/session-onramp.md` — new contributor flow
+
+### 1h.13 Ordered Build Sequence And Review Gates
+
+The build sequence is strictly linear. Each step has a Codex/Claude reviewer gate before the next begins.
+
+1. **User approves §1h.1 decisions (a)-(l) in writing** — this is the single unblocking event for ALL other work.
+2. Rust-M1 spike → ADR-001/002/003 published → Codex review.
+3. Rust-M2 conformance harness → Codex review (byte-parity is the highest-risk item).
+4. Rust-M3 through Rust-M9 → per-milestone PTY artifact + Codex review.
+5. Rust-M10 cross-platform + performance → Codex + user review.
+6. Full 23-lane benchmark regression with Rust binary green.
+7. Rust-M11 cutover → user-authored commit.
+
+### 1h.14 Explicit Non-Goals For §1h
+
+- Changing the JSON-RPC protocol (even additive changes are out of scope; they happen in a separate plan).
+- Changing the Python backend surface.
+- Retiring hooks, skills, or rules loader.
+- Parity with non-autocode TUIs (claude-code / opencode / codex / aider) beyond the existing Track 4 research.
+- Remote-client architecture (already §1f non-goal; §1h inherits).
+- New agent behavior on the backend.
+
+### 1h.15 Questions Blocking The Plan (Must Resolve Before Any Code)
+
+Re-stated explicitly for the review pass:
+
+1. (Decision a) Strategic go/no-go — **is this migration approved?**
+2. (Decision d) Freeze 1f Milestones C/D/E/F at current Go state, or finish them on Go first?
+3. (Decision g) Is Windows an MVP blocker or post-v1?
+4. (Decision j) Who is the Builder agent?
+5. (Decision k) Does Python `--inline` fallback die at cutover?
+
+If the answer to (1) is no, this entire section becomes archive; §1f continues on Go as-is.

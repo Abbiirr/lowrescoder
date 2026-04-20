@@ -20,7 +20,7 @@ cd autocode
 uv sync --all-extras
 
 # Build the Go TUI frontend
-make tui                  # Linux/macOS
+make tui                  # Linux
 build.bat tui             # Windows
 
 # Ensure the LLM Gateway is running at http://localhost:4000/v1
@@ -52,7 +52,7 @@ uv sync --extra dev      # pytest, ruff, mypy
 ### Go TUI frontend
 
 ```bash
-# Linux/macOS
+# Linux
 make tui
 
 # Windows
@@ -177,7 +177,7 @@ Set `AUTOCODE_LLM_MODEL` to one of these aliases:
 ### Setup
 
 ```bash
-make setup       # Linux/macOS
+make setup       # Linux
 build.bat setup  # Windows
 # Or directly: uv sync --all-extras
 ```
@@ -199,21 +199,21 @@ cd autocode && make go-test
 ### Run linting
 
 ```bash
-make lint            # Linux/macOS
+make lint            # Linux
 build.bat lint       # Windows
 ```
 
 ### Format code
 
 ```bash
-make format          # Linux/macOS
+make format          # Linux
 build.bat format     # Windows
 ```
 
 ### Build Go TUI
 
 ```bash
-make tui             # Linux/macOS
+make tui             # Linux
 build.bat tui        # Windows
 ```
 

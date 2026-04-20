@@ -33,13 +33,17 @@ class LaunchSpec:
 def find_binary() -> Path:
     """Locate the autocode TUI binary.
 
-    Priority order matches the repo convention: build/ (canonical) →
-    explicit env override → ~/.local/bin/autocode (uv-tool install
-    wrapper).
+    Priority order: explicit env override → Rust release build (canonical)
+    → build/ fallback → ~/.local/bin/autocode (uv-tool wrapper).
     """
     env_override = os.environ.get("AUTOCODE_TUI_BIN")
     if env_override and Path(env_override).exists():
         return Path(env_override)
+    # Rust binary — canonical path after M11 cutover
+    rust_path = Path(__file__).resolve().parents[3] / "rtui" / "target" / "release" / "autocode-tui"
+    if rust_path.exists():
+        return rust_path
+    # Legacy build/ path (kept as fallback for pre-cutover artifacts)
     build_path = Path(__file__).resolve().parents[3] / "build" / "autocode-tui"
     if build_path.exists():
         return build_path
@@ -49,7 +53,7 @@ def find_binary() -> Path:
         return fallback
     raise FileNotFoundError(
         "autocode TUI binary not found; set AUTOCODE_TUI_BIN or run "
-        "`go build -o autocode/build/autocode-tui ./autocode/cmd/autocode-tui`"
+        "`cargo build --release --manifest-path autocode/rtui/Cargo.toml`"
     )
 
 

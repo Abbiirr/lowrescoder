@@ -36,9 +36,12 @@ Run from superproject root:
 
 - `uv sync` — install workspace deps
 - `make test` / `make lint` — via Makefile delegator
+- `make tui-build` — build Rust TUI binary (`autocode/rtui/target/release/autocode-tui`)
 - `uv run pytest autocode/tests/unit/ -v --cov=src/autocode` — autocode unit tests
 - `uv run pytest -m integration autocode/tests/integration/` — integration (self-skips without API keys / gateway)
 - `uv run autocode chat` — run autocode
+- `cd autocode/rtui && cargo test` — Rust TUI unit tests
+- `cd autocode/rtui && cargo clippy -- -D warnings` — Rust TUI lint
 
 Full command reference: `autocode/TESTING.md`.
 
@@ -55,7 +58,7 @@ Four complementary dimensions: runtime invariants · design-target ratchet · se
 
 | Directory | Contents |
 |---|---|
-| `autocode/` | Python backend (`src/autocode/`), Go TUI (`cmd/autocode-tui/`), product tests |
+| `autocode/` | Python backend (`src/autocode/`), Rust TUI (`rtui/`), product tests |
 | `benchmarks/` | Benchmark harness, adapters, e2e fixtures, benchmark tests |
 | `docs/` | All documentation |
 | `training-data/` | Training data for models |

@@ -63,8 +63,6 @@ def _default(
             tui=False,
             alternate_screen=False,
             legacy=False,
-            inline=False,
-            parallel=True,
         )
 
 
@@ -172,36 +170,38 @@ def _get_version() -> str:
     return __version__
 
 
-def _find_go_tui_binary() -> str | None:
-    """Discover the Go TUI binary.
+def _find_tui_binary() -> str | None:
+    """Discover the Rust TUI binary.
 
     Discovery order:
-      1. $AUTOCODE_TUI_BIN (or legacy $HYBRIDCODER_TUI_BIN) environment variable
-      2. build/autocode-tui(.exe) relative to project root (then legacy name)
-      3. autocode-tui on PATH (then legacy name)
+      1. $AUTOCODE_TUI_BIN environment variable
+      2. autocode/rtui/target/release/autocode-tui relative to the repo
+      3. autocode-tui on PATH
     """
     import os
     import shutil
     import sys
     from pathlib import Path
 
-    # 1. Env var override (new name, then legacy)
-    env_bin = os.environ.get("AUTOCODE_TUI_BIN") or os.environ.get("HYBRIDCODER_TUI_BIN")
+    env_bin = os.environ.get("AUTOCODE_TUI_BIN")
     if env_bin and Path(env_bin).is_file():
         return env_bin
 
-    # 2. build/ directory relative to project
     ext = ".exe" if sys.platform == "win32" else ""
-    for name in ("autocode-tui", "hybridcoder-tui"):
-        build_path = Path(__file__).resolve().parent.parent.parent / "build" / f"{name}{ext}"
-        if build_path.is_file():
-            return str(build_path)
+    # autocode/src/autocode/cli.py → autocode/rtui/target/release/autocode-tui
+    rtui_path = (
+        Path(__file__).resolve().parent.parent.parent
+        / "rtui"
+        / "target"
+        / "release"
+        / f"autocode-tui{ext}"
+    )
+    if rtui_path.is_file():
+        return str(rtui_path)
 
-    # 3. On PATH
-    for name in ("autocode-tui", "hybridcoder-tui"):
-        found = shutil.which(f"{name}{ext}")
-        if found:
-            return found
+    found = shutil.which(f"autocode-tui{ext}")
+    if found:
+        return found
 
     return None
 
@@ -213,24 +213,15 @@ def _find_go_tui_binary() -> str | None:
 def chat(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
     session: str | None = typer.Option(None, "--session", "-s", help="Resume a session by ID"),
-    tui: bool = typer.Option(False, "--tui", help="Use fullscreen Textual TUI"),
+    tui: bool = typer.Option(False, "--tui", help="Use fullscreen Textual TUI (fallback)"),
     alternate_screen: bool = typer.Option(False, "--alternate-screen", help="Alias for --tui"),
     legacy: bool = typer.Option(False, "--legacy", help="Use legacy Rich REPL (no agent loop)"),
-    inline: bool = typer.Option(
-        False,
-        "--inline",
-        help="Use Python inline REPL (explicit fallback when Go TUI is unavailable)",
-    ),
-    parallel: bool = typer.Option(
-        True,
-        "--parallel/--sequential",
-        help=(
-            "Inline mode: keep prompt active while assistant streams output (default). "
-            "Use --sequential if your terminal has issues."
-        ),
-    ),
 ) -> None:
-    """Start an interactive chat session."""
+    """Start an interactive chat session.
+
+    Default: launches the Rust TUI binary (autocode/rtui/target/release/autocode-tui).
+    Use --tui for the Textual fullscreen fallback, or --legacy for the Rich REPL.
+    """
     import os
     import subprocess
 
@@ -244,51 +235,34 @@ def chat(
 
     if legacy:
         asyncio.run(_chat_loop(config))
-    elif tui or alternate_screen:
-        # Fullscreen Textual TUI (opt-in)
+        return
+
+    if tui or alternate_screen:
         from autocode.tui.app import AutoCodeApp
 
         tui_app = AutoCodeApp(config=config, session_id=session or None)
         tui_app.run(inline=False)
-    elif inline:
-        # Python inline REPL (opt-in fallback)
-        from autocode.inline.app import InlineApp
+        return
 
-        inline_app = InlineApp(
-            config=config,
-            session_id=session or None,
-            parallel=parallel,
+    # Default: Rust TUI
+    rust_bin = _find_tui_binary()
+    if rust_bin is None:
+        console.print(
+            "[red]Rust TUI binary not found.[/red]\n\n"
+            "Build it with:\n"
+            "    [bold]cd autocode/rtui && cargo build --release[/bold]\n\n"
+            "Or set [bold]AUTOCODE_TUI_BIN[/bold] to an existing binary path.\n"
+            "Fallbacks: [bold]autocode chat --tui[/bold] (Textual) or "
+            "[bold]autocode chat --legacy[/bold] (Rich REPL)."
         )
-        asyncio.run(inline_app.run())
-    else:
-        # Default: Go Bubble Tea TUI
-        go_bin = _find_go_tui_binary()
-        if go_bin:
-            env = None
-            if session:
-                env = os.environ.copy()
-                env["AUTOCODE_SESSION_ID"] = session
+        raise typer.Exit(1)
 
-            result = subprocess.run([go_bin], env=env)
-            if result.returncode == 0:
-                raise typer.Exit(0)
+    env = os.environ.copy()
+    if session:
+        env["AUTOCODE_SESSION_ID"] = session
 
-            if verbose:
-                console.print(
-                    f"[dim]Go TUI exited with code {result.returncode}. Using inline REPL.[/]"
-                )
-        else:
-            if verbose:
-                console.print("[dim]Go TUI binary not found. Using inline REPL.[/]")
-                console.print("[dim]Build it with: make tui (or build.bat tui on Windows)[/]")
-        from autocode.inline.app import InlineApp
-
-        inline_app = InlineApp(
-            config=config,
-            session_id=session or None,
-            parallel=parallel,
-        )
-        asyncio.run(inline_app.run())
+    result = subprocess.run([rust_bin], env=env)
+    raise typer.Exit(result.returncode)
 
 
 @app.command()

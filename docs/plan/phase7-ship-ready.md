@@ -96,7 +96,7 @@ Per Codex Entry 841 concern #1.
 |---|----------|--------------|---------------------|
 | 1 | **Config format** | Runtime reads YAML (`config.py`), installer writes TOML (`installer.py`) | Canonical: **YAML** (matches live runtime). Fix installer to write YAML. TOML migration is future work, not Phase 7. |
 | 2 | **Config path** | Runtime: `~/.autocode/config.yaml`. Installer was `~/.config/autocode/` | Canonical: **`~/.autocode/config.yaml`** (matches runtime). Installer reverted to match. Done. |
-| 3 | **First shipping platform** | PyInstaller spec exists, untested | **Linux x86_64 only.** macOS/Windows are Phase 8. |
+| 3 | **First shipping platform** | PyInstaller spec exists, untested | **Linux x86_64 only.** Windows is Phase 8; macOS is out of scope. |
 | 4 | **Default local LLM endpoint** | `DEFAULT_OLLAMA_API_BASE` is `http://localhost:4000` (gateway) | Product/local: change to **`http://localhost:11434`** (direct Ollama default). Benchmark/parity: `.env` override sets `AUTOCODE_LLM_API_BASE=http://localhost:4000/v1` (gateway). The gateway is the **exception**, not the default. A fresh machine with Ollama installed works without any gateway. |
 
 **Deliverable:** Updated `config.py`, `installer.py`, and this plan doc.
@@ -148,7 +148,7 @@ Per Codex Entry 841 concern #4 — platform-aware, not "run until it works."
 
 | # | Task | Details |
 |---|------|---------|
-| 1 | Platform scope | **Linux x86_64 only.** macOS/Windows deferred. |
+| 1 | Platform scope | **Linux x86_64 only.** Windows deferred; macOS is out of scope. |
 | 2 | Build mode | Try `--onefile` first. If temp-dir extraction fails (noexec mount), fall back to `--onedir`. Document which mode ships. |
 | 3 | Install PyInstaller | Use a temporary toolchain (`uv run --with pyinstaller pyinstaller`) or add it explicitly to the env. |
 | 4 | Build | `cd autocode && pyinstaller autocode.spec` |

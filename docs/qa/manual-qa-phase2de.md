@@ -5,7 +5,7 @@
 
 ## Prerequisites
 
-- [ ] Windows Terminal (or iTerm2/Alacritty on macOS/Linux)
+- [ ] Windows Terminal or a Linux terminal emulator (for example Alacritty or Ghostty)
 - [ ] Ollama running: `ollama serve`
 - [ ] Model pulled: `ollama pull qwen3-8b` (or configured model)
 

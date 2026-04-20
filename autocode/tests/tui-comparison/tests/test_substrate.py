@@ -65,11 +65,18 @@ def test_positive_control_autocode_startup_hard_invariants_pass():
         from launchers import autocode as autocode_launcher
         binary = autocode_launcher.find_binary()
     except FileNotFoundError:
-        pytest.skip("autocode TUI binary not built (run `go build ...` first)")
+        pytest.skip("autocode TUI binary not built (run `cargo build --release` first)")
 
     # Lazy-import the capture module so headless test envs without
     # termios/pty still import this test file.
     from capture import CaptureOptions, capture
+
+    # Point at the mock backend so the positive control is deterministic
+    # and does not require a live gateway or API keys.
+    from pathlib import Path
+    mock_backend = Path(__file__).resolve().parents[2] / "pty" / "mock_backend.py"
+    if not mock_backend.exists():
+        pytest.skip(f"mock backend not found at {mock_backend}")
 
     opts = CaptureOptions(
         argv=[str(binary)],
@@ -80,6 +87,7 @@ def test_positive_control_autocode_startup_hard_invariants_pass():
         drain_maxwait_s=3.0,
         env_extra={
             "LITELLM_MASTER_KEY": os.environ.get("LITELLM_MASTER_KEY", ""),
+            "AUTOCODE_PYTHON_CMD": str(mock_backend),
         },
         steps=[],
     )

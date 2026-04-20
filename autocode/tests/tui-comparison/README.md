@@ -231,3 +231,4 @@ rate-limit exposure, no LLM-quality variance.
 - **PNG is optional.** If Pillow or the VHS renderer fails to import,
   the `.png` is skipped with a `.png.skipped` marker file. The
   `.raw` and `.txt` are the primary gate signal.
+- **Rust TUI binary:** set `$AUTOCODE_TUI_BIN=autocode/rtui/target/release/autocode-tui` to retarget the harness at the Rust implementation. The launcher in `launchers/autocode.py` resolves the binary from this env var.

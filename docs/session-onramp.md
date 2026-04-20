@@ -20,17 +20,17 @@ This is the fastest way to rebuild correct working context in a new session.
 - Phase 6: complete
 - Phase 7: complete
 - Phase 8: complete, including live frontend switch-over
-- Migration: complete
-- Immediate work: post-Phase-8 frontier
+- Rust TUI Migration (M1-M11): complete
+- Immediate work: post-migration frontier
   - Claude Code primary TUI parity
   - large-codebase comprehension validation
   - native external-harness orchestration
   - Terminal-Bench improvement
 
 Important current detail:
-- Section `1f` already has a partial Go TUI parity slice landed in the worktree
+- The Rust TUI (`autocode/rtui/`) is the sole interactive frontend. Go TUI and Python inline fallback have been deleted.
 - Section `1g` owns the TUI testing strategy (four dimensions — runtime invariants, design-target ratchet, self-vs-self PNG regression, PTY smoke). Canonical guide: `docs/tests/tui-testing-strategy.md`.
-- resume from that diff; do not restart the TUI workstream from scratch
+- All test harnesses retarget via `$AUTOCODE_TUI_BIN=autocode/rtui/target/release/autocode-tui`
 
 Do not treat `docs/plan/phase5-agent-teams.md` as the current execution target.
 That is historical planning context now.
@@ -41,7 +41,7 @@ This is now a multi-repo superproject:
 
 | Path | Role |
 |------|------|
-| `autocode/` | Product runtime, CLI, inline frontend, backend, tests |
+| `autocode/` | Product runtime, CLI, Rust TUI (`rtui/`), backend, tests |
 | `benchmarks/` | Harness, manifests, adapters, fixtures, benchmark tests |
 | `docs/` | Documentation and stored verification artifacts |
 | `training-data/` | Training data |

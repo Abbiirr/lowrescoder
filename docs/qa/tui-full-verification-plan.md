@@ -129,7 +129,7 @@ Assertions:
 Preferred tools:
 
 1. `asciinema rec` (cross-platform where available).
-2. `script` (Linux/WSL/macOS) as fallback.
+2. `script` (Linux/WSL) as fallback.
 
 Store raw output as `session.ansi`.
 

@@ -32,7 +32,7 @@ class InstallLocation:
                 data_dir=home / "AppData" / "Local" / "autocode" / "data",
                 cache_dir=home / "AppData" / "Local" / "autocode" / "cache",
             )
-        else:  # Linux/macOS — match runtime's ~/.autocode/ path
+        else:  # POSIX/Linux path — match runtime's ~/.autocode/ path
             return cls(
                 bin_dir=home / ".local" / "bin",
                 config_dir=home / ".autocode",
