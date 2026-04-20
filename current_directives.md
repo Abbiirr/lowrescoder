@@ -1,37 +1,51 @@
 # Current Directives
 
-> Last updated: 2026-04-19
+> Last updated: 2026-04-20
 
 ## Active Phase
 
-**Phase 7 COMPLETE. Phase 8 COMPLETE. §1g TUI Testing Strategy committed (`a9cc315`, `e3038b9`). §1h Rust TUI Migration COMPLETE (2026-04-19). Go TUI and Python inline deleted. Rust binary (`autocode/rtui/target/release/autocode-tui`) is the sole interactive frontend. Linux-first scope is locked; macOS is out of scope; Windows remains post-v1.**
+**Stabilization Sprint — Stage 0A active.** §1h Rust TUI Migration closed its engineering gate on 2026-04-19, but the product gate is still open: 60 concrete defects + 12 adversarial-sweep gaps documented in `bugs/codex-tui-issue-inventory.md` (including two critical UTF-8 crashers and broad protocol/visibility drift). The stabilization plan at `docs/plan/stabilization-and-parity-plan.md` is APPROVED (user, 2026-04-20). Execution assigned to Codex per Entry 1266. Critical path: Stage 0A → 1 → 2 → 3A → 3B → 4. Linux-first scope locked; macOS out of scope; Windows post-v1.
 
-## ACTIVE SLICE: §1h Rust TUI Migration — COMPLETE
+## ACTIVE SLICE: Stabilization Sprint — Stage 0A (protocol freeze + harness hygiene)
 
-**Status:** M1–M11 complete. Go TUI and Python inline fallback deleted. Rust binary is sole frontend.
+**Canonical plan:** `docs/plan/stabilization-and-parity-plan.md`
+**Known-bug inventory:** `bugs/codex-tui-issue-inventory.md` (60 items + §S1–§S12 adversarial sweeps)
+**Ship gate:** `docs/tui-testing/tui_testing_checklist.md` §6.5 sweeps + §7 regression table
 
-**Locked stack (baseline):** `crossterm` + `ratatui` + `tokio` + `portable-pty` + `serde_json` + `anyhow` + `tracing` (file only — stdout is the RPC channel).
-**M1 spike candidates (not yet locked):** `tui-textarea` (keybinding collision risk), `tokio-util::LinesCodec` (max-length truncation policy).
+**Locked decisions (§14 Qs 1+2):**
+- Schema source format: hand-maintained Markdown in `docs/reference/rpc-schema-v1.md` (revisit at Stage 4 only if drift recurs)
+- Compat-shim release window: one release; removal gated on backend + mock + every known consumer being on new names; every shim tagged `// STAGE0_COMPAT_SHIM`
 
-**Locked constraints:**
-- Binary: `autocode-tui` (single name; Go binary removed at cutover)
-- Inline by default; `--altscreen` opt-in
-- Linux first; macOS out of scope; Windows post-v1 (keep architecture ConPTY-capable)
-- Python `--inline` fallback deleted at cutover
-- §1f Go milestones C/D/E/F frozen; gates absorbed into Rust-M5 through Rust-M10
-- Track 4 xfail decorators re-baselined at cutover (permission to improve)
-- Builder: flexible per milestone (user decides per slice)
+**Stage 0A deliverables (per plan §4.1):**
+- `docs/reference/rpc-schema-v1.md` — every inbound/outbound notification, request/response pair, field types
+- `autocode/src/autocode/backend/schema.py` + `autocode/rtui/src/rpc/schema.rs` — generated/matching types
+- Schema-owned fixture corpus under `autocode/tests/pty/fixtures/rpc-schema-v1/` + CI conformance (both sides)
+- RPC-name audit → full old/new map documented before shims land
+- Compat alias layer (one-release window)
+- Dedicated endpoint declarations (`command.list`, `model.list`, `provider.list`, `session.list`) to unblock Stage 2 without Stage 0B
+- Doc sync pass closes Inventory §16–§21
 
-**Milestone sequence (see `PLAN.md` §1h.8):**
-Rust-M1 (scaffold) → M2 (RPC conformance) → M3 (streaming) → M4 (composer) → M5 (status bar/spinner) → M6 (commands/palette) → M7 (pickers) → M8 (approval/steer/fork) → M9 (editor/plan/tasks/markdown) → M10 (perf/release gate) → M11 (delete Go TUI + Python inline)
+**Stage 0A closes:** Inventory §16, §17, §18, §19, §20, §21, §22 (and lays foundation for §1/§2/§6/§7/§8/§10/§11/§34/§37/§40/§41 to close cleanly in Stage 2/3).
 
-**All milestones COMPLETE.**
+**Locked stack (unchanged from §1h):** `crossterm` 0.28 + `ratatui` 0.29 + `tokio` 1.x + `portable-pty` 0.8 + `serde_json` + `anyhow` + `tracing` (file only — stdout is the RPC channel).
+
+### Former §1h framing (historical — engineering gate)
+
+§1h Rust TUI Migration M1–M11 closed its engineering gate on 2026-04-19: cargo gates green, performance targets met, Go TUI + Python inline deleted, Rust binary sole frontend, CI workflow landed. That was the engineering-gate view of "done." The product gate (slash discoverability, visible modals/pickers, UTF-8 safety, transcript integrity, resource bounds) is what Stages 0A–4 now deliver.
 
 ## Other Open Items
 
 - VHS baseline refresh — 4 scenes drift 1.85–3.46%; rebaseline decision pending (low priority during Rust migration).
 - Slice 2 (themed parallel renderer) — deferred.
 - 3 pre-session cruft files (`DEFERRED_PENDING_TODO.md`, `deep-research-report.md`, `benchmarks/run_b7_b30_sweep.sh`) — disposition pending.
+
+## Next-Sprint Candidate: Stabilization + Parity (PROPOSED 2026-04-20)
+
+§1h Rust TUI Migration was a **compile/test gate**, not a product gate. Direct source audit + live PTY probing on 2026-04-20 captured **60 product defects** in `bugs/codex-tui-issue-inventory.md` (§1-§60) plus twelve adversarial sweeps (§S1-§S12). Highlights: 2 critical UTF-8 crashers (§28, §29), protocol drift between the Rust reducer and the Python backend (§22), and a vestigial command-discovery surface (§1, §2, §3, §6, §7, §8, §27).
+
+Proposed next sprint: `docs/plan/stabilization-and-parity-plan.md` — five sequenced stages (protocol freeze → engine hardening → visible UI → modal/transcript integrity → polish) followed by P0 feature build-out (`@file`, `!shell`, `/undo`, `/redo`, `/diff`, `/export`, tiered permissions, AGENTS/CLAUDE instruction hierarchy, non-interactive mode). P1/P2 (web, MCP, hooks, skills, parallel subagents, themes, recipes) queued behind P0.
+
+Section 14 of the plan lists the five decisions blocking Stage 0 kickoff. Awaiting user approval.
 
 ## Status
 

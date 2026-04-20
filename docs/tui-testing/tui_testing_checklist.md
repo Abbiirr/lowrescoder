@@ -6,7 +6,7 @@
 
 **Strategy reference:** [`tui-testing-strategy.md`](tui-testing-strategy.md) defines the rules. This file enforces them.
 
-**Known failure modes (reference):** [`/bugs/codex-tui-issue-inventory.md`](../../bugs/codex-tui-issue-inventory.md) — Codex's 2026-04-20 inventory plus same-day aggressive bug-hunt addendum. If your verification didn't look for these specific patterns, you missed them.
+**Known failure modes (reference):** [`/bugs/codex-tui-issue-inventory.md`](../../bugs/codex-tui-issue-inventory.md) — Codex's 2026-04-20 inventory (§1-21), aggressive bug-hunt addendum (§22-27), and deeper source-audit addendum (§28-60) covering UTF-8 safety, RPC ID-space, modal concurrency, resource bounds, and renderer-reachability. The same file defines twelve adversarial sweeps §S1-§S12 that this checklist's Section 6.5 enforces. If your verification didn't look for these specific patterns, you missed them.
 
 ---
 
@@ -320,9 +320,32 @@ Every TUI change must exercise all four dimensions that apply to the changed sur
 
 ---
 
+## Section 6.5 — Adversarial Sweeps (Inventory §S1-§S12)
+
+Optional per-change; **REQUIRED** for cross-cutting changes to composer, reducer, RPC bus, render paths, or history/persistence. Each sweep is a targeted bug-hunt that would have caught a specific Inventory pattern. Mark N/A only if the sweep does not apply to the changed surface.
+
+| # | Sweep | Catches | Command / artifact | Result | Evidence path |
+|---|---|---|---|---|---|
+| S1 | Reducer-fuzz event invariants | §28, §29, §34, §42 class | `proptest` over arbitrary `Key`/`RpcNotification`/`Resize`/`Tick` sequences; asserts `composer_text.is_char_boundary(composer_cursor)`, `scrollback.len() <= 10_000`, `pending_requests` freshness, monotonic `next_request_id`, picker/palette stage invariants | ☐ PASS / ☐ FAIL / ☐ N/A | `_______` |
+| S2 | UTF-8 torture (composer + renderer) | §28, §29, §53 | PTY fixture injects ASCII, Latin-1, CJK, 4-byte emoji, ZWJ, RTL, combining diacritics; per char: insert → Left/Right nav → Backspace/Delete → render | ☐ PASS / ☐ FAIL / ☐ N/A | `_______` |
+| S3 | Render-panic smoke on fuzz states | §29 + future render-invariant breaks | Pair S1 with `ratatui::TestBackend`; `Terminal::draw()` after every step must not panic | ☐ PASS / ☐ FAIL / ☐ N/A | `_______` |
+| S4 | Inbound/outbound RPC ID-space audit | §43 | grep pass + runtime assertion that TUI-assigned ids and backend-inbound ids are disjoint (or tagged); the response routing table never has an ambiguous id | ☐ PASS / ☐ FAIL / ☐ N/A | `_______` |
+| S5 | ANSI-injection resistance | Strategy §3.18 class | Mock backend emits `on_token` / `on_error` payloads containing `\x1b[2J`, OSC `\x1b]0;title\x07`, DCS, APC, BEL, SI/SO; TUI must render as literal text or strip — never execute | ☐ PASS / ☐ FAIL / ☐ N/A | `_______` |
+| S6 | Malformed / giant-frame backend | §49, codec reject path | Extend `autocode/tests/pty/mock_backend.py` with `__GIANT__` (1 GB line, no newline), `__INVALID_UTF8__` (`\xff\xfe` prefix), `__WRONG_VERSION__` (`"jsonrpc": "1.0"`) triggers | ☐ PASS / ☐ FAIL / ☐ N/A | `_______` |
+| S7 | Modal-concurrency chaos | §42, future parallel-state regressions | 50 ms-gap sequences: two `approval` inbounds; `approval` → `ask_user`; `ask_user` while Picker open; `approval` while Palette open. Assert queue-or-reject contract | ☐ PASS / ☐ FAIL / ☐ N/A | `_______` |
+| S8 | Mouse / unknown-crossterm-event smoke | §60 | Inject `MouseEvent::ScrollUp` / `ScrollDown` via PTY; TUI must scroll scrollback or document explicit ignore | ☐ PASS / ☐ FAIL / ☐ N/A | `_______` |
+| S9 | `$EDITOR` cross-environment matrix | §46 | Ctrl+E with `vim`, `nano`, `vim -p`, `code --wait`, `"ed with spaces"`, unset, `/nonexistent/bin/editor` — each must either launch cleanly or surface a readable error banner | ☐ PASS / ☐ FAIL / ☐ N/A | `_______` |
+| S10 | Long-session soak + resource deltas | §56, §58 | Script 10 000 turns against `mock_backend.py`; measure RSS delta, fd count (`ls /proc/<pid>/fd/`), `~/.autocode/history.json` size, `~/.autocode/tui.log` size — all bounded | ☐ PASS / ☐ FAIL / ☐ N/A | `_______` |
+| S11 | Grep-based static-analysis lints | §28, §29, §34, §42, §53 classes | CI or pre-commit pass: `String::remove\(` unpaired with `is_char_boundary`; cursor-indexed `&str[..]` slicing; `Option<...>` AppState fields without overwrite-policy doc; `println!` / `eprintln!` outside tests | ☐ PASS / ☐ FAIL / ☐ N/A | `_______` |
+| S12 | Renderer-reachability audit | §11, §37, §39, §40 | Static assertion that every `AppState` field has at least one read site in `autocode/rtui/src/render/view.rs`; fail-CI if a field is stored but never rendered | ☐ PASS / ☐ FAIL / ☐ N/A | `_______` |
+
+Each sweep may cite a single multi-scenario artifact. Treat "sweep green" as a sweep ratchet — failing any sub-scenario fails the sweep. If a sweep is skipped, state explicitly which class of bug is left uncovered.
+
+---
+
 ## Section 7 — Known-Bug Regression Sweep
 
-Codex Inventory §1-21. For each, confirm the change did NOT reintroduce, and preferably closed it.
+Codex Inventory §1-60. For each, confirm the change did NOT reintroduce, and preferably closed it.
 
 | # | Bug | Closed? | Evidence |
 |---|---|---|---|
@@ -347,6 +370,45 @@ Codex Inventory §1-21. For each, confirm the change did NOT reintroduce, and pr
 | 19 | Comprehensive smoke overclaims | ☐ still open / ☐ closed / ☐ n/a | `_______` |
 | 20 | `pty_e2e_real_gateway.py` stale | ☐ still open / ☐ closed / ☐ n/a | `_______` |
 | 21 | Track 1 predicate drift | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 22 | `ask_user` RPC name mismatch (TUI vs backend) | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 23 | Triple Ctrl+C does not hard-quit | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 24 | Inline mode clears prior terminal content | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 25 | Editor round-trip forces altscreen | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 26 | History write non-atomic + unbounded | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 27 | Ctrl+K Enter dispatches unfiltered entry | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 28 | **Critical** — UTF-8 Backspace/Delete panic | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 29 | **Critical** — renderer panics on non-boundary cursor | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 30 | History ↑ stuck on newest entry | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 31 | Frecency sort dominated by timestamp | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 32 | Slash commands not echoed in scrollback | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 33 | `/plan` only visible as status-bar tag | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 34 | `on_tool_call` overwrites parallel tools | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 35 | `on_thinking` has no stream_buf overflow flush | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 36 | Tokens during Approval/AskUser silently absorbed | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 37 | `followup_queue` invisible + unbounded | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 38 | Ctrl+L bypasses `/clear` dispatcher | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 39 | `ToolCallInfo.args` / `.result` stored but unrendered | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 40 | `session_list` response has no render path | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 41 | `/compact` response silently dropped | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 42 | Second `approval` overwrites pending one (no queue) | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 43 | Approval / ask-user response IDs share space with TUI IDs | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 44 | Multiple stale requests collapse to one banner | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 45 | PTY writer leaks outbound queue after write error | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 46 | Editor launch crashes for `$EDITOR` with arguments | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 47 | Editor tempfile world-readable + predictable path | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 48 | Editor round-trip competes with the render loop | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 49 | RPC reader has no line-length cap (strategy §3.16 gap) | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 50 | `BackendExit` always reports code 0 | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 51 | Editor-return unconditional `EnterAlternateScreen` | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 52 | `Stage::EditorLaunch` never reached | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 53 | Status-bar session-id slice panics on non-ASCII IDs | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 54 | Palette filter accepts control chars | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 55 | Palette Enter indexes the unfiltered entry list (§27 precise) | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 56 | History dedupe strict-`==`; no size cap | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 57 | Resize emits `ResizePty` unclamped (tiny geometry hides composer) | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 58 | `tui.log` append-only, no rotation / size cap | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 59 | Tick only emits `Render` during `Stage::Streaming` | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 60 | Mouse events silently dropped | ☐ still open / ☐ closed / ☐ n/a | `_______` |
 
 ---
 
@@ -356,7 +418,8 @@ Codex Inventory §1-21. For each, confirm the change did NOT reintroduce, and pr
 - ☐ No section was skipped. "Didn't apply" counts as N/A with a specific reason, not blank
 - ☐ Every evidence path points to a real file in `autocode/docs/qa/test-results/` or the regression output tree — not `<TODO>` or `<TBD>`
 - ☐ The agent posting the review request checked §2 + §3 specifically with PTY captures — NOT just cargo unit tests
-- ☐ Codex Inventory bugs §1-21 have been deliberately examined (Section 7)
+- ☐ Codex Inventory bugs §1-60 have been deliberately examined (Section 7)
+- ☐ Section 6.5 sweeps S1-S12 either executed or explicitly marked N/A with a named uncovered class
 - ☐ Staged files listed: ________________________
 - ☐ Comms entry posted: Entry # ________________________
 

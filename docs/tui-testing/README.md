@@ -22,5 +22,5 @@ Single source of truth for testing the interactive terminal surface. Not for uni
   - `autocode/tests/tui-references/README.md` — Track 4 design-target ratchet
   - `autocode/tests/vhs/README.md` — VHS self-regression
   - `autocode/tests/pty/README.md` — PTY smoke harnesses
-- Known-bug inventory: `bugs/codex-tui-issue-inventory.md` (21 patterns; referenced throughout the checklist)
+- Known-bug inventory: `bugs/codex-tui-issue-inventory.md` (60 patterns + 12 adversarial sweeps S1-S12; all referenced in the checklist)
 - PTY command reference: `docs/tests/pty-testing.md`

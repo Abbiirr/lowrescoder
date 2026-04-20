@@ -1,8 +1,9 @@
 # Rust TUI Migration — Status & Close-Out Plan
 
-> **Last updated:** 2026-04-19
-> **Purpose:** Single source of truth for what is actually done, what verification gaps exist, and the exact remaining work needed to close the migration. Cross-references `rust_migration_todo.md` (historical completion record) and `rust_migration_plan.md` (builder-oriented extract of `PLAN.md §1h`).
-> **Authority:** `PLAN.md §1h` is canonical. This file is the working close-out checklist; when it conflicts with `rust_migration_todo.md`, this file is newer and wins.
+> **Last updated:** 2026-04-20
+> **Status:** §1h engineering gate CLOSED (M1–M11 code-complete 2026-04-19). Product gate OPEN and tracked under **Stabilization Sprint** — see `docs/plan/stabilization-and-parity-plan.md` (APPROVED 2026-04-20, Codex owning Stages 0A–4 per Entry 1266).
+> **Purpose:** Historical record of the §1h engineering-gate close-out and its known testing gaps. The remaining product-gate work (60 bugs + 12 sweep gaps in `bugs/codex-tui-issue-inventory.md`) is now owned by the stabilization plan; do not schedule fixes against this file.
+> **Authority:** `PLAN.md §1h` + `docs/plan/stabilization-and-parity-plan.md`. This file is a historical artifact for the engineering-gate state.
 
 ---
 

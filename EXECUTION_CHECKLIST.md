@@ -1,21 +1,30 @@
 # Execution Checklist
 
-Last updated: 2026-04-19 (Rust M1-M11 COMPLETE. Go TUI and Python inline deleted. Rust binary is sole frontend.)
-Owner: OpenCode
+Last updated: 2026-04-20 (Stabilization Sprint — Stage 0A active. §1h engineering gate closed 2026-04-19; product gate open: 60 bugs + 12 sweep gaps.)
+Owner: Codex (Stabilization Sprint, Entry 1266)
 Purpose: live status checklist for source-of-truth work, active next-frontier research-to-implementation items, and any benchmark/harness follow-up. Re-check this file every 10 minutes during active work.
 
 Detailed implementation map:
-- `PLAN.md`
-- For every open item below, find the matching numbered section in `PLAN.md` before implementing.
-- `DEFERRED_PENDING_TODO.md` — consolidated store of everything NOT in the current active slice. Do not lose these items; walk that file after the active slice closes.
+- **`docs/plan/stabilization-and-parity-plan.md`** — APPROVED 2026-04-20; primary source of truth for the sprint
+- `PLAN.md` — long-form roadmap; stabilization sits ahead of everything else
+- `bugs/codex-tui-issue-inventory.md` — 60 items + §S1–§S12 adversarial sweeps
+- `docs/tui-testing/tui_testing_checklist.md` — enforced per-change checklist; §6.5 sweeps + §7 regression table gate the ship
+- `DEFERRED_PENDING_TODO.md` — store of everything NOT in the current active slice
 
-Execution order (2026-04-19, §1h Rust TUI Migration COMPLETE):
-1. **Section 1h Rust TUI Migration (COMPLETE)** — M1-M11 all done. Go TUI deleted. Python inline deleted. Rust binary is sole frontend. See `PLAN.md` §1h.8 for milestones.
-2. Section 1g TUI Testing Strategy — committed (`a9cc315`); Slice 2 themed renderer deferred (user-gated).
-3. Section 1f Milestone C/D/E/F — **FROZEN** on Go; gates absorbed into Rust-M5 through Rust-M10.
-4. Section 1 large-repo validation / retrieval contract.
-5. Section 2 external-harness event normalization + deeper adapters.
-6. Section 3 Terminal-Bench score improvement.
+Execution order (2026-04-20, Stabilization Sprint active):
+1. **Stabilization Sprint — Stage 0A ACTIVE** (`docs/plan/stabilization-and-parity-plan.md` §4.1): protocol freeze, schema-owned fixtures, RPC-name audit, compat-shim layer, harness/doc sync. Closes Inventory §16–§22. Locked decisions: hand-maintained Markdown schema (§14 Q1), one-release compat-shim window (§14 Q2).
+2. Stabilization Stage 1 — TUI engine hardening (plan §5): UTF-8 textbuf, editor lifecycle, RPC frame cap, history atomicity, resize/tick/mouse/log hygiene. Closes Inventory §24–§31, §44–§60.
+3. Stabilization Stage 2 — command registry + visible UI (plan §6): slash dropdown, palette rewrite, picker overlay, `/help` unification, backend-owned command execution. Closes Inventory §1–§3, §6–§8, §10, §12, §27, §33, §40, §41, §54, §55.
+4. Stabilization Stage 3A — modal correctness + transcript integrity (plan §7.1). Closes Inventory §4, §5, §13–§15, §23, §32, §35, §36, §38, §42–§44.
+5. Stabilization Stage 3B — inspection panels + queue visibility (plan §7.2, non-blocking after 3A). Closes §11, §34, §37, §39.
+6. Stabilization Stage 4 — persistence soak + shim removal (plan §8).
+7. **§1h Rust TUI Migration (engineering gate — COMPLETE 2026-04-19)** — M1–M11 done. Historical reference only; stabilization supersedes as the active slice.
+8. Section 1g TUI Testing Strategy — committed (`a9cc315`); canonical guide at `docs/tui-testing/tui-testing-strategy.md`; Slice 2 themed renderer deferred (user-gated).
+9. Section 1f Milestone C/D/E/F — **FROZEN** on Go; gates absorbed into Rust-M5 through Rust-M10.
+10. Section 1 large-repo validation / retrieval contract (post-stabilization).
+11. Section 2 external-harness event normalization + deeper adapters (post-stabilization).
+12. Section 3 Terminal-Bench score improvement (post-stabilization).
+13. P0–P2 feature parity (plan §9–§11) — explicitly deferred, separate execution approval.
 
 ## Rust TUI Migration (COMPLETE)
 
