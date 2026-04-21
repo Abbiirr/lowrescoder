@@ -18,13 +18,13 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import asdict, dataclass, field
-from enum import Enum
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from enum import StrEnum
 from pathlib import Path
-from typing import Callable
 
 
-class PredicateClass(str, Enum):
+class PredicateClass(StrEnum):
     HARD = "hard"
     SOFT = "soft"
 
@@ -195,7 +195,10 @@ def _pred_basic_turn_returns_to_usable_input(text: str, scenario: str) -> Predic
     # Turn scenarios send "hello" — look for evidence of the user prompt echo
     # and the composer still being present after the response.
     composer_markers = ("❯ Ask", "❯ ", "│ > ", "│ ❯", "> Ask", "Ask AutoCode")
-    composer_present = any(m in text for m in composer_markers)
+    tail_lines = [line for line in text.splitlines() if line.strip()][-2:]
+    composer_present = any(any(m in line for m in composer_markers) for line in tail_lines)
+    if not composer_present:
+        composer_present = any("> " in line or line.rstrip().endswith(">") for line in tail_lines)
     return PredicateResult(
         name="basic_turn_returns_to_usable_input",
         classification=PredicateClass.HARD,
@@ -511,10 +514,9 @@ def _pred_warnings_render_dim_not_red_banner(text: str, scenario: str) -> Predic
 def _pred_startup_timeout_fires_when_backend_absent(text: str, scenario: str) -> PredicateResult:
     """For orphaned-startup scenarios, the TUI must surface a timeout error.
 
-    autocode's ``startupTimeoutMsg`` handler sets ``m.lastError`` to a
-    string containing ``Backend not connected (startup timeout)`` after
-    15s without an ``on_status`` message. This predicate verifies the
-    captured frame includes that signature.
+    The Rust TUI surfaces a visible startup-timeout banner after 15s
+    without an ``on_status`` message. This predicate verifies the
+    captured frame includes one of the accepted signatures.
 
     Non-orphaned-startup scenarios return PASS with N/A.
     """
@@ -526,6 +528,7 @@ def _pred_startup_timeout_fires_when_backend_absent(text: str, scenario: str) ->
             detail=f"N/A — scenario {scenario!r} is not an orphaned-startup scenario",
         )
     signature_markers = (
+        "Backend not responding",
         "startup timeout",
         "Backend not connected",
     )

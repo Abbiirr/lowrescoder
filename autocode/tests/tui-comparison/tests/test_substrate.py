@@ -22,7 +22,6 @@ from predicates import (  # noqa: E402
     run_predicates,
 )
 
-
 # -------------------------------------------------------------------------
 # NEGATIVE CONTROL — a bad/empty frame MUST produce a hard-invariant failure
 # -------------------------------------------------------------------------
@@ -69,11 +68,11 @@ def test_positive_control_autocode_startup_hard_invariants_pass():
 
     # Lazy-import the capture module so headless test envs without
     # termios/pty still import this test file.
-    from capture import CaptureOptions, capture
-
     # Point at the mock backend so the positive control is deterministic
     # and does not require a live gateway or API keys.
     from pathlib import Path
+
+    from capture import CaptureOptions, capture
     mock_backend = Path(__file__).resolve().parents[2] / "pty" / "mock_backend.py"
     if not mock_backend.exists():
         pytest.skip(f"mock backend not found at {mock_backend}")
@@ -204,7 +203,10 @@ def test_turn_predicates_pass_on_complete_turn_fixture():
     assert spin.passed, f"spinner should PASS (⠙ + 'Thinking' present); detail={spin.detail}"
 
     resp = _find_hard(report, "response_followed_user_prompt")
-    assert resp.passed, f"response should PASS (substantive line after prompt); detail={resp.detail}"
+    assert resp.passed, (
+        "response should PASS (substantive line after prompt); "
+        f"detail={resp.detail}"
+    )
 
 
 def test_basic_turn_fails_when_composer_missing_after_turn():
@@ -224,6 +226,27 @@ def test_basic_turn_fails_when_composer_missing_after_turn():
     basic = _find_hard(report, "basic_turn_returns_to_usable_input")
     assert not basic.passed, (
         "basic_turn should FAIL when composer is absent after a turn; "
+        f"detail={basic.detail}"
+    )
+
+
+def test_basic_turn_accepts_rust_minimal_prompt_after_turn():
+    """Rust's minimal `> ` composer prompt counts as regained input."""
+    synthetic = (
+        b"\x1b[2J\x1b[H"
+        b"AutoCode\r\n"
+        b"> hello\r\n"
+        b"\xe2\xa0\x99 Thinking\xe2\x80\xa6\r\n"
+        b"Response content line one has substantial text here to pass response pred\r\n"
+        b"\r\n"
+        b"> \r\n"
+        b"tools openrouter suggest mock-session-001\r\n"
+    )
+    report = run_predicates(synthetic, scenario="first-prompt-text", rows=50, cols=160)
+
+    basic = _find_hard(report, "basic_turn_returns_to_usable_input")
+    assert basic.passed, (
+        "basic_turn should PASS when the Rust minimal `> ` prompt is visible; "
         f"detail={basic.detail}"
     )
 
@@ -560,7 +583,8 @@ def test_warnings_dim_banner_fails_on_startup_only_warning():
         b"\x1b[2J\x1b[H"
         b"AutoCode\r\n"
         # Only the startup warning from mock_backend.py's initial print
-        b"\xe2\x9a\xa0 [backend] WARNING: mock backend starting \xe2\x80\x94 this is a test warning\r\n"
+        b"\xe2\x9a\xa0 [backend] WARNING: mock backend starting "
+        b"\xe2\x80\x94 this is a test warning\r\n"
         b"\xe2\x9d\xaf Ask AutoCode\xe2\x80\xa6\r\n"
     )
     report = run_predicates(synthetic, scenario="error-state", rows=50, cols=160)
@@ -604,7 +628,8 @@ def test_startup_timeout_passes_when_banner_visible():
     synthetic = (
         b"\x1b[2J\x1b[H"
         b"AutoCode \xe2\x94\x80 Edge-native AI coding assistant\r\n"
-        b"Error: Backend not connected (startup timeout). Commands requiring the backend will fail.\r\n"
+        b"Error: Backend not connected (startup timeout). "
+        b"Commands requiring the backend will fail.\r\n"
         b"\xe2\x9d\xaf Ask AutoCode\xe2\x80\xa6\r\n"
     )
     report = run_predicates(synthetic, scenario="orphaned-startup", rows=50, cols=160)

@@ -488,18 +488,17 @@ corresponding `reference/<name>.png` is committed.
 (b) loosen `--pixel-ratio`, or (c) add a mask that excludes
 spinner/clock cells (not implemented today; future work).
 
-### Binary not found at `build/autocode-tui`
+### Binary not found at `rtui/target/release/autocode-tui`
 
-**Cause:** the Go binary wasn't built after a source change, or the
+**Cause:** the Rust binary wasn't built after a source change, or the
 canonical output path is stale.
 
 **Fix:** rebuild into `autocode/rtui/target/release/autocode-tui` (the same binary path
 the PTY / Track 1 / Track 4 harnesses use):
 
 ```bash
-cd /home/bs01763/projects/ai/lowrescoder/autocode/cmd/autocode-tui
-GOROOT=/usr/lib/go-1.24 PATH=/usr/lib/go-1.24/bin:$PATH \
-  cd autocode/rtui && cargo build --release
+cd /home/bs01763/projects/ai/lowrescoder/autocode/rtui
+cargo build --release
 ```
 
 Override the resolved path with `AUTOCODE_TUI_BIN=<path>` when running

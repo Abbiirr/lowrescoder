@@ -26,8 +26,11 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-GO_TUI = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "../../build/autocode-tui")
+RUST_TUI = os.environ.get(
+    "AUTOCODE_TUI_BIN",
+    os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "../../rtui/target/release/autocode-tui")
+    ),
 )
 COLS, ROWS = 160, 50
 ANSI = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
@@ -124,16 +127,16 @@ def kill(pid: int) -> None:
 
 
 def main() -> int:
-    log(f"E2E TUI smoke — real Python backend + real gateway")
-    log(f"Binary: {GO_TUI}")
+    log("E2E TUI smoke — real Python backend + real gateway")
+    log(f"Binary: {RUST_TUI}")
     log(f"Terminal: {COLS}x{ROWS}")
 
-    if not os.path.isfile(GO_TUI):
-        bug("E2E_binary_missing", f"not found at {GO_TUI}", "CRITICAL")
+    if not os.path.isfile(RUST_TUI):
+        bug("E2E_binary_missing", f"not found at {RUST_TUI}", "CRITICAL")
         return 1
 
     # Spawn real TUI (NO mock backend — real subprocess)
-    fd, pid = spawn([GO_TUI])
+    fd, pid = spawn([RUST_TUI])
     try:
         # Wait for header + backend-connected status bar
         raw = read_until(fd, quiet=2.0, maxwait=20.0, stop_on=b"suggest")
@@ -207,7 +210,7 @@ def main() -> int:
     artifact = results_dir / f"{stamp}-pty-e2e-real-gateway.md"
     body = "# PTY E2E Smoke — Real Backend + Gateway\n\n"
     body += f"**Date:** {datetime.now(UTC).isoformat()}\n\n"
-    body += f"**Binary:** `{GO_TUI}`\n\n"
+    body += f"**Binary:** `{RUST_TUI}`\n\n"
     body += f"**Bugs found:** {len(BUGS)}\n\n"
     body += "## Log\n\n```\n" + "\n".join(LOG) + "\n```\n"
     artifact.write_text(body, encoding="utf-8")

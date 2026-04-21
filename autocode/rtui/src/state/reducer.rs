@@ -1,12 +1,17 @@
 use std::time::Duration;
 
+use portable_pty::ExitStatus;
+
 use crate::rpc::protocol::RPCMessage;
-use crate::state::model::Stage;
+use crate::rpc::schema;
+use crate::state::model::{AskUserSource, InboundId, PaletteMode, Stage};
+use crate::ui::textbuf::TextBuf;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum Event {
     Key(crossterm::event::KeyEvent),
+    Mouse(crossterm::event::MouseEvent),
     Resize(u16, u16),
     Tick,
 
@@ -14,9 +19,14 @@ pub enum Event {
     RpcResponse(RPCMessage),
     RpcInboundRequest(RPCMessage),
 
-    BackendExit(i32),
+    RpcFrameTooLarge(usize),
+    BackendReadyTimeout,
+    BackendExit(ExitStatus),
     BackendError(String),
+    BackendWarning(String),
+    BackendWriteFailed(String),
     EditorDone(String),
+    EditorFailed(String),
     Paste(String),
 }
 
@@ -36,6 +46,7 @@ impl Event {
     pub fn from_crossterm(evt: crossterm::event::Event) -> Option<Self> {
         match evt {
             crossterm::event::Event::Key(k) => Some(Event::Key(k)),
+            crossterm::event::Event::Mouse(m) => Some(Event::Mouse(m)),
             crossterm::event::Event::Resize(w, h) => Some(Event::Resize(w, h)),
             _ => None,
         }
@@ -52,6 +63,9 @@ pub enum Effect {
 }
 
 const STALE_REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+const CTRL_C_HARD_QUIT_WINDOW: Duration = Duration::from_secs(2);
+const FOLLOWUP_QUEUE_LIMIT: usize = 32;
+const ACTIVE_TOOLS_LIMIT: usize = 16;
 
 pub fn reduce(
     state: crate::state::model::AppState,
@@ -59,40 +73,160 @@ pub fn reduce(
 ) -> (crate::state::model::AppState, Vec<Effect>) {
     match event {
         Event::Key(key) => handle_key(state, key),
+        Event::Mouse(mouse) => handle_mouse(state, mouse),
         Event::Resize(w, h) => {
             let mut s = state;
             s.terminal_size = (w, h);
-            (s, vec![Effect::ResizePty(w, h), Effect::Render])
+            (
+                s,
+                vec![Effect::ResizePty(w.max(40), h.max(6)), Effect::Render],
+            )
         }
         Event::Tick => handle_tick(state),
         Event::RpcNotification(msg) => handle_notification(state, msg),
         Event::RpcResponse(msg) => handle_response(state, msg),
         Event::RpcInboundRequest(msg) => handle_inbound_request(state, msg),
-        Event::BackendExit(_) => {
+        Event::RpcFrameTooLarge(max_bytes) => {
             let mut s = state;
             s.stage = crate::state::model::Stage::Shutdown;
-            (s, vec![Effect::Quit])
+            s.error_banner = Some(format!(
+                "backend RPC frame exceeded {} bytes; restart required",
+                max_bytes
+            ));
+            (s, vec![Effect::Render])
+        }
+        Event::BackendReadyTimeout => {
+            let mut s = state;
+            s.error_banner = Some("Backend not responding".into());
+            (s, vec![Effect::Render])
+        }
+        Event::BackendExit(status) => {
+            let mut s = state;
+            s.stage = crate::state::model::Stage::Shutdown;
+            if status.success() {
+                (s, vec![Effect::Quit])
+            } else {
+                s.error_banner = Some(format!("backend crashed (code {})", status.exit_code()));
+                (s, vec![Effect::Render])
+            }
         }
         Event::BackendError(err) => {
             let mut s = state;
             s.error_banner = Some(err);
             (s, vec![Effect::Render])
         }
+        Event::BackendWarning(message) => {
+            let mut s = state;
+            s.scrollback.push_back(format!("⚠ [backend] {}", message));
+            (s, vec![Effect::Render])
+        }
+        Event::BackendWriteFailed(err) => {
+            let mut s = state;
+            s.stage = Stage::Shutdown;
+            s.error_banner = Some(err);
+            (s, vec![Effect::Render])
+        }
         Event::EditorDone(text) => {
             let mut s = state;
-            s.composer_text = text;
-            s.composer_cursor = s.composer_text.len();
+            s.composer_text.set_text(text);
+            s.stage = Stage::Idle;
             s.error_banner = None;
+            (s, vec![Effect::Render])
+        }
+        Event::EditorFailed(err) => {
+            let mut s = state;
+            s.stage = Stage::Idle;
+            s.error_banner = Some(err);
             (s, vec![Effect::Render])
         }
         Event::Paste(text) => {
             let mut s = state;
-            let pos = s.composer_cursor;
-            s.composer_text.insert_str(pos, &text);
-            s.composer_cursor += text.len();
+            for c in text.chars() {
+                s.composer_text.insert(c);
+            }
             (s, vec![Effect::Render])
         }
     }
+}
+
+fn clear_transcript(state: &mut crate::state::model::AppState) {
+    state.scrollback.clear();
+    state.stream_buf.clear();
+    state.stream_lines.clear();
+    state.error_banner = None;
+    state.current_tool = None;
+    state.active_tools.clear();
+    state.followup_queue.clear();
+}
+
+fn flush_stream_lines(state: &mut crate::state::model::AppState) {
+    if !state.stream_lines.is_empty() {
+        for line in state.stream_lines.drain(..) {
+            state.scrollback.push_back(line);
+        }
+        if state.scrollback.len() > 10_000 {
+            let excess = state.scrollback.len() - 10_000;
+            state.scrollback.drain(..excess);
+        }
+        state.stream_buf.clear();
+    }
+}
+
+fn activate_next_modal(state: &mut crate::state::model::AppState) {
+    match state.modal_queue.pop_front() {
+        Some(crate::state::model::ModalRequest::Approval(approval)) => {
+            state.approval = Some(approval);
+            state.ask_user = None;
+            state.stage = Stage::Approval;
+        }
+        Some(crate::state::model::ModalRequest::AskUser(ask_user)) => {
+            state.ask_user = Some(ask_user);
+            state.approval = None;
+            state.stage = Stage::AskUser;
+        }
+        None => {
+            state.approval = None;
+            state.ask_user = None;
+            state.stage = Stage::Idle;
+        }
+    }
+}
+
+fn queue_or_activate_modal(
+    state: &mut crate::state::model::AppState,
+    modal: crate::state::model::ModalRequest,
+) {
+    if state.approval.is_none() && state.ask_user.is_none() {
+        match modal {
+            crate::state::model::ModalRequest::Approval(approval) => {
+                state.approval = Some(approval);
+                state.ask_user = None;
+                state.stage = Stage::Approval;
+            }
+            crate::state::model::ModalRequest::AskUser(ask_user) => {
+                state.ask_user = Some(ask_user);
+                state.approval = None;
+                state.stage = Stage::AskUser;
+            }
+        }
+    } else {
+        state.modal_queue.push_back(modal);
+    }
+}
+
+fn record_ctrl_c(state: &mut crate::state::model::AppState, now: std::time::Instant) -> bool {
+    let within_window = state
+        .last_ctrl_c_at
+        .is_some_and(|last| now.duration_since(last) <= CTRL_C_HARD_QUIT_WINDOW);
+
+    state.ctrl_c_count = if within_window {
+        state.ctrl_c_count.saturating_add(1)
+    } else {
+        1
+    };
+    state.last_ctrl_c_at = Some(now);
+
+    state.ctrl_c_count >= 3
 }
 
 fn handle_key(
@@ -101,105 +235,138 @@ fn handle_key(
 ) -> (crate::state::model::AppState, Vec<Effect>) {
     use crossterm::event::{KeyCode, KeyModifiers};
 
+    if state.stage == Stage::EditorLaunch {
+        return (state, vec![]);
+    }
+
     match (key.modifiers, key.code) {
-        (KeyModifiers::CONTROL, KeyCode::Char('c')) => match &state.stage {
-            Stage::Idle => {
-                let id = state.next_request_id;
-                state.next_request_id += 1;
-                let msg = crate::rpc::protocol::RPCMessage {
-                    jsonrpc: "2.0".to_string(),
-                    id: Some(id),
-                    method: Some("cancel".to_string()),
-                    params: Some(serde_json::json!({})),
-                    result: None,
-                    error: None,
-                };
-                state.pending_requests.insert(
-                    id,
-                    crate::state::model::PendingRequest {
-                        method: "cancel".to_string(),
-                        sent_at: std::time::Instant::now(),
-                    },
-                );
-                (state, vec![Effect::SendRpc(msg), Effect::Render])
-            }
-            Stage::Streaming => {
-                state.stage = Stage::AskUser;
-                state.ask_user = Some(crate::state::model::AskUserRequest {
-                    rpc_id: 0,
-                    question: "Steer message: ".to_string(),
-                    options: vec![],
-                    allow_text: true,
-                    selected: 0,
-                    free_text: String::new(),
-                });
-                (state, vec![Effect::Render])
-            }
-            Stage::AskUser => {
-                state.ask_user = None;
-                state.stage = Stage::Streaming;
-                (state, vec![Effect::Render])
-            }
-            _ => {
+        (KeyModifiers::CONTROL, KeyCode::Char('c')) => {
+            if record_ctrl_c(&mut state, std::time::Instant::now()) {
                 state.stage = Stage::Shutdown;
-                (state, vec![Effect::Quit])
+                return (state, vec![Effect::Quit]);
             }
-        },
+
+            match &state.stage {
+                Stage::Idle => {
+                    let id = state.next_request_id;
+                    state.next_request_id += 1;
+                    let msg = crate::rpc::protocol::RPCMessage {
+                        jsonrpc: "2.0".to_string(),
+                        id: Some(id),
+                        method: Some("cancel".to_string()),
+                        params: Some(serde_json::json!({})),
+                        result: None,
+                        error: None,
+                    };
+                    state.pending_requests.insert(
+                        id,
+                        crate::state::model::PendingRequest {
+                            method: "cancel".to_string(),
+                            sent_at: std::time::Instant::now(),
+                        },
+                    );
+                    (state, vec![Effect::SendRpc(msg), Effect::Render])
+                }
+                Stage::Streaming => {
+                    state.stage = Stage::AskUser;
+                    state.ask_user = Some(crate::state::model::AskUserRequest {
+                        source: AskUserSource::Steer,
+                        question: "Steer message: ".to_string(),
+                        options: vec![],
+                        allow_text: true,
+                        selected: 0,
+                        free_text: TextBuf::default(),
+                    });
+                    (state, vec![Effect::Render])
+                }
+                Stage::AskUser => {
+                    state.ask_user = None;
+                    state.stage = Stage::Streaming;
+                    (state, vec![Effect::Render])
+                }
+                _ => {
+                    state.stage = Stage::Shutdown;
+                    (state, vec![Effect::Quit])
+                }
+            }
+        }
         (KeyModifiers::CONTROL, KeyCode::Char('k')) => {
             state.palette = Some(crate::state::model::PaletteState {
-                filter: String::new(),
+                mode: PaletteMode::CommandPalette,
+                filter: TextBuf::default(),
                 cursor: 0,
-                entries: vec![
-                    crate::state::model::PaletteEntry {
-                        name: "/clear".into(),
-                        description: "Clear scrollback".into(),
-                    },
-                    crate::state::model::PaletteEntry {
-                        name: "/exit".into(),
-                        description: "Exit TUI".into(),
-                    },
-                    crate::state::model::PaletteEntry {
-                        name: "/fork".into(),
-                        description: "Fork session".into(),
-                    },
-                    crate::state::model::PaletteEntry {
-                        name: "/compact".into(),
-                        description: "Compact context".into(),
-                    },
-                    crate::state::model::PaletteEntry {
-                        name: "/plan".into(),
-                        description: "Toggle plan mode".into(),
-                    },
-                    crate::state::model::PaletteEntry {
-                        name: "/sessions".into(),
-                        description: "List sessions".into(),
-                    },
-                    crate::state::model::PaletteEntry {
-                        name: "/model".into(),
-                        description: "Change model".into(),
-                    },
-                    crate::state::model::PaletteEntry {
-                        name: "/provider".into(),
-                        description: "Change provider".into(),
-                    },
-                    crate::state::model::PaletteEntry {
-                        name: "/help".into(),
-                        description: "Show help".into(),
-                    },
-                ],
+                entries: vec![],
             });
             state.stage = crate::state::model::Stage::Palette;
+            let id = state.next_request_id;
+            state.next_request_id += 1;
+            let msg = crate::rpc::protocol::RPCMessage {
+                jsonrpc: "2.0".to_string(),
+                id: Some(id),
+                method: Some("command.list".to_string()),
+                params: Some(serde_json::json!({})),
+                result: None,
+                error: None,
+            };
+            state.pending_requests.insert(
+                id,
+                crate::state::model::PendingRequest {
+                    method: "command.list".to_string(),
+                    sent_at: std::time::Instant::now(),
+                },
+            );
+            (state, vec![Effect::SendRpc(msg), Effect::Render])
+        }
+        (KeyModifiers::CONTROL, KeyCode::Char('t')) => {
+            state.task_panel_open = !state.task_panel_open;
             (state, vec![Effect::Render])
         }
+        (KeyModifiers::CONTROL, KeyCode::Char('q')) => {
+            state.followup_panel_open = !state.followup_panel_open;
+            (state, vec![Effect::Render])
+        }
+        (KeyModifiers::NONE, KeyCode::Char('/'))
+            if state.stage == Stage::Idle && state.composer_text.is_empty() =>
+        {
+            state.palette = Some(crate::state::model::PaletteState {
+                mode: PaletteMode::SlashAutocomplete,
+                filter: TextBuf::default(),
+                cursor: 0,
+                entries: vec![],
+            });
+            state.stage = Stage::Palette;
+            let id = state.next_request_id;
+            state.next_request_id += 1;
+            let msg = crate::rpc::protocol::RPCMessage {
+                jsonrpc: "2.0".to_string(),
+                id: Some(id),
+                method: Some("command.list".to_string()),
+                params: Some(serde_json::json!({})),
+                result: None,
+                error: None,
+            };
+            state.pending_requests.insert(
+                id,
+                crate::state::model::PendingRequest {
+                    method: "command.list".to_string(),
+                    sent_at: std::time::Instant::now(),
+                },
+            );
+            (state, vec![Effect::SendRpc(msg), Effect::Render])
+        }
         (KeyModifiers::CONTROL, KeyCode::Char('l')) => {
-            state.scrollback.clear();
-            state.stream_buf.clear();
-            state.stream_lines.clear();
+            clear_transcript(&mut state);
             (state, vec![Effect::Render])
         }
         (KeyModifiers::CONTROL, KeyCode::Char('e')) => {
             if let Ok(editor) = std::env::var("EDITOR") {
-                state.composer_lines = state.composer_text.lines().map(String::from).collect();
+                state.composer_lines = state
+                    .composer_text
+                    .as_str()
+                    .lines()
+                    .map(String::from)
+                    .collect();
+                state.stage = Stage::EditorLaunch;
                 state.error_banner = Some(format!("Launching {}...", editor));
                 (state, vec![Effect::SpawnEditor(editor), Effect::Render])
             } else {
@@ -210,10 +377,13 @@ fn handle_key(
         // Up/Down: history browse in Idle
         (KeyModifiers::NONE, KeyCode::Up) if state.stage == crate::state::model::Stage::Idle => {
             if !state.history.is_empty() {
-                let idx = state.history_cursor.map_or(0, |c| c.saturating_sub(1));
+                let idx = state
+                    .history_cursor
+                    .map_or(0, |c| (c + 1).min(state.history.len().saturating_sub(1)));
                 if idx < state.history.len() {
-                    state.composer_text = state.history[idx].text.clone();
-                    state.composer_cursor = state.composer_text.len();
+                    state
+                        .composer_text
+                        .set_text(state.history[idx].text.clone());
                     state.history_cursor = Some(idx);
                 }
             }
@@ -221,13 +391,13 @@ fn handle_key(
         }
         (KeyModifiers::NONE, KeyCode::Down) if state.stage == crate::state::model::Stage::Idle => {
             if let Some(idx) = state.history_cursor {
-                if idx + 1 < state.history.len() {
-                    state.composer_text = state.history[idx + 1].text.clone();
-                    state.composer_cursor = state.composer_text.len();
-                    state.history_cursor = Some(idx + 1);
+                if idx > 0 {
+                    state
+                        .composer_text
+                        .set_text(state.history[idx - 1].text.clone());
+                    state.history_cursor = Some(idx - 1);
                 } else {
                     state.composer_text.clear();
-                    state.composer_cursor = 0;
                     state.history_cursor = None;
                 }
             }
@@ -250,6 +420,25 @@ fn handle_key(
     }
 }
 
+fn handle_mouse(
+    mut state: crate::state::model::AppState,
+    mouse: crossterm::event::MouseEvent,
+) -> (crate::state::model::AppState, Vec<Effect>) {
+    use crossterm::event::MouseEventKind;
+
+    match mouse.kind {
+        MouseEventKind::ScrollUp => {
+            state.scroll_offset = state.scroll_offset.saturating_add(1);
+            (state, vec![Effect::Render])
+        }
+        MouseEventKind::ScrollDown => {
+            state.scroll_offset = state.scroll_offset.saturating_sub(1);
+            (state, vec![Effect::Render])
+        }
+        _ => (state, vec![]),
+    }
+}
+
 fn handle_palette_key(
     mut state: crate::state::model::AppState,
     key: &crossterm::event::KeyEvent,
@@ -263,11 +452,49 @@ fn handle_palette_key(
             state.palette = None;
             effects.push(Effect::Render);
         }
-        (KeyModifiers::NONE, KeyCode::Enter) => {
+        (KeyModifiers::NONE, KeyCode::Enter) | (KeyModifiers::NONE, KeyCode::Tab) => {
             if let Some(palette) = &state.palette {
-                if let Some(entry) = palette.entries.get(palette.cursor) {
-                    let cmd = entry.name.clone();
-                    effects.extend(handle_slash_command(&mut state, &cmd));
+                let visible = visible_palette_indices(palette);
+                if let Some(selected_idx) = visible.get(palette.cursor).copied() {
+                    let entry = &palette.entries[selected_idx];
+                    match palette.mode {
+                        PaletteMode::CommandPalette => {
+                            let cmd = entry.name.clone();
+                            effects.extend(handle_slash_command(&mut state, &cmd));
+                        }
+                        PaletteMode::SlashAutocomplete => {
+                            let filter = palette.filter.as_str().trim().to_lowercase();
+                            let exact_match = filter
+                                == entry.name.trim_start_matches('/').to_lowercase()
+                                || filter == entry.name.to_lowercase();
+                            if matches!(key.code, KeyCode::Enter) && exact_match {
+                                state
+                                    .pending_requests
+                                    .retain(|_, pending| pending.method != "command.list");
+                                let cmd = entry.name.clone();
+                                effects.extend(handle_slash_command(&mut state, &cmd));
+                            } else {
+                                state.composer_text.set_text(entry.name.clone());
+                                state.composer_lines = state
+                                    .composer_text
+                                    .as_str()
+                                    .lines()
+                                    .map(String::from)
+                                    .collect();
+                            }
+                        }
+                    }
+                } else if palette.mode == PaletteMode::SlashAutocomplete
+                    && matches!(key.code, KeyCode::Enter)
+                {
+                    let filter = palette.filter.as_str().trim();
+                    if !filter.is_empty() {
+                        state
+                            .pending_requests
+                            .retain(|_, pending| pending.method != "command.list");
+                        let cmd = format!("/{}", filter);
+                        effects.extend(handle_slash_command(&mut state, &cmd));
+                    }
                 }
             }
             state.stage = crate::state::model::Stage::Idle;
@@ -284,22 +511,29 @@ fn handle_palette_key(
         }
         (KeyModifiers::NONE, KeyCode::Down) => {
             if let Some(palette) = &mut state.palette {
-                let max = palette.entries.len().saturating_sub(1);
+                let max = visible_palette_indices(palette).len().saturating_sub(1);
                 if palette.cursor < max {
                     palette.cursor += 1;
                 }
             }
             effects.push(Effect::Render);
         }
-        (KeyModifiers::NONE, KeyCode::Char(c)) => {
+        (KeyModifiers::NONE, KeyCode::Char(c)) if !c.is_control() => {
             if let Some(palette) = &mut state.palette {
-                palette.filter.push(c);
+                palette.filter.insert(c);
+                palette.cursor = 0;
             }
             effects.push(Effect::Render);
         }
         (KeyModifiers::NONE, KeyCode::Backspace) => {
             if let Some(palette) = &mut state.palette {
-                palette.filter.pop();
+                if palette.filter.is_empty() && palette.mode == PaletteMode::SlashAutocomplete {
+                    state.palette = None;
+                    state.stage = Stage::Idle;
+                } else {
+                    palette.filter.delete_left();
+                    palette.cursor = 0;
+                }
             }
             effects.push(Effect::Render);
         }
@@ -315,19 +549,39 @@ pub(crate) fn handle_slash_command(
     let mut effects = vec![];
     match cmd {
         "/clear" => {
-            state.scrollback.clear();
-            state.stream_buf.clear();
-            state.stream_lines.clear();
+            clear_transcript(state);
+            state.scrollback.push_back("/clear".into());
             effects.push(Effect::Render);
         }
         "/exit" => {
+            state.scrollback.push_back("/exit".into());
             effects.push(Effect::Quit);
         }
         "/plan" => {
-            state.plan_mode = !state.plan_mode;
-            effects.push(Effect::Render);
+            state.scrollback.push_back("/plan".into());
+            let id = state.next_request_id;
+            state.next_request_id += 1;
+            let msg = crate::rpc::protocol::RPCMessage {
+                jsonrpc: "2.0".to_string(),
+                id: Some(id),
+                method: Some("plan.set".to_string()),
+                params: Some(serde_json::json!({
+                    "mode": if state.plan_mode { "normal" } else { "planning" }
+                })),
+                result: None,
+                error: None,
+            };
+            state.pending_requests.insert(
+                id,
+                crate::state::model::PendingRequest {
+                    method: "plan.set".to_string(),
+                    sent_at: std::time::Instant::now(),
+                },
+            );
+            effects.push(Effect::SendRpc(msg));
         }
         "/fork" => {
+            state.scrollback.push_back("/fork".into());
             let id = state.next_request_id;
             state.next_request_id += 1;
             let msg = crate::rpc::protocol::RPCMessage {
@@ -348,6 +602,7 @@ pub(crate) fn handle_slash_command(
             effects.push(Effect::SendRpc(msg));
         }
         "/compact" => {
+            state.scrollback.push_back("/compact".into());
             let id = state.next_request_id;
             state.next_request_id += 1;
             let msg = crate::rpc::protocol::RPCMessage {
@@ -361,13 +616,14 @@ pub(crate) fn handle_slash_command(
             state.pending_requests.insert(
                 id,
                 crate::state::model::PendingRequest {
-                    method: "command".to_string(),
+                    method: "command:/compact".to_string(),
                     sent_at: std::time::Instant::now(),
                 },
             );
             effects.push(Effect::SendRpc(msg));
         }
         "/sessions" | "/resume" => {
+            state.scrollback.push_back(cmd.into());
             let id = state.next_request_id;
             state.next_request_id += 1;
             let msg = crate::rpc::protocol::RPCMessage {
@@ -388,32 +644,82 @@ pub(crate) fn handle_slash_command(
             effects.push(Effect::SendRpc(msg));
         }
         "/model" => {
-            state.picker = Some(crate::state::model::PickerState {
-                kind: crate::state::model::PickerKind::Model,
-                entries: vec!["tools".into(), "coding".into(), "fast".into()],
-                filter: String::new(),
-                cursor: 0,
-            });
-            state.stage =
-                crate::state::model::Stage::Picker(crate::state::model::PickerKind::Model);
-            effects.push(Effect::Render);
+            state.scrollback.push_back("/model".into());
+            let id = state.next_request_id;
+            state.next_request_id += 1;
+            let msg = crate::rpc::protocol::RPCMessage {
+                jsonrpc: "2.0".to_string(),
+                id: Some(id),
+                method: Some("model.list".to_string()),
+                params: Some(serde_json::json!({})),
+                result: None,
+                error: None,
+            };
+            state.pending_requests.insert(
+                id,
+                crate::state::model::PendingRequest {
+                    method: "model.list".to_string(),
+                    sent_at: std::time::Instant::now(),
+                },
+            );
+            effects.push(Effect::SendRpc(msg));
         }
         "/provider" => {
-            state.picker = Some(crate::state::model::PickerState {
-                kind: crate::state::model::PickerKind::Provider,
-                entries: vec!["openrouter".into(), "anthropic".into(), "openai".into()],
-                filter: String::new(),
-                cursor: 0,
-            });
-            state.stage =
-                crate::state::model::Stage::Picker(crate::state::model::PickerKind::Provider);
-            effects.push(Effect::Render);
+            state.scrollback.push_back("/provider".into());
+            let id = state.next_request_id;
+            state.next_request_id += 1;
+            let msg = crate::rpc::protocol::RPCMessage {
+                jsonrpc: "2.0".to_string(),
+                id: Some(id),
+                method: Some("provider.list".to_string()),
+                params: Some(serde_json::json!({})),
+                result: None,
+                error: None,
+            };
+            state.pending_requests.insert(
+                id,
+                crate::state::model::PendingRequest {
+                    method: "provider.list".to_string(),
+                    sent_at: std::time::Instant::now(),
+                },
+            );
+            effects.push(Effect::SendRpc(msg));
         }
         "/help" => {
-            state.scrollback.push_back("Available commands: /clear /exit /fork /compact /plan /sessions /resume /model /provider /help".into());
+            state.scrollback.push_back("/help".into());
+            state.stage = crate::state::model::Stage::Palette;
+            state.palette = Some(crate::state::model::PaletteState {
+                mode: PaletteMode::CommandPalette,
+                filter: TextBuf::default(),
+                cursor: 0,
+                entries: vec![],
+            });
+            let id = state.next_request_id;
+            state.next_request_id += 1;
+            let msg = crate::rpc::protocol::RPCMessage {
+                jsonrpc: "2.0".to_string(),
+                id: Some(id),
+                method: Some("command.list".to_string()),
+                params: Some(serde_json::json!({})),
+                result: None,
+                error: None,
+            };
+            state.pending_requests.insert(
+                id,
+                crate::state::model::PendingRequest {
+                    method: "command.list".to_string(),
+                    sent_at: std::time::Instant::now(),
+                },
+            );
+            effects.push(Effect::SendRpc(msg));
             effects.push(Effect::Render);
         }
-        _ => {}
+        _ => {
+            state
+                .scrollback
+                .push_back(format!("Unknown command: `{}` — try `/help`", cmd));
+            effects.push(Effect::Render);
+        }
     }
     effects
 }
@@ -438,6 +744,11 @@ fn handle_tick(
         .map(|(&id, _)| id)
         .collect();
 
+    if state.followup_queue.len() > FOLLOWUP_QUEUE_LIMIT {
+        let overflow = state.followup_queue.len() - FOLLOWUP_QUEUE_LIMIT;
+        state.followup_queue.drain(..overflow);
+    }
+
     let mut effects = vec![];
     for id in stale_ids {
         if let Some(req) = state.pending_requests.remove(&id) {
@@ -448,13 +759,28 @@ fn handle_tick(
                 STALE_REQUEST_TIMEOUT
             );
         }
-        if state.error_banner.is_none() {
-            state.error_banner = Some(format!("Request {} timed out", id));
-            effects.push(Effect::Render);
-        }
+        state.stale_request_ids.push(id);
     }
 
-    if state.stage == crate::state::model::Stage::Streaming {
+    if !state.stale_request_ids.is_empty() {
+        let count = state.stale_request_ids.len();
+        state.error_banner = Some(if count == 1 {
+            "1 request timed out".to_string()
+        } else {
+            format!("{} requests timed out", count)
+        });
+        effects.push(Effect::Render);
+    }
+
+    if state.stage == crate::state::model::Stage::Streaming
+        || state.error_banner.is_some()
+        || state.current_tool.is_some()
+        || !state.active_tools.is_empty()
+        || !state.stream_lines.is_empty()
+        || !state.followup_queue.is_empty()
+        || state.task_panel_open
+        || state.followup_panel_open
+    {
         effects.push(Effect::Render);
     }
 
@@ -524,6 +850,17 @@ fn handle_notification(
                     if state.stage == crate::state::model::Stage::Idle {
                         state.stage = crate::state::model::Stage::Streaming;
                     }
+                    if state.stream_lines.len() > 20 {
+                        let overflow = state.stream_lines.len() - 20;
+                        for line in state.stream_lines.drain(..overflow) {
+                            state.scrollback.push_back(line);
+                        }
+                        if state.scrollback.len() > 10_000 {
+                            let excess = state.scrollback.len() - 10_000;
+                            state.scrollback.drain(..excess);
+                        }
+                        state.stream_buf = state.stream_lines.join("\n");
+                    }
                 }
             }
             (state, vec![Effect::Render])
@@ -537,16 +874,7 @@ fn handle_notification(
                     state.status.tokens_out = done.tokens_out;
                 }
             }
-            if !state.stream_lines.is_empty() {
-                for line in state.stream_lines.drain(..) {
-                    state.scrollback.push_back(line);
-                }
-                if state.scrollback.len() > 10_000 {
-                    let excess = state.scrollback.len() - 10_000;
-                    state.scrollback.drain(..excess);
-                }
-            }
-            state.stream_buf.clear();
+            flush_stream_lines(&mut state);
             state.stream_lines.clear();
             state.stage = crate::state::model::Stage::Idle;
 
@@ -583,17 +911,29 @@ fn handle_notification(
                 if let Ok(tool) =
                     serde_json::from_value::<crate::rpc::protocol::ToolCallParams>(params.clone())
                 {
-                    state.current_tool = Some(crate::state::model::ToolCallInfo {
+                    let tool_info = crate::state::model::ToolCallInfo {
                         name: tool.name,
                         status: tool.status,
                         args: tool.args,
                         result: tool.result,
-                    });
+                    };
+                    if let Some(existing) = state.active_tools.iter_mut().find(|existing| {
+                        existing.name == tool_info.name && existing.args == tool_info.args
+                    }) {
+                        *existing = tool_info.clone();
+                    } else {
+                        state.active_tools.push(tool_info.clone());
+                        if state.active_tools.len() > ACTIVE_TOOLS_LIMIT {
+                            let overflow = state.active_tools.len() - ACTIVE_TOOLS_LIMIT;
+                            state.active_tools.drain(..overflow);
+                        }
+                    }
+                    state.current_tool = Some(tool_info);
                 }
             }
             (state, vec![Effect::Render])
         }
-        Some("on_tasks") => {
+        Some(method) if schema::is_task_state_method(method) => {
             if let Some(params) = &msg.params {
                 if let Ok(task_state) =
                     serde_json::from_value::<crate::rpc::protocol::TaskStateParams>(params.clone())
@@ -628,15 +968,52 @@ fn handle_response(
     let id = msg.id.unwrap_or(-1);
     if let Some(pending) = state.pending_requests.remove(&id) {
         match pending.method.as_str() {
+            "command.list" => {
+                if let Some(result) = &msg.result {
+                    if let Some(error) = result.get("error").and_then(|value| value.as_str()) {
+                        state.error_banner = Some(error.to_string());
+                    } else if let Ok(command_result) = serde_json::from_value::<
+                        crate::rpc::protocol::CommandListResult,
+                    >(result.clone())
+                    {
+                        let filter = state
+                            .palette
+                            .as_ref()
+                            .map(|palette| palette.filter.clone())
+                            .unwrap_or_default();
+                        let mode = state
+                            .palette
+                            .as_ref()
+                            .map(|palette| palette.mode.clone())
+                            .unwrap_or(PaletteMode::CommandPalette);
+                        state.stage = Stage::Palette;
+                        state.palette = Some(crate::state::model::PaletteState {
+                            mode,
+                            filter,
+                            cursor: 0,
+                            entries: command_result
+                                .commands
+                                .into_iter()
+                                .map(|entry| crate::state::model::PaletteEntry {
+                                    name: format!("/{}", entry.name),
+                                    description: entry.description,
+                                })
+                                .collect(),
+                        });
+                    }
+                }
+            }
             "session.fork" => {
                 if let Some(result) = &msg.result {
                     if let Ok(fork_result) = serde_json::from_value::<
                         crate::rpc::protocol::ForkSessionResult,
                     >(result.clone())
                     {
-                        let short_id = fork_result.new_session_id
-                            [..fork_result.new_session_id.len().min(8)]
-                            .to_string();
+                        let short_id = fork_result
+                            .new_session_id
+                            .chars()
+                            .take(8)
+                            .collect::<String>();
                         state.status.session_id = Some(fork_result.new_session_id);
                         state.scrollback.push_back(format!("Forked → {}", short_id));
                     }
@@ -648,7 +1025,97 @@ fn handle_response(
                         crate::rpc::protocol::SessionListResult,
                     >(result.clone())
                     {
+                        let entries = list_result
+                            .sessions
+                            .iter()
+                            .map(|session| {
+                                format!(
+                                    "{} [{}] · {} / {}",
+                                    session.title, session.id, session.provider, session.model
+                                )
+                            })
+                            .collect();
                         state.session_list = Some(list_result.sessions);
+                        state.picker = Some(crate::state::model::PickerState {
+                            kind: crate::state::model::PickerKind::Session,
+                            entries,
+                            filter: TextBuf::default(),
+                            cursor: 0,
+                        });
+                        state.stage = Stage::Picker(crate::state::model::PickerKind::Session);
+                    }
+                }
+            }
+            "model.list" => {
+                if let Some(result) = &msg.result {
+                    if let Some(error) = result.get("error").and_then(|value| value.as_str()) {
+                        state.error_banner = Some(error.to_string());
+                    } else if let Ok(list_result) = serde_json::from_value::<
+                        crate::rpc::protocol::ModelListResult,
+                    >(result.clone())
+                    {
+                        state.picker = Some(crate::state::model::PickerState {
+                            kind: crate::state::model::PickerKind::Model,
+                            entries: list_result.models,
+                            filter: TextBuf::default(),
+                            cursor: 0,
+                        });
+                        state.stage = Stage::Picker(crate::state::model::PickerKind::Model);
+                    }
+                }
+            }
+            "provider.list" => {
+                if let Some(result) = &msg.result {
+                    if let Some(error) = result.get("error").and_then(|value| value.as_str()) {
+                        state.error_banner = Some(error.to_string());
+                    } else if let Ok(list_result) = serde_json::from_value::<
+                        crate::rpc::protocol::ProviderListResult,
+                    >(result.clone())
+                    {
+                        state.picker = Some(crate::state::model::PickerState {
+                            kind: crate::state::model::PickerKind::Provider,
+                            entries: list_result.providers,
+                            filter: TextBuf::default(),
+                            cursor: 0,
+                        });
+                        state.stage = Stage::Picker(crate::state::model::PickerKind::Provider);
+                    }
+                }
+            }
+            "plan.set" => {
+                if let Some(result) = &msg.result {
+                    if let Some(error) = result.get("error").and_then(|value| value.as_str()) {
+                        state.error_banner = Some(error.to_string());
+                    } else if let Ok(plan_result) = serde_json::from_value::<
+                        crate::rpc::protocol::PlanSetResult,
+                    >(result.clone())
+                    {
+                        state.plan_mode = plan_result.mode == "planning";
+                        state.scrollback.push_back(format!(
+                            "Plan mode → {}",
+                            if state.plan_mode {
+                                "planning"
+                            } else {
+                                "normal"
+                            }
+                        ));
+                    }
+                }
+            }
+            "command:/compact" => {
+                if let Some(result) = &msg.result {
+                    if let Some(error) = result.get("error").and_then(|value| value.as_str()) {
+                        state.error_banner = Some(error.to_string());
+                    } else if let Ok(compact_result) = serde_json::from_value::<
+                        crate::rpc::protocol::CompactCommandResult,
+                    >(result.clone())
+                    {
+                        if compact_result.messages_compacted > 0 {
+                            state.scrollback.push_back(format!(
+                                "Compacted {} turns → {} tokens",
+                                compact_result.messages_compacted, compact_result.summary_tokens
+                            ));
+                        }
                     }
                 }
             }
@@ -663,36 +1130,46 @@ fn handle_inbound_request(
     msg: RPCMessage,
 ) -> (crate::state::model::AppState, Vec<Effect>) {
     match msg.method.as_deref() {
-        Some("approval") => {
+        Some(method) if schema::is_tool_request_method(method) => {
             if let Some(params) = &msg.params {
                 if let Ok(approval) = serde_json::from_value::<
                     crate::rpc::protocol::ApprovalRequestParams,
                 >(params.clone())
                 {
-                    state.approval = Some(crate::state::model::ApprovalRequest {
-                        rpc_id: msg.id.unwrap_or(0),
-                        tool: approval.tool,
-                        args: approval.args,
-                    });
-                    state.stage = crate::state::model::Stage::Approval;
+                    flush_stream_lines(&mut state);
+                    queue_or_activate_modal(
+                        &mut state,
+                        crate::state::model::ModalRequest::Approval(
+                            crate::state::model::ApprovalRequest {
+                                rpc_id: InboundId::new(msg.id.unwrap_or(0)),
+                                tool: approval.tool,
+                                args: approval.args,
+                            },
+                        ),
+                    );
                 }
             }
             (state, vec![Effect::Render])
         }
-        Some("ask_user") => {
+        Some(method) if schema::is_ask_user_method(method) => {
             if let Some(params) = &msg.params {
                 if let Ok(ask) = serde_json::from_value::<crate::rpc::protocol::AskUserRequestParams>(
                     params.clone(),
                 ) {
-                    state.ask_user = Some(crate::state::model::AskUserRequest {
-                        rpc_id: msg.id.unwrap_or(0),
-                        question: ask.question,
-                        options: ask.options,
-                        allow_text: ask.allow_text,
-                        selected: 0,
-                        free_text: String::new(),
-                    });
-                    state.stage = crate::state::model::Stage::AskUser;
+                    flush_stream_lines(&mut state);
+                    queue_or_activate_modal(
+                        &mut state,
+                        crate::state::model::ModalRequest::AskUser(
+                            crate::state::model::AskUserRequest {
+                                source: AskUserSource::Inbound(InboundId::new(msg.id.unwrap_or(0))),
+                                question: ask.question,
+                                options: ask.options,
+                                allow_text: ask.allow_text,
+                                selected: 0,
+                                free_text: TextBuf::default(),
+                            },
+                        ),
+                    );
                 }
             }
             (state, vec![Effect::Render])
@@ -723,12 +1200,9 @@ fn handle_picker_key(
         }
         (KeyModifiers::NONE, KeyCode::Enter) => {
             if let Some(picker) = &state.picker {
-                let visible: Vec<&String> = picker
-                    .entries
-                    .iter()
-                    .filter(|e| e.to_lowercase().contains(&picker.filter.to_lowercase()))
-                    .collect();
-                if let Some(selected) = visible.get(picker.cursor) {
+                let visible = visible_picker_indices(picker);
+                if let Some(selected_idx) = visible.get(picker.cursor).copied() {
+                    let selected = &picker.entries[selected_idx];
                     match picker.kind {
                         crate::state::model::PickerKind::Model => {
                             let id = state.next_request_id;
@@ -738,7 +1212,7 @@ fn handle_picker_key(
                                 id: Some(id),
                                 method: Some("config.set".to_string()),
                                 params: Some(
-                                    serde_json::json!({"key": "model", "value": selected}),
+                                    serde_json::json!({"key": "llm.model", "value": selected}),
                                 ),
                                 result: None,
                                 error: None,
@@ -760,7 +1234,7 @@ fn handle_picker_key(
                                 id: Some(id),
                                 method: Some("config.set".to_string()),
                                 params: Some(
-                                    serde_json::json!({"key": "provider", "value": selected}),
+                                    serde_json::json!({"key": "llm.provider", "value": selected}),
                                 ),
                                 result: None,
                                 error: None,
@@ -776,7 +1250,7 @@ fn handle_picker_key(
                         }
                         crate::state::model::PickerKind::Session => {
                             if let Some(sessions) = &state.session_list {
-                                if let Some(session) = sessions.get(picker.cursor) {
+                                if let Some(session) = sessions.get(selected_idx) {
                                     let id = state.next_request_id;
                                     state.next_request_id += 1;
                                     let msg = crate::rpc::protocol::RPCMessage {
@@ -815,11 +1289,7 @@ fn handle_picker_key(
         }
         (KeyModifiers::NONE, KeyCode::Down) | (KeyModifiers::NONE, KeyCode::Char('j')) => {
             if let Some(picker) = &mut state.picker {
-                let visible = picker
-                    .entries
-                    .iter()
-                    .filter(|e| e.to_lowercase().contains(&picker.filter.to_lowercase()))
-                    .count();
+                let visible = visible_picker_indices(picker).len();
                 if visible > 0 && picker.cursor < visible.saturating_sub(1) {
                     picker.cursor += 1;
                 }
@@ -828,7 +1298,7 @@ fn handle_picker_key(
         }
         (KeyModifiers::NONE, KeyCode::Backspace) => {
             if let Some(picker) = &mut state.picker {
-                picker.filter.pop();
+                picker.filter.delete_left();
                 picker.cursor = 0;
             }
             effects.push(Effect::Render);
@@ -837,7 +1307,7 @@ fn handle_picker_key(
             if c.is_ascii_alphanumeric() || c.is_ascii_punctuation() || c == ' ' =>
         {
             if let Some(picker) = &mut state.picker {
-                picker.filter.push(c);
+                picker.filter.insert(c);
                 picker.cursor = 0;
             }
             effects.push(Effect::Render);
@@ -845,6 +1315,32 @@ fn handle_picker_key(
         _ => {}
     }
     (state, effects)
+}
+
+fn visible_palette_indices(palette: &crate::state::model::PaletteState) -> Vec<usize> {
+    let filter = palette.filter.as_str().to_lowercase();
+    palette
+        .entries
+        .iter()
+        .enumerate()
+        .filter(|(_, entry)| {
+            filter.is_empty()
+                || entry.name.to_lowercase().contains(&filter)
+                || entry.description.to_lowercase().contains(&filter)
+        })
+        .map(|(idx, _)| idx)
+        .collect()
+}
+
+fn visible_picker_indices(picker: &crate::state::model::PickerState) -> Vec<usize> {
+    let filter = picker.filter.as_str().to_lowercase();
+    picker
+        .entries
+        .iter()
+        .enumerate()
+        .filter(|(_, entry)| filter.is_empty() || entry.to_lowercase().contains(&filter))
+        .map(|(idx, _)| idx)
+        .collect()
 }
 
 fn handle_approval_key(
@@ -871,7 +1367,7 @@ fn handle_approval_key(
             );
             let msg = crate::rpc::protocol::RPCMessage {
                 jsonrpc: "2.0".to_string(),
-                id: Some(approval.rpc_id),
+                id: Some(approval.rpc_id.get()),
                 method: None,
                 params: None,
                 result: Some(
@@ -886,7 +1382,7 @@ fn handle_approval_key(
             effects.push(Effect::SendRpc(msg));
         }
         state.approval = None;
-        state.stage = Stage::Idle;
+        activate_next_modal(&mut state);
         effects.push(Effect::Render);
     }
 
@@ -903,54 +1399,61 @@ fn handle_ask_user_key(
     match (key.modifiers, key.code) {
         (KeyModifiers::NONE, KeyCode::Enter) => {
             if let Some(ask) = &state.ask_user {
-                // Steer mode: rpc_id=0 means this is a steer prompt, not a backend ask_user
-                if ask.rpc_id == 0 {
-                    let id = state.next_request_id;
-                    state.next_request_id += 1;
-                    let msg = crate::rpc::protocol::RPCMessage {
-                        jsonrpc: "2.0".to_string(),
-                        id: Some(id),
-                        method: Some("steer".to_string()),
-                        params: Some(serde_json::json!({"message": ask.free_text})),
-                        result: None,
-                        error: None,
-                    };
-                    state.pending_requests.insert(
-                        id,
-                        crate::state::model::PendingRequest {
-                            method: "steer".to_string(),
-                            sent_at: std::time::Instant::now(),
-                        },
-                    );
-                    effects.push(Effect::SendRpc(msg));
-                    state.stage = Stage::Streaming;
-                } else {
-                    let answer = if !ask.options.is_empty() {
-                        ask.options.get(ask.selected).cloned().unwrap_or_default()
-                    } else {
-                        ask.free_text.clone()
-                    };
-                    let msg = crate::rpc::protocol::RPCMessage {
-                        jsonrpc: "2.0".to_string(),
-                        id: Some(ask.rpc_id),
-                        method: None,
-                        params: None,
-                        result: Some(
-                            serde_json::to_value(crate::rpc::protocol::AskUserResult { answer })
+                match ask.source {
+                    AskUserSource::Steer => {
+                        let id = state.next_request_id;
+                        state.next_request_id += 1;
+                        let msg = crate::rpc::protocol::RPCMessage {
+                            jsonrpc: "2.0".to_string(),
+                            id: Some(id),
+                            method: Some("steer".to_string()),
+                            params: Some(serde_json::json!({"message": ask.free_text.as_str()})),
+                            result: None,
+                            error: None,
+                        };
+                        state.pending_requests.insert(
+                            id,
+                            crate::state::model::PendingRequest {
+                                method: "steer".to_string(),
+                                sent_at: std::time::Instant::now(),
+                            },
+                        );
+                        effects.push(Effect::SendRpc(msg));
+                        state.stage = Stage::Streaming;
+                    }
+                    AskUserSource::Inbound(rpc_id) => {
+                        let answer = if !ask.options.is_empty() {
+                            ask.options.get(ask.selected).cloned().unwrap_or_default()
+                        } else {
+                            ask.free_text.as_str().to_string()
+                        };
+                        let msg = crate::rpc::protocol::RPCMessage {
+                            jsonrpc: "2.0".to_string(),
+                            id: Some(rpc_id.get()),
+                            method: None,
+                            params: None,
+                            result: Some(
+                                serde_json::to_value(crate::rpc::protocol::AskUserResult {
+                                    answer,
+                                })
                                 .unwrap_or_default(),
-                        ),
-                        error: None,
-                    };
-                    effects.push(Effect::SendRpc(msg));
-                    state.stage = Stage::Idle;
+                            ),
+                            error: None,
+                        };
+                        effects.push(Effect::SendRpc(msg));
+                        state.ask_user = None;
+                        activate_next_modal(&mut state);
+                    }
                 }
             }
-            state.ask_user = None;
+            if state.stage == Stage::Streaming {
+                state.ask_user = None;
+            }
             effects.push(Effect::Render);
         }
         (KeyModifiers::NONE, KeyCode::Esc) => {
             state.ask_user = None;
-            state.stage = Stage::Idle;
+            activate_next_modal(&mut state);
             effects.push(Effect::Render);
         }
         (KeyModifiers::NONE, KeyCode::Up) => {
@@ -965,6 +1468,54 @@ fn handle_ask_user_key(
             if let Some(ask) = &mut state.ask_user {
                 if ask.selected + 1 < ask.options.len() {
                     ask.selected += 1;
+                }
+            }
+            effects.push(Effect::Render);
+        }
+        (KeyModifiers::NONE | KeyModifiers::SHIFT, KeyCode::Char(c)) => {
+            if let Some(ask) = &mut state.ask_user {
+                if ask.allow_text {
+                    ask.free_text.insert(c);
+                }
+            }
+            effects.push(Effect::Render);
+        }
+        (KeyModifiers::NONE, KeyCode::Backspace) => {
+            if let Some(ask) = &mut state.ask_user {
+                if ask.allow_text {
+                    ask.free_text.delete_left();
+                }
+            }
+            effects.push(Effect::Render);
+        }
+        (KeyModifiers::NONE, KeyCode::Left) => {
+            if let Some(ask) = &mut state.ask_user {
+                if ask.allow_text {
+                    ask.free_text.move_left();
+                }
+            }
+            effects.push(Effect::Render);
+        }
+        (KeyModifiers::NONE, KeyCode::Right) => {
+            if let Some(ask) = &mut state.ask_user {
+                if ask.allow_text {
+                    ask.free_text.move_right();
+                }
+            }
+            effects.push(Effect::Render);
+        }
+        (KeyModifiers::NONE, KeyCode::Home) => {
+            if let Some(ask) = &mut state.ask_user {
+                if ask.allow_text {
+                    ask.free_text.home();
+                }
+            }
+            effects.push(Effect::Render);
+        }
+        (KeyModifiers::NONE, KeyCode::End) => {
+            if let Some(ask) = &mut state.ask_user {
+                if ask.allow_text {
+                    ask.free_text.end();
                 }
             }
             effects.push(Effect::Render);

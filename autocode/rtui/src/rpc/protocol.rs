@@ -118,7 +118,7 @@ pub struct AskUserRequestParams {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ChatParams {
     pub message: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -126,36 +126,66 @@ pub struct ChatParams {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CancelParams {}
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CommandParams {
     pub cmd: String,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SessionNewParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SessionResumeParams {
     pub session_id: String,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SessionListParams {}
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct SessionListResult {
     pub sessions: Vec<SessionInfo>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize, Clone)]
+pub struct CommandListEntry {
+    pub name: String,
+    #[serde(default)]
+    pub aliases: Vec<String>,
+    #[serde(default)]
+    pub description: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct CommandListResult {
+    pub commands: Vec<CommandListEntry>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct ProviderListResult {
+    pub providers: Vec<String>,
+    pub current: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct ModelListResult {
+    pub models: Vec<String>,
+    pub current: String,
 }
 
 #[allow(dead_code)]
@@ -168,7 +198,7 @@ pub struct SessionInfo {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ForkSessionParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub session_id: Option<String>,
@@ -181,20 +211,44 @@ pub struct ForkSessionResult {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ConfigSetParams {
     pub key: String,
     pub value: String,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SteerParams {
     pub message: String,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PlanSetParams {
+    pub mode: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct PlanSetResult {
+    pub mode: String,
+    pub changed: bool,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct CompactCommandResult {
+    #[serde(default)]
+    pub ok: bool,
+    #[serde(default)]
+    pub messages_compacted: usize,
+    #[serde(default)]
+    pub summary_tokens: usize,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ApprovalResult {
     pub approved: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -202,7 +256,7 @@ pub struct ApprovalResult {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct AskUserResult {
     pub answer: String,
 }
@@ -236,7 +290,7 @@ mod tests {
         let msg = RPCMessage {
             jsonrpc: "2.0".into(),
             id: Some(42),
-            method: Some("session_new".into()),
+            method: Some("session.new".into()),
             params: Some(serde_json::json!({"title": "test"})),
             result: None,
             error: None,
@@ -244,7 +298,7 @@ mod tests {
         let json = serde_json::to_string(&msg).unwrap();
         let back = serde_json::from_str::<RPCMessage>(&json).unwrap();
         assert_eq!(back.id, Some(42));
-        assert_eq!(back.method, Some("session_new".into()));
+        assert_eq!(back.method, Some("session.new".into()));
     }
 
     #[test]
@@ -481,6 +535,32 @@ mod tests {
     }
 
     #[test]
+    fn command_list_result_roundtrip() {
+        let json =
+            r#"{"commands":[{"name":"help","aliases":["h","?"],"description":"Show help"}]}"#;
+        let result = serde_json::from_str::<CommandListResult>(json).unwrap();
+        assert_eq!(result.commands.len(), 1);
+        assert_eq!(result.commands[0].name, "help");
+        assert_eq!(result.commands[0].aliases, vec!["h", "?"]);
+    }
+
+    #[test]
+    fn provider_list_result_roundtrip() {
+        let json = r#"{"providers":["openrouter","openai"],"current":"openrouter"}"#;
+        let result = serde_json::from_str::<ProviderListResult>(json).unwrap();
+        assert_eq!(result.providers.len(), 2);
+        assert_eq!(result.current, "openrouter");
+    }
+
+    #[test]
+    fn model_list_result_roundtrip() {
+        let json = r#"{"models":["tools","coding"],"current":"tools"}"#;
+        let result = serde_json::from_str::<ModelListResult>(json).unwrap();
+        assert_eq!(result.models, vec!["tools", "coding"]);
+        assert_eq!(result.current, "tools");
+    }
+
+    #[test]
     fn fork_session_params_roundtrip() {
         let params = ForkSessionParams { session_id: None };
         let json = serde_json::to_string(&params).unwrap();
@@ -512,6 +592,33 @@ mod tests {
         };
         let json = serde_json::to_string(&params).unwrap();
         assert!(json.contains("\"message\":\"try again\""));
+    }
+
+    #[test]
+    fn plan_set_params_roundtrip() {
+        let params = PlanSetParams {
+            mode: "planning".into(),
+        };
+        let json = serde_json::to_string(&params).unwrap();
+        let back = serde_json::from_str::<PlanSetParams>(&json).unwrap();
+        assert_eq!(back.mode, "planning");
+    }
+
+    #[test]
+    fn plan_set_result_roundtrip() {
+        let json = r#"{"mode":"planning","changed":true}"#;
+        let result = serde_json::from_str::<PlanSetResult>(json).unwrap();
+        assert_eq!(result.mode, "planning");
+        assert!(result.changed);
+    }
+
+    #[test]
+    fn compact_command_result_roundtrip() {
+        let json = r#"{"ok":true,"messages_compacted":6,"summary_tokens":42}"#;
+        let result = serde_json::from_str::<CompactCommandResult>(json).unwrap();
+        assert!(result.ok);
+        assert_eq!(result.messages_compacted, 6);
+        assert_eq!(result.summary_tokens, 42);
     }
 
     #[test]

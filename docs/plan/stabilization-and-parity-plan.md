@@ -144,14 +144,14 @@ Goal: crash-proof the input/render core and terminal lifecycle.
 
 ### 5.2 Bugs closed by Stage 1
 
-§24, §25, §26, §28, §29, §30, §31, §44, §45, §46, §47, §48, §49, §50, §51, §52, §53, §56, §57, §58, §59, §60.
+§24, §25, §26, §28, §29, §30, §31, §45, §46, §47, §48, §49, §50, §51, §52, §53, §56, §57, §58, §59, §60.
 
 ### 5.3 Verification gate
 
 - `tui_testing_checklist.md` §6.5 S1, S2, S3, S6, S9, S10, S11 green.
 - `cargo test` adds: `textbuf` property tests (proptest), editor-env matrix unit tests, RPC-frame-overflow unit test, resize-clamp unit test.
 - Live PTY smoke with UTF-8 payload (`é`, `👨‍👩‍👧`, `日本語`, Hebrew) — no panic.
-- `tui_testing_checklist.md` Section 7 rows for §28-§31, §44-§60 flip to `closed` with evidence paths.
+- `tui_testing_checklist.md` Section 7 rows for §28-§31 and §45-§60 flip to `closed` with evidence paths.
 
 ## 6. Stage 2 — Command registry + visible UI (WEEK 3)
 

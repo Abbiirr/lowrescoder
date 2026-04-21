@@ -9,7 +9,7 @@ no duplicated process-launch code.
 
 The reference contract encodes the design target described by
 ``tui-references/AutoCode TUI _standalone_.html`` — that target is not
-yet shipped in the Go TUI (no HUD chip row, no composer box, no tool
+yet shipped in the Rust TUI (no HUD chip row, no composer box, no tool
 cards, no narrow-layout branch, no recovery action cards). Each scene's
 xfail reason names the concrete gap. Using ``strict=True`` means:
 
@@ -25,8 +25,8 @@ after the matching UI work lands and the xfail decorator is removed.
 
 Environment:
 
-- Requires the Go TUI binary at ``autocode/build/autocode-tui`` or
-  ``$AUTOCODE_TUI_BIN`` set.
+- Requires the Rust TUI binary at
+  ``autocode/rtui/target/release/autocode-tui`` or ``$AUTOCODE_TUI_BIN`` set.
 - Mock backend at ``autocode/tests/pty/mock_backend.py`` handles JSON-RPC.
 """
 from __future__ import annotations
@@ -42,7 +42,7 @@ _HERE = Path(__file__).resolve().parent
 # _HERE = <repo>/autocode/tests/tui-references → parents[0]=tests,
 # parents[1]=autocode, parents[2]=<repo>
 _REPO_ROOT = _HERE.parents[2]
-_BIN_PATH = _REPO_ROOT / "autocode" / "build" / "autocode-tui"
+_BIN_PATH = _REPO_ROOT / "autocode" / "rtui" / "target" / "release" / "autocode-tui"
 _MANIFEST_PATH = _HERE / "manifest.yaml"
 _TUI_COMPARISON_DIR = _HERE.parent / "tui-comparison"
 

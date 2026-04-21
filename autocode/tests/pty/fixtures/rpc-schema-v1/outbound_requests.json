@@ -1,0 +1,16 @@
+[
+  {"name":"chat","method":"chat","params_model":"ChatParams","message":{"jsonrpc":"2.0","id":1,"method":"chat","params":{"message":"hello","session_id":"mock-session-001"}}},
+  {"name":"cancel","method":"cancel","params_model":"EmptyParams","message":{"jsonrpc":"2.0","id":2,"method":"cancel","params":{}}},
+  {"name":"command_exec","method":"command","params_model":"CommandParams","message":{"jsonrpc":"2.0","id":3,"method":"command","params":{"cmd":"/compact"}}},
+  {"name":"command_list","method":"command.list","params_model":"EmptyParams","message":{"jsonrpc":"2.0","id":4,"method":"command.list","params":{}}},
+  {"name":"session.new_request","method":"session.new","params_model":"SessionNewParams","message":{"jsonrpc":"2.0","id":5,"method":"session.new","params":{"title":"Fresh session"}}},
+  {"name":"session.list_request","method":"session.list","params_model":"EmptyParams","message":{"jsonrpc":"2.0","id":6,"method":"session.list","params":{}}},
+  {"name":"model.list_request","method":"model.list","params_model":"EmptyParams","message":{"jsonrpc":"2.0","id":7,"method":"model.list","params":{}}},
+  {"name":"provider.list_request","method":"provider.list","params_model":"EmptyParams","message":{"jsonrpc":"2.0","id":8,"method":"provider.list","params":{}}},
+  {"name":"session_resume","method":"session.resume","params_model":"SessionResumeParams","message":{"jsonrpc":"2.0","id":9,"method":"session.resume","params":{"session_id":"mock-session-001"}}},
+  {"name":"plan_set","method":"plan.set","params_model":"PlanSetParams","message":{"jsonrpc":"2.0","id":10,"method":"plan.set","params":{"mode":"planning"}}},
+  {"name":"config_set","method":"config.set","params_model":"ConfigSetParams","message":{"jsonrpc":"2.0","id":11,"method":"config.set","params":{"key":"llm.model","value":"tools"}}},
+  {"name":"steer","method":"steer","params_model":"SteerParams","message":{"jsonrpc":"2.0","id":12,"method":"steer","params":{"message":"focus on tests"}}},
+  {"name":"session_fork","method":"session.fork","params_model":"EmptyParams","message":{"jsonrpc":"2.0","id":13,"method":"session.fork","params":{}}},
+  {"name":"shutdown","method":"shutdown","params_model":"EmptyParams","message":{"jsonrpc":"2.0","id":14,"method":"shutdown","params":{}}}
+]

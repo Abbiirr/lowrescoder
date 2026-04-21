@@ -1,6 +1,6 @@
 # AutoCode Rust TUI
 
-> **Status:** M1 complete — scaffold + PTY launch + minimal RPC echo
+> **Status:** Rust binary is the sole interactive frontend. Stabilization Sprint Stage 0A is the active slice; the canonical RPC contract is `docs/reference/rpc-schema-v1.md`.
 
 ## Build
 
@@ -40,21 +40,19 @@ Binary: `target/release/autocode-tui` (2.2 MB)
 - **RPC:** JSON-RPC 2.0, LF-terminated lines
 - **Logging:** `tracing` → file only (stdout is RPC channel)
 
+## Status
+
+- Go TUI and Python inline fallback are deleted.
+- `docs/reference/rpc-schema-v1.md` is the source of truth for backend/TUI method names.
+- `autocode/tests/pty/fixtures/rpc-schema-v1/` is the schema-owned conformance corpus shared by Python and Rust tests.
+
 ## Milestones
 
 | Milestone | Status |
 |-----------|--------|
-| M1: Scaffold + PTY launch | ✅ DONE |
-| M2: JSON-RPC codec + conformance | Pending |
-| M3: Raw input loop + streaming | Pending |
-| M4: Composer (line editing, history) | Pending |
-| M5: Status bar + spinner | Pending |
-| M6: Slash commands + palette | Pending |
-| M7: Pickers | Pending |
-| M8: Approval / ask-user / steer / fork | Pending |
-| M9: Editor / task panel / markdown | Pending |
-| M10: Linux release hardening | Pending |
-| M11: Cutover (delete Go TUI) | Pending |
+| M1-M11 migration program | ✅ DONE |
+| Stabilization Stage 0A | ACTIVE |
+| Stabilization Stages 1-4 | Queued behind 0A |
 
 ## Testing
 
@@ -84,4 +82,5 @@ See `Cargo.toml` — locked baseline:
 
 - `rust_migration_plan.md` — detailed implementation plan
 - `rust_migration_todo.md` — milestone checklist
-- `PLAN.md §1h` — canonical authority
+- `PLAN.md §1h` — historical migration program
+- `docs/reference/rpc-schema-v1.md` — canonical Stage 0A RPC contract

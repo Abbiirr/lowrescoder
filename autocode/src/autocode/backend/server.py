@@ -24,6 +24,7 @@ from autocode.agent.subagent import LLMScheduler, SubagentManager
 from autocode.agent.subagent_tools import register_subagent_tools
 from autocode.agent.task_tools import register_task_tools
 from autocode.agent.tools import ToolRegistry, create_default_registry
+from autocode.backend import schema as rpc_schema
 from autocode.config import AutoCodeConfig, load_config
 from autocode.core.blob_store import BlobStore
 from autocode.core.logging import log_event, setup_session_logging
@@ -489,7 +490,7 @@ class BackendServer:
         if self._subagent_manager:
             subagents = self._subagent_manager.list_all()
         self.emit_notification(
-            "on_task_state",
+            rpc_schema.METHOD_ON_TASK_STATE,
             {
                 "tasks": tasks,
                 "subagents": subagents,
@@ -508,7 +509,7 @@ class BackendServer:
         args_str = json.dumps(arguments, indent=2)
         try:
             result = await self.emit_request(
-                "on_tool_request",
+                rpc_schema.METHOD_ON_TOOL_REQUEST,
                 {
                     "tool": tool_name,
                     "args": args_str,
@@ -537,7 +538,7 @@ class BackendServer:
         """Ask-user callback -> request on_ask_user, waits for Go response."""
         try:
             result = await self.emit_request(
-                "on_ask_user",
+                rpc_schema.METHOD_ON_ASK_USER,
                 {
                     "question": question,
                     "options": options,
@@ -800,6 +801,22 @@ class BackendServer:
         before_model = self.config.llm.model
         before_provider = self.config.llm.provider
         before_mode = self.config.tui.approval_mode
+        result_payload: dict[str, Any] = {"ok": True}
+
+        stripped = cmd.strip()
+        if stripped == "/compact":
+            messages = self.session_store.get_messages(self.session_id)
+            kept_messages = 4
+            if len(messages) > kept_messages:
+                summary_parts = [f"{m.role}: {m.content[:100]}" for m in messages[:-kept_messages]]
+                summary = "Summary of previous conversation:\n" + "\n".join(summary_parts)
+                result_payload.update(
+                    {
+                        "compacted": True,
+                        "messages_compacted": len(messages) - kept_messages,
+                        "summary_tokens": max(1, len(summary) // 4),
+                    }
+                )
 
         result = self.command_router.dispatch(cmd)
         if result is not None:
@@ -819,7 +836,19 @@ class BackendServer:
         ):
             self._emit_status()
 
-        self.emit_response(request_id, {"ok": True})
+        self.emit_response(request_id, result_payload)
+
+    async def handle_command_list(self, request_id: int) -> None:
+        """List backend-owned slash commands for Stage 2 surfaces."""
+        commands = [
+            {
+                "name": cmd.name,
+                "aliases": list(cmd.aliases),
+                "description": cmd.description,
+            }
+            for cmd in self.command_router.get_all()
+        ]
+        self.emit_response(request_id, {"commands": commands})
 
     async def handle_session_new(self, title: str, request_id: int) -> None:
         """Create a new session."""
@@ -1229,14 +1258,16 @@ class BackendServer:
         elif method == "command":
             cmd = params.get("cmd", "")
             await self.handle_command(cmd, request_id)
-        elif method == "session.new":
+        elif method == rpc_schema.METHOD_COMMAND_LIST:
+            await self.handle_command_list(request_id)
+        elif method == rpc_schema.METHOD_SESSION_NEW:
             title = params.get("title", "")
             await self.handle_session_new(title, request_id)
-        elif method == "session.list":
+        elif method == rpc_schema.METHOD_SESSION_LIST:
             await self.handle_session_list(request_id)
-        elif method == "model.list":
+        elif method == rpc_schema.METHOD_MODEL_LIST:
             await self.handle_model_list(request_id)
-        elif method == "provider.list":
+        elif method == rpc_schema.METHOD_PROVIDER_LIST:
             await self.handle_provider_list(request_id)
         elif method == "session.resume":
             sid = params.get("session_id", "")
@@ -1274,7 +1305,7 @@ class BackendServer:
         elif method == "steer":
             message = params.get("message", "")
             await self.handle_steer(message, request_id)
-        elif method == "session.fork":
+        elif method == rpc_schema.METHOD_SESSION_FORK:
             await self.handle_session_fork(request_id)
         elif method == "shutdown":
             await self.handle_shutdown(request_id)

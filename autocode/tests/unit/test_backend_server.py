@@ -240,6 +240,20 @@ class TestRequestHandlers:
         assert len(response["result"]["sessions"]) >= 1
 
     @pytest.mark.asyncio
+    async def test_handle_command_list(self, server: BackendServer, capsys: CaptureFixture) -> None:
+        await server.handle_command_list(41)
+        captured = capsys.readouterr()
+        response = None
+        for line in captured.out.strip().split("\n"):
+            msg = json.loads(line)
+            if msg.get("id") == 41:
+                response = msg
+                break
+        assert response is not None
+        assert "commands" in response["result"]
+        assert any(cmd["name"] == "help" for cmd in response["result"]["commands"])
+
+    @pytest.mark.asyncio
     async def test_handle_session_resume_not_found(
         self,
         server: BackendServer,
@@ -365,6 +379,35 @@ class TestRequestHandlers:
         assert found_help
 
     @pytest.mark.asyncio
+    async def test_handle_command_compact_returns_visible_summary(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        for idx in range(6):
+            role = "user" if idx % 2 == 0 else "assistant"
+            server.session_store.add_message(server.session_id, role, f"message {idx}")
+
+        capsys.readouterr()
+        await server.handle_command("/compact", 15)
+        captured = capsys.readouterr()
+
+        response = None
+        for line in captured.out.strip().split("\n"):
+            if not line:
+                continue
+            msg = json.loads(line)
+            if msg.get("id") == 15:
+                response = msg
+                break
+
+        assert response is not None
+        assert response["result"]["ok"] is True
+        assert response["result"]["compacted"] is True
+        assert response["result"]["messages_compacted"] == 2
+        assert response["result"]["summary_tokens"] > 0
+
+    @pytest.mark.asyncio
     async def test_handle_command_model_switch_reemits_status(
         self,
         server: BackendServer,
@@ -461,6 +504,14 @@ class TestDispatch:
     async def test_dispatch_config_get(self, server: BackendServer) -> None:
         await server._dispatch("config.get", {}, 104)
         # Should not raise
+
+    @pytest.mark.asyncio
+    async def test_dispatch_canonical_session_methods(self, server: BackendServer) -> None:
+        await server._dispatch("session.new", {"title": "Canonical"}, 105)
+        await server._dispatch("session.list", {}, 106)
+        await server._dispatch("model.list", {}, 107)
+        await server._dispatch("provider.list", {}, 108)
+        await server._dispatch("session.fork", {}, 109)
 
 
 class TestServerAppContext:

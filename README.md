@@ -231,7 +231,7 @@ AutoCode uses a **Rust TUI frontend** + **Python backend** split, communicating 
 Rust TUI (crossterm + ratatui + tokio)  ←── JSON-RPC ──►  Python Backend (agent loop, tools, LLM)
 ```
 
-The Rust frontend handles all terminal interaction (rendering, input, approvals, autocomplete). The Python backend handles intelligence: agent loop, tool execution, LLM providers, session storage, and slash commands.
+The Rust frontend handles all terminal interaction (rendering, input, approvals, autocomplete). The Python backend handles intelligence: agent loop, tool execution, LLM providers, session storage, and slash commands. The canonical wire contract now lives in [docs/reference/rpc-schema-v1.md](docs/reference/rpc-schema-v1.md).
 
 ### 4-Layer Intelligence Model
 
@@ -246,7 +246,7 @@ Each layer adds capability at increasing cost:
 
 The system always tries the cheapest layer first and only escalates when necessary.
 
-See [docs/architecture.md](docs/architecture.md) for detailed architecture documentation, [docs/reference/rust-tui-architecture.md](docs/reference/rust-tui-architecture.md) for the Rust TUI internals, and [docs/reference/rust-tui-rpc-contract.md](docs/reference/rust-tui-rpc-contract.md) for the JSON-RPC protocol.
+See [docs/architecture.md](docs/architecture.md) for detailed architecture documentation, [docs/reference/rust-tui-architecture.md](docs/reference/rust-tui-architecture.md) for the Rust TUI internals, and [docs/reference/rpc-schema-v1.md](docs/reference/rpc-schema-v1.md) for the Stage 0A JSON-RPC contract.
 
 ## License
 

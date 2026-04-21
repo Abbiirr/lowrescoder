@@ -76,13 +76,15 @@ tests):
 
 | Stub | Role |
 |---|---|
-| `mock_backend.py` | Deterministic JSON-RPC mock. Triggers in the chat body: `__ASK_USER__`, `__WARNING__`, `__SLOW__`. Shared with `autocode/tests/tui-comparison/`. |
+| `mock_backend.py` | Deterministic JSON-RPC mock. Triggers in the chat body: `__ASK_USER__`, `__WARNING__`, `__SLOW__`. Imports the Stage 0A schema constants and accepts the documented compat aliases. Shared with `autocode/tests/tui-comparison/`. |
 | `silent_backend.py` | Starts, reads stdin, **never** emits `on_status`. Used to exercise the TUI's 15 s startup-timeout path. |
 | `dead_backend.py` | Sleeps forever. Legacy variant; prefer `silent_backend.py`. |
 
 Stubs are selected via `AUTOCODE_PYTHON_CMD=<path>` when spawning the
 Rust TUI. The Rust binary appends `serve` as argv[1]; stubs ignore it
 via their shebang (`#!/usr/bin/env python3`) and their `__main__` block.
+
+The schema-owned fixture corpus for Stage 0A lives in `fixtures/rpc-schema-v1/`.
 
 ---
 

@@ -58,9 +58,9 @@ All four dimensions accept `$AUTOCODE_TUI_BIN` as an override. **Current harness
 | Harness | Auto-resolves Rust binary? | Notes |
 |---|---|---|
 | Track 1 launcher (`tui-comparison/launchers/autocode.py`) | ✅ yes | Resolution order: env → `autocode/rtui/target/release/autocode-tui` → PATH |
-| Track 4 (`tui-references/`) | ⚠️ env var required | Default path logic not yet retargeted to Rust |
-| VHS (`vhs/run_visual_suite.py`) | ⚠️ env var required | Default path logic not yet retargeted to Rust |
-| PTY smokes (`tests/pty/*.py`) | Mixed | `pty_smoke_rust_m1.py` / `pty_smoke_rust_comprehensive.py` resolve correctly. **`pty_e2e_real_gateway.py` still hardcodes deleted `autocode/build/autocode-tui` — STALE, must be retargeted or deleted.** |
+| Track 4 (`tui-references/`) | ✅ yes | Defaults to `autocode/rtui/target/release/autocode-tui`; env override still supported |
+| VHS (`vhs/run_visual_suite.py`) | ✅ yes | Defaults to `autocode/rtui/target/release/autocode-tui`; env override still supported |
+| PTY smokes (`tests/pty/*.py`) | ✅ yes | `pty_smoke_rust_m1.py`, `pty_smoke_rust_comprehensive.py`, and `pty_e2e_real_gateway.py` all resolve the Rust binary path |
 
 **Until Track 4 / VHS are retargeted, always set the env var:**
 
@@ -456,10 +456,6 @@ All four dimensions must exercise the same binary. If you suspect a harness dive
 
 Track 1 and Track 4 predicates were authored against the Go TUI's rendered output. When the Rust TUI renders the same feature differently (different prompt shape, different marker characters, different ordering), the predicate must be updated to match the Rust output — **not** the Rust output bent to match the stale predicate.
 
-Known current drift (Codex Entry 1262):
-
-- `basic_turn_returns_to_usable_input` — asserts on a Go-era prompt shape that does not match the Rust `> ` composer
-
 Process for fixing predicate drift:
 
 1. Capture a fresh Rust PTY frame showing the correct behavior
@@ -625,9 +621,7 @@ Each dimension has its own tree with implementation detail. Read those when you 
 | VHS | `autocode/tests/vhs/README.md` | `run_visual_suite.py`, `scenarios.py`, `capture.py`, `differ.py`, `reference/*.png` |
 | PTY smoke | `autocode/tests/pty/README.md` | `pty_smoke_rust_m1.py`, `pty_smoke_rust_comprehensive.py`, `mock_backend.py`, `silent_backend.py`, `dead_backend.py` |
 
-**Stale harness (needs retarget or deletion):**
-
-- `autocode/tests/pty/pty_e2e_real_gateway.py` — hardcodes deleted `autocode/build/autocode-tui` path; not valid Rust-frontend evidence until retargeted
+**Retarget note:** `autocode/tests/pty/pty_e2e_real_gateway.py` now resolves the Rust binary and is valid Stage 0A evidence again.
 
 **Canonical entry commands:**
 
@@ -775,4 +769,3 @@ Unit tests + cargo gates ≠ full TUI tested. The user can always reproduce a "l
 ### 13.10 Silent failures above the agent's terminal
 
 When agents run in a non-TTY shell, the Rust TUI emits `Error: failed to enable raw mode` on stderr and exits. That's not a bug — it's correct. Don't flag it as a regression. Use PTY-backed scripts for agent-side testing.
-

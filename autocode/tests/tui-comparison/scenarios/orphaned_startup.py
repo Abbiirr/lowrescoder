@@ -41,10 +41,10 @@ def spec() -> ScenarioSpec:
     return ScenarioSpec(
         name=NAME,
         steps=[
-            # Add 2 extra seconds of settle after the 18s boot budget so
-            # the startup-timeout banner has time to render. No keys are
-            # sent — the error frame is the entire evidence we assert on.
-            2.0,
+            # The capture driver sees the initial bracketed-paste control
+            # sequence as output, so we must explicitly wait long enough
+            # for the 15s startup-timeout banner to render after boot.
+            16.0,
         ],
         drain_quiet_s=1.5,
         drain_maxwait_s=4.0,

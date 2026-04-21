@@ -19,6 +19,13 @@ import json
 import sys
 import threading
 import time
+from pathlib import Path
+
+SRC_ROOT = Path(__file__).resolve().parents[2] / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from autocode.backend import schema as rpc_schema  # noqa: E402
 
 # Pending ask_user request IDs → threading.Event + answer slot.
 _ASK_LOCK = threading.Lock()
@@ -58,7 +65,7 @@ def _ask_user_blocking(
         evt = threading.Event()
         _PENDING_ASK[req_id] = {"event": evt, "answer": ""}
 
-    request("on_ask_user", {
+    request(rpc_schema.METHOD_ON_ASK_USER, {
         "question": question,
         "options": options,
         "allow_text": allow_text,
@@ -80,7 +87,7 @@ def main() -> None:
 
     # Small delay then send on_status so TUI transitions stageInit → stageInput
     time.sleep(0.3)
-    send("on_status", {
+    send(rpc_schema.METHOD_ON_STATUS, {
         "model": "tools",
         "provider": "openrouter",
         "mode": "suggest",
@@ -121,14 +128,54 @@ def main() -> None:
                 daemon=True,
             ).start()
 
-        elif method in ("session.resume", "steer", "fork_session", "session.fork"):
+        elif method in ("session.resume", "steer", rpc_schema.METHOD_SESSION_FORK):
             if req_id is not None:
                 respond(req_id, {"ok": True})
 
-        elif method in ("model_list", "model.list"):
+        elif method == rpc_schema.METHOD_MODEL_LIST:
             # CRITICAL: only respond if explicitly requested — never send unsolicited
             if req_id is not None:
                 respond(req_id, {"models": ["tools", "coding", "fast"], "current": "tools"})
+
+        elif method == rpc_schema.METHOD_PROVIDER_LIST:
+            if req_id is not None:
+                respond(req_id, {"providers": ["ollama", "openrouter"], "current": "openrouter"})
+
+        elif method == rpc_schema.METHOD_SESSION_LIST:
+            if req_id is not None:
+                respond(
+                    req_id,
+                    {
+                        "sessions": [
+                            {
+                                "id": "mock-session-001",
+                                "title": "Mock session",
+                                "model": "tools",
+                                "provider": "openrouter",
+                            }
+                        ]
+                    },
+                )
+
+        elif method == rpc_schema.METHOD_COMMAND_LIST:
+            if req_id is not None:
+                respond(
+                    req_id,
+                    {
+                        "commands": [
+                            {
+                                "name": "help",
+                                "aliases": ["h", "?"],
+                                "description": "Show available commands",
+                            },
+                            {
+                                "name": "model",
+                                "aliases": ["m"],
+                                "description": "Show or switch the LLM model",
+                            },
+                        ]
+                    },
+                )
 
         elif req_id is not None:
             respond(req_id, {"ok": True})
@@ -158,11 +205,51 @@ def _handle_chat(req_id: int | None, message: str) -> None:
         tokens = ["Warning", " emitted", "."]
     elif "__SLOW__" in message:
         # Phase 2 Scenario 5: hold the spinner for multiple ticks by
-        # inserting a longer gap before the tokens. autocode's braille
-        # spinner rotates ~10Hz; >1s of quiescence gives pyte multiple
-        # distinct frames.
+        # emitting one token immediately, then inserting a longer gap
+        # mid-stream. This keeps the TUI in Stage::Streaming long enough
+        # for spinner and queued-followup interactions to become visible.
+        send("on_token", {"text": "Working"})
         time.sleep(2.0)
-        tokens = ["Done", " after", " a", " slow", " pause", "."]
+        tokens = [" done", " after", " a", " slow", " pause", "."]
+    elif "__PANELS__" in message:
+        send(
+            rpc_schema.METHOD_ON_TASK_STATE,
+            {
+                "tasks": [
+                    {
+                        "id": "task-1",
+                        "title": "Build release",
+                        "status": "running",
+                    }
+                ],
+                "subagents": [
+                    {
+                        "id": "agent-1",
+                        "role": "coder",
+                        "status": "running",
+                    }
+                ],
+            },
+        )
+        send(
+            rpc_schema.METHOD_ON_TOOL_CALL,
+            {
+                "name": "bash",
+                "status": "running",
+                "args": "ls -la",
+            },
+        )
+        time.sleep(0.1)
+        send(
+            rpc_schema.METHOD_ON_TOOL_CALL,
+            {
+                "name": "write_file",
+                "status": "completed",
+                "args": "{\"path\":\"demo.txt\"}",
+                "result": "ok",
+            },
+        )
+        tokens = ["Panels", " ready", "."]
     else:
         tokens = ["Hello", " from", " the", " mock", " backend", "!"]
 

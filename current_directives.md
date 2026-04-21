@@ -1,31 +1,62 @@
 # Current Directives
 
-> Last updated: 2026-04-20
+> Last updated: 2026-04-21
 
 ## Active Phase
 
-**Stabilization Sprint — Stage 0A active.** §1h Rust TUI Migration closed its engineering gate on 2026-04-19, but the product gate is still open: 60 concrete defects + 12 adversarial-sweep gaps documented in `bugs/codex-tui-issue-inventory.md` (including two critical UTF-8 crashers and broad protocol/visibility drift). The stabilization plan at `docs/plan/stabilization-and-parity-plan.md` is APPROVED (user, 2026-04-20). Execution assigned to Codex per Entry 1266. Critical path: Stage 0A → 1 → 2 → 3A → 3B → 4. Linux-first scope locked; macOS out of scope; Windows post-v1.
+**Stabilization Sprint — COMPLETE.** Stage 0A closed on 2026-04-20 with schema/docs/harness synchronization recorded in `autocode/docs/qa/test-results/20260420-171416-stage0a-verification.md`; Stage 0B is intentionally skipped because `command.list`, `model.list`, `provider.list`, and `session.list` unblock Stage 2 directly. Stage 1 closed on 2026-04-21 after the UTF-8/history, editor/inline, RPC/process, and runtime-hygiene slices recorded in the Stage 1 artifacts below. Stage 2 closed on 2026-04-21 after the visible command/picker slice and the slash-autocomplete/compact-feedback slice recorded below. Stage 3A closed on 2026-04-21 after the modal/transcript slice recorded below. Stage 3B closed on 2026-04-21 after the inspection/queue slice recorded below. Stage 4 closed on 2026-04-21 after the canonical-name-only shim-removal pass and full stabilization rerun recorded in `autocode/docs/qa/test-results/20260421-104354-stabilization-verification.md`. The product gate is now closed for the stabilization program. Execution of the sprint was carried by Codex under Entry 1266. Linux-first scope remains locked; macOS out of scope; Windows post-v1.
 
-## ACTIVE SLICE: Stabilization Sprint — Stage 0A (protocol freeze + harness hygiene)
+## ACTIVE SLICE: Post-Stabilization backlog only
 
 **Canonical plan:** `docs/plan/stabilization-and-parity-plan.md`
 **Known-bug inventory:** `bugs/codex-tui-issue-inventory.md` (60 items + §S1–§S12 adversarial sweeps)
 **Ship gate:** `docs/tui-testing/tui_testing_checklist.md` §6.5 sweeps + §7 regression table
 
-**Locked decisions (§14 Qs 1+2):**
-- Schema source format: hand-maintained Markdown in `docs/reference/rpc-schema-v1.md` (revisit at Stage 4 only if drift recurs)
-- Compat-shim release window: one release; removal gated on backend + mock + every known consumer being on new names; every shim tagged `// STAGE0_COMPAT_SHIM`
+**Recent close-out:** Stage 0A delivered `docs/reference/rpc-schema-v1.md`, `autocode/src/autocode/backend/schema.py`, `autocode/rtui/src/rpc/schema.rs`, the fixture corpus under `autocode/tests/pty/fixtures/rpc-schema-v1/`, the one-release compat shim layer, and the harness/doc retarget pass that closed Inventory §16–§22. Canonical artifact: `autocode/docs/qa/test-results/20260420-171416-stage0a-verification.md`.
 
-**Stage 0A deliverables (per plan §4.1):**
-- `docs/reference/rpc-schema-v1.md` — every inbound/outbound notification, request/response pair, field types
-- `autocode/src/autocode/backend/schema.py` + `autocode/rtui/src/rpc/schema.rs` — generated/matching types
-- Schema-owned fixture corpus under `autocode/tests/pty/fixtures/rpc-schema-v1/` + CI conformance (both sides)
-- RPC-name audit → full old/new map documented before shims land
-- Compat alias layer (one-release window)
-- Dedicated endpoint declarations (`command.list`, `model.list`, `provider.list`, `session.list`) to unblock Stage 2 without Stage 0B
-- Doc sync pass closes Inventory §16–§21
+**Stage 1 close-out artifacts:**
+- `autocode/docs/qa/test-results/20260420-173018-stage1-utf8-textbuf-verification.md`
+- `autocode/docs/qa/test-results/20260421-085810-stage1-editor-inline-verification.md`
+- `autocode/docs/qa/test-results/20260421-091015-stage1-rpc-process-verification.md`
+- `autocode/docs/qa/test-results/20260421-091548-stage1-runtime-hygiene-verification.md`
 
-**Stage 0A closes:** Inventory §16, §17, §18, §19, §20, §21, §22 (and lays foundation for §1/§2/§6/§7/§8/§10/§11/§34/§37/§40/§41 to close cleanly in Stage 2/3).
+**Stage 1 bugs closed:** Inventory §5, §24, §25, §26, §28, §29, §30, §31, §45, §46, §47, §48, §49, §50, §51, §52, §53, §56, §57, §58, §59, §60.
+**Stage 1 carry-forward / later-stage items:** §27 belongs to Stage 2 visible command/palette work; §44 remains with the Stage 3A stale-request banner rewrite.
+
+**Stage 2 sub-slices landed:**
+- backend-driven `Ctrl+K` palette and `/help` overlay
+- visible picker overlays for model / provider / session
+- filtered selection correctness for palette + session picker
+- backend `plan.set` wiring for `/plan`
+- slash autocomplete on `/`
+- visible `/compact` completion summary
+- verification artifacts:
+  - `autocode/docs/qa/test-results/20260421-093005-stage2-visible-command-picker-verification.md`
+  - `autocode/docs/qa/test-results/20260421-094503-stage2-slash-compact-verification.md`
+
+**Stage 2 bugs closed:** Inventory §1, §2, §3, §6, §7, §8, §9, §10, §12, §27, §33, §40, §41, §54, §55.
+
+**Stage 3A close-out artifact:**
+- `autocode/docs/qa/test-results/20260421-102221-stage3a-modal-transcript-verification.md`
+
+**Stage 3A bugs closed:** Inventory §4, §13, §14, §15, §23, §32, §35, §36, §38, §42, §43, §44.
+
+**Stage 3B close-out artifact:**
+- `autocode/docs/qa/test-results/20260421-103256-stage3b-inspection-queue-verification.md`
+
+**Stage 3B bugs closed:** Inventory §11, §34, §37, §39.
+
+**Stage 4 close-out artifact:**
+- `autocode/docs/qa/test-results/20260421-104354-stabilization-verification.md`
+
+**Stage 4 bugs / debt closed:**
+- remaining Stage 0 compat alias removal from the Rust/Python schema, backend dispatch, fixture corpus, and canonical RPC docs
+- final canonical-name-only validation rerun across Rust gates, Python schema/dispatch tests, PTY smoke, and full Track 1 runtime invariants
+
+**Post-sprint state:**
+- Stabilization stages `0A`, `1`, `2`, `3A`, `3B`, and `4` are complete
+- Stage `0B` remains intentionally skipped by plan decision
+- Deferred backlog is now the only frontier: large-repo validation, external-harness depth, Terminal-Bench improvement, and P0-P2 feature parity
 
 **Locked stack (unchanged from §1h):** `crossterm` 0.28 + `ratatui` 0.29 + `tokio` 1.x + `portable-pty` 0.8 + `serde_json` + `anyhow` + `tracing` (file only — stdout is the RPC channel).
 
@@ -45,7 +76,7 @@
 
 Proposed next sprint: `docs/plan/stabilization-and-parity-plan.md` — five sequenced stages (protocol freeze → engine hardening → visible UI → modal/transcript integrity → polish) followed by P0 feature build-out (`@file`, `!shell`, `/undo`, `/redo`, `/diff`, `/export`, tiered permissions, AGENTS/CLAUDE instruction hierarchy, non-interactive mode). P1/P2 (web, MCP, hooks, skills, parallel subagents, themes, recipes) queued behind P0.
 
-Section 14 of the plan lists the five decisions blocking Stage 0 kickoff. Awaiting user approval.
+Section 14 Questions 1-2 are now locked and implemented. Questions 3-5 remain backlog questions, not blockers for the active Stage 1 work.
 
 ## Status
 

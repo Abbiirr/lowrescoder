@@ -17,9 +17,10 @@ Fastest way to rebuild working context in a new session.
 ## 2) Current State
 
 - Phase 5–8: complete
-- Rust TUI migration (M1–M11): code-complete; close-out items tracked in `rust_tui_migration_status.md`
+- Stabilization Sprint Stage 0A is active: protocol freeze + schema fixtures + harness hygiene
 - Rust TUI (`autocode/rtui/target/release/autocode-tui`) is the sole interactive frontend; Go TUI and Python inline are deleted
 - `autocode` (bare) launches the Rust TUI via `cli.py`
+- `docs/reference/rpc-schema-v1.md` is the canonical backend/TUI contract
 
 ## 3) Repository Layout
 
@@ -51,7 +52,7 @@ All four resolve the binary via `$AUTOCODE_TUI_BIN` → `autocode/rtui/target/re
 
 **Benchmarks:** `benchmarks/benchmark_runner.py`, `benchmarks/adapters/`, `benchmarks/benchmarks/STATUS.md`
 
-**Source-of-truth docs:** `current_directives.md`, `EXECUTION_CHECKLIST.md`, `PLAN.md`, `rust_tui_migration_status.md`
+**Source-of-truth docs:** `current_directives.md`, `EXECUTION_CHECKLIST.md`, `PLAN.md`, `docs/reference/rpc-schema-v1.md`, `rust_tui_migration_status.md`
 
 ## 6) Commands
 

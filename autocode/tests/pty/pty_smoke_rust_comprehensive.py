@@ -1,19 +1,29 @@
 #!/usr/bin/env python3
-"""Comprehensive PTY smoke test for Rust TUI (M3/M7/M8/M9 coverage).
+"""Broader PTY smoke test for Rust TUI.
 
-Checks:
+Current implemented coverage:
   S1: Backend spawn + on_status (renderer-owned status line)
   S2: /exit clean exit
-  S3: Chat streaming — type "hi" → Enter → tokens stream → on_done → scrollback
-  S4: /plan toggle → status bar shows [PLAN] → /plan again → clears
-  S5: Ctrl+C in Idle → sends cancel RPC (no exit)
-  S6: /fork → session.fork RPC sent → response received
+
+The older M3/M7/M8/M9 aspirations (streaming, /plan, Ctrl+C idle cancel,
+/fork) are intentionally not claimed here until the script implements them.
 
 Run: python3 autocode/tests/pty/pty_smoke_rust_comprehensive.py
 Override binary: AUTOCODE_TUI_BIN=<path> python3 autocode/tests/pty/pty_smoke_rust_comprehensive.py
 """
 from __future__ import annotations
-import errno, fcntl, os, pty, re, select, signal, struct, sys, termios, time, json
+
+import errno
+import fcntl
+import os
+import pty
+import re
+import select
+import signal
+import struct
+import sys
+import termios
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -35,7 +45,13 @@ def _set_winsize(fd: int, rows: int, cols: int) -> None:
     fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
 
 
-def read_until(fd: int, *, quiet: float = 1.5, maxwait: float = 15.0, stop_on: str | None = None) -> bytes:
+def read_until(
+    fd: int,
+    *,
+    quiet: float = 1.5,
+    maxwait: float = 15.0,
+    stop_on: str | None = None,
+) -> bytes:
     buf = b""
     deadline = time.monotonic() + maxwait
     last_data = time.monotonic()
@@ -194,7 +210,7 @@ def run_smoke() -> None:
         if exit_code is None:
             bug("S2_clean_exit: process did not exit within 5s after /exit", "", "HIGH")
         elif exit_code == 0:
-            ok("S2_clean_exit", f"exited with code 0")
+            ok("S2_clean_exit", "exited with code 0")
         else:
             bug(f"S2_clean_exit: exit code {exit_code} (expected 0)", "", "HIGH")
 

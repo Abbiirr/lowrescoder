@@ -95,11 +95,12 @@ def _read_with_dsr(
     buf = bytearray()
     deadline = time.monotonic() + maxwait_s
     last = time.monotonic()
+    saw_output = False
     while time.monotonic() < deadline:
         timeout = max(0.05, min(quiet_s, deadline - time.monotonic()))
         r, _, _ = select.select([fd], [], [], timeout)
         if not r:
-            if time.monotonic() - last >= quiet_s:
+            if saw_output and time.monotonic() - last >= quiet_s:
                 break
             continue
         try:
@@ -113,6 +114,7 @@ def _read_with_dsr(
         responder.process(chunk)  # side effect: writes DSR responses back
         buf += chunk
         last = time.monotonic()
+        saw_output = True
     return bytes(buf)
 
 

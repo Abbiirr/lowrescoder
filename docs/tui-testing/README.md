@@ -6,6 +6,7 @@ Single source of truth for testing the interactive terminal surface. Not for uni
 
 - **[`tui-testing-strategy.md`](tui-testing-strategy.md)** — the rules. Read this first. Covers the four-dimension matrix, required validation matrix (§3), command discoverability (§4), policies, PTY patterns, triage workflow, adding scenarios, and common pitfalls.
 - **[`tui_testing_checklist.md`](tui_testing_checklist.md)** — the enforced template. Copy it per-change, fill in as you go, store as an artifact at `autocode/docs/qa/test-results/<YYYYMMDD-HHMMSS>-tui-verification.md`. Unchecked boxes or missing evidence paths = FAIL.
+- **[`../reference/rpc-schema-v1.md`](../reference/rpc-schema-v1.md)** — canonical Stage 0A JSON-RPC method names and compat-alias audit.
 
 ## Workflow
 

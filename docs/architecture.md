@@ -119,12 +119,12 @@ Callbacks map to JSON-RPC notifications/requests:
 
 | Callback | JSON-RPC | Direction |
 |----------|----------|-----------|
-| `on_chunk(text)` | `on_token` notification | Py → Go |
-| `on_thinking_chunk(text)` | `on_thinking` notification | Py → Go |
-| `on_tool_call(name, status, result)` | `on_tool_call` notification | Py → Go |
-| `approval_callback(tool, args)` | `on_tool_request` **request** | Py → Go (waits for response) |
-| `ask_user_callback(question, options)` | `on_ask_user` **request** | Py → Go (waits for response) |
-| *(loop complete)* | `on_done` notification | Py → Go |
+| `on_chunk(text)` | `on_token` notification | Py → Rust |
+| `on_thinking_chunk(text)` | `on_thinking` notification | Py → Rust |
+| `on_tool_call(name, status, result)` | `on_tool_call` notification | Py → Rust |
+| `approval_callback(tool, args)` | `on_tool_request` **request** | Py → Rust (waits for response) |
+| `ask_user_callback(question, options)` | `on_ask_user` **request** | Py → Rust (waits for response) |
+| *(loop complete)* | `on_done` notification | Py → Rust |
 
 ### LLM Providers
 
@@ -190,21 +190,24 @@ Go handles `/exit`, `/clear`, `/thinking` locally. All others are delegated to t
 
 Wire format: newline-delimited JSON (one JSON object per line over stdin/stdout).
 
-### Go → Python Requests
+### Rust → Python Requests
 
 | Method | Params | Description |
 |--------|--------|-------------|
 | `chat` | `{message, session_id}` | Send user message to agent loop |
 | `cancel` | `{}` | Cancel current generation |
 | `command` | `{cmd}` | Execute slash command |
+| `command.list` | `{}` | List backend-owned slash commands for overlays |
 | `session.new` | `{title}` | Create new session |
 | `session.list` | `{}` | List all sessions |
+| `model.list` | `{}` | List models for picker/autocomplete surfaces |
+| `provider.list` | `{}` | List providers for picker/autocomplete surfaces |
 | `session.resume` | `{session_id}` | Resume session |
 | `config.get` | `{}` | Get current config |
 | `config.set` | `{key, value}` | Set config value |
 | `shutdown` | `{}` | Graceful shutdown |
 
-### Python → Go Notifications (no response expected)
+### Python → Rust Notifications (no response expected)
 
 | Method | Params | Description |
 |--------|--------|-------------|
@@ -214,13 +217,17 @@ Wire format: newline-delimited JSON (one JSON object per line over stdin/stdout)
 | `on_done` | `{tokens_in, tokens_out}` | Generation complete |
 | `on_error` | `{message}` | Error occurred |
 | `on_status` | `{model, provider, mode, session_id}` | Backend status info |
+| `on_task_state` | `{tasks, subagents}` | Background-task state update |
+| `on_cost_update` | `{cost, tokens_in, tokens_out}` | Per-turn cost/token snapshot |
 
-### Python → Go Requests (response required)
+### Python → Rust Requests (response required)
 
 | Method | Params | Response |
 |--------|--------|----------|
 | `on_tool_request` | `{tool, args}` | `{approved, session_approve}` |
 | `on_ask_user` | `{question, options, allow_text}` | `{answer}` |
+
+`docs/reference/rpc-schema-v1.md` is the canonical contract; this section is an overview.
 
 ### ID Ranges
 

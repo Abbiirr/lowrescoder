@@ -29,8 +29,14 @@ impl ChildGuard {
 
     #[allow(dead_code)]
     pub fn try_wait(&mut self) -> anyhow::Result<Option<ExitStatus>> {
-        if let Some(ref mut child) = self.child {
-            Ok(child.try_wait()?)
+        if let Some(mut child) = self.child.take() {
+            match child.try_wait()? {
+                Some(status) => Ok(Some(status)),
+                None => {
+                    self.child = Some(child);
+                    Ok(None)
+                }
+            }
         } else {
             Ok(None)
         }

@@ -45,23 +45,15 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 AUTOCODE_ROOT = REPO_ROOT / "autocode"
 
 
-def _resolve_go_tui() -> Path:
-    """Return the Go TUI binary path.
-
-    Matches the contract used by the PTY / Track 1 / Track 4 harnesses:
-    ``$AUTOCODE_TUI_BIN`` override → ``autocode/build/autocode-tui`` →
-    legacy in-place build at ``autocode/cmd/autocode-tui/autocode-tui``.
-    """
+def _resolve_rust_tui() -> Path:
+    """Return the Rust TUI binary path used by the active harnesses."""
     override = os.environ.get("AUTOCODE_TUI_BIN", "")
     if override:
         return Path(override)
-    build_path = AUTOCODE_ROOT / "build" / "autocode-tui"
-    if build_path.exists():
-        return build_path
-    return AUTOCODE_ROOT / "cmd" / "autocode-tui" / "autocode-tui"
+    return AUTOCODE_ROOT / "rtui" / "target" / "release" / "autocode-tui"
 
 
-GO_TUI = _resolve_go_tui()
+RUST_TUI = _resolve_rust_tui()
 MOCK_BACKEND = AUTOCODE_ROOT / "tests" / "pty" / "mock_backend.py"
 REFERENCE_DIR = AUTOCODE_ROOT / "tests" / "vhs" / "reference"
 CANDIDATE_ROOT = AUTOCODE_ROOT / "docs" / "qa" / "vhs" / "candidates"
@@ -78,7 +70,7 @@ def _env_for_capture() -> dict[str, str]:
 
 def _capture_one(scenario, stamp: str, *, is_update: bool) -> tuple[Path, dict]:
     ansi = capture_scenario(
-        GO_TUI, scenario, env_extra=_env_for_capture(),
+        RUST_TUI, scenario, env_extra=_env_for_capture(),
     )
     screen = feed_ansi_to_screen(
         ansi, columns=scenario.columns, lines=scenario.lines,
@@ -108,8 +100,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    if not GO_TUI.is_file():
-        print(f"ERROR: Go TUI binary not found at {GO_TUI}")
+    if not RUST_TUI.is_file():
+        print(f"ERROR: Rust TUI binary not found at {RUST_TUI}")
         return 2
     if not MOCK_BACKEND.is_file():
         print(f"ERROR: mock backend not found at {MOCK_BACKEND}")
@@ -120,7 +112,7 @@ def main(argv: list[str] | None = None) -> int:
     mode_label = "UPDATE (overwriting references)" if is_update else "DIFF"
 
     print(f"AutoCode TUI visual suite — {mode_label}")
-    print(f"Binary: {GO_TUI}")
+    print(f"Binary: {RUST_TUI}")
     print(f"Reference dir: {REFERENCE_DIR}")
 
     scenario_results: list[dict] = []
@@ -187,7 +179,7 @@ def main(argv: list[str] | None = None) -> int:
     artifact_path = ARTIFACT_DIR / f"{stamp}-vhs-visual-suite.md"
     lines = [f"# TUI Visual Suite — {stamp}\n"]
     lines.append(f"Mode: {mode_label}\n")
-    lines.append(f"Binary: `{GO_TUI}`\n")
+    lines.append(f"Binary: `{RUST_TUI}`\n")
     lines.append(f"Scenarios: {len(scenario_results)}\n")
     if not is_update:
         ok_count = sum(

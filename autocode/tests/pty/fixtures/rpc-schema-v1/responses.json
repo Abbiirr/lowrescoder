@@ -1,0 +1,12 @@
+[
+  {"name":"command_list_result","method":"command.list","result_model":"CommandListResult","message":{"jsonrpc":"2.0","id":4,"result":{"commands":[{"name":"help","aliases":["h","?"],"description":"Show available commands"},{"name":"model","aliases":["m"],"description":"Show or switch the LLM model"}]}}},
+  {"name":"session_new_result","method":"session.new","result_model":"SessionCreateResult","message":{"jsonrpc":"2.0","id":5,"result":{"session_id":"session-123"}}},
+  {"name":"session_list_result","method":"session.list","result_model":"SessionListResult","message":{"jsonrpc":"2.0","id":6,"result":{"sessions":[{"id":"mock-session-001","title":"Mock session","model":"tools","provider":"openrouter"}]}}},
+  {"name":"model_list_result","method":"model.list","result_model":"ModelListResult","message":{"jsonrpc":"2.0","id":7,"result":{"models":["tools","coding","fast"],"current":"tools"}}},
+  {"name":"provider_list_result","method":"provider.list","result_model":"ProviderListResult","message":{"jsonrpc":"2.0","id":8,"result":{"providers":["ollama","openrouter"],"current":"openrouter"}}},
+  {"name":"session_resume_result","method":"session.resume","result_model":"SessionResumeResult","message":{"jsonrpc":"2.0","id":9,"result":{"session_id":"mock-session-001","title":"Mock session"}}},
+  {"name":"plan_set_result","method":"plan.set","result_model":"PlanSetResult","message":{"jsonrpc":"2.0","id":10,"result":{"mode":"planning","changed":true}}},
+  {"name":"config_set_result","method":"config.set","result_model":"OkResult","message":{"jsonrpc":"2.0","id":11,"result":{"ok":true}}},
+  {"name":"session_fork_result","method":"session.fork","result_model":"ForkSessionResult","message":{"jsonrpc":"2.0","id":13,"result":{"new_session_id":"fork-001"}}},
+  {"name":"shutdown_result","method":"shutdown","result_model":"OkResult","message":{"jsonrpc":"2.0","id":14,"result":{"ok":true}}}
+]

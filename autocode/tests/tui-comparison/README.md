@@ -1,7 +1,7 @@
 # tui-comparison — Track 1 Runtime-Invariant Harness
 
 **One of four TUI testing dimensions.** See
-`docs/tests/tui-testing-strategy.md` for the matrix and how to pick
+`docs/tui-testing/tui-testing-strategy.md` for the matrix and how to pick
 between them.
 
 This tree answers: **"Does the Rust TUI still satisfy its runtime
@@ -32,7 +32,7 @@ Not this tree's job:
 
 ## Purpose
 
-Runtime-invariant gate. Runs the real `autocode-tui` Go binary in a PTY,
+Runtime-invariant gate. Runs the real `autocode-tui` Rust binary in a PTY,
 drives each scenario's scripted input, and asserts a set of
 deterministic predicates on the pyte-rendered output. Hard predicates
 fail the build. Soft predicates are Track 3 (style-gap) backlog data

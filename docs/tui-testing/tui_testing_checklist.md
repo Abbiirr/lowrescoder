@@ -349,66 +349,66 @@ Codex Inventory §1-60. For each, confirm the change did NOT reintroduce, and pr
 
 | # | Bug | Closed? | Evidence |
 |---|---|---|---|
-| 1 | Slash autocomplete missing | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 2 | Ctrl+K palette invisible | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 3 | Picker UI invisible | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 4 | Ask-user / approval invisible | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 5 | Free-text ask-user cannot type | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 6 | `/sessions` / `/resume` no visible browser | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 7 | Unknown slash silent fallthrough | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 8 | `/help` only static dump | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 9 | Model/provider pickers hardcoded | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 10 | Command inventory inconsistent | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 11 | Task panel not rendered | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 12 | Session picker filtered-selection bug | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 13 | User chat messages not echoed | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 14 | Backend warnings not surfaced | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 15 | Silent-backend timeout banner missing | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 16 | PTY README stale | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 17 | VHS defaults to Go-era paths | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 18 | Track 4 file uses Go path | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 19 | Comprehensive smoke overclaims | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 20 | `pty_e2e_real_gateway.py` stale | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 21 | Track 1 predicate drift | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 22 | `ask_user` RPC name mismatch (TUI vs backend) | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 23 | Triple Ctrl+C does not hard-quit | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 24 | Inline mode clears prior terminal content | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 25 | Editor round-trip forces altscreen | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 26 | History write non-atomic + unbounded | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 27 | Ctrl+K Enter dispatches unfiltered entry | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 28 | **Critical** — UTF-8 Backspace/Delete panic | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 29 | **Critical** — renderer panics on non-boundary cursor | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 30 | History ↑ stuck on newest entry | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 31 | Frecency sort dominated by timestamp | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 32 | Slash commands not echoed in scrollback | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 33 | `/plan` only visible as status-bar tag | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 34 | `on_tool_call` overwrites parallel tools | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 35 | `on_thinking` has no stream_buf overflow flush | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 36 | Tokens during Approval/AskUser silently absorbed | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 37 | `followup_queue` invisible + unbounded | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 38 | Ctrl+L bypasses `/clear` dispatcher | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 39 | `ToolCallInfo.args` / `.result` stored but unrendered | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 40 | `session_list` response has no render path | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 41 | `/compact` response silently dropped | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 42 | Second `approval` overwrites pending one (no queue) | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 43 | Approval / ask-user response IDs share space with TUI IDs | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 44 | Multiple stale requests collapse to one banner | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 45 | PTY writer leaks outbound queue after write error | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 46 | Editor launch crashes for `$EDITOR` with arguments | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 47 | Editor tempfile world-readable + predictable path | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 48 | Editor round-trip competes with the render loop | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 49 | RPC reader has no line-length cap (strategy §3.16 gap) | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 50 | `BackendExit` always reports code 0 | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 51 | Editor-return unconditional `EnterAlternateScreen` | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 52 | `Stage::EditorLaunch` never reached | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 53 | Status-bar session-id slice panics on non-ASCII IDs | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 54 | Palette filter accepts control chars | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 55 | Palette Enter indexes the unfiltered entry list (§27 precise) | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 56 | History dedupe strict-`==`; no size cap | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 57 | Resize emits `ResizePty` unclamped (tiny geometry hides composer) | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 58 | `tui.log` append-only, no rotation / size cap | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 59 | Tick only emits `Render` during `Stage::Streaming` | ☐ still open / ☐ closed / ☐ n/a | `_______` |
-| 60 | Mouse events silently dropped | ☐ still open / ☐ closed / ☐ n/a | `_______` |
+| 1 | Slash autocomplete missing | ☐ still open / ☒ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-094503-stage2-slash-compact-verification.md` |
+| 2 | Ctrl+K palette invisible | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-093005-stage2-visible-command-picker-verification.md` |
+| 3 | Picker UI invisible | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-093005-stage2-visible-command-picker-verification.md` |
+| 4 | Ask-user / approval invisible | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-102221-stage3a-modal-transcript-verification.md` |
+| 5 | Free-text ask-user cannot type | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260420-173018-stage1-utf8-textbuf-verification.md` |
+| 6 | `/sessions` / `/resume` no visible browser | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-093005-stage2-visible-command-picker-verification.md` |
+| 7 | Unknown slash silent fallthrough | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-093005-stage2-visible-command-picker-verification.md` |
+| 8 | `/help` only static dump | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-093005-stage2-visible-command-picker-verification.md` |
+| 9 | Model/provider pickers hardcoded | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-093005-stage2-visible-command-picker-verification.md` |
+| 10 | Command inventory inconsistent | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-093005-stage2-visible-command-picker-verification.md` |
+| 11 | Task panel not rendered | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-103256-stage3b-inspection-queue-verification.md` |
+| 12 | Session picker filtered-selection bug | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-093005-stage2-visible-command-picker-verification.md` |
+| 13 | User chat messages not echoed | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-102221-stage3a-modal-transcript-verification.md` |
+| 14 | Backend warnings not surfaced | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-102221-stage3a-modal-transcript-verification.md` |
+| 15 | Silent-backend timeout banner missing | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-102221-stage3a-modal-transcript-verification.md` |
+| 16 | PTY README stale | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260420-171416-stage0a-verification.md` |
+| 17 | VHS defaults to Go-era paths | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260420-171416-stage0a-verification.md` |
+| 18 | Track 4 file uses Go path | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260420-171416-stage0a-verification.md` |
+| 19 | Comprehensive smoke overclaims | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260420-171416-stage0a-verification.md` |
+| 20 | `pty_e2e_real_gateway.py` stale | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260420-171416-stage0a-verification.md` |
+| 21 | Track 1 predicate drift | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260420-171416-stage0a-verification.md` |
+| 22 | `ask_user` RPC name mismatch (TUI vs backend) | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260420-171416-stage0a-verification.md` |
+| 23 | Triple Ctrl+C does not hard-quit | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-102221-stage3a-modal-transcript-verification.md` |
+| 24 | Inline mode clears prior terminal content | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-085810-stage1-editor-inline-verification.md` |
+| 25 | Editor round-trip forces altscreen | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-085810-stage1-editor-inline-verification.md` |
+| 26 | History write non-atomic + unbounded | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260420-173018-stage1-utf8-textbuf-verification.md` |
+| 27 | Ctrl+K Enter dispatches unfiltered entry | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-093005-stage2-visible-command-picker-verification.md` |
+| 28 | **Critical** — UTF-8 Backspace/Delete panic | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260420-173018-stage1-utf8-textbuf-verification.md` |
+| 29 | **Critical** — renderer panics on non-boundary cursor | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260420-173018-stage1-utf8-textbuf-verification.md` |
+| 30 | History ↑ stuck on newest entry | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-091548-stage1-runtime-hygiene-verification.md` |
+| 31 | Frecency sort dominated by timestamp | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-091548-stage1-runtime-hygiene-verification.md` |
+| 32 | Slash commands not echoed in scrollback | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-102221-stage3a-modal-transcript-verification.md` |
+| 33 | `/plan` only visible as status-bar tag | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-093005-stage2-visible-command-picker-verification.md` |
+| 34 | `on_tool_call` overwrites parallel tools | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-103256-stage3b-inspection-queue-verification.md` |
+| 35 | `on_thinking` has no stream_buf overflow flush | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-102221-stage3a-modal-transcript-verification.md` |
+| 36 | Tokens during Approval/AskUser silently absorbed | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-102221-stage3a-modal-transcript-verification.md` |
+| 37 | `followup_queue` invisible + unbounded | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-103256-stage3b-inspection-queue-verification.md` |
+| 38 | Ctrl+L bypasses `/clear` dispatcher | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-102221-stage3a-modal-transcript-verification.md` |
+| 39 | `ToolCallInfo.args` / `.result` stored but unrendered | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-103256-stage3b-inspection-queue-verification.md` |
+| 40 | `session_list` response has no render path | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-093005-stage2-visible-command-picker-verification.md` |
+| 41 | `/compact` response silently dropped | ☐ still open / ☒ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-094503-stage2-slash-compact-verification.md` |
+| 42 | Second `approval` overwrites pending one (no queue) | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-102221-stage3a-modal-transcript-verification.md` |
+| 43 | Approval / ask-user response IDs share space with TUI IDs | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-102221-stage3a-modal-transcript-verification.md` |
+| 44 | Multiple stale requests collapse to one banner | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-102221-stage3a-modal-transcript-verification.md` |
+| 45 | PTY writer leaks outbound queue after write error | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-091015-stage1-rpc-process-verification.md` |
+| 46 | Editor launch crashes for `$EDITOR` with arguments | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-085810-stage1-editor-inline-verification.md` |
+| 47 | Editor tempfile world-readable + predictable path | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-085810-stage1-editor-inline-verification.md` |
+| 48 | Editor round-trip competes with the render loop | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-085810-stage1-editor-inline-verification.md` |
+| 49 | RPC reader has no line-length cap (strategy §3.16 gap) | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-091015-stage1-rpc-process-verification.md` |
+| 50 | `BackendExit` always reports code 0 | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-091015-stage1-rpc-process-verification.md` |
+| 51 | Editor-return unconditional `EnterAlternateScreen` | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-085810-stage1-editor-inline-verification.md` |
+| 52 | `Stage::EditorLaunch` never reached | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-085810-stage1-editor-inline-verification.md` |
+| 53 | Status-bar session-id slice panics on non-ASCII IDs | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260420-173018-stage1-utf8-textbuf-verification.md` |
+| 54 | Palette filter accepts control chars | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-093005-stage2-visible-command-picker-verification.md` |
+| 55 | Palette Enter indexes the unfiltered entry list (§27 precise) | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-093005-stage2-visible-command-picker-verification.md` |
+| 56 | History dedupe strict-`==`; no size cap | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260420-173018-stage1-utf8-textbuf-verification.md` |
+| 57 | Resize emits `ResizePty` unclamped (tiny geometry hides composer) | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-091548-stage1-runtime-hygiene-verification.md` |
+| 58 | `tui.log` append-only, no rotation / size cap | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-091548-stage1-runtime-hygiene-verification.md` |
+| 59 | Tick only emits `Render` during `Stage::Streaming` | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-091548-stage1-runtime-hygiene-verification.md` |
+| 60 | Mouse events silently dropped | ☐ still open / ☑ closed / ☐ n/a | `autocode/docs/qa/test-results/20260421-091548-stage1-runtime-hygiene-verification.md` |
 
 ---
 
