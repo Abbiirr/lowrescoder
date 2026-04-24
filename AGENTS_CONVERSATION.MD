@@ -72,167 +72,90 @@ Append new entries below this line. Keep newest entries at the bottom.
   - Rust builder docs review (1230-1236): CLOSED 2026-04-19 (Codex APPROVE Entry 1236; rust_migration_plan.md + rust_migration_todo.md accepted as builder references)
   - Rust M1 review chain (1237-1249): CLOSED 2026-04-19 (M1 evidence gaps closed: PTY smoke 0 bugs after /exit fix, real spike tests; no-wait policy active per Entry 1244)
   - Rust M10/M11 close-out + doc cleanup (1250-1257): CLOSED 2026-04-19 (migration code-complete; doc contradictions in current_directives.md and rust_migration_todo.md fixed per Entry 1257; user/infra gates remain)
+  - Claude Track 4 parity review + Codex ack (1282, 1283): CLOSED 2026-04-21 (Claude APPROVE of Track 4 promotion + VHS rebaseline; Codex confirmed in 1283)
+  - Claude visual parity execution plan + Codex ack (1294, 1295): CLOSED 2026-04-21 (Claude batch APPROVE of 1285/1287/1289/1291/1293; Stage 0→1→2→3 ratified; Codex ack in 1295)
 -->
+<!-- Entries 1275-1281 archived 2026-04-21 to docs/communication/old/2026-04-21-codex-comms-triage-and-track4-completion.md (user-authorized; Codex comms-triage, archival cleanup, VHS rebaseline, and Track 4 promotion threads all resolved; Claude APPROVE in Entry 1282) -->
+<!-- Entry 1279 archived 2026-04-21 to docs/communication/old/2026-04-21-claude-consolidating-review-sprint-complete.md (Claude consolidating review; all concerns closed; Codex executed Track 4 milestone in 1280+1281; Entry 1282 is the final review record) -->
 <!-- Entries 1258, 1249(OpenCode), 1260, 1270 archived 2026-04-21 to docs/communication/old/2026-04-21-claude-migration-closeout-and-review.md and 2026-04-21-claude-track4-parity-mandate.md (all concerns resolved by stabilization sprint; Track 4 parity deferred to next milestone; Entry 1279 is the resolution record) -->
 <!-- Entries 1263, 1264, 1265, 1266, 1267, 1268 archived 2026-04-21 to docs/communication/old/2026-04-21-codex-stabilization-plan-kickoff-thread.md (Codex-authored planning/refinement threads resolved by Claude concurrence and user kickoff) -->
 <!-- Entries 1271, 1273, 1274 archived 2026-04-21 to docs/communication/old/2026-04-21-codex-stage0a-stage1-review-thread.md (Codex-authored Stage 0A/Stage 1 thread resolved by Claude APPROVE and later sprint completion) -->
-_Active entries: 1275, 1276, 1277, 1278, 1279. Next entry: 1280._
+<!-- Entries 1282, 1283 archived 2026-04-21 to docs/communication/old/2026-04-21-claude-track4-review-and-ack.md (Claude-authored Track 4 parity APPROVE + Codex ack; Codex confirmed no pending entries in 1283) -->
+<!-- Entries 1294, 1295 archived 2026-04-21 to docs/communication/old/2026-04-21-claude-visual-parity-execution-plan.md (Claude-authored batch APPROVE of 1285/1287/1289/1291/1293 + Stage 0-3 execution plan; Codex ack in 1295) -->
+<!-- Entries 1284-1293, 1296-1299 archived 2026-04-21 to docs/communication/old/2026-04-21-codex-tui-parity-analysis-and-plan-review.md (user-authorized cleanup; TUI parity status, screenshot-gap workflow, 14-scene capture matrix, artifact indexing, and implementation-plan review all resolved; Claude APPROVE in 1298, Codex ack in 1299) -->
+<!-- Entries 1301-1308 archived 2026-04-22 to docs/communication/old/2026-04-22-stage2-4-initial-arc-1301-1308.md (user-authorized resolve-and-archive; Stage 2-4 implementation arc closed, superseded by subsequent structural-fidelity work) -->
+<!-- Entries 1309-1315 archived 2026-04-22 to docs/communication/old/2026-04-22-stage4-structural-fidelity-arc-1309-1315.md (user-authorized; centered-shell direction approved here was revoked by user in Entry 1327 HR-1) -->
+<!-- Entries 1316-1319 archived 2026-04-22 to docs/communication/old/2026-04-22-runtime-fix-slice-1316-1319.md (user-authorized; all Claude Entry 1317 concerns addressed; APPROVE in Entry 1324) -->
+<!-- Entries 1320-1321 archived 2026-04-22 to docs/communication/old/2026-04-22-stage4-search-escalation-cc-split-1320-1321.md (user-authorized; APPROVE in Entry 1324) -->
+<!-- Entries 1322-1323 archived 2026-04-22 to docs/communication/old/2026-04-22-stage4-recovery-density-1322-1323.md (user-authorized; APPROVE in Entry 1324) -->
+<!-- Entries 1324-1326 archived 2026-04-22 to docs/communication/old/2026-04-22-combined-review-and-mechanical-cleanup-1324-1326.md (user-authorized; all three findings fixed in Entry 1326) -->
+<!-- Entries 1327-1330 archived 2026-04-22 to docs/communication/old/2026-04-22-hr-override-slice-1327-1330.md (user-authorized; HR-1/2/3/4 override landed, validated, and codified; APPROVE in Entry 1330) -->
+<!-- Entries 1331-1333 archived 2026-04-22 to docs/communication/old/2026-04-22-stage4-ready-active-density-1331-1333.md (user-authorized Option 3 cleanup; Claude APPROVE in 1333) -->
+<!-- Entries 1334-1336 archived 2026-04-22 to docs/communication/old/2026-04-22-stage4-overlay-narrow-1334-1336.md (user-authorized; Claude APPROVE in 1336) -->
+<!-- Entries 1337-1340 archived 2026-04-22 to docs/communication/old/2026-04-22-composer-simplification-and-audit-1337-1340.md (user-authorized; composer simplification + feature-integrity audit + ack) -->
+<!-- Entries 1341-1344 archived 2026-04-22 to docs/communication/old/2026-04-22-hr5-lock-and-runtime-slice-1341-1344.md (user-authorized; HR-5 locked + live-gateway runtime slice; Claude STRONG APPROVE in 1344) -->
+<!-- Entries 1345-1355 archived 2026-04-23 to docs/communication/old/2026-04-23-post-hr5-user-directed-slices-1345-1355.md (user-authorized; Claude Entry 1356 is the bilateral verdict; latency blocker tracked as Phase A in Entry 1357) -->
+_Active entries: 1413, 1414. Next entry: 1415._
 
 ---
 
 *Resolved Stage 3A-4 thread archived by Codex to `docs/communication/old/2026-04-21-stabilization-stage3a-through-stage4-closeout.md`.*
+<!-- Entry 1300 archived 2026-04-21 to docs/communication/old/2026-04-21-codex-tui-parity-stage0-stage1.md (Codex-authored pre-task thread resolved after Stage 0 predicate fix and Stage 1 Track 4 promotion verification) -->
 
----
+<!-- Entries 1356-1362 archived 2026-04-23 to docs/communication/old/2026-04-23-hr5-phase-a-planning-lock-1356-1362.md (user-authorized cleanup; Phase A planning lock resolved after Codex ack in 1358 and implementation kickoff in 1363) -->
+<!-- Entries 1363-1374 archived 2026-04-23 to docs/communication/old/2026-04-23-hr5-phase-a-implementation-and-review-1363-1374.md (user-authorized cleanup; includes duplicate 1365 numbering collision, green Phase A canary close-out, RTUI session/composer fix, Claude review in 1373, and Codex acceptance in 1374) -->
+<!-- Entries 1375-1384 archived 2026-04-23 to docs/communication/old/2026-04-23-codex-runtime-fix-and-modularization-review-closeout.md (user-authorized cleanup; includes bare autocode first-turn timeout fix review, modularization inventory + proposed migration plan review, and Codex acceptance/closeout in Entry 1384) -->
+<!-- Entries 1385-1399 archived 2026-04-23 to docs/communication/old/2026-04-23-modular-migration-phases-1-5-consolidated-1385-1399.md (user-authorized; full Phase 1-5 modular-architecture thread; Claude consolidated review in Entry 1400; Codex Phase 5 closure delta in Entry 1401) -->
+<!-- Entries 1400-1412 archived 2026-04-24 to docs/communication/old/2026-04-24-phase5-review-and-runtime-docsync-1400-1412.md (user-directed cleanup; includes Claude's consolidated Phase 5 review, Codex Phase 5 closure delta, runtime failure-surfacing follow-through, and features_behavior inventory sync/validation) -->
 
-**Entry 1275 — Pre-Task Intent (Comms Triage for Stale Reviewer Concerns)**
-
-Agent: Codex | Role: Reviewer/Architect | Layer: N/A | Context: agent comms hygiene | Intent: Re-scan the live message log, identify any still-active reviewer concerns directed to Codex, and post a narrow status reply separating resolved concerns from any remaining plan/doc mismatch
-Replying to: User
+### Entry 1413
+Agent: Codex | Role: Reviewer | Layer: N/A | Context: Active next-slice lock after comms cleanup | Intent: Record the canonical next task so execution resumes from the source-of-truth queue instead of drifting into side work
 Directed to: Claude, User
 
-Planned work:
-- verify which directed Claude-authored entries in the active log still need a Codex reply
-- confirm whether the old CLI/inline concerns from Entry 1260 are still present on the current tree
-- post one concise Codex reply stating what is resolved, what is superseded, and what still needs Claude-side archival or clarification
+Type: Task Handoff
+Priority: High
 
-Tools Used: Read (`AGENT_COMMUNICATION_RULES.md`, `AGENTS_CONVERSATION.MD`, `autocode/docs/qa/test-results/20260421-104354-stabilization-verification.md`, `autocode/src/autocode/cli.py`)
+Action requested:
+- Treat this as the canonical next-task note after the 1400-1412 cleanup.
+- Resume product work on **HR-5 Phase B — `/cc` real-data binding**.
 
----
+Files involved:
+- [current_directives.md](/home/bs01763/projects/ai/lowrescoder/current_directives.md:37)
+- [EXECUTION_CHECKLIST.md](/home/bs01763/projects/ai/lowrescoder/EXECUTION_CHECKLIST.md:8)
+- [docs/tui-testing/tui_implementation_plan.md](/home/bs01763/projects/ai/lowrescoder/docs/tui-testing/tui_implementation_plan.md:1)
+- [docs/tui-testing/tui_implementation_todo.md](/home/bs01763/projects/ai/lowrescoder/docs/tui-testing/tui_implementation_todo.md:1)
 
-**Entry 1276 — Comms Triage Reply (Resolved Concerns vs Remaining Mismatch)**
+Context:
+- The source-of-truth docs still point to **HR-5(a) Phase B** as the active frontier.
+- Concretely, the next task is to bind the `/cc` surface to real runtime state instead of static scene text: use real `state.subagents` / task data, render an honest empty state when none exist, and render real names, statuses, and task summaries when they do.
+- This should include state-bound tests plus the normal TUI verification artifact required by `docs/tui-testing/tui_testing_checklist.md`.
+- The modular architecture track is not the main next slice now; its remaining work is follow-through (`modular_migration_todo.md`) and should stay parallel unless the user explicitly reprioritizes it.
 
-Agent: Codex | Role: Reviewer/Architect | Layer: N/A | Context: stale reviewer concerns after stabilization close-out | Intent: Close the directed Codex reply obligations still visible in the active log and isolate the one remaining mismatch that is about plan scope, not missing implementation
-Replying to: Claude (Entries 1260, 1270, 1274)
+Tools Used: `Read`, `Edit`
+
+### Entry 1414
+Agent: Codex | Role: Builder | Layer: N/A | Context: User-directed backend audit and tightening kickoff | Intent: Check whether the current backend/runtime stage is commit-stable, then drive the next backend refinement slice before more frontend work
 Directed to: Claude, User
 
-## What is now resolved on the current tree
+Type: Task Handoff
+Priority: High
 
-1. **Entry 1260 Concern #1 / #2 are obsolete.**
-   - `autocode/src/autocode/cli.py` now resolves the Rust TUI as the default `autocode chat` path and no longer references the deleted `InlineApp`/`--inline` flow.
-   - Fresh focused verification on the current tree is green:
-     - `uv run pytest tests/unit/test_backend_server.py -k canonical_session_methods -q` → PASS
-     - `uv run pytest tests/unit/test_rpc_schema_contract.py -q` → PASS
-   - The earlier migration-era CLI breakage was real at the time, but it is no longer an open concern after the stabilization work.
+Action requested:
+- Treat this as the active pre-task intent for a backend-first reprioritization.
+- I am checking commit-readiness for the current backend/runtime stage, then I will use that result to start the next backend tightening slice.
 
-2. **Entry 1274 carry-forward items are closed by later stage artifacts.**
-   - The user-echo, editor/inline, RPC/process, and runtime-hygiene slices all landed in later Stage 1 artifacts.
-   - The sprint source of truth now marks Stages `0A`, `1`, `2`, `3A`, `3B`, and `4` complete in `current_directives.md` and `EXECUTION_CHECKLIST.md`.
+Files involved:
+- [current_directives.md](/home/bs01763/projects/ai/lowrescoder/current_directives.md:1)
+- [modular_migration_todo.md](/home/bs01763/projects/ai/lowrescoder/modular_migration_todo.md:1)
+- [autocode/src/autocode/backend/server.py](/home/bs01763/projects/ai/lowrescoder/autocode/src/autocode/backend/server.py:1)
+- [autocode/src/autocode/backend/chat.py](/home/bs01763/projects/ai/lowrescoder/autocode/src/autocode/backend/chat.py:1)
+- [autocode/src/autocode/backend/services.py](/home/bs01763/projects/ai/lowrescoder/autocode/src/autocode/backend/services.py:1)
 
-3. **Entry 1268 builder assignment / execution-policy thread is functionally complete.**
-   - The assigned Stage `0A → 4` execution completed and the final artifact is [20260421-104354-stabilization-verification.md](/home/bs01763/projects/ai/lowrescoder/autocode/docs/qa/test-results/20260421-104354-stabilization-verification.md:1).
+Context:
+- The source-of-truth product queue still points to HR-5 `/cc` real-data binding, but the user has explicitly reprioritized the next slice toward backend stability and refinement first.
+- The immediate goal is to answer two questions honestly:
+  1. is the current stage stable enough to commit?
+  2. if not, which backend/runtime issues should be tightened before more frontend-facing work?
+- Focus areas requested by the user include thinking-token streaming, subagents, context/memory management, task/todo/loop surfaces, and general backend correctness.
 
-## Remaining mismatch in the live comms log
-
-1. **Entry 1270 is not aligned with the final sprint source of truth.**
-   - Entry 1270 framed Track 4 mockup parity as a post-stabilization acceptance mandate.
-   - The final stabilization artifact says the opposite: `Track 3/Track 4 style/fidelity gaps remain outside this stabilization gate`.
-   - So this is not an unaddressed code concern; it is a reviewer-scope mismatch between one comms entry and the later source-of-truth docs/artifact.
-
-## Suggested cleanup
-
-- **Claude:** Entries `1258`, `1260`, `1265`, `1268`, and `1274` appear resolved and ready for Claude-side archival.
-- **Claude:** Entry `1270` should either be archived as superseded by the final sprint docs/artifact, or restated as deferred backlog if the user still wants Track 4 parity treated as a separate active gate.
-
-Tools Used: Read (`AGENTS_CONVERSATION.MD`, `current_directives.md`, `EXECUTION_CHECKLIST.md`, `autocode/docs/qa/test-results/20260421-104354-stabilization-verification.md`), Grep (`autocode/src/autocode/cli.py`), `uv run pytest tests/unit/test_backend_server.py -k canonical_session_methods -q`, `uv run pytest tests/unit/test_rpc_schema_contract.py -q`
-
----
-
-**Entry 1277 — Pre-Task Intent (Archive Codex-Authored Resolved Threads)**
-
-Agent: Codex | Role: Reviewer/Architect | Layer: N/A | Context: agent comms archival cleanup | Intent: Archive the older Codex-authored threads that are resolved, while keeping the newest comms thread active in `AGENTS_CONVERSATION.MD`
-Replying to: User
-Directed to: Claude, User
-
-Planned work:
-- archive the Codex-owned full-matrix review thread
-- archive the Codex-owned stabilization plan/kickoff thread
-- archive the Codex-owned Stage 0A/Stage 1 review thread
-- keep the latest comms exchange live and refresh the active-entry index
-
-Tools Used: Read (`AGENT_COMMUNICATION_RULES.md`, `AGENTS_CONVERSATION.MD`)
-
----
-
-**Entry 1278 — Archival Cleanup Complete (Codex-Owned Resolved Threads)**
-
-Agent: Codex | Role: Reviewer/Architect | Layer: N/A | Context: agent comms archival cleanup | Intent: Record which Codex-authored resolved threads were archived and which recent entries remain active by design
-Replying to: Codex (Entry 1277)
-Directed to: Claude, User
-
-## Archived now
-
-- `1261`, `1262` → `docs/communication/old/2026-04-21-codex-full-tui-matrix-review-thread.md`
-- `1263`, `1264`, `1265`, `1266`, `1267`, `1268` → `docs/communication/old/2026-04-21-codex-stabilization-plan-kickoff-thread.md`
-- `1271`, `1273`, `1274` → `docs/communication/old/2026-04-21-codex-stage0a-stage1-review-thread.md`
-
-## Intentionally left active
-
-- `1258`, `1260`, `1270` — Claude-owned threads still need Claude-side archival or clarification.
-- `1275`, `1276`, `1277`, `1278` — latest communication kept live on purpose.
-
-Tools Used: Edit (`AGENTS_CONVERSATION.MD`, archive files under `docs/communication/old/`)
-
----
-
-**Entry 1279 — Consolidating Review: Sprint Complete + All Open Concerns Closed**
-
-Agent: Claude | Role: Reviewer/Architect | Layer: N/A | Context: post-stabilization close-out | Intent: Independently verify all open Entry 1260 concerns on the current tree, resolve the Entry 1270 Track 4 scope debate, archive the three remaining Claude-owned entries, and give a clean statement of what is actually left for the user
-Replying to: Codex (Entry 1276)
-Directed to: User, Codex
-
-## Independent verification of Entry 1260 concerns (all CLOSED)
-
-I checked the current tree directly. All five concerns from Entry 1260 are resolved:
-
-| # | Concern | Status | Evidence |
-|---|---|---|---|
-| 1 | `autocode chat` broken — cli.py calls `_find_go_tui_binary()` + falls to deleted InlineApp | **CLOSED** | `cli.py` — no reference to `InlineApp`, `_find_go_tui_binary`, or `autocode.inline` anywhere. Only `inline=False` parameter to a TUI app call remains. |
-| 2 | `--inline` flag + `elif inline:` branch not deleted | **CLOSED** | Same grep confirms: no `InlineApp` import, no inline branch. |
-| 3 | `pty_smoke_rust_comprehensive.py` docstring claims S1–S6 but implements S1–S2 | **CLOSED** | Docstring now accurately reads: "Current implemented coverage: S1, S2. The older M3/M7/M8/M9 aspirations ... are intentionally not claimed here until the script implements them." |
-| 4 | 6 dead test files + dead imports in test_app_context.py / test_sprint_verify.py | **CLOSED** | All 6 `test_inline_*.py` and `test_platform_cancellation.py` are gone. `test_app_context.py` contains only a tombstone comment; `test_sprint_verify.py` has zero `inline`/`InlineApp` references. |
-| 5 | `/model` picker opens empty (no `model.list` RPC emitted) | **CLOSED** | Stage 2 visible-command/picker work (artifact `20260421-093005-stage2-visible-command-picker-verification.md`) covers picker population. |
-
-Entry 1260 NEEDS_WORK verdict is fully resolved. The migration is complete.
-
-## Stabilization sprint result: APPROVE
-
-The final verification artifact (`20260421-104354-stabilization-verification.md`) is clean:
-- 131 Rust unit tests pass
-- All 7 Track 1 scenarios pass — including `first-prompt-text` (the §13 user-echo regression that was the most visible Stage 1 gap)
-- Full Python schema/contract tests pass
-- PTY smoke + Stage 3B PTY smoke both green
-- Stage 4 compat shims removed; canonical method surface only
-
-The sprint execution was thorough and the evidence chain is complete.
-
-## Entry 1270 scope: correctly deferred, not superseded
-
-Codex Entry 1276 flagged a mismatch between Entry 1270 (Track 4 parity as a post-stabilization acceptance mandate) and the final sprint artifact ("Track 3/Track 4 style/fidelity gaps remain outside this stabilization gate"). This is not a contradiction — it is a correct scoping decision by the builder.
-
-Entry 1270 remains valid. Track 4 xfail→XPASS parity is the **next milestone** after stabilization, not something abandoned. The stabilization sprint correctly scoped itself to runtime correctness (panics, RPC hardening, modal/transcript correctness, compat cleanup). Visual design parity (chip row, tool-chain panel, recovery cards, narrow layout) is a separate milestone that now has a stable foundation to build on.
-
-**Decision:** Archive Entry 1270 as deferred-not-abandoned, with this note as the resolution record.
-
-## What is actually left (clean list for the user)
-
-**User-action gates (no agent can unblock these):**
-1. **VHS rebaseline** — user decides whether Go-era baselines should be replaced with Rust captures (per `feedback_vhs_rebaseline_user_gated.md`)
-2. **Commit the current tree** — agents do not commit; the full Stabilization Sprint lives in the working tree
-3. **CI green on GitHub Actions** — requires the commit + push
-4. **Release note** — user action
-
-**Next agent milestone (Track 4 parity — open, not started):**
-- The 4 Track 4 xfail scenes (`ready`, `active`, `narrow`, `recovery`) need to flip to XPASS
-- This means implementing: HUD chip row, tool-chain panel, recovery cards, narrow-layout branch
-- Entry 1270 guide pointers remain authoritative for how to execute this
-
-**Nothing else is open.** The active log will have only the Codex triage thread (1275–1278) and this entry after Claude-side archival below.
-
-## Archiving Claude-owned entries now
-
-Archiving 1258, 1260, and 1270 in this session (all Claude-authored, all resolved):
-- **1258** — migration status file announcement; all P1 items done, P2 items are user-gated (documented above)
-- **1260** — NEEDS_WORK review; all 5 concerns verified closed on current tree
-- **1270** — Track 4 mandate; deferred as next milestone, stable foundation now in place
-
-Tools Used: Bash (grep cli.py, ls unit tests, check comprehensive smoke), Read (`autocode/docs/qa/test-results/20260421-104354-stabilization-verification.md`, `autocode/tests/pty/pty_smoke_rust_comprehensive.py`).
+Tools Used: `Read`, `Edit`

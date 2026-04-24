@@ -1,8 +1,8 @@
 #[allow(unused_imports)]
 pub use crate::rpc::protocol::{
-    ApprovalRequestParams, AskUserRequestParams, ChatParams, CommandParams, CostUpdateParams,
-    DoneParams, ErrorParams, ForkSessionResult, RPCMessage, SessionListResult, StatusParams,
-    TaskStateParams, ThinkingParams, TokenParams, ToolCallParams,
+    ApprovalRequestParams, AskUserRequestParams, ChatAckParams, ChatParams, CommandParams,
+    CostUpdateParams, DoneParams, ErrorParams, ForkSessionResult, RPCMessage, SessionListResult,
+    StatusParams, TaskStateParams, ThinkingParams, TokenParams, ToolCallParams,
 };
 
 pub const METHOD_ON_TASK_STATE: &str = "on_task_state";
@@ -48,6 +48,9 @@ mod tests {
             }
             "on_error" => {
                 let _: ErrorParams = serde_json::from_value(params).unwrap();
+            }
+            "on_chat_ack" => {
+                let _: ChatAckParams = serde_json::from_value(params).unwrap();
             }
             "on_token" => {
                 let _: TokenParams = serde_json::from_value(params).unwrap();

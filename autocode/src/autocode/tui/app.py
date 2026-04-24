@@ -17,9 +17,9 @@ from textual.binding import Binding
 from textual.widgets import Static, TextArea
 
 from autocode.agent.loop import AgentMode
+from autocode.app.commands import CommandRouter, create_default_router
 from autocode.config import AutoCodeConfig, load_config
 from autocode.session.store import SessionStore
-from autocode.tui.commands import CommandRouter, create_default_router
 from autocode.tui.file_completer import expand_references
 from autocode.tui.widgets.chat_view import ChatView
 from autocode.tui.widgets.input_bar import InputBar
@@ -592,7 +592,7 @@ class AutoCodeApp(App[None]):
 
     def copy_to_clipboard(self, text: str) -> bool:  # type: ignore[override]
         """AppContext: Copy to clipboard using platform-native command."""
-        from autocode.tui.commands import _copy_to_clipboard
+        from autocode.app.commands import _copy_to_clipboard
 
         return _copy_to_clipboard(text)
 

@@ -218,6 +218,43 @@ class TestRequestHandlers:
         server._session_approved_tools.add("write_file")
         server._agent_loop = MagicMock()
 
+    @pytest.mark.asyncio
+    async def test_handle_provider_list_uses_shared_command_runtime(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        with patch(
+            "autocode.app.commands._SUPPORTED_PROVIDERS",
+            ("ollama", "openrouter", "sandbox"),
+        ):
+            await server.handle_provider_list(21)
+
+        captured = capsys.readouterr()
+        msg = json.loads(captured.out.strip().split("\n")[-1])
+        assert msg["id"] == 21
+        assert msg["result"]["providers"] == ["ollama", "openrouter", "sandbox"]
+        assert msg["result"]["current"] == "ollama"
+
+    @pytest.mark.asyncio
+    async def test_handle_model_list_uses_shared_command_runtime(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        with patch(
+            "autocode.app.commands._list_models",
+            return_value=["coding", "tools"],
+        ) as mock_list_models:
+            await server.handle_model_list(22)
+
+        mock_list_models.assert_called_once_with("ollama", DEFAULT_OLLAMA_API_BASE)
+        captured = capsys.readouterr()
+        msg = json.loads(captured.out.strip().split("\n")[-1])
+        assert msg["id"] == 22
+        assert msg["result"]["models"] == ["coding", "tools"]
+        assert msg["result"]["current"] == DEFAULT_OLLAMA_MODEL
+
         await server.handle_session_new("New", 3)
 
         assert len(server._session_approved_tools) == 0
@@ -665,6 +702,70 @@ class TestHandleChat:
             assert server._session_titled
 
     @pytest.mark.asyncio
+    async def test_handle_chat_emits_chat_ack_before_done(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        with patch.object(server, "_ensure_agent_loop") as mock_ensure:
+            mock_loop = AsyncMock()
+            mock_loop.run = AsyncMock(return_value="response")
+            mock_loop.session_id = server.session_id
+            mock_ensure.return_value = mock_loop
+
+            await server.handle_chat("test", None, 1)
+
+            methods: list[str] = []
+            ack_msg = None
+            for line in capsys.readouterr().out.strip().split("\n"):
+                if not line:
+                    continue
+                msg = json.loads(line)
+                method = msg.get("method")
+                if method:
+                    methods.append(method)
+                if method == "on_chat_ack":
+                    ack_msg = msg
+            assert ack_msg is not None
+            assert ack_msg["params"]["request_id"] == 1
+            assert methods.index("on_chat_ack") < methods.index("on_done")
+
+    @pytest.mark.asyncio
+    async def test_handle_chat_contract_ack_precedes_first_token_and_done(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        async def run_with_stream(*args: Any, **kwargs: Any) -> str:
+            on_chunk = kwargs["on_chunk"]
+            on_chunk("hello")
+            return "response"
+
+        with patch.object(server, "_ensure_agent_loop") as mock_ensure:
+            mock_loop = AsyncMock()
+            mock_loop.run = AsyncMock(side_effect=run_with_stream)
+            mock_loop.session_id = server.session_id
+            mock_ensure.return_value = mock_loop
+
+            await server.handle_chat("test", None, 1)
+
+            methods: list[str] = []
+            for line in capsys.readouterr().out.strip().split("\n"):
+                if not line:
+                    continue
+                msg = json.loads(line)
+                method = msg.get("method")
+                if method:
+                    methods.append(method)
+
+            assert "on_chat_ack" in methods
+            assert "on_token" in methods
+            assert "on_done" in methods
+            assert methods.index("on_chat_ack") < methods.index("on_token") < methods.index(
+                "on_done"
+            )
+
+    @pytest.mark.asyncio
     async def test_handle_chat_sends_done(
         self,
         server: BackendServer,
@@ -687,6 +788,92 @@ class TestHandleChat:
                     done_found = True
                     break
             assert done_found
+
+    @pytest.mark.asyncio
+    async def test_handle_chat_force_l4_skips_router(
+        self,
+        server: BackendServer,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("AUTOCODE_FORCE_L4", "1")
+
+        with (
+            patch.object(server, "_ensure_agent_loop") as mock_ensure,
+            patch("autocode.core.router.RequestRouter") as mock_router,
+        ):
+            mock_loop = AsyncMock()
+            mock_loop.run = AsyncMock(return_value="response")
+            mock_loop.session_id = server.session_id
+            mock_ensure.return_value = mock_loop
+
+            await server.handle_chat("fix the bug in the login handler", None, 1)
+
+            mock_router.assert_not_called()
+            mock_loop.run.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_handle_chat_emits_heartbeat_ack_during_long_turn(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr("autocode.backend.chat._CHAT_HEARTBEAT_INTERVAL_S", 0.01)
+
+        async def slow_run(*args: Any, **kwargs: Any) -> str:
+            await asyncio.sleep(0.05)
+            return "response"
+
+        with patch.object(server, "_ensure_agent_loop") as mock_ensure:
+            mock_loop = AsyncMock()
+            mock_loop.run = AsyncMock(side_effect=slow_run)
+            mock_loop.session_id = server.session_id
+            mock_ensure.return_value = mock_loop
+
+            await server.handle_chat("test", None, 1)
+
+            ack_count = 0
+            for line in capsys.readouterr().out.strip().split("\n"):
+                if not line:
+                    continue
+                msg = json.loads(line)
+                if msg.get("method") == "on_chat_ack":
+                    ack_count += 1
+            assert ack_count >= 2
+
+    @pytest.mark.asyncio
+    async def test_handle_chat_benchmark_prompt_routes_to_l4(
+        self,
+        server: BackendServer,
+    ) -> None:
+        server.config.layer2.enabled = False
+        server.config.layer3.enabled = True
+        server._l3_provider = AsyncMock()
+
+        prompt = """WORKING DIRECTORY: /tmp/task
+
+BUG REPORT:
+Fix the failing benchmark task.
+
+GRADING COMMAND (wrapped by run_tests):
+pytest -q
+
+MANDATORY WORKFLOW — follow these steps exactly:
+1. Inspect the repo.
+2. Make the smallest correct change.
+3. Re-run the grading command.
+"""
+
+        with patch.object(server, "_ensure_agent_loop") as mock_ensure:
+            mock_loop = AsyncMock()
+            mock_loop.run = AsyncMock(return_value="response")
+            mock_loop.session_id = server.session_id
+            mock_ensure.return_value = mock_loop
+
+            await server.handle_chat(prompt, None, 1)
+
+            server._l3_provider.generate.assert_not_awaited()
+            mock_loop.run.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_handle_chat_error_sends_error(
@@ -971,11 +1158,34 @@ class TestSessionState:
         assert server._task_store is None
 
     @pytest.mark.asyncio
+    async def test_session_new_cancels_active_agent_task(self, server: BackendServer) -> None:
+        loop = MagicMock()
+        server._agent_loop = loop
+        server._agent_task = asyncio.create_task(asyncio.sleep(100))
+
+        await server.handle_session_new("Fresh", 52)
+
+        assert server._agent_task is None
+        loop.cancel.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_session_resume_resets_task_store(self, server: BackendServer) -> None:
         server._task_store = MagicMock()
         prefix = server.session_id[:8]
         await server.handle_session_resume(prefix, 53)
         assert server._task_store is None
+
+    @pytest.mark.asyncio
+    async def test_session_resume_cancels_active_agent_task(self, server: BackendServer) -> None:
+        loop = MagicMock()
+        server._agent_loop = loop
+        server._agent_task = asyncio.create_task(asyncio.sleep(100))
+        prefix = server.session_id[:8]
+
+        await server.handle_session_resume(prefix, 54)
+
+        assert server._agent_task is None
+        loop.cancel.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_handle_chat_session_switch_resets_task_store(

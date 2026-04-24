@@ -102,15 +102,16 @@ def _pred_no_crash(text: str, raw: bytes) -> PredicateResult:
 def _pred_composer_present(text: str, scenario: str) -> PredicateResult:
     """Composer zone visible on screen.
 
-    Per Codex Entry 1160 Concern #1, bare ``>`` / ``❯`` are **too
-    permissive** — picker rows like ``❯ coding`` (the selection glyph)
-    falsely satisfied the earlier broad marker set. This version:
+    Per Codex Entry 1160 Concern #1, a bare selection glyph is **too
+    permissive** — picker rows like ``❯ coding`` falsely satisfied the
+    earlier broad marker set. This version:
 
     1. Returns PASS with N/A for picker scenarios, where the picker
        intentionally REPLACES the composer and its absence is correct.
-    2. For all other scenarios, uses composer-specific marker shapes
-       (``Ask AutoCode``, ``❯ Ask``, ``> Ask``, ``│ > ``, ``│ ❯ ``).
-       A bare selection glyph is insufficient.
+    2. For all other scenarios, looks only in the bottom visible window
+       and requires either a composer-specific marker or an otherwise
+       empty bare prompt row (``❯`` / ``>``), not an arbitrary
+       ``❯ something`` selection row.
     """
     if scenario in _PICKER_SCENARIOS:
         return PredicateResult(
@@ -126,17 +127,8 @@ def _pred_composer_present(text: str, scenario: str) -> PredicateResult:
             passed=True,
             detail=f"N/A — ask-user scenario {scenario!r} replaces the composer with a modal",
         )
-    # Composer-specific markers — each anchored to a composer-line shape,
-    # not a bare selection glyph. Includes both Go-era markers and the
-    # Rust TUI's minimal `> ` prompt at end-of-line.
-    markers = ("Ask AutoCode", "❯ Ask", "> Ask", "│ > ", "│ ❯ ")
-    lines = text.split("\n")
-    passed = any(any(m in line for m in markers) for line in lines)
-    # Rust TUI uses a minimal `> ` prompt at the end of the last line
-    # (after the status bar). Check for `> ` in the line or `>` at end of
-    # stripped line as a fallback.
-    if not passed:
-        passed = any("> " in line or line.rstrip().endswith(">") for line in lines)
+    tail_lines = _bottom_visible_lines(text, window=8)
+    passed = any(_line_has_composer_marker(line) for line in tail_lines)
     return PredicateResult(
         name="composer_present",
         classification=PredicateClass.HARD,
@@ -177,6 +169,31 @@ _ORPHAN_SCENARIOS = {"orphaned-startup"}
 _SPINNER_CADENCE_SCENARIOS = {"spinner-cadence"}
 
 
+def _normalize_frame_line(line: str) -> str:
+    candidate = line.lstrip()
+    while candidate[:1] in {"│", "┃", "|"}:
+        candidate = candidate[1:].lstrip()
+    return candidate
+
+
+def _line_has_composer_marker(line: str) -> bool:
+    """Return True when a single rendered line looks like the composer."""
+    normalized = _normalize_frame_line(line)
+    composer_markers = ("❯ Ask", "> Ask", "Ask AutoCode")
+    if any(marker in normalized for marker in composer_markers):
+        return True
+    stripped = normalized.strip(" │┃|")
+    return stripped in {">", "❯"}
+
+
+def _bottom_visible_lines(text: str, window: int = 5) -> list[str]:
+    """Return the bottom visible rows after trimming terminal-padding blanks."""
+    lines = text.splitlines()
+    while lines and not lines[-1].strip():
+        lines.pop()
+    return lines[-window:]
+
+
 def _pred_basic_turn_returns_to_usable_input(text: str, scenario: str) -> PredicateResult:
     """After a send/response cycle, the composer must be ready for new input.
 
@@ -193,12 +210,11 @@ def _pred_basic_turn_returns_to_usable_input(text: str, scenario: str) -> Predic
             detail=f"N/A — scenario {scenario!r} has no turn",
         )
     # Turn scenarios send "hello" — look for evidence of the user prompt echo
-    # and the composer still being present after the response.
-    composer_markers = ("❯ Ask", "❯ ", "│ > ", "│ ❯", "> Ask", "Ask AutoCode")
-    tail_lines = [line for line in text.splitlines() if line.strip()][-2:]
-    composer_present = any(any(m in line for m in composer_markers) for line in tail_lines)
-    if not composer_present:
-        composer_present = any("> " in line or line.rstrip().endswith(">") for line in tail_lines)
+    # and the composer still being present after the response. Search a
+    # bottom window rather than only the last two non-empty lines because the
+    # live Rust TUI may render helper/footer rows beneath the composer.
+    tail_lines = _bottom_visible_lines(text, window=8)
+    composer_present = any(_line_has_composer_marker(line) for line in tail_lines)
     return PredicateResult(
         name="basic_turn_returns_to_usable_input",
         classification=PredicateClass.HARD,
@@ -206,7 +222,10 @@ def _pred_basic_turn_returns_to_usable_input(text: str, scenario: str) -> Predic
         detail=(
             "composer still visible after turn"
             if composer_present
-            else "no composer marker after turn — input not regained"
+            else (
+                "no composer marker in bottom 8 visible lines after turn — "
+                "input not regained"
+            )
         ),
     )
 
@@ -240,7 +259,9 @@ def _pred_spinner_observed_during_turn(text: str, raw: bytes, scenario: str) -> 
         "Synthesizing",
         "Processing",
     )
-    verb_seen = any(v in text for v in verb_markers)
+    text_lower = text.lower()
+    raw_lower = raw_text.lower()
+    verb_seen = any(v.lower() in text_lower or v.lower() in raw_lower for v in verb_markers)
     passed = braille_seen or verb_seen
     return PredicateResult(
         name="spinner_observed_during_turn",
@@ -285,7 +306,7 @@ def _pred_response_followed_user_prompt(text: str, scenario: str) -> PredicateRe
     # `> ` or `❯ ` and has a body that isn't a composer placeholder.
     prompt_line_idx = None
     for i, line in enumerate(lines):
-        stripped = line.lstrip()
+        stripped = _normalize_frame_line(line)
         body: str | None = None
         if stripped.startswith("> "):
             body = stripped[2:].strip()

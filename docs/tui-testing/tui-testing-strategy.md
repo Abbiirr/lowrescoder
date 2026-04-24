@@ -4,6 +4,12 @@
 
 **Unit tests are not in scope for this doc.** They're required but separate; cover them in focused `*_test.rs` / `test_*.py` files. This doc is about proving the interactive terminal surface actually works.
 
+Companion guides:
+
+- `docs/tui-testing/tui-reference-scene-trigger-guide.md` — 14-scene trigger matrix
+- `docs/tui-testing/tui-capture-compare-workflow.md` — repeatable screenshot-first workflow
+- `docs/tui-testing/tui-system-feature-coverage-guide.md` — benchmark/mid-run coverage rules for plan, subagents, restore, diff, search, escalation
+
 ---
 
 ## Contents
@@ -31,14 +37,14 @@ The repo has four complementary TUI test dimensions. Each answers a different qu
 | # | Dimension | Question | Entry command | Substrate |
 |---|---|---|---|---|
 | 1 | **Runtime invariants** (Track 1) | Does the TUI start, accept input, render correctly, not leak debug state? | `make tui-regression` | `autocode/tests/tui-comparison/` |
-| 2 | **Design-target ratchet** (Track 4) | Does the live TUI render the layout the mockup bundle specifies? Each scene is `strict=True` xfail that flips to a hard gate when the matching UI feature ships. | `make tui-references` | `autocode/tests/tui-references/` |
+| 2 | **Design-target ratchet** (Track 4) | Does the live TUI render the layout the mockup bundle specifies? New scenes start as `strict=True` xfail and flip to hard gates when the matching UI feature ships. | `make tui-references` | `autocode/tests/tui-references/` |
 | 3 | **Self-vs-self PNG regression** (VHS) | Did today's TUI render pixel-identical to yesterday's committed baseline? | `uv run python autocode/tests/vhs/run_visual_suite.py` | `autocode/tests/vhs/` |
 | 4 | **PTY smoke** (live binary + backend) | Does the real binary + real backend path work end-to-end in a real terminal? | `uv run python autocode/tests/pty/<script>.py` | `autocode/tests/pty/` |
 
 ### When to use which
 
 - **Runtime regression** (crash / composer / warnings / pickers / queues / spinner) → Track 1
-- **Implementing a UI feature that matches a mockup scene** → Track 4 (XPASS is the "done" signal — flip the `xfail` off)
+- **Implementing a UI feature that matches a mockup scene** → Track 4 (for pre-promotion scenes, XPASS is the "done" signal — flip the `xfail` off)
 - **Layout / color / palette / alt-screen / scrollback change** → VHS self-regression (commit new baseline or prove no drift)
 - **Backend/TUI JSON-RPC contract or startup timeout change** → PTY smoke
 - **Any feature the user will touch** → at minimum a PTY smoke plus the Track/VHS dimension matching what changed
@@ -413,8 +419,8 @@ A fresh agent landing on a red test must identify which dimension the failure be
 | Signal | Meaning | Action |
 |---|---|---|
 | Track 1 hard predicate failed | Actual runtime regression | Fix the TUI code |
-| Track 4 `xfail` | Expected until matching UI feature ships | **Do not remove the decorator** unless you shipped the feature |
-| Track 4 unexpected XPASS | Feature landed — flip `xfail` off and commit | Celebrate then commit |
+| Track 4 `xfail` | Expected for unshipped scenes only | **Do not remove the decorator** unless you shipped the feature |
+| Track 4 unexpected XPASS | Feature landed on a ratcheted scene — flip `xfail` off and commit | Celebrate then commit |
 | VHS diff above tolerance | Either intentional layout change or real visual regression | **Never** auto-`--update`; ask user (§6.1) |
 | PTY smoke failed | Backend contract change, gateway issue, or real runtime bug | Check gateway health, check backend stderr; do not assume PTY harness bug first |
 
@@ -701,7 +707,7 @@ When adding coverage for a new UI behavior, plumb through **all four dimensions*
 |---|---|---|
 | Track 1 | `autocode/tests/tui-comparison/scenarios/<name>.py` | `Scenario` dataclass with `steps`, `name`, `drain_maxwait_s`, `graceful_exit=False` |
 | Track 1 predicate | `autocode/tests/tui-comparison/predicates.py` | New `_pred_<name>()` + registry entry; use hard predicate (not soft) if the scenario is user-facing |
-| Track 4 | `autocode/tests/tui-references/test_reference_scenes.py` | `@pytest.mark.xfail(strict=True)` test function; scene predicate in `extract_scenes.py` |
+| Track 4 | `autocode/tests/tui-references/test_reference_scenes.py` | test function (pre-promotion scenes use `@pytest.mark.xfail(strict=True)`); scene predicate in `extract_scenes.py` |
 | VHS | `autocode/tests/vhs/scenarios.py` | Add `Scenario` with steps; reference PNG captured via `run_visual_suite.py --update` (user-gated) |
 | PTY smoke | `autocode/tests/pty/<new_script>.py` or extend `pty_smoke_rust_comprehensive.py` | `send()` + `read_until()` + assertion |
 

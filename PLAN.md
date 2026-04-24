@@ -765,8 +765,7 @@ After Milestone A, move in order:
 
 ## 1g. TUI Testing Strategy (Active Slice)
 
-**Last updated:** 2026-04-18 (Phase 1 Track 1 substrate landed; Track 4
-reference-driven Slice 1 APPROVED by Codex Entry 1197).
+**Last updated:** 2026-04-23 (14-scene parity program active; HR-5 Phase A benchmark-latency close-out is recorded and `/cc` real-data binding is now the active next slice).
 **Status:** Architecture APPROVED by Codex Entry 1141 + doc-polish
 delta APPROVED by Codex Entry 1144. Phase 1 Track 1 substrate
 implemented under `autocode/tests/tui-comparison/` with positive +
@@ -776,6 +775,30 @@ remain open for follow-up slices per the three-track architecture
 below. Track 4 (reference-driven design-target ratchet against the
 `tui-references/` mockup bundle) landed Slice 1 on 2026-04-18 with
 Codex APPROVE via Entry 1197 — see §Track 4 below.
+
+**Visual Parity Program (2026-04-21, active):** Durable 14-scene staged
+execution plan approved Claude Entry 1298. Canonical documents:
+- Phase A close-out plan: `docs/plan/hr5-phase-a-benchmark-latency-plan.md`
+- Phase A close-out checklist: `docs/plan/hr5-phase-a-benchmark-latency-checklist.md`
+- Execution plan: `docs/tui-testing/tui_implementation_plan.md`
+- Working checklist: `docs/tui-testing/tui_implementation_todo.md`
+- Baseline matrix: `autocode/docs/qa/test-results/20260421-175050-tui-14-scene-capture-matrix.md`
+- Fidelity baseline: `autocode/docs/qa/test-results/20260421-172920-tui-reference-gap.md`
+- First Stage 4 verification note: `autocode/docs/qa/test-results/20260421-235651-tui-stage4-fidelity-pass.md`
+
+Stage order: 0 (fix `basic_turn_returns_to_usable_input` predicate) →
+1 (promote `sessions`, `palette`, `plan`) → 2 (`restore`, `multi`,
+`review`, `diff` — user design gate required) → 3 (`grep`,
+`escalation`, `cc` — blocked on product features) → 4 (global fidelity
+pass). Stages 0-3 are complete. Stage 4 remains open, but HR-5 Phase A
+is now closed on the canary lane: the real-gateway Rust TUI PTY path
+completed `B13-PROXY` through `--autocode-runner tui` without the
+stretched stale-request workaround, recorded in
+`docs/qa/test-results/20260423-040320-B13-PROXY-autocode.json` and
+`docs/qa/test-results/20260423-100635-tui-benchmark-latency-verification.md`.
+`/cc` real-data binding is now the active Phase B slice. The latest
+runtime slice is
+`autocode/docs/qa/test-results/20260422-114723-tui-runtime-gateway-pass.md`.
 
 ### Post-Codex-1138 Three-Track Architecture (AUTHORITATIVE)
 

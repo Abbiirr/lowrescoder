@@ -1,0 +1,50 @@
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│tools | openrouter | suggest | ● search | mock-ses | tasks:0 | agents:0 | q:0 | sandbox:local                                                                 │
+│Search "extractImports|ASTNode\.kind" src · 14 hits across 5 files                                                                  ATTACH                    │
+│                                                                                                                                    @src/types.ts             │
+│src/utils/parser.ts · 4 hits                                                                                                        #extractImports           │
+│12 import { extractImports , ASTNode } from '../types'                                                                              3 attached                │
+│71 const nodes = ast.imports ? extractImports (ast.imports) : []                                                                                              │
+│                                                                                                                                    QUERY                     │
+│src/utils/resolver.ts · 5 hits                                                                                                      scope src                 │
+│116 const kind = n.kind ?? 'module'                                                                                                 regex on                  │
+│117 if ( kind === 'dyn') return null                                                                                                case smart                │
+│                                                                                                                                                              │
+│src/types.ts · 3 hits                                                                                                               ACTIONS                   │
+│19 export function extractImports(nodes?: ImportNode[])                                                                             ↵ open hit                │
+│27 return nodes.filter(Boolean)                                                                                                     Tab attach                │
+│                                                                                                                                    / refine                  │
+│                                                                                                                                    Esc back                  │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐│
+││❯ Ask AutoCode                                                                                                                                              ││
+│└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘│
+│Search results can be attached directly into the composer for the next prompt.                                                                                │
+│↵ open hit · Tab attach to composer · Ctrl+] next file · / refine query · Esc back                                                                            │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘

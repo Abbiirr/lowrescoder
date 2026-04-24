@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import io
+import json
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+from urllib.error import HTTPError
 
 # scripts/ is not a package — add project root to sys.path for imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -20,7 +23,12 @@ from benchmarks.adapters.autocode_adapter import (  # noqa: E402
     classify_provider_mode,
 )
 
-from benchmarks.adapters.base import BenchmarkTask, BudgetProfile  # noqa: E402  # isort: skip
+from benchmarks.adapters.base import (  # noqa: E402  # isort: skip
+    AgentResult,
+    BenchmarkTask,
+    BudgetProfile,
+    ProviderHealthError,
+)
 
 
 # --- A1: AutoCode adapter constants ---
@@ -607,6 +615,141 @@ def test_autocode_pre_task_healthcheck_non_ollama_noop(monkeypatch):
     with patch("urllib.request.urlopen") as mock_urlopen:
         adapter.pre_task_healthcheck()
     mock_urlopen.assert_not_called()
+
+
+def test_autocode_pre_task_healthcheck_probes_gateway_alias_once(monkeypatch):
+    monkeypatch.setenv("OLLAMA_HOST", "http://localhost:4000/v1")
+
+    adapter = AutoCodeAdapter(model="swebench")
+    adapter._provider = "ollama"
+
+    response = MagicMock()
+    response.__enter__.return_value = response
+    response.__exit__.return_value = False
+    response.read.return_value = json.dumps(
+        {"choices": [{"message": {"content": "ok"}}]}
+    ).encode("utf-8")
+
+    with patch(
+        "benchmarks.adapters.autocode_adapter.urlopen",
+        return_value=response,
+    ) as mock_urlopen, patch(
+        "autocode.gateway_auth.build_gateway_headers",
+        return_value={"Content-Type": "application/json"},
+    ):
+        adapter.pre_task_healthcheck()
+        adapter.pre_task_healthcheck()
+
+    assert mock_urlopen.call_count == 1
+
+
+def test_autocode_pre_task_healthcheck_raises_on_bad_gateway_alias(monkeypatch):
+    monkeypatch.setenv("OLLAMA_HOST", "http://localhost:4000/v1")
+
+    adapter = AutoCodeAdapter(model="swebench")
+    adapter._provider = "ollama"
+
+    error = HTTPError(
+        url="http://localhost:4000/v1/chat/completions",
+        code=404,
+        msg="Not Found",
+        hdrs=None,
+        fp=io.BytesIO(b'{"detail":"Not Found"}'),
+    )
+
+    with patch(
+        "benchmarks.adapters.autocode_adapter.urlopen",
+        side_effect=error,
+    ), patch(
+        "autocode.gateway_auth.build_gateway_headers",
+        return_value={"Content-Type": "application/json"},
+    ):
+        try:
+            adapter.pre_task_healthcheck()
+        except ProviderHealthError as exc:
+            message = str(exc)
+        else:  # pragma: no cover - explicit failure branch
+            raise AssertionError("expected ProviderHealthError")
+
+    assert "swebench" in message
+    assert "HTTP 404" in message
+
+
+def test_autocode_adapter_resolves_gateway_aliases_to_openrouter(monkeypatch):
+    monkeypatch.setenv("AUTOCODE_LLM_API_BASE", "http://localhost:4000/v1")
+
+    adapter = AutoCodeAdapter(model="swebench")
+    adapter._provider = "ollama"
+
+    assert adapter._resolve_execution_provider() == "openrouter"
+
+
+def test_autocode_adapter_keeps_ollama_for_non_gateway_models(monkeypatch):
+    monkeypatch.delenv("AUTOCODE_LLM_API_BASE", raising=False)
+    monkeypatch.setenv("OLLAMA_HOST", "http://localhost:11435")
+
+    adapter = AutoCodeAdapter(model="qwen3:8b")
+    adapter._provider = "ollama"
+
+    assert adapter._resolve_execution_provider() == "ollama"
+
+
+def test_autocode_adapter_tui_runner_delegates_to_tui_driver(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("AUTOCODE_LLM_API_BASE", "http://localhost:4000/v1")
+    task = BenchmarkTask(
+        task_id="test-task",
+        description="Fix the bug",
+        grading_command="pytest -q",
+    )
+    budget = BudgetProfile(wall_time_s=60, token_cap=1_000, max_tool_calls=10)
+    expected = AgentResult(task_id=task.task_id, resolved=True, wall_time_s=2.5)
+
+    with patch(
+        "benchmarks.adapters.autocode_adapter.AutoCodeTuiBenchmarkRunner",
+    ) as mock_runner_cls:
+        mock_runner = mock_runner_cls.return_value
+        mock_runner.run_task = AsyncMock(return_value=expected)
+
+        adapter = AutoCodeAdapter(model="swebench", runner="tui")
+        result = asyncio.run(adapter.solve_task(task, tmp_path, budget))
+
+    mock_runner_cls.assert_called_once()
+    runner_context = mock_runner_cls.call_args.args[0]
+    assert runner_context.provider == "openrouter"
+    assert runner_context.model == "swebench"
+    assert runner_context.connection_mode.value == "spawn"
+    mock_runner.run_task.assert_awaited_once()
+    assert result == expected
+
+
+def test_autocode_adapter_tui_runner_can_request_attach_mode(
+    tmp_path: Path, monkeypatch,
+):
+    monkeypatch.setenv("AUTOCODE_LLM_API_BASE", "http://localhost:4000/v1")
+    task = BenchmarkTask(
+        task_id="test-task",
+        description="Fix the bug",
+        grading_command="pytest -q",
+    )
+    budget = BudgetProfile(wall_time_s=60, token_cap=1_000, max_tool_calls=10)
+    expected = AgentResult(task_id=task.task_id, resolved=True, wall_time_s=2.5)
+
+    with patch(
+        "benchmarks.adapters.autocode_adapter.AutoCodeTuiBenchmarkRunner",
+    ) as mock_runner_cls:
+        mock_runner = mock_runner_cls.return_value
+        mock_runner.run_task = AsyncMock(return_value=expected)
+
+        adapter = AutoCodeAdapter(
+            model="swebench",
+            runner="tui",
+            tui_connection="attach",
+        )
+        result = asyncio.run(adapter.solve_task(task, tmp_path, budget))
+
+    runner_context = mock_runner_cls.call_args.args[0]
+    assert runner_context.connection_mode.value == "attach"
+    assert result == expected
 
 
 # --- B8: Tool filtering ---

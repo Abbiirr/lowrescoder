@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -982,9 +982,12 @@ class TestTextOnlyNudge:
 
     @pytest.mark.asyncio()
     async def test_first_turn_includes_environment_bootstrap_snapshot(
-        self, store: SessionStore, tmp_path: Path,
+        self,
+        store: SessionStore,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Iteration-zero messages should include a one-time workspace snapshot."""
+        """Iteration-zero bootstrap should stay cheap on the first user turn."""
         session_id = store.create_session(
             title="Env bootstrap",
             model="m",
@@ -1004,6 +1007,14 @@ class TestTextOnlyNudge:
         async def fake_generate(messages: Any, tools: Any, **kwargs: Any) -> LLMResponse:
             captured_messages.append([dict(message) for message in messages])
             return LLMResponse(content="done")
+
+        warm_index = Mock(side_effect=AssertionError("warm_code_index should stay deferred"))
+        repo_map_generate = Mock(side_effect=AssertionError("repo map should stay deferred"))
+        monkeypatch.setattr("autocode.agent.tools.warm_code_index", warm_index)
+        monkeypatch.setattr(
+            "autocode.layer2.repomap.RepoMapGenerator.generate",
+            repo_map_generate,
+        )
 
         provider = AsyncMock()
         provider.generate_with_tools = fake_generate
@@ -1026,10 +1037,11 @@ class TestTextOnlyNudge:
             if msg.get("role") == "system" and "Workspace Bootstrap" in msg.get("content", "")
         ]
         assert bootstrap_messages
+        assert warm_index.call_count == 0
+        assert repo_map_generate.call_count == 0
         assert "Project root" in bootstrap_messages[0]["content"]
         assert "Retrieval index" in bootstrap_messages[0]["content"]
-        assert "Repo map preview" in bootstrap_messages[0]["content"]
-        assert "App" in bootstrap_messages[0]["content"]
+        assert "deferred" in bootstrap_messages[0]["content"].lower()
         assert "Available tools" in bootstrap_messages[0]["content"]
 
     @pytest.mark.asyncio()

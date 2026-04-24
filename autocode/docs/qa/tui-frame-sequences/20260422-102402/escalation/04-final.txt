@@ -1,0 +1,50 @@
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│tools | openrouter | suggest | ● escalated | mock-sessi | tasks:0 | agents:0 | q:0 | sandbox:local                                                            │
+│⚑ Permission escalation · protected path touched                                                                                    DECISION                  │
+│Auto-accept was on, but this edit would modify .github/workflows/ci.yml                                                             ● Approve this edit only  │
+│which is in .autocode/protect . Mode bumped to [review-needed] for this hunk only.                                                  ○ Approve for this session│
+│                                                                                                                                    ○ Open diff in focus mode │
+│path .github/workflows/ci.yml matched rule .autocode/protect → ".github/**"                                                         ○ Remove rule             │
+│edit origin auto-planning · propagating bun version bump                                                                            ○ Reject                  │
+│blast radius CI for all branches · reversible yes · local only until push                                                                                     │
+│                                                                                                                                    RISK                      │
+│pending hunk: update bun cache key and install version to 1.2.0                                                                     ci global                 │
+│paired diff available before approval                                                                                               network off               │
+│                                                                                                                                    reversible yes            │
+│                                                                                                                                    protected yes             │
+│                                                                                                                                    [a]pprove                 │
+│                                                                                                                                    [r]eject                  │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐│
+││❯                                                                                                                                                           ││
+│└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘│
+│Protected-path escalation pauses the agent before the write and preserves the composer.                                                                       │
+│a approve-once · s approve-session · r reject · d focus diff · Esc stay paused                                                                                │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘

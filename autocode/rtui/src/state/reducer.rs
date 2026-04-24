@@ -4,7 +4,7 @@ use portable_pty::ExitStatus;
 
 use crate::rpc::protocol::RPCMessage;
 use crate::rpc::schema;
-use crate::state::model::{AskUserSource, InboundId, PaletteMode, Stage};
+use crate::state::model::{AskUserSource, DetailSurface, InboundId, PaletteMode, Stage};
 use crate::ui::textbuf::TextBuf;
 
 #[allow(dead_code)]
@@ -62,10 +62,20 @@ pub enum Effect {
     SpawnEditor(String),
 }
 
-const STALE_REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+const DEFAULT_STALE_REQUEST_TIMEOUT_SECS: u64 = 30;
 const CTRL_C_HARD_QUIT_WINDOW: Duration = Duration::from_secs(2);
 const FOLLOWUP_QUEUE_LIMIT: usize = 32;
 const ACTIVE_TOOLS_LIMIT: usize = 16;
+const RECOVERY_ACTION_COUNT: usize = 6;
+
+pub(crate) fn stale_request_timeout() -> Duration {
+    std::env::var("AUTOCODE_STALE_REQUEST_TIMEOUT_SECS")
+        .ok()
+        .and_then(|raw| raw.parse::<u64>().ok())
+        .filter(|value| *value > 0)
+        .map(Duration::from_secs)
+        .unwrap_or(Duration::from_secs(DEFAULT_STALE_REQUEST_TIMEOUT_SECS))
+}
 
 pub fn reduce(
     state: crate::state::model::AppState,
@@ -98,6 +108,7 @@ pub fn reduce(
         Event::BackendReadyTimeout => {
             let mut s = state;
             s.error_banner = Some("Backend not responding".into());
+            s.recovery_action_idx = 0;
             (s, vec![Effect::Render])
         }
         Event::BackendExit(status) => {
@@ -107,12 +118,14 @@ pub fn reduce(
                 (s, vec![Effect::Quit])
             } else {
                 s.error_banner = Some(format!("backend crashed (code {})", status.exit_code()));
+                s.recovery_action_idx = 0;
                 (s, vec![Effect::Render])
             }
         }
         Event::BackendError(err) => {
             let mut s = state;
             s.error_banner = Some(err);
+            s.recovery_action_idx = 0;
             (s, vec![Effect::Render])
         }
         Event::BackendWarning(message) => {
@@ -124,6 +137,7 @@ pub fn reduce(
             let mut s = state;
             s.stage = Stage::Shutdown;
             s.error_banner = Some(err);
+            s.recovery_action_idx = 0;
             (s, vec![Effect::Render])
         }
         Event::EditorDone(text) => {
@@ -157,6 +171,55 @@ fn clear_transcript(state: &mut crate::state::model::AppState) {
     state.current_tool = None;
     state.active_tools.clear();
     state.followup_queue.clear();
+    state.detail_surface = None;
+    state.recovery_action_idx = 0;
+}
+
+fn sync_composer_lines(state: &mut crate::state::model::AppState) {
+    state.composer_lines = state
+        .composer_text
+        .as_str()
+        .lines()
+        .map(String::from)
+        .collect();
+}
+
+fn set_composer_text(state: &mut crate::state::model::AppState, text: impl Into<String>) {
+    state.composer_text.set_text(text.into());
+    sync_composer_lines(state);
+}
+
+fn clear_composer(state: &mut crate::state::model::AppState) {
+    state.composer_text.clear();
+    state.composer_lines.clear();
+}
+
+fn reset_for_session_switch(
+    state: &mut crate::state::model::AppState,
+    session_id: String,
+    notice: String,
+) {
+    clear_transcript(state);
+    state.stage = Stage::Idle;
+    state.pending_requests.clear();
+    state.stale_request_ids.clear();
+    state.picker = None;
+    state.palette = None;
+    state.approval = None;
+    state.ask_user = None;
+    state.modal_queue.clear();
+    state.session_list = None;
+    state.tasks.clear();
+    state.subagents.clear();
+    state.status.session_id = Some(session_id);
+    state.status.tokens_in = 0;
+    state.status.tokens_out = 0;
+    state.status.cost = None;
+    state.status.bg_tasks = 0;
+    state.scroll_offset = 0;
+    state.history_cursor = None;
+    clear_composer(state);
+    state.scrollback.push_back(format!("[System] {}", notice));
 }
 
 fn flush_stream_lines(state: &mut crate::state::model::AppState) {
@@ -170,6 +233,40 @@ fn flush_stream_lines(state: &mut crate::state::model::AppState) {
         }
         state.stream_buf.clear();
     }
+}
+
+fn oldest_pending_request_id_by_method(
+    state: &crate::state::model::AppState,
+    method: &str,
+) -> Option<i64> {
+    state
+        .pending_requests
+        .iter()
+        .filter(|(_, pending)| pending.method == method)
+        .min_by_key(|(_, pending)| pending.sent_at)
+        .map(|(&id, _)| id)
+}
+
+fn touch_oldest_pending_request_by_method(
+    state: &mut crate::state::model::AppState,
+    method: &str,
+) -> bool {
+    if let Some(id) = oldest_pending_request_id_by_method(state, method) {
+        if let Some(pending) = state.pending_requests.get_mut(&id) {
+            pending.sent_at = std::time::Instant::now();
+            return true;
+        }
+    }
+    false
+}
+
+fn remove_oldest_pending_request_by_method(
+    state: &mut crate::state::model::AppState,
+    method: &str,
+) -> Option<i64> {
+    let id = oldest_pending_request_id_by_method(state, method)?;
+    state.pending_requests.remove(&id)?;
+    Some(id)
 }
 
 fn activate_next_modal(state: &mut crate::state::model::AppState) {
@@ -326,7 +423,10 @@ fn handle_key(
             (state, vec![Effect::Render])
         }
         (KeyModifiers::NONE, KeyCode::Char('/'))
-            if state.stage == Stage::Idle && state.composer_text.is_empty() =>
+            if matches!(
+                state.stage,
+                Stage::Idle | Stage::Streaming | Stage::ToolCall
+            ) && state.composer_text.is_empty() =>
         {
             state.palette = Some(crate::state::model::PaletteState {
                 mode: PaletteMode::SlashAutocomplete,
@@ -334,6 +434,7 @@ fn handle_key(
                 cursor: 0,
                 entries: vec![],
             });
+            set_composer_text(&mut state, "/");
             state.stage = Stage::Palette;
             let id = state.next_request_id;
             state.next_request_id += 1;
@@ -354,6 +455,10 @@ fn handle_key(
             );
             (state, vec![Effect::SendRpc(msg), Effect::Render])
         }
+        (KeyModifiers::NONE, KeyCode::Esc) if state.detail_surface.is_some() => {
+            state.detail_surface = None;
+            (state, vec![Effect::Render])
+        }
         (KeyModifiers::CONTROL, KeyCode::Char('l')) => {
             clear_transcript(&mut state);
             (state, vec![Effect::Render])
@@ -373,6 +478,9 @@ fn handle_key(
                 state.error_banner = Some("$EDITOR not set".to_string());
                 (state, vec![Effect::Render])
             }
+        }
+        _ if state.error_banner.is_some() || state.stage == Stage::Shutdown => {
+            handle_recovery_key(state, &key)
         }
         // Up/Down: history browse in Idle
         (KeyModifiers::NONE, KeyCode::Up) if state.stage == crate::state::model::Stage::Idle => {
@@ -420,6 +528,124 @@ fn handle_key(
     }
 }
 
+fn handle_recovery_key(
+    mut state: crate::state::model::AppState,
+    key: &crossterm::event::KeyEvent,
+) -> (crate::state::model::AppState, Vec<Effect>) {
+    use crossterm::event::{KeyCode, KeyModifiers};
+
+    match (key.modifiers, key.code) {
+        (KeyModifiers::NONE, KeyCode::Esc) => (state, vec![Effect::Render]),
+        (KeyModifiers::NONE, KeyCode::Left) => {
+            if !state.recovery_action_idx.is_multiple_of(3) {
+                state.recovery_action_idx -= 1;
+            }
+            (state, vec![Effect::Render])
+        }
+        (KeyModifiers::NONE, KeyCode::Right) => {
+            if state.recovery_action_idx % 3 < 2
+                && state.recovery_action_idx + 1 < RECOVERY_ACTION_COUNT
+            {
+                state.recovery_action_idx += 1;
+            }
+            (state, vec![Effect::Render])
+        }
+        (KeyModifiers::NONE, KeyCode::Up) => {
+            if state.recovery_action_idx >= 3 {
+                state.recovery_action_idx -= 3;
+            }
+            (state, vec![Effect::Render])
+        }
+        (KeyModifiers::NONE, KeyCode::Down) => {
+            if state.recovery_action_idx + 3 < RECOVERY_ACTION_COUNT {
+                state.recovery_action_idx += 3;
+            }
+            (state, vec![Effect::Render])
+        }
+        (KeyModifiers::NONE, KeyCode::Tab) => {
+            state.recovery_action_idx = (state.recovery_action_idx + 1) % RECOVERY_ACTION_COUNT;
+            (state, vec![Effect::Render])
+        }
+        (KeyModifiers::SHIFT, KeyCode::BackTab) => {
+            state.recovery_action_idx =
+                (state.recovery_action_idx + RECOVERY_ACTION_COUNT - 1) % RECOVERY_ACTION_COUNT;
+            (state, vec![Effect::Render])
+        }
+        (KeyModifiers::NONE, KeyCode::Enter) => {
+            let idx = state.recovery_action_idx;
+            run_recovery_action(state, idx)
+        }
+        (KeyModifiers::NONE, KeyCode::Char('e')) => run_recovery_action(state, 1),
+        (KeyModifiers::NONE, KeyCode::Char('r')) => run_recovery_action(state, 2),
+        (KeyModifiers::NONE, KeyCode::Char('w')) => run_recovery_action(state, 3),
+        (KeyModifiers::NONE, KeyCode::Char('c')) => run_recovery_action(state, 4),
+        (KeyModifiers::NONE, KeyCode::Char('p')) => run_recovery_action(state, 5),
+        _ => crate::ui::composer::Composer::handle_key(state, key),
+    }
+}
+
+fn run_recovery_action(
+    mut state: crate::state::model::AppState,
+    idx: usize,
+) -> (crate::state::model::AppState, Vec<Effect>) {
+    state.recovery_action_idx = idx.min(RECOVERY_ACTION_COUNT.saturating_sub(1));
+
+    match state.recovery_action_idx {
+        0 => retry_from_recovery(state),
+        1 => {
+            state.detail_surface = Some(DetailSurface::CommandCenter);
+            (state, vec![Effect::Render])
+        }
+        2 | 3 => {
+            state.detail_surface = Some(DetailSurface::Restore);
+            (state, vec![Effect::Render])
+        }
+        4 => {
+            let effects = handle_slash_command(&mut state, "/compact");
+            (state, effects)
+        }
+        5 => {
+            let effects = handle_slash_command(&mut state, "/plan");
+            (state, effects)
+        }
+        _ => (state, vec![Effect::Render]),
+    }
+}
+
+fn retry_from_recovery(
+    mut state: crate::state::model::AppState,
+) -> (crate::state::model::AppState, Vec<Effect>) {
+    if state.composer_text.as_str().trim().is_empty() {
+        if let Some(last_input) = last_retryable_input(&state) {
+            state.composer_text.set_text(last_input);
+        } else {
+            return (state, vec![Effect::Render]);
+        }
+    }
+
+    state.stage = Stage::Idle;
+    state.error_banner = None;
+    crate::ui::composer::Composer::handle_key(
+        state,
+        &crossterm::event::KeyEvent::new(
+            crossterm::event::KeyCode::Enter,
+            crossterm::event::KeyModifiers::NONE,
+        ),
+    )
+}
+
+fn last_retryable_input(state: &crate::state::model::AppState) -> Option<String> {
+    state.scrollback.iter().rev().find_map(|line| {
+        if let Some(rest) = line.strip_prefix("> ") {
+            Some(rest.to_string())
+        } else if line.starts_with('/') {
+            Some(line.clone())
+        } else {
+            None
+        }
+    })
+}
+
 fn handle_mouse(
     mut state: crate::state::model::AppState,
     mouse: crossterm::event::MouseEvent,
@@ -448,19 +674,28 @@ fn handle_palette_key(
     let mut effects = vec![];
     match (key.modifiers, key.code) {
         (KeyModifiers::NONE, KeyCode::Esc) => {
+            let clear_draft = state.palette.as_ref().is_some_and(|palette| {
+                palette.mode == PaletteMode::SlashAutocomplete && palette.filter.is_empty()
+            });
             state.stage = crate::state::model::Stage::Idle;
             state.palette = None;
+            if clear_draft {
+                clear_composer(&mut state);
+            }
             effects.push(Effect::Render);
         }
         (KeyModifiers::NONE, KeyCode::Enter) | (KeyModifiers::NONE, KeyCode::Tab) => {
+            let mut command_to_dispatch: Option<String> = None;
+            let mut completed_draft: Option<String> = None;
+            let mut clear_draft_after_dispatch = false;
+
             if let Some(palette) = &state.palette {
                 let visible = visible_palette_indices(palette);
                 if let Some(selected_idx) = visible.get(palette.cursor).copied() {
                     let entry = &palette.entries[selected_idx];
                     match palette.mode {
                         PaletteMode::CommandPalette => {
-                            let cmd = entry.name.clone();
-                            effects.extend(handle_slash_command(&mut state, &cmd));
+                            command_to_dispatch = Some(entry.name.clone());
                         }
                         PaletteMode::SlashAutocomplete => {
                             let filter = palette.filter.as_str().trim().to_lowercase();
@@ -468,19 +703,10 @@ fn handle_palette_key(
                                 == entry.name.trim_start_matches('/').to_lowercase()
                                 || filter == entry.name.to_lowercase();
                             if matches!(key.code, KeyCode::Enter) && exact_match {
-                                state
-                                    .pending_requests
-                                    .retain(|_, pending| pending.method != "command.list");
-                                let cmd = entry.name.clone();
-                                effects.extend(handle_slash_command(&mut state, &cmd));
+                                command_to_dispatch = Some(entry.name.clone());
+                                clear_draft_after_dispatch = true;
                             } else {
-                                state.composer_text.set_text(entry.name.clone());
-                                state.composer_lines = state
-                                    .composer_text
-                                    .as_str()
-                                    .lines()
-                                    .map(String::from)
-                                    .collect();
+                                completed_draft = Some(entry.name.clone());
                             }
                         }
                     }
@@ -489,16 +715,30 @@ fn handle_palette_key(
                 {
                     let filter = palette.filter.as_str().trim();
                     if !filter.is_empty() {
-                        state
-                            .pending_requests
-                            .retain(|_, pending| pending.method != "command.list");
-                        let cmd = format!("/{}", filter);
-                        effects.extend(handle_slash_command(&mut state, &cmd));
+                        command_to_dispatch = Some(format!("/{}", filter));
+                        clear_draft_after_dispatch = true;
                     }
                 }
             }
+
+            state
+                .pending_requests
+                .retain(|_, pending| pending.method != "command.list");
             state.stage = crate::state::model::Stage::Idle;
             state.palette = None;
+
+            if let Some(draft) = completed_draft {
+                set_composer_text(&mut state, draft);
+            }
+
+            if let Some(cmd) = command_to_dispatch {
+                effects.extend(handle_slash_command(&mut state, &cmd));
+                if clear_draft_after_dispatch {
+                    clear_composer(&mut state);
+                    state.history_cursor = None;
+                }
+            }
+
             effects.push(Effect::Render);
         }
         (KeyModifiers::NONE, KeyCode::Up) => {
@@ -519,21 +759,39 @@ fn handle_palette_key(
             effects.push(Effect::Render);
         }
         (KeyModifiers::NONE, KeyCode::Char(c)) if !c.is_control() => {
+            let mut slash_filter: Option<String> = None;
             if let Some(palette) = &mut state.palette {
                 palette.filter.insert(c);
                 palette.cursor = 0;
+                if palette.mode == PaletteMode::SlashAutocomplete {
+                    slash_filter = Some(palette.filter.as_str().to_string());
+                }
+            }
+            if let Some(filter) = slash_filter {
+                set_composer_text(&mut state, format!("/{}", filter));
             }
             effects.push(Effect::Render);
         }
         (KeyModifiers::NONE, KeyCode::Backspace) => {
+            let mut slash_filter: Option<String> = None;
+            let mut close_empty_slash = false;
             if let Some(palette) = &mut state.palette {
                 if palette.filter.is_empty() && palette.mode == PaletteMode::SlashAutocomplete {
                     state.palette = None;
                     state.stage = Stage::Idle;
+                    close_empty_slash = true;
                 } else {
                     palette.filter.delete_left();
                     palette.cursor = 0;
+                    if palette.mode == PaletteMode::SlashAutocomplete {
+                        slash_filter = Some(palette.filter.as_str().to_string());
+                    }
                 }
+            }
+            if close_empty_slash {
+                clear_composer(&mut state);
+            } else if let Some(filter) = slash_filter {
+                set_composer_text(&mut state, format!("/{}", filter));
             }
             effects.push(Effect::Render);
         }
@@ -542,12 +800,69 @@ fn handle_palette_key(
     (state, effects)
 }
 
+fn dispatch_backend_slash_command(
+    state: &mut crate::state::model::AppState,
+    cmd: &str,
+    pending_method: Option<String>,
+) -> Vec<Effect> {
+    state.scrollback.push_back(cmd.into());
+    let id = state.next_request_id;
+    state.next_request_id += 1;
+    let msg = crate::rpc::protocol::RPCMessage {
+        jsonrpc: "2.0".to_string(),
+        id: Some(id),
+        method: Some("command".to_string()),
+        params: Some(serde_json::json!({"cmd": cmd})),
+        result: None,
+        error: None,
+    };
+    state.pending_requests.insert(
+        id,
+        crate::state::model::PendingRequest {
+            method: pending_method.unwrap_or_else(|| format!("command:{cmd}")),
+            sent_at: std::time::Instant::now(),
+        },
+    );
+    vec![Effect::SendRpc(msg)]
+}
+
 pub(crate) fn handle_slash_command(
     state: &mut crate::state::model::AppState,
     cmd: &str,
 ) -> Vec<Effect> {
     let mut effects = vec![];
-    match cmd {
+    let command = cmd.split_whitespace().next().unwrap_or(cmd);
+    let args = cmd.strip_prefix(command).map(str::trim).unwrap_or_default();
+
+    match command {
+        "/new" => {
+            let title = if args.is_empty() {
+                None
+            } else {
+                Some(args.to_string())
+            };
+            let id = state.next_request_id;
+            state.next_request_id += 1;
+            let msg = crate::rpc::protocol::RPCMessage {
+                jsonrpc: "2.0".to_string(),
+                id: Some(id),
+                method: Some("session.new".to_string()),
+                params: Some(serde_json::json!({
+                    "title": title,
+                })),
+                result: None,
+                error: None,
+            };
+            state.pending_requests.insert(
+                id,
+                crate::state::model::PendingRequest {
+                    method: "session.new".to_string(),
+                    sent_at: std::time::Instant::now(),
+                },
+            );
+            effects.push(Effect::SendRpc(msg));
+            effects.push(Effect::Render);
+        }
         "/clear" => {
             clear_transcript(state);
             state.scrollback.push_back("/clear".into());
@@ -559,6 +874,7 @@ pub(crate) fn handle_slash_command(
         }
         "/plan" => {
             state.scrollback.push_back("/plan".into());
+            state.detail_surface = Some(DetailSurface::Plan);
             let id = state.next_request_id;
             state.next_request_id += 1;
             let msg = crate::rpc::protocol::RPCMessage {
@@ -579,6 +895,42 @@ pub(crate) fn handle_slash_command(
                 },
             );
             effects.push(Effect::SendRpc(msg));
+            effects.push(Effect::Render);
+        }
+        "/multi" => {
+            state.scrollback.push_back("/multi".into());
+            state.detail_surface = Some(DetailSurface::Multi);
+            effects.push(Effect::Render);
+        }
+        "/review" => {
+            state.scrollback.push_back("/review".into());
+            state.detail_surface = Some(DetailSurface::Review);
+            effects.push(Effect::Render);
+        }
+        "/cc" => {
+            state.scrollback.push_back("/cc".into());
+            state.detail_surface = Some(DetailSurface::CommandCenter);
+            effects.push(Effect::Render);
+        }
+        "/restore" => {
+            state.scrollback.push_back("/restore".into());
+            state.detail_surface = Some(DetailSurface::Restore);
+            effects.push(Effect::Render);
+        }
+        "/diff" => {
+            state.scrollback.push_back("/diff".into());
+            state.detail_surface = Some(DetailSurface::Diff);
+            effects.push(Effect::Render);
+        }
+        "/grep" | "/search" => {
+            state.scrollback.push_back(cmd.into());
+            state.detail_surface = Some(DetailSurface::Grep);
+            effects.push(Effect::Render);
+        }
+        "/escalation" => {
+            state.scrollback.push_back("/escalation".into());
+            state.detail_surface = Some(DetailSurface::Escalation);
+            effects.push(Effect::Render);
         }
         "/fork" => {
             state.scrollback.push_back("/fork".into());
@@ -602,25 +954,11 @@ pub(crate) fn handle_slash_command(
             effects.push(Effect::SendRpc(msg));
         }
         "/compact" => {
-            state.scrollback.push_back("/compact".into());
-            let id = state.next_request_id;
-            state.next_request_id += 1;
-            let msg = crate::rpc::protocol::RPCMessage {
-                jsonrpc: "2.0".to_string(),
-                id: Some(id),
-                method: Some("command".to_string()),
-                params: Some(serde_json::json!({"cmd": "/compact"})),
-                result: None,
-                error: None,
-            };
-            state.pending_requests.insert(
-                id,
-                crate::state::model::PendingRequest {
-                    method: "command:/compact".to_string(),
-                    sent_at: std::time::Instant::now(),
-                },
-            );
-            effects.push(Effect::SendRpc(msg));
+            effects.extend(dispatch_backend_slash_command(
+                state,
+                "/compact",
+                Some("command:/compact".to_string()),
+            ));
         }
         "/sessions" | "/resume" => {
             state.scrollback.push_back(cmd.into());
@@ -715,10 +1053,7 @@ pub(crate) fn handle_slash_command(
             effects.push(Effect::Render);
         }
         _ => {
-            state
-                .scrollback
-                .push_back(format!("Unknown command: `{}` — try `/help`", cmd));
-            effects.push(Effect::Render);
+            effects.extend(dispatch_backend_slash_command(state, cmd, None));
         }
     }
     effects
@@ -737,10 +1072,11 @@ fn handle_tick(
 
     // Stale request detection
     let now = std::time::Instant::now();
+    let stale_request_timeout = stale_request_timeout();
     let stale_ids: Vec<i64> = state
         .pending_requests
         .iter()
-        .filter(|(_, req)| now.duration_since(req.sent_at) > STALE_REQUEST_TIMEOUT)
+        .filter(|(_, req)| now.duration_since(req.sent_at) > stale_request_timeout)
         .map(|(&id, _)| id)
         .collect();
 
@@ -756,7 +1092,7 @@ fn handle_tick(
                 "stale RPC request: id={} method={} (>{:?} old)",
                 id,
                 req.method,
-                STALE_REQUEST_TIMEOUT
+                stale_request_timeout
             );
         }
         state.stale_request_ids.push(id);
@@ -815,11 +1151,30 @@ fn handle_notification(
             }
             (state, vec![Effect::Render])
         }
+        Some("on_warning") => {
+            if let Some(params) = &msg.params {
+                if let Ok(warn) =
+                    serde_json::from_value::<crate::rpc::protocol::WarningParams>(params.clone())
+                {
+                    state.scrollback.push_back(warn.message);
+                }
+            }
+            (state, vec![Effect::Render])
+        }
+        Some("on_chat_ack") => {
+            if let Some(params) = &msg.params {
+                let _ =
+                    serde_json::from_value::<crate::rpc::protocol::ChatAckParams>(params.clone());
+            }
+            touch_oldest_pending_request_by_method(&mut state, "chat");
+            (state, vec![])
+        }
         Some("on_token") => {
             if let Some(params) = &msg.params {
                 if let Ok(token) =
                     serde_json::from_value::<crate::rpc::protocol::TokenParams>(params.clone())
                 {
+                    touch_oldest_pending_request_by_method(&mut state, "chat");
                     state.stream_buf.push_str(&token.text);
                     state.stream_lines = state.stream_buf.split('\n').map(String::from).collect();
                     if state.stage == crate::state::model::Stage::Idle {
@@ -845,6 +1200,7 @@ fn handle_notification(
                 if let Ok(thinking) =
                     serde_json::from_value::<crate::rpc::protocol::ThinkingParams>(params.clone())
                 {
+                    touch_oldest_pending_request_by_method(&mut state, "chat");
                     state.stream_buf.push_str(&thinking.text);
                     state.stream_lines = state.stream_buf.split('\n').map(String::from).collect();
                     if state.stage == crate::state::model::Stage::Idle {
@@ -874,6 +1230,7 @@ fn handle_notification(
                     state.status.tokens_out = done.tokens_out;
                 }
             }
+            remove_oldest_pending_request_by_method(&mut state, "chat");
             flush_stream_lines(&mut state);
             state.stream_lines.clear();
             state.stage = crate::state::model::Stage::Idle;
@@ -911,6 +1268,7 @@ fn handle_notification(
                 if let Ok(tool) =
                     serde_json::from_value::<crate::rpc::protocol::ToolCallParams>(params.clone())
                 {
+                    touch_oldest_pending_request_by_method(&mut state, "chat");
                     let tool_info = crate::state::model::ToolCallInfo {
                         name: tool.name,
                         status: tool.status,
@@ -938,6 +1296,7 @@ fn handle_notification(
                 if let Ok(task_state) =
                     serde_json::from_value::<crate::rpc::protocol::TaskStateParams>(params.clone())
                 {
+                    touch_oldest_pending_request_by_method(&mut state, "chat");
                     state.tasks = task_state.tasks;
                     state.subagents = task_state.subagents;
                     state.status.bg_tasks = state.subagents.len() as u32;
@@ -950,6 +1309,7 @@ fn handle_notification(
                 if let Ok(cost) =
                     serde_json::from_value::<crate::rpc::protocol::CostUpdateParams>(params.clone())
                 {
+                    touch_oldest_pending_request_by_method(&mut state, "chat");
                     state.status.cost = Some(cost.cost);
                     state.status.tokens_in = cost.tokens_in;
                     state.status.tokens_out = cost.tokens_out;
@@ -1019,6 +1379,25 @@ fn handle_response(
                     }
                 }
             }
+            "session.new" => {
+                if let Some(result) = &msg.result {
+                    if let Some(error) = result.get("error").and_then(|value| value.as_str()) {
+                        state.error_banner = Some(error.to_string());
+                    } else if let Ok(change_result) = serde_json::from_value::<
+                        crate::rpc::protocol::SessionChangeResult,
+                    >(result.clone())
+                    {
+                        let title = change_result
+                            .title
+                            .unwrap_or_else(|| "New session".to_string());
+                        reset_for_session_switch(
+                            &mut state,
+                            change_result.session_id,
+                            format!("Started new session: {}", title),
+                        );
+                    }
+                }
+            }
             "session.list" => {
                 if let Some(result) = &msg.result {
                     if let Ok(list_result) = serde_json::from_value::<
@@ -1043,6 +1422,23 @@ fn handle_response(
                             cursor: 0,
                         });
                         state.stage = Stage::Picker(crate::state::model::PickerKind::Session);
+                    }
+                }
+            }
+            "session.resume" => {
+                if let Some(result) = &msg.result {
+                    if let Some(error) = result.get("error").and_then(|value| value.as_str()) {
+                        state.error_banner = Some(error.to_string());
+                    } else if let Ok(change_result) = serde_json::from_value::<
+                        crate::rpc::protocol::SessionChangeResult,
+                    >(result.clone())
+                    {
+                        let title = change_result.title.unwrap_or_else(|| "session".to_string());
+                        reset_for_session_switch(
+                            &mut state,
+                            change_result.session_id,
+                            format!("Resumed session: {}", title),
+                        );
                     }
                 }
             }
@@ -1136,6 +1532,7 @@ fn handle_inbound_request(
                     crate::rpc::protocol::ApprovalRequestParams,
                 >(params.clone())
                 {
+                    touch_oldest_pending_request_by_method(&mut state, "chat");
                     flush_stream_lines(&mut state);
                     queue_or_activate_modal(
                         &mut state,
@@ -1156,6 +1553,7 @@ fn handle_inbound_request(
                 if let Ok(ask) = serde_json::from_value::<crate::rpc::protocol::AskUserRequestParams>(
                     params.clone(),
                 ) {
+                    touch_oldest_pending_request_by_method(&mut state, "chat");
                     flush_stream_lines(&mut state);
                     queue_or_activate_modal(
                         &mut state,

@@ -1,0 +1,50 @@
+                                                                                                                                                                
+                                ┌──────────────────────────────────────────────────────────────────────────────────────────────┐                                
+                                │tools | openrouter | suggest | ● escalated | mock-ses | tasks:0 | agents:0 | q:0 | sandbox:loc│                                
+                                │⚑ Permission escalation · protected path touched                    DECISION                  │                                
+                                │Auto-accept was on, but this edit would modify                      ● Approve this edit only  │                                
+                                │.github/workflows/ci.yml                                            ○ Approve for this session│                                
+                                │which is in .autocode/protect . Mode bumped to [review-needed] for  ○ Open diff in focus mode │                                
+                                │this hunk only.                                                     ○ Remove rule             │                                
+                                │                                                                    ○ Reject                  │                                
+                                │path .github/workflows/ci.yml matched rule .autocode/protect →                                │                                
+                                │".github/**"                                                        RISK                      │                                
+                                │edit origin auto-planning · propagating bun version bump            ci global                 │                                
+                                │blast radius CI for all branches · reversible yes · local only      network off               │                                
+                                │until push                                                          reversible yes            │                                
+                                │                                                                    protected yes             │                                
+                                │pending hunk: update bun cache key and install version to 1.2.0     [a]pprove                 │                                
+                                │paired diff available before approval                               [r]eject                  │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │┌────────────────────────────────────────────────────────────────────────────────────────────┐│                                
+                                ││❯ Ask AutoCode                                                                              ││                                
+                                │└────────────────────────────────────────────────────────────────────────────────────────────┘│                                
+                                │Protected-path escalation pauses the agent before the write and preserves the composer.       │                                
+                                │a approve-once · s approve-session · r reject · d focus diff · Esc stay paused                │                                
+                                └──────────────────────────────────────────────────────────────────────────────────────────────┘                                
+                                                                                                                                                                

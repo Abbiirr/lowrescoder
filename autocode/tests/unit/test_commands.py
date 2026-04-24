@@ -8,11 +8,18 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from autocode.agent.loop import AgentMode
-from autocode.tui.commands import create_default_router
+from autocode.app.commands import create_default_router
 
 
 async def _noop_handler(app: object, args: str) -> None:
     pass
+
+
+def test_tui_commands_is_compat_alias_to_shared_runtime() -> None:
+    import autocode.app.commands as app_commands
+    import autocode.tui.commands as tui_commands
+
+    assert tui_commands is app_commands
 
 
 class TestCommandRouter:
@@ -95,6 +102,7 @@ class TestCommandRouter:
             "memory",
             "checkpoint",
             "loop",
+            "tui",
             "undo",
             "diff",
             "cost",
@@ -256,7 +264,7 @@ class TestHandleExit:
     @pytest.mark.asyncio()
     async def test_exit_raises_eof(self, tmp_path: Path) -> None:
         """_handle_exit raises EOFError."""
-        from autocode.tui.commands import _handle_exit
+        from autocode.app.commands import _handle_exit
 
         app = _make_mock_app(tmp_path)
         app.exit_app.side_effect = EOFError
@@ -268,7 +276,7 @@ class TestHandleNew:
     @pytest.mark.asyncio()
     async def test_new_creates_session(self, tmp_path: Path) -> None:
         """_handle_new creates a new session with default title."""
-        from autocode.tui.commands import _handle_new
+        from autocode.app.commands import _handle_new
 
         app = _make_mock_app(tmp_path)
         old_id = app.session_id
@@ -284,7 +292,7 @@ class TestHandleNew:
     @pytest.mark.asyncio()
     async def test_new_with_custom_title(self, tmp_path: Path) -> None:
         """_handle_new uses custom title when provided."""
-        from autocode.tui.commands import _handle_new
+        from autocode.app.commands import _handle_new
 
         app = _make_mock_app(tmp_path)
         await _handle_new(app, "My Custom Title")
@@ -296,7 +304,7 @@ class TestHandleResume:
     @pytest.mark.asyncio()
     async def test_resume_resets_runtime_state(self, tmp_path: Path) -> None:
         """Resuming a session should clear stale loop/stats state."""
-        from autocode.tui.commands import _handle_resume
+        from autocode.app.commands import _handle_resume
 
         app = _make_mock_app(tmp_path)
         resumed = app.session_store.create_session(
@@ -318,7 +326,7 @@ class TestHandleHelp:
     @pytest.mark.asyncio()
     async def test_help_lists_all_commands(self, tmp_path: Path) -> None:
         """_handle_help lists all 14 commands."""
-        from autocode.tui.commands import _handle_help
+        from autocode.app.commands import _handle_help
 
         app = _make_mock_app(tmp_path)
         await _handle_help(app, "")
@@ -348,10 +356,10 @@ class TestHandleModel:
     @pytest.mark.asyncio()
     async def test_model_no_args_shows_current(self, tmp_path: Path) -> None:
         """_handle_model with no args shows current model and provider."""
-        from autocode.tui.commands import _handle_model
+        from autocode.app.commands import _handle_model
 
         app = _make_mock_app(tmp_path)
-        with patch("autocode.tui.commands._list_models", return_value=[]):
+        with patch("autocode.app.commands._list_models", return_value=[]):
             await _handle_model(app, "")
         assert "Current model" in app._messages[-1]
         assert "provider" in app._messages[-1]
@@ -359,7 +367,7 @@ class TestHandleModel:
     @pytest.mark.asyncio()
     async def test_model_set_changes_config(self, tmp_path: Path) -> None:
         """_handle_model with arg changes model."""
-        from autocode.tui.commands import _handle_model
+        from autocode.app.commands import _handle_model
 
         app = _make_mock_app(tmp_path)
         await _handle_model(app, "llama3")
@@ -369,23 +377,23 @@ class TestHandleModel:
     @pytest.mark.asyncio()
     async def test_model_ollama_provider_shows_ollama_error(self, tmp_path: Path) -> None:
         """_handle_model with ollama provider shows Ollama-specific failure."""
-        from autocode.tui.commands import _handle_model
+        from autocode.app.commands import _handle_model
 
         app = _make_mock_app(tmp_path)
         app.config.llm.provider = "ollama"
-        with patch("autocode.tui.commands._list_models", return_value=[]):
+        with patch("autocode.app.commands._list_models", return_value=[]):
             await _handle_model(app, "")
         assert "Ollama" in app._messages[-1]
 
     @pytest.mark.asyncio()
     async def test_model_openrouter_provider_shows_gateway_error(self, tmp_path: Path) -> None:
         """_handle_model with openrouter provider shows gateway-specific failure."""
-        from autocode.tui.commands import _handle_model
+        from autocode.app.commands import _handle_model
 
         app = _make_mock_app(tmp_path)
         app.config.llm.provider = "openrouter"
         app.config.llm.api_base = "http://localhost:4000/v1"
-        with patch("autocode.tui.commands._list_models", return_value=[]):
+        with patch("autocode.app.commands._list_models", return_value=[]):
             await _handle_model(app, "")
         assert "gateway" in app._messages[-1]
         assert "localhost" in app._messages[-1]
@@ -394,12 +402,12 @@ class TestHandleModel:
     @pytest.mark.asyncio()
     async def test_model_with_available_models_shows_list(self, tmp_path: Path) -> None:
         """_handle_model with available models shows them with active marker."""
-        from autocode.tui.commands import _handle_model
+        from autocode.app.commands import _handle_model
 
         app = _make_mock_app(tmp_path)
         app.config.llm.provider = "openrouter"
         app.config.llm.model = "coding"
-        with patch("autocode.tui.commands._list_models", return_value=["coding", "tools", "fast"]):
+        with patch("autocode.app.commands._list_models", return_value=["coding", "tools", "fast"]):
             await _handle_model(app, "")
         assert "coding" in app._messages[-1]
         assert "(active)" in app._messages[-1]
@@ -407,14 +415,14 @@ class TestHandleModel:
     @pytest.mark.asyncio()
     async def test_model_large_catalog_truncation(self, tmp_path: Path) -> None:
         """_handle_model truncates large gateway catalogs with 'N more' note."""
-        from autocode.tui.commands import _handle_model
+        from autocode.app.commands import _handle_model
 
         app = _make_mock_app(tmp_path)
         app.config.llm.provider = "openrouter"
         app.config.llm.model = "coding"
         many_models = [f"model-{i}" for i in range(50)]
         many_models.append("coding")
-        with patch("autocode.tui.commands._list_models", return_value=many_models):
+        with patch("autocode.app.commands._list_models", return_value=many_models):
             await _handle_model(app, "")
         assert "more models available" in app._messages[-1]
 
@@ -422,23 +430,23 @@ class TestHandleModel:
 class TestListModelHelpers:
     def test_list_models_ollama_delegates(self) -> None:
         """_list_models delegates to _list_ollama_models for ollama provider."""
-        from autocode.tui.commands import _list_models
+        from autocode.app.commands import _list_models
 
-        with patch("autocode.tui.commands._list_ollama_models", return_value=["qwen3:8b"]):
+        with patch("autocode.app.commands._list_ollama_models", return_value=["qwen3:8b"]):
             result = _list_models("ollama", "http://localhost:11434")
         assert result == ["qwen3:8b"]
 
     def test_list_models_openai_delegates(self) -> None:
         """_list_models delegates to _list_openai_models for non-ollama provider."""
-        from autocode.tui.commands import _list_models
+        from autocode.app.commands import _list_models
 
-        with patch("autocode.tui.commands._list_openai_models", return_value=["coding"]):
+        with patch("autocode.app.commands._list_openai_models", return_value=["coding"]):
             result = _list_models("openrouter", "http://localhost:4000/v1")
         assert result == ["coding"]
 
     def test_list_openai_models_success(self) -> None:
         """_list_openai_models parses OpenAI /models response."""
-        from autocode.tui.commands import _list_openai_models
+        from autocode.app.commands import _list_openai_models
 
         mock_data = b'{"data": [{"id": "coding"}, {"id": "tools"}, {"id": "fast"}]}'
         with patch("urllib.request.urlopen") as mock_urlopen:
@@ -455,7 +463,7 @@ class TestListModelHelpers:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """_list_openai_models includes gateway auth when available."""
-        from autocode.tui.commands import _list_openai_models
+        from autocode.app.commands import _list_openai_models
 
         monkeypatch.setenv("LITELLM_API_KEY", "test-gateway-key")
         captured_request = None
@@ -478,7 +486,7 @@ class TestListModelHelpers:
 
     def test_list_openai_models_failure_returns_empty(self) -> None:
         """_list_openai_models returns empty list on failure."""
-        from autocode.tui.commands import _list_openai_models
+        from autocode.app.commands import _list_openai_models
 
         with patch("urllib.request.urlopen", side_effect=Exception("connection refused")):
             result = _list_openai_models("http://localhost:4000/v1")
@@ -486,7 +494,7 @@ class TestListModelHelpers:
 
     def test_prioritize_models_small_catalog(self) -> None:
         """_prioritize_models returns all models when under limit."""
-        from autocode.tui.commands import _prioritize_models
+        from autocode.app.commands import _prioritize_models
 
         displayed, remaining = _prioritize_models(["a", "b", "c"], "b")
         assert remaining == 0
@@ -494,7 +502,7 @@ class TestListModelHelpers:
 
     def test_prioritize_models_large_catalog(self) -> None:
         """_prioritize_models truncates large catalogs and reports remainder."""
-        from autocode.tui.commands import _GATEWAY_DISPLAY_LIMIT, _prioritize_models
+        from autocode.app.commands import _GATEWAY_DISPLAY_LIMIT, _prioritize_models
 
         models = ["coding"] + [f"model-{i}" for i in range(_GATEWAY_DISPLAY_LIMIT + 10)]
         displayed, remaining = _prioritize_models(models, "coding")
@@ -504,7 +512,7 @@ class TestListModelHelpers:
 
     def test_prioritize_models_aliases_before_rest(self) -> None:
         """_prioritize_models puts known aliases before generic models."""
-        from autocode.tui.commands import _prioritize_models
+        from autocode.app.commands import _prioritize_models
 
         models = ["zzz-generic", "coding", "aaa-generic", "tools"]
         displayed, remaining = _prioritize_models(models, "not-in-list")
@@ -520,7 +528,7 @@ class TestHandleMode:
     @pytest.mark.asyncio()
     async def test_mode_no_args_shows_current(self, tmp_path: Path) -> None:
         """_handle_mode with no args shows current mode."""
-        from autocode.tui.commands import _handle_mode
+        from autocode.app.commands import _handle_mode
 
         app = _make_mock_app(tmp_path)
         await _handle_mode(app, "")
@@ -529,7 +537,7 @@ class TestHandleMode:
     @pytest.mark.asyncio()
     async def test_mode_set_valid(self, tmp_path: Path) -> None:
         """_handle_mode sets valid mode."""
-        from autocode.tui.commands import _handle_mode
+        from autocode.app.commands import _handle_mode
 
         app = _make_mock_app(tmp_path)
         await _handle_mode(app, "auto")
@@ -539,18 +547,66 @@ class TestHandleMode:
     @pytest.mark.asyncio()
     async def test_mode_set_invalid_rejected(self, tmp_path: Path) -> None:
         """_handle_mode rejects invalid mode."""
-        from autocode.tui.commands import _handle_mode
+        from autocode.app.commands import _handle_mode
 
         app = _make_mock_app(tmp_path)
         await _handle_mode(app, "invalid-mode")
         assert "Invalid mode" in app._messages[-1]
 
 
+class TestHandleTui:
+    @pytest.mark.asyncio()
+    async def test_tui_no_args_shows_current_default(self, tmp_path: Path) -> None:
+        """_handle_tui with no args shows current saved launch mode."""
+        from autocode.app.commands import _handle_tui
+
+        app = _make_mock_app(tmp_path)
+        await _handle_tui(app, "")
+        assert "Current TUI launch mode" in app._messages[-1]
+        assert "inline" in app._messages[-1]
+
+    @pytest.mark.asyncio()
+    async def test_tui_sets_altscreen_and_persists_config(self, tmp_path: Path) -> None:
+        """_handle_tui persists altscreen as the next-launch default."""
+        from autocode.app.commands import _handle_tui
+
+        app = _make_mock_app(tmp_path)
+        with patch("autocode.app.commands.save_config") as mock_save:
+            await _handle_tui(app, "altscreen")
+
+        assert app.config.tui.alternate_screen is True
+        mock_save.assert_called_once_with(app.config)
+        assert "altscreen" in app._messages[-1]
+
+    @pytest.mark.asyncio()
+    async def test_tui_sets_inline_and_persists_config(self, tmp_path: Path) -> None:
+        """_handle_tui persists inline as the next-launch default."""
+        from autocode.app.commands import _handle_tui
+
+        app = _make_mock_app(tmp_path)
+        app.config.tui.alternate_screen = True
+        with patch("autocode.app.commands.save_config") as mock_save:
+            await _handle_tui(app, "inline")
+
+        assert app.config.tui.alternate_screen is False
+        mock_save.assert_called_once_with(app.config)
+        assert "inline" in app._messages[-1]
+
+    @pytest.mark.asyncio()
+    async def test_tui_rejects_invalid_mode(self, tmp_path: Path) -> None:
+        """_handle_tui rejects unsupported launch modes."""
+        from autocode.app.commands import _handle_tui
+
+        app = _make_mock_app(tmp_path)
+        await _handle_tui(app, "fullscreen")
+        assert "Invalid TUI mode" in app._messages[-1]
+
+
 class TestHandleProvider:
     @pytest.mark.asyncio()
     async def test_provider_no_args_shows_current(self, tmp_path: Path) -> None:
         """_handle_provider with no args shows current provider."""
-        from autocode.tui.commands import _handle_provider
+        from autocode.app.commands import _handle_provider
 
         app = _make_mock_app(tmp_path)
         app.config.llm.provider = "openrouter"
@@ -561,7 +617,7 @@ class TestHandleProvider:
     @pytest.mark.asyncio()
     async def test_provider_list_shows_supported_values(self, tmp_path: Path) -> None:
         """_handle_provider list shows supported providers."""
-        from autocode.tui.commands import _handle_provider
+        from autocode.app.commands import _handle_provider
 
         app = _make_mock_app(tmp_path)
         await _handle_provider(app, "list")
@@ -572,7 +628,7 @@ class TestHandleProvider:
     @pytest.mark.asyncio()
     async def test_provider_set_changes_config(self, tmp_path: Path) -> None:
         """_handle_provider switches the configured provider."""
-        from autocode.tui.commands import _handle_provider
+        from autocode.app.commands import _handle_provider
 
         app = _make_mock_app(tmp_path)
         app.config.llm.provider = "ollama"
@@ -583,7 +639,7 @@ class TestHandleProvider:
     @pytest.mark.asyncio()
     async def test_provider_rejects_unknown_value(self, tmp_path: Path) -> None:
         """_handle_provider rejects unsupported providers."""
-        from autocode.tui.commands import _handle_provider
+        from autocode.app.commands import _handle_provider
 
         app = _make_mock_app(tmp_path)
         await _handle_provider(app, "definitely-not-real")
@@ -594,7 +650,7 @@ class TestHandleCompact:
     @pytest.mark.asyncio()
     async def test_compact_few_messages_early_return(self, tmp_path: Path) -> None:
         """_handle_compact returns early with <4 messages."""
-        from autocode.tui.commands import _handle_compact
+        from autocode.app.commands import _handle_compact
 
         app = _make_mock_app(tmp_path)
         # Add only 2 messages
@@ -606,7 +662,7 @@ class TestHandleCompact:
     @pytest.mark.asyncio()
     async def test_compact_enough_messages(self, tmp_path: Path) -> None:
         """_handle_compact compacts when enough messages exist."""
-        from autocode.tui.commands import _handle_compact
+        from autocode.app.commands import _handle_compact
 
         app = _make_mock_app(tmp_path)
         for i in range(6):
@@ -620,7 +676,7 @@ class TestHandleShell:
     @pytest.mark.asyncio()
     async def test_shell_on(self, tmp_path: Path) -> None:
         """_handle_shell enables shell."""
-        from autocode.tui.commands import _handle_shell
+        from autocode.app.commands import _handle_shell
 
         app = _make_mock_app(tmp_path)
         await _handle_shell(app, "on")
@@ -630,7 +686,7 @@ class TestHandleShell:
     @pytest.mark.asyncio()
     async def test_shell_off(self, tmp_path: Path) -> None:
         """_handle_shell disables shell."""
-        from autocode.tui.commands import _handle_shell
+        from autocode.app.commands import _handle_shell
 
         app = _make_mock_app(tmp_path)
         await _handle_shell(app, "off")
@@ -640,7 +696,7 @@ class TestHandleShell:
     @pytest.mark.asyncio()
     async def test_shell_no_args_shows_status(self, tmp_path: Path) -> None:
         """_handle_shell with no args shows status."""
-        from autocode.tui.commands import _handle_shell
+        from autocode.app.commands import _handle_shell
 
         app = _make_mock_app(tmp_path)
         await _handle_shell(app, "")
@@ -652,7 +708,7 @@ class TestHandleCopy:
     @pytest.mark.asyncio()
     async def test_copy_no_args_copies_last(self, tmp_path: Path) -> None:
         """_handle_copy with no args copies last assistant message."""
-        from autocode.tui.commands import _handle_copy
+        from autocode.app.commands import _handle_copy
 
         app = _make_mock_app(tmp_path)
         app.session_store.add_message(app.session_id, "assistant", "response text")
@@ -664,7 +720,7 @@ class TestHandleCopy:
     @pytest.mark.asyncio()
     async def test_copy_n(self, tmp_path: Path) -> None:
         """_handle_copy N copies Nth-last assistant message."""
-        from autocode.tui.commands import _handle_copy
+        from autocode.app.commands import _handle_copy
 
         app = _make_mock_app(tmp_path)
         app.session_store.add_message(app.session_id, "assistant", "first")
@@ -676,7 +732,7 @@ class TestHandleCopy:
     @pytest.mark.asyncio()
     async def test_copy_all(self, tmp_path: Path) -> None:
         """_handle_copy all copies all messages."""
-        from autocode.tui.commands import _handle_copy
+        from autocode.app.commands import _handle_copy
 
         app = _make_mock_app(tmp_path)
         app.session_store.add_message(app.session_id, "user", "hello")
@@ -690,7 +746,7 @@ class TestHandleCopy:
     @pytest.mark.asyncio()
     async def test_copy_last_n(self, tmp_path: Path) -> None:
         """_handle_copy last N copies last N messages."""
-        from autocode.tui.commands import _handle_copy
+        from autocode.app.commands import _handle_copy
 
         app = _make_mock_app(tmp_path)
         app.session_store.add_message(app.session_id, "user", "u1")
@@ -705,7 +761,7 @@ class TestHandleCopy:
     @pytest.mark.asyncio()
     async def test_copy_no_messages(self, tmp_path: Path) -> None:
         """_handle_copy with no assistant messages shows error."""
-        from autocode.tui.commands import _handle_copy
+        from autocode.app.commands import _handle_copy
 
         app = _make_mock_app(tmp_path)
         await _handle_copy(app, "")
@@ -714,7 +770,7 @@ class TestHandleCopy:
     @pytest.mark.asyncio()
     async def test_copy_clipboard_fail(self, tmp_path: Path) -> None:
         """_handle_copy shows fallback when clipboard fails."""
-        from autocode.tui.commands import _handle_copy
+        from autocode.app.commands import _handle_copy
 
         app = _make_mock_app(tmp_path)
         app.session_store.add_message(app.session_id, "assistant", "response")
@@ -727,7 +783,7 @@ class TestHandleThinking:
     @pytest.mark.asyncio()
     async def test_thinking_toggles(self, tmp_path: Path) -> None:
         """_handle_thinking toggles show_thinking on/off."""
-        from autocode.tui.commands import _handle_thinking
+        from autocode.app.commands import _handle_thinking
 
         app = _make_mock_app(tmp_path)
         assert app.show_thinking is False
@@ -740,7 +796,7 @@ class TestHandleClear:
     @pytest.mark.asyncio()
     async def test_clear_writes_ansi_and_message(self, tmp_path: Path) -> None:
         """_handle_clear writes ANSI clear + confirmation."""
-        from autocode.tui.commands import _handle_clear
+        from autocode.app.commands import _handle_clear
 
         app = _make_mock_app(tmp_path)
         with patch("sys.stdout"):
@@ -752,7 +808,7 @@ class TestHandleFreeze:
     @pytest.mark.asyncio()
     async def test_freeze_inline_mode(self, tmp_path: Path) -> None:
         """_handle_freeze in inline mode shows 'not needed' message."""
-        from autocode.tui.commands import _handle_freeze
+        from autocode.app.commands import _handle_freeze
 
         app = _make_mock_app(tmp_path)
         # MagicMock doesn't have query_one by default (no hasattr match)
@@ -793,7 +849,7 @@ class TestHandleLoop:
     @pytest.mark.asyncio()
     async def test_loop_create_list_cancel(self, tmp_path: Path) -> None:
         """/loop supports create/list/cancel lifecycle."""
-        from autocode.tui.commands import _handle_loop
+        from autocode.app.commands import _handle_loop
 
         app = _LoopTestApp(tmp_path)
         await _handle_loop(app, "10m status")
@@ -809,7 +865,7 @@ class TestHandleLoop:
     @pytest.mark.asyncio()
     async def test_loop_routes_prompt_and_command_payloads(self, tmp_path: Path) -> None:
         """Loop payload routing uses command path for slash and prompt path otherwise."""
-        from autocode.tui.commands import _execute_loop_payload
+        from autocode.app.commands import _execute_loop_payload
 
         app = _LoopTestApp(tmp_path)
         await _execute_loop_payload(app, "/help")
@@ -823,7 +879,7 @@ class TestHandleResearch:
     @pytest.mark.asyncio()
     async def test_research_on_sets_agent_mode(self, tmp_path: Path) -> None:
         """Research mode should switch the app into read-only comprehension mode."""
-        from autocode.tui.commands import _handle_research
+        from autocode.app.commands import _handle_research
 
         app = _make_mock_app(tmp_path)
         recorded: list[AgentMode] = []
@@ -842,7 +898,7 @@ class TestHandleResearch:
     @pytest.mark.asyncio()
     async def test_research_status_reports_current_mode(self, tmp_path: Path) -> None:
         """Research status should display the current persisted agent mode."""
-        from autocode.tui.commands import _handle_research
+        from autocode.app.commands import _handle_research
 
         app = _make_mock_app(tmp_path)
         app._agent_mode = AgentMode.RESEARCH
@@ -856,7 +912,7 @@ class TestHandleInit:
     @pytest.mark.asyncio()
     async def test_init_creates_memory(self, tmp_path: Path) -> None:
         """_handle_init creates memory.md."""
-        from autocode.tui.commands import _handle_init
+        from autocode.app.commands import _handle_init
 
         app = _make_mock_app(tmp_path)
         await _handle_init(app, "")
@@ -867,7 +923,7 @@ class TestHandleInit:
     @pytest.mark.asyncio()
     async def test_init_already_exists(self, tmp_path: Path) -> None:
         """_handle_init reports if memory.md already exists."""
-        from autocode.tui.commands import _handle_init
+        from autocode.app.commands import _handle_init
 
         app = _make_mock_app(tmp_path)
         memory_dir = tmp_path / ".autocode"
@@ -879,7 +935,7 @@ class TestHandleInit:
     @pytest.mark.asyncio()
     async def test_init_reads_key_files(self, tmp_path: Path) -> None:
         """_handle_init includes key files in memory."""
-        from autocode.tui.commands import _handle_init
+        from autocode.app.commands import _handle_init
 
         app = _make_mock_app(tmp_path)
         (tmp_path / "README.md").write_text("# Test Project")
@@ -895,9 +951,9 @@ class TestTitleTruncation:
     @pytest.mark.asyncio()
     async def test_resume_truncates_long_title(self, tmp_path: Path) -> None:
         """/resume truncates session titles longer than 40 chars."""
+        from autocode.app.commands import _handle_resume
         from autocode.config import AutoCodeConfig
         from autocode.session.store import SessionStore
-        from autocode.tui.commands import _handle_resume
 
         config = AutoCodeConfig()
         config.tui.session_db_path = str(tmp_path / "test.db")
@@ -931,9 +987,9 @@ class TestTitleTruncation:
     @pytest.mark.asyncio()
     async def test_sessions_truncates_long_title(self, tmp_path: Path) -> None:
         """/sessions truncates session titles longer than 40 chars."""
+        from autocode.app.commands import _handle_sessions
         from autocode.config import AutoCodeConfig
         from autocode.session.store import SessionStore
-        from autocode.tui.commands import _handle_sessions
 
         config = AutoCodeConfig()
         config.tui.session_db_path = str(tmp_path / "test.db")

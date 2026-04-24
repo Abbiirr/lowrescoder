@@ -1,4 +1,4 @@
-.PHONY: setup test lint format clean clean-runtime tui go-test bench tui-regression tui-reference-capture tui-references
+.PHONY: setup test lint format clean clean-runtime tui go-test bench tui-regression tui-reference-capture tui-references tui-reference-gap tui-frame-sequence tui-scene-matrix
 
 setup:
 	cd autocode && uv sync --all-extras
@@ -80,3 +80,28 @@ tui-references:
 	cd autocode && uv run python tests/tui-references/extract_scenes.py
 	cd autocode && uv run pytest tests/unit/test_tui_reference_extractor.py tests/unit/test_tui_reference_predicates.py -v
 	cd autocode && uv run pytest tests/tui-references/ -v
+
+# Manual screenshot-first evidence bundle:
+# - fresh live PNG captures
+# - side-by-side sheets against the exported reference JPG pages
+# - markdown artifact under autocode/docs/qa/test-results/
+tui-reference-gap:
+	cd autocode && uv run python tests/tui-references/build_visual_gap_report.py
+
+# Manual current-state sweep for all 14 reference scenes:
+# - stores one current AutoCode analog per reference scene
+# - includes direct, approximate, partial, and negative-evidence captures
+# - writes frames under autocode/docs/qa/tui-frame-sequences/<stamp>/
+# - writes markdown summary under autocode/docs/qa/test-results/
+tui-scene-matrix:
+	cd autocode && uv run python tests/tui-references/capture_reference_scene_matrix.py
+
+# Manual mid-run frame capture helper. Use directly with either:
+#   cd autocode && uv run python tests/tui-references/capture_frame_sequence.py --list-presets
+#   cd autocode && uv run python tests/tui-references/capture_frame_sequence.py --name demo --preset sessions
+#   cd autocode && uv run python tests/tui-references/capture_frame_sequence.py --name demo --steps '[0.8, "/sessions\\r", 2.0]'
+tui-frame-sequence:
+	@echo "Use directly with explicit args. Example:"
+	@echo "  cd autocode && uv run python tests/tui-references/capture_frame_sequence.py --list-presets"
+	@echo "  cd autocode && uv run python tests/tui-references/capture_frame_sequence.py --name demo --preset sessions"
+	@echo "  cd autocode && uv run python tests/tui-references/capture_frame_sequence.py --name demo --steps '[0.8, \"/sessions\\\\r\", 2.0]'"

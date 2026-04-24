@@ -43,8 +43,25 @@ _SCRIPT_RE = re.compile(
     re.DOTALL,
 )
 
-# Scenes we are fully populating in Slice 1; other 14-scene entries get stubbed.
-_MVP_SCENES: frozenset[str] = frozenset({"ready", "active", "recovery", "narrow"})
+# Scenes we are fully populating in the current parity slice.
+_MVP_SCENES: frozenset[str] = frozenset(
+    {
+        "ready",
+        "active",
+        "multi",
+        "plan",
+        "review",
+        "cc",
+        "recovery",
+        "restore",
+        "sessions",
+        "palette",
+        "diff",
+        "grep",
+        "escalation",
+        "narrow",
+    }
+)
 
 
 @dataclass
@@ -63,7 +80,7 @@ class SceneRecord:
     scene_id: str                       # e.g. "ready", "active", "recovery", "narrow"
     label: str                          # e.g. "01 Ready", "07 Recovery"
     page_number: int                    # parsed leading integer in the label
-    populated: bool                     # True for the 4 MVP scenes; False = stubbed
+    populated: bool                     # True for the current live-gated scenes; False = stubbed
     anchors: list[str] = field(default_factory=list)
     class_counts: dict[str, int] = field(default_factory=dict)
     region_classes: list[str] = field(default_factory=list)

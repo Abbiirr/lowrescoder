@@ -101,6 +101,12 @@ def test_hud_present_passes_when_tokens_visible(pm):
     assert result.verdict is pm.ReferenceVerdict.PASS
 
 
+def test_hud_present_accepts_compact_narrow_tokens(pm):
+    text = "tools | openrouter | suggest | ● ready | mock-ses | t:0 | a:0 | q:0\nbody"
+    result = pm._pred_hud_present(text)
+    assert result.verdict is pm.ReferenceVerdict.PASS
+
+
 def test_hud_present_fails_when_only_welcome_banner(pm):
     text = "AutoCode — Edge-native AI coding assistant\nType /help for commands..."
     result = pm._pred_hud_present(text)
@@ -114,7 +120,19 @@ def test_composer_present_passes_on_composer_marker(pm):
 
 
 def test_composer_present_passes_on_ask_prompt(pm):
-    text = "\n".join([""] * 20 + ["❯ Ask AutoCode anything"])
+    text = "\n".join([""] * 20 + ["❯ "])
+    result = pm._pred_composer_present(text)
+    assert result.verdict is pm.ReferenceVerdict.PASS
+
+
+def test_composer_present_passes_on_bordered_bare_prompt(pm):
+    text = "\n".join([""] * 20 + ["│ ❯ │"])
+    result = pm._pred_composer_present(text)
+    assert result.verdict is pm.ReferenceVerdict.PASS
+
+
+def test_composer_present_passes_on_overlay_stage_prompt(pm):
+    text = "\n".join([""] * 20 + ["Palette>"])
     result = pm._pred_composer_present(text)
     assert result.verdict is pm.ReferenceVerdict.PASS
 
@@ -164,6 +182,44 @@ def test_active_turn_indicator_detects_working(pm):
     assert fail_v is pm.ReferenceVerdict.FAIL
 
 
+def test_overlay_header_visible_checks_expected_title(pm):
+    pass_v = pm._pred_scene_overlay_header("Command Palette", expected="Command Palette")
+    fail_v = pm._pred_scene_overlay_header("Select a session:", expected="Command Palette")
+    assert pass_v.verdict is pm.ReferenceVerdict.PASS
+    assert fail_v.verdict is pm.ReferenceVerdict.FAIL
+
+
+def test_overlay_filter_visible_detects_filter_row(pm):
+    pass_v = pm._pred_scene_overlay_filter("[filter: ]")
+    fail_v = pm._pred_scene_overlay_filter("plain text")
+    assert pass_v.verdict is pm.ReferenceVerdict.PASS
+    assert fail_v.verdict is pm.ReferenceVerdict.FAIL
+
+
+def test_overlay_selection_visible_detects_selected_row(pm):
+    pass_v = pm._pred_scene_overlay_selection("▶ /help — Show available commands")
+    bordered_v = pm._pred_scene_overlay_selection("│ ▶ /help — Show available commands")
+    fail_v = pm._pred_scene_overlay_selection("  /help — Show available commands")
+    assert pass_v.verdict is pm.ReferenceVerdict.PASS
+    assert bordered_v.verdict is pm.ReferenceVerdict.PASS
+    assert fail_v.verdict is pm.ReferenceVerdict.FAIL
+
+
+def test_overlay_entries_visible_uses_token_threshold(pm):
+    pass_v = pm._pred_scene_overlay_entries(
+        "Mock session [mock-session-001]",
+        expected_tokens=("Mock session", "mock-session-001"),
+        minimum_hits=1,
+    )
+    fail_v = pm._pred_scene_overlay_entries(
+        "Mock session",
+        expected_tokens=("/help", "/model", "Show available commands"),
+        minimum_hits=2,
+    )
+    assert pass_v.verdict is pm.ReferenceVerdict.PASS
+    assert fail_v.verdict is pm.ReferenceVerdict.FAIL
+
+
 # -------------------------------------------------- full orchestration path
 
 def _make_scene_dict(**overrides):
@@ -207,16 +263,38 @@ def test_run_scene_predicates_includes_active_check(pm):
     report = pm.run_scene_predicates("text", scene, cols=160)
     names = {c.name for c in report.checks}
     assert "active_turn_indicator" in names
+    assert "active_surface_tokens" in names
 
 
-def test_run_scene_predicates_ready_has_no_scene_specific_check(pm):
+def test_run_scene_predicates_includes_sessions_overlay_checks(pm):
+    scene = _make_scene_dict(scene_id="sessions", label="09 Sessions")
+    report = pm.run_scene_predicates("text", scene, cols=160)
+    names = {c.name for c in report.checks}
+    assert "overlay_header_visible" in names
+    assert "overlay_filter_visible" in names
+    assert "overlay_selection_visible" in names
+    assert "overlay_entries_visible" in names
+
+
+def test_run_scene_predicates_includes_palette_overlay_checks(pm):
+    scene = _make_scene_dict(scene_id="palette", label="10 Palette")
+    report = pm.run_scene_predicates("text", scene, cols=160)
+    names = {c.name for c in report.checks}
+    assert "overlay_header_visible" in names
+    assert "overlay_filter_visible" in names
+    assert "overlay_selection_visible" in names
+    assert "overlay_entries_visible" in names
+
+
+def test_run_scene_predicates_ready_includes_quiet_surface_check(pm):
     scene = _make_scene_dict(scene_id="ready")
     report = pm.run_scene_predicates("text", scene, cols=160)
     names = {c.name for c in report.checks}
-    # ready has no scene-specific predicate in Slice 1.
+    assert "ready_surface_tokens" in names
     assert "recovery_cards_visible" not in names
     assert "active_turn_indicator" not in names
     assert "narrow_layout_fits" not in names
+    assert "overlay_header_visible" not in names
 
 
 def test_report_failures_lists_only_failing(pm):
@@ -308,7 +386,11 @@ def test_load_scene_records_round_trips_real_manifest(pm):
         "ready", "active", "recovery", "narrow"
     }
     populated = {r["scene_id"] for r in records if r["populated"]}
-    assert populated == {"ready", "active", "recovery", "narrow"}
+    assert populated == {
+        "ready", "active", "multi", "plan", "review", "cc", "recovery",
+        "restore", "sessions", "palette", "diff", "grep", "escalation",
+        "narrow",
+    }
 
 
 # Regression guards: an earlier reader corrupted nested ``class_counts``

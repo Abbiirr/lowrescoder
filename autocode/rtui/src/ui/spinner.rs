@@ -1,4 +1,5 @@
-/// 187 spinner verbs — ported verbatim from spinnerverbs.go
+/// 194 spinner verbs — ported verbatim from spinnerverbs.go
+#[allow(dead_code)]
 pub const VERBS: [&str; 194] = [
     "thinking",
     "processing",

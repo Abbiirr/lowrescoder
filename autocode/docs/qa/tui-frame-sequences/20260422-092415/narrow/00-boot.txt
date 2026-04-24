@@ -1,0 +1,30 @@
+┌──────────────────────────────────────────────────────────────────┐
+│tools | openrouter | suggest | ● ready | t:0 | a:0 | q:0          │
+│                                                                  │
+│                                                                  │
+│                                                                  │
+│                                                                  │
+│                                                                  │
+│                                                                  │
+│     Describe a change, ask a question, or paste a stack trace    │
+│                                                                  │
+│                                                                  │
+│                                                                  │
+│                                                                  │
+│                                                                  │
+│                                                                  │
+│                                                                  │
+│                                                                  │
+│                                                                  │
+│                                                                  │
+│                                                                  │
+│                                                                  │
+│               ↻ Restore · recent checkpoint · local              │
+│           recent session · mock-session-0 · resume/fork          │
+│        last branch activity · workspace preserved · ready        │
+│┌────────────────────────────────────────────────────────────────┐│
+││❯ Ask AutoCode                                                  ││
+│└────────────────────────────────────────────────────────────────┘│
+│Type the next step or use / commands.                             │
+│Ctrl+Enter send · Esc interrupt · Ctrl+Shift+P palette            │
+└──────────────────────────────────────────────────────────────────┘

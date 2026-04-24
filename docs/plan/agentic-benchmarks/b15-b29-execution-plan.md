@@ -32,10 +32,10 @@ portfolio.
 
 ## Current Restored Artifacts
 
-- Manifests: `scripts/e2e/external/b15-*.json` through `b29-*.json`
+- Manifests: `benchmarks/e2e/external/b15-*.json` through `b29-*.json`
 - New prototype fixtures:
-  - `scripts/e2e/external/fixtures/b18/b18-public-fresh-proxy`
-  - `scripts/e2e/external/fixtures/b22/b22-half-applied-refactor`
-  - `scripts/e2e/external/fixtures/b23/b23-stale-auth-path`
-  - `scripts/e2e/external/fixtures/b25/b25-proposal-selection`
-  - `scripts/e2e/external/fixtures/b29/b29-transient-verify`
+  - `benchmarks/e2e/external/fixtures/b18/b18-public-fresh-proxy`
+  - `benchmarks/e2e/external/fixtures/b22/b22-half-applied-refactor`
+  - `benchmarks/e2e/external/fixtures/b23/b23-stale-auth-path`
+  - `benchmarks/e2e/external/fixtures/b25/b25-proposal-selection`
+  - `benchmarks/e2e/external/fixtures/b29/b29-transient-verify`

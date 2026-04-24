@@ -1,16 +1,78 @@
 # Current Directives
 
-> Last updated: 2026-04-21
+> Last updated: 2026-04-23
 
 ## Active Phase
 
 **Stabilization Sprint — COMPLETE.** Stage 0A closed on 2026-04-20 with schema/docs/harness synchronization recorded in `autocode/docs/qa/test-results/20260420-171416-stage0a-verification.md`; Stage 0B is intentionally skipped because `command.list`, `model.list`, `provider.list`, and `session.list` unblock Stage 2 directly. Stage 1 closed on 2026-04-21 after the UTF-8/history, editor/inline, RPC/process, and runtime-hygiene slices recorded in the Stage 1 artifacts below. Stage 2 closed on 2026-04-21 after the visible command/picker slice and the slash-autocomplete/compact-feedback slice recorded below. Stage 3A closed on 2026-04-21 after the modal/transcript slice recorded below. Stage 3B closed on 2026-04-21 after the inspection/queue slice recorded below. Stage 4 closed on 2026-04-21 after the canonical-name-only shim-removal pass and full stabilization rerun recorded in `autocode/docs/qa/test-results/20260421-104354-stabilization-verification.md`. The product gate is now closed for the stabilization program. Execution of the sprint was carried by Codex under Entry 1266. Linux-first scope remains locked; macOS out of scope; Windows post-v1.
 
-## ACTIVE SLICE: Post-Stabilization backlog only
+## ACTIVE SLICE: TUI Runtime Correctness + Parity Follow-through (HR-5 active)
 
-**Canonical plan:** `docs/plan/stabilization-and-parity-plan.md`
-**Known-bug inventory:** `bugs/codex-tui-issue-inventory.md` (60 items + §S1–§S12 adversarial sweeps)
-**Ship gate:** `docs/tui-testing/tui_testing_checklist.md` §6.5 sweeps + §7 regression table
+**Canonical plan:** `docs/tui-testing/tui_implementation_plan.md`
+**Checklist:** `docs/tui-testing/tui_implementation_todo.md`
+**Phase A close-out plan:** `docs/plan/hr5-phase-a-benchmark-latency-plan.md`
+**Phase A close-out checklist:** `docs/plan/hr5-phase-a-benchmark-latency-checklist.md`
+**Baseline artifact:** `autocode/docs/qa/test-results/20260421-175050-tui-14-scene-capture-matrix.md`
+**Current screenshot gap bundle:** `autocode/docs/qa/test-results/20260422-114357-tui-reference-gap.md`
+**Approved:** Claude Entry 1298 (2026-04-21); execution order ratified in Entry 1294.
+
+**Stage 0 close-out:** `basic_turn_returns_to_usable_input` in `autocode/tests/tui-comparison/predicates.py` now searches the bottom 5 visible lines instead of the last 2 non-empty lines, with regression coverage for helper/footer rows below the composer. Verification artifact: `autocode/docs/qa/test-results/20260421-160214-tui-stage0-predicate-verification.md`.
+
+**Stage 1 close-out:** historical promotion slice closed on 2026-04-21 with `sessions` and `palette` as live Track 4 gates and `/plan` still represented honestly as a strict-`xfail` partial scene. Verification artifact: `autocode/docs/qa/test-results/20260421-172147-tui-stage1-reference-promotion.md`.
+
+**Stage 2-3 close-out:** dedicated surfaces for `multi`, `plan`, `review`, `cc`, `restore`, `diff`, `grep`, and `escalation` are now live with deterministic triggers. All 14 reference scenes are `direct` in the current matrix. Verification artifact: `autocode/docs/qa/test-results/20260421-195645-tui-stage2-stage3-implementation.md`.
+
+**Design gate:** APPROVED by user on 2026-04-21. The mockups are now the explicit spec for the remaining parity work.
+
+**Hard rendering requirements (user-locked 2026-04-22):** the default inline TUI must render full-screen, terminal resizing must keep working, multiple terminal sizes must be validated, and native terminal scrollback must remain preserved. This user instruction supersedes the earlier centered-shell direction from the Stage 4 structural-fidelity passes.
+
+**Current parity state:** all 14 scenes now have direct live capture paths in `autocode/docs/qa/test-results/20260422-114357-tui-14-scene-capture-matrix.md`. The current visual-fidelity baseline is `autocode/docs/qa/test-results/20260422-114357-tui-reference-gap.md`.
+
+**Latest runtime artifact:** the current runtime-correctness slice is recorded in `autocode/docs/qa/test-results/20260422-114723-tui-runtime-gateway-pass.md`. That artifact closes the live LiteLLM auth fix, false chat-timeout cleanup, active-turn slash discovery, the refreshed real-gateway PTY smoke, and the explicit Rust alt-screen CLI switch.
+
+**Latest benchmark canary artifact:** `docs/qa/test-results/20260423-040320-B13-PROXY-autocode.json`. The benchmark-owned Rust TUI PTY canary on `B13-PROXY` now resolves on the real gateway with `ready -> streaming -> completed`, `first_streaming_s = 7.231`, `completed_detected_s = 75.473`, and `recovery_detected_s = null`. Phase A close-out is recorded in `docs/qa/test-results/20260423-100635-tui-benchmark-latency-verification.md`.
+
+**Honesty note:** the dedicated detail surfaces are real and directly triggerable, but several still render static scene text rather than real bound session data. Human-driven TUI benchmarking is unblocked, the benchmark-owned Rust TUI PTY runner now has a green real-gateway canary, and the specific Phase A latency blocker is no longer the active frontier. Larger sweeps should still start with a fresh canary on the current gateway before the long run begins.
+
+**Active task:** do not start another visual-only slice. Under HR-5, Phase A is closed on the canary lane and the active next slice is now Phase B under HR-5(a): `/cc` real-data binding. Keep the broader implementation order in `docs/tui-testing/tui_implementation_plan.md` and `docs/tui-testing/tui_implementation_todo.md`, with the Phase A close-out captured in the dedicated plan/checklist pair above.
+
+**User-directed temporary override (2026-04-24):** before more frontend binding work, run a backend-tightening tranche to check commit-readiness on the current tree and tighten backend/runtime behavior around chat streaming, subagents, context, memory, task/todo, loop, and transport correctness. Canonical plan: `docs/plan/backend-tightening-refinement-plan.md`. Once that tranche is stable enough, return to HR-5 Phase B `/cc` real-data binding.
+
+**Active phase order (locked 2026-04-23):**
+- Phase A — HR-5(c): COMPLETE on 2026-04-23 via `docs/qa/test-results/20260423-100635-tui-benchmark-latency-verification.md`
+- Phase B — HR-5(a): `/cc` real-data binding (active)
+- Phase C — HR-5(a): `/restore` / checkpoints, `/plan`, `/tasks`, `/grep`, `/review`, `/diff`, `/escalation`, and remaining detail-surface bindings
+- Phase D — HR-5(b): spinner activity-correlation, thinking/output split, per-slash PTY smoke, 194-verb spinner badge
+- Phase E — release gate after at least `4/10` HR-5(a) bindings ship
+
+## Parallel Architecture Track (User-Directed 2026-04-23)
+
+This track now runs alongside HR-5; it does not pause the HR-5 product queue unless the user explicitly says to pause it.
+
+- Canonical plan: `modular_migration_plan.md`
+- Todo / execution checklist: `modular_migration_todo.md`
+- Current verification note: `autocode/docs/qa/test-results/20260423-210037-modular-phase5-closeout.md`
+- Current build slice: Tranches B, C, D, and Phase 5 are now COMPLETE.
+  - Phase 2: `autocode.backend.chat` owns chat-turn execution, callback wiring, and turn-result shaping instead of `BackendServer`
+  - Phase 3: backend transport abstraction is live with stdio and TCP host adapters
+  - Phase 4: Rust TUI connection modes plus launcher `--attach HOST:PORT` wiring are live, the default bare `autocode` path remains intact, and the spawn-managed path is now a stdio subprocess backend rather than a PTY-backed spawn path
+  - Regression baseline is currently green: `uv run pytest autocode/tests/unit -q` → `1862 passed`; `uv run pytest benchmarks/tests -q` → `199 passed`; Rust `cargo test`, `cargo build --release`, and `cargo clippy -D warnings` are green; PTY smokes are green aside from the known `E2E_async_palette_missing` caveat
+  - Phase 0 follow-through is now closed via `autocode/tests/unit/test_backend_transport_conformance.py`
+  - The benchmark-owned TUI harness now supports the split attach/TCP shape via `--autocode-tui-connection attach`, with backend-host artifact capture and pyte-backed screen reconstruction
+  - Phase 5 swapability proof is now closed via the attach-path artifact `docs/qa/test-results/20260423-145703-B13-PROXY-autocode.json` plus the same-window spawn-managed comparator `docs/qa/test-results/20260423-150833-B13-PROXY-autocode.json`
+  - The attach-vs-spawn comparison matched closely enough to treat the live retry storm as attach-unrelated: both runs ended as `INFRA_FAIL` at ~`181s`, both reached `ready -> streaming`, and `first_streaming_s` was within ~`1.1s` (`90.527s` attach vs `91.638s` spawn)
+  - Remaining follow-through on this architecture track: the Phase 2-4 follow-through items plus Phase 6 cleanup recorded in `modular_migration_todo.md`
+- Keep the HR-5 benchmark-owned canary convention (`B13-PROXY`) for backend-host or frontend-transport changes that touch the user path
+- User-directed 2026-04-24 refinement order before more frontend work: `docs/plan/backend-tightening-refinement-plan.md`
+
+**Phase A exit gate:** PASSED on 2026-04-23. `B13-PROXY` through `--autocode-runner tui` completed without needing the stretched stale-request workaround; see `docs/qa/test-results/20260423-040320-B13-PROXY-autocode.json` and `docs/qa/test-results/20260423-100635-tui-benchmark-latency-verification.md`.
+
+**Stage sequence:** 0 (harness signal) → 1 (promote `sessions`, `palette`, `plan` to live Track 4 gates) → 2 (`restore`, `multi`, `review`, `diff`) → 3 (`grep`, `escalation`, `cc`) → 4 (global fidelity pass; active).
+
+**Post-stabilization backlog (after parity program):**
+- Canonical plan: `docs/plan/stabilization-and-parity-plan.md`
+- Known-bug inventory: `bugs/codex-tui-issue-inventory.md` (60 items + §S1–§S12 adversarial sweeps)
+- Ship gate: `docs/tui-testing/tui_testing_checklist.md` §6.5 sweeps + §7 regression table
 
 **Recent close-out:** Stage 0A delivered `docs/reference/rpc-schema-v1.md`, `autocode/src/autocode/backend/schema.py`, `autocode/rtui/src/rpc/schema.rs`, the fixture corpus under `autocode/tests/pty/fixtures/rpc-schema-v1/`, the one-release compat shim layer, and the harness/doc retarget pass that closed Inventory §16–§22. Canonical artifact: `autocode/docs/qa/test-results/20260420-171416-stage0a-verification.md`.
 
@@ -66,7 +128,7 @@
 
 ## Other Open Items
 
-- VHS baseline refresh — 4 scenes drift 1.85–3.46%; rebaseline decision pending (low priority during Rust migration).
+- VHS baseline refreshed on 2026-04-21 after Track 4 chrome/recovery promotion; MVP Track 4 scenes now run as hard gates.
 - Slice 2 (themed parallel renderer) — deferred.
 - 3 pre-session cruft files (`DEFERRED_PENDING_TODO.md`, `deep-research-report.md`, `benchmarks/run_b7_b30_sweep.sh`) — disposition pending.
 
@@ -134,6 +196,7 @@ Total: **1777+ tests, 0 failures in the latest stored full-suite artifact, 4 ski
 
 - B28 green: `docs/qa/test-results/20260330-045004-B28-autocode.json`
 - B17 green: `docs/qa/test-results/20260330-034741-B17-autocode.json`
+- TUI benchmark prep: `docs/qa/test-results/20260422-125734-tui-benchmark-prep.md`
 - Full pytest: `autocode/docs/qa/test-results/20260402-150707-full-suite-after-fixes.md`
 - Install smoke: `autocode/docs/qa/test-results/20260403-173036-install-smoke.md`
 - Loop smoke: `autocode/docs/qa/test-results/20260403-173500-loop-smoke.md`
@@ -148,6 +211,8 @@ Total: **1777+ tests, 0 failures in the latest stored full-suite artifact, 4 ski
 |------|------|
 | Benchmark harness | `benchmarks/benchmark_runner.py` |
 | Benchmark adapters | `benchmarks/adapters/` |
+| TUI benchmark prep | `benchmarks/prepare_tui_benchmark_run.py` |
+| TUI benchmark runbook | `docs/benchmark-tui-runbook.md` |
 | Phase 7 plan | `docs/plan/phase7-ship-ready.md` |
 | Execution checklist | `EXECUTION_CHECKLIST.md` |
 | Detailed execution plan | `PLAN.md` |

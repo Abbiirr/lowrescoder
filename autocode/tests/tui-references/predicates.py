@@ -109,11 +109,10 @@ _COMPOSER_MARKERS: tuple[str, ...] = (
     "Ask AutoCode",
     "❯ Ask",
     "> Ask",
-    "│ > ",
-    "│ ❯ ",
     "│ > │",
     "│ ❯ │",
 )
+_OVERLAY_STAGE_PROMPTS: tuple[str, ...] = ("Picker>", "Palette>")
 
 # Characteristic HUD tokens. The mockups put these on one or two rows at
 # the top of the terminal window. A live Go TUI capture is allowed to
@@ -122,6 +121,8 @@ _HUD_TOKENS: tuple[str, ...] = (
     "tasks:",
     "agents:",
     "sandbox",
+    "t:",
+    "a:",
 )
 
 # Keybind hints appear in a footer row on the mockup.
@@ -149,6 +150,23 @@ def _find_first(haystack: str, needles: tuple[str, ...]) -> str | None:
         if needle in haystack:
             return needle
     return None
+
+
+def _normalize_frame_line(line: str) -> str:
+    candidate = line.lstrip()
+    while candidate[:1] in {"│", "┃", "|"}:
+        candidate = candidate[1:].lstrip()
+    return candidate
+
+
+def _line_has_composer_marker(line: str) -> bool:
+    if _find_first(line, _COMPOSER_MARKERS) is not None:
+        return True
+    normalized = _normalize_frame_line(line)
+    if _find_first(normalized, _COMPOSER_MARKERS + _OVERLAY_STAGE_PROMPTS) is not None:
+        return True
+    stripped = normalized.strip(" │┃|")
+    return stripped in {">", "❯"}
 
 
 def _pred_tokens_in_strip(
@@ -181,13 +199,16 @@ def _pred_hud_present(text: str) -> ReferenceCheck:
 
 
 def _pred_composer_present(text: str) -> ReferenceCheck:
-    bottom = _bottom_strip(text, rows=10)
-    marker = _find_first(bottom, _COMPOSER_MARKERS)
+    bottom_lines = _bottom_strip(text, rows=10).split("\n")
+    marker = next(
+        (line for line in bottom_lines if _line_has_composer_marker(line)),
+        None,
+    )
     return ReferenceCheck(
         name="composer_present",
         verdict=ReferenceVerdict.PASS if marker else ReferenceVerdict.FAIL,
         detail=(
-            f"matched marker {marker!r}"
+            f"matched composer row {marker!r}"
             if marker
             else "no composer marker found in the bottom 10 rows"
         ),
@@ -336,6 +357,95 @@ def _pred_scene_active_streaming(text: str) -> ReferenceCheck:
     )
 
 
+def _pred_scene_overlay_header(text: str, *, expected: str) -> ReferenceCheck:
+    return ReferenceCheck(
+        name="overlay_header_visible",
+        verdict=ReferenceVerdict.PASS if expected in text else ReferenceVerdict.FAIL,
+        detail=(
+            f"matched overlay header {expected!r}"
+            if expected in text
+            else f"missing overlay header {expected!r}"
+        ),
+    )
+
+
+def _pred_scene_overlay_filter(text: str) -> ReferenceCheck:
+    has_filter = "[filter:" in text.lower()
+    return ReferenceCheck(
+        name="overlay_filter_visible",
+        verdict=ReferenceVerdict.PASS if has_filter else ReferenceVerdict.FAIL,
+        detail=(
+            "filter line visible"
+            if has_filter
+            else "no overlay filter line found"
+        ),
+    )
+
+
+def _pred_scene_overlay_selection(text: str) -> ReferenceCheck:
+    def _normalize_overlay_row(line: str) -> str:
+        candidate = line.strip()
+        while candidate[:1] in {"│", "┃", "|"}:
+            candidate = candidate[1:].lstrip()
+        return candidate
+
+    selected = [
+        _normalize_overlay_row(line)
+        for line in text.split("\n")
+        if _normalize_overlay_row(line).startswith("▶ ")
+    ]
+    return ReferenceCheck(
+        name="overlay_selection_visible",
+        verdict=ReferenceVerdict.PASS if selected else ReferenceVerdict.FAIL,
+        detail=(
+            f"selected row(s): {selected[:2]}"
+            if selected
+            else "no selected overlay row found"
+        ),
+    )
+
+
+def _pred_scene_overlay_entries(
+    text: str,
+    *,
+    expected_tokens: tuple[str, ...],
+    minimum_hits: int = 1,
+) -> ReferenceCheck:
+    lower = text.lower()
+    hits = [token for token in expected_tokens if token.lower() in lower]
+    passed = len(hits) >= minimum_hits
+    return ReferenceCheck(
+        name="overlay_entries_visible",
+        verdict=ReferenceVerdict.PASS if passed else ReferenceVerdict.FAIL,
+        detail=(
+            f"matched {len(hits)}/{len(expected_tokens)} entry token(s): {hits}"
+            if passed
+            else f"matched only {len(hits)}/{len(expected_tokens)} entry token(s): {hits}"
+        ),
+    )
+
+
+def _pred_scene_signal_tokens(
+    text: str,
+    *,
+    name: str,
+    expected_tokens: tuple[str, ...],
+    minimum_hits: int = 2,
+) -> ReferenceCheck:
+    lower = text.lower()
+    hits = [token for token in expected_tokens if token.lower() in lower]
+    passed = len(hits) >= minimum_hits
+    return ReferenceCheck(
+        name=name,
+        verdict=ReferenceVerdict.PASS if passed else ReferenceVerdict.FAIL,
+        detail=(
+            f"matched {len(hits)}/{len(expected_tokens)} token(s): {hits}"
+            if passed
+            else f"matched only {len(hits)}/{len(expected_tokens)} token(s): {hits}"
+        ),
+    )
+
+
 # ------------------------------------------------------------------ public API
 
 def run_scene_predicates(
@@ -378,6 +488,115 @@ def run_scene_predicates(
         report.checks.append(_pred_scene_narrow_layout(text, cols=cols))
     if scene_id == "active":
         report.checks.append(_pred_scene_active_streaming(text))
+        report.checks.append(
+            _pred_scene_signal_tokens(
+                text,
+                name="active_surface_tokens",
+                expected_tokens=("Planning", "Read(src/utils/parser.ts)", "tests/parser.test.ts"),
+            )
+        )
+    if scene_id == "ready":
+        report.checks.append(
+            _pred_scene_signal_tokens(
+                text,
+                name="ready_surface_tokens",
+                expected_tokens=("Restore", "recent session", "last branch activity"),
+            )
+        )
+    if scene_id == "multi":
+        report.checks.append(
+            _pred_scene_signal_tokens(
+                text,
+                name="multi_surface_tokens",
+                expected_tokens=("jobs running", "[prioritized]", "[blocked: tests]"),
+            )
+        )
+    if scene_id == "plan":
+        report.checks.append(
+            _pred_scene_signal_tokens(
+                text,
+                name="plan_surface_tokens",
+                expected_tokens=("Seven steps queued", "Run targeted parser tests", "VALIDATION"),
+            )
+        )
+    if scene_id == "review":
+        report.checks.append(
+            _pred_scene_signal_tokens(
+                text,
+                name="review_surface_tokens",
+                expected_tokens=("REVIEW NEEDED", "src/utils/parser.ts", "[a]pprove"),
+            )
+        )
+    if scene_id == "cc":
+        report.checks.append(
+            _pred_scene_signal_tokens(
+                text,
+                name="cc_surface_tokens",
+                expected_tokens=("Delegate", "SUBAGENTS", "matrix tests"),
+            )
+        )
+    if scene_id == "sessions":
+        report.checks.append(
+            _pred_scene_overlay_header(text, expected="Select a session:")
+        )
+        report.checks.append(_pred_scene_overlay_filter(text))
+        report.checks.append(_pred_scene_overlay_selection(text))
+        report.checks.append(
+            _pred_scene_overlay_entries(
+                text,
+                expected_tokens=("Mock session", "mock-session-001"),
+                minimum_hits=1,
+            )
+        )
+    if scene_id == "palette":
+        report.checks.append(
+            _pred_scene_overlay_header(text, expected="Command Palette")
+        )
+        report.checks.append(_pred_scene_overlay_filter(text))
+        report.checks.append(_pred_scene_overlay_selection(text))
+        report.checks.append(
+            _pred_scene_overlay_entries(
+                text,
+                expected_tokens=("/help", "/model", "Show available commands"),
+                minimum_hits=2,
+            )
+        )
+    if scene_id == "restore":
+        report.checks.append(
+            _pred_scene_signal_tokens(
+                text,
+                name="restore_surface_tokens",
+                expected_tokens=("5 checkpoints", "extractImports guard", "diff from here"),
+            )
+        )
+    if scene_id == "diff":
+        report.checks.append(
+            _pred_scene_signal_tokens(
+                text,
+                name="diff_surface_tokens",
+                expected_tokens=("files changed", "APPROVAL PATTERN", "src/utils/resolver.ts"),
+            )
+        )
+    if scene_id == "grep":
+        report.checks.append(
+            _pred_scene_signal_tokens(
+                text,
+                name="grep_surface_tokens",
+                expected_tokens=("14 hits across 5 files", "@attach", "extractImports"),
+            )
+        )
+    if scene_id == "escalation":
+        report.checks.append(
+            _pred_scene_signal_tokens(
+                text,
+                name="escalation_surface_tokens",
+                expected_tokens=(
+                    "Permission escalation",
+                    ".github/workflows/ci.yml",
+                    "Approve this edit only",
+                ),
+            )
+        )
 
     rows = _nonempty_rows(text)
     report.checks.append(

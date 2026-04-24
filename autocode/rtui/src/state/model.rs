@@ -36,6 +36,19 @@ pub enum PaletteMode {
 }
 
 #[allow(dead_code)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DetailSurface {
+    Multi,
+    Plan,
+    Review,
+    CommandCenter,
+    Restore,
+    Diff,
+    Grep,
+    Escalation,
+}
+
+#[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 pub struct StatusInfo {
     pub model: String,
@@ -181,6 +194,8 @@ pub struct AppState {
     pub ctrl_c_count: u8,
     pub task_panel_open: bool,
     pub followup_panel_open: bool,
+    pub detail_surface: Option<DetailSurface>,
+    pub recovery_action_idx: usize,
 }
 
 impl AppState {
@@ -220,6 +235,8 @@ impl AppState {
             ctrl_c_count: 0,
             task_panel_open: false,
             followup_panel_open: false,
+            detail_surface: None,
+            recovery_action_idx: 0,
         }
     }
 }

@@ -50,7 +50,7 @@ prompt (e.g. `/help`) or mock where possible.
 |---|---|---|
 | `pty_smoke_rust_m1.py` | M1 evidence: backend spawn + `on_status` render + `/exit` clean exit | Rust binary + mock backend |
 | `pty_smoke_rust_comprehensive.py` | Broader Rust smoke (currently S1 on_status + S2 /exit; S3–S6 for streaming/plan/Ctrl+C/fork are aspirational in docstring but not implemented yet) | Rust binary + mock backend |
-| `pty_e2e_real_gateway.py` | **STALE — hardcodes deleted `autocode/build/autocode-tui`; retarget or delete before using** | was Go TUI; needs Rust retarget |
+| `pty_e2e_real_gateway.py` | Live backend + live gateway smoke: `/help`, `/cost`, real chat turn, and async command discovery during a live turn | Rust binary + reachable gateway + auth env |
 
 Each script is designed to be run directly:
 
@@ -76,7 +76,7 @@ tests):
 
 | Stub | Role |
 |---|---|
-| `mock_backend.py` | Deterministic JSON-RPC mock. Triggers in the chat body: `__ASK_USER__`, `__WARNING__`, `__SLOW__`. Imports the Stage 0A schema constants and accepts the documented compat aliases. Shared with `autocode/tests/tui-comparison/`. |
+| `mock_backend.py` | Deterministic JSON-RPC mock. Triggers in the chat body: `__ASK_USER__`, `__WARNING__`, `__SLOW__`; the reference `active` preset also uses a richer parser-refactor prompt fixture. Set `AUTOCODE_MOCK_SUPPRESS_STARTUP_WARNING=1` when you need clean visual captures without the startup warning line. Imports the Stage 0A schema constants and accepts the documented compat aliases. Shared with `autocode/tests/tui-comparison/`. |
 | `silent_backend.py` | Starts, reads stdin, **never** emits `on_status`. Used to exercise the TUI's 15 s startup-timeout path. |
 | `dead_backend.py` | Sleeps forever. Legacy variant; prefer `silent_backend.py`. |
 
@@ -102,12 +102,10 @@ python3 autocode/tests/pty/pty_smoke_rust_m1.py
 python3 autocode/tests/pty/pty_smoke_rust_comprehensive.py
 ```
 
-**Live gateway end-to-end (STALE — needs retarget):**
+**Live gateway end-to-end:**
 
 ```bash
-# pty_e2e_real_gateway.py currently hardcodes the deleted Go binary path.
-# Do not use until retargeted to autocode/rtui/target/release/autocode-tui
-# and updated to honor $AUTOCODE_TUI_BIN.
+LITELLM_MASTER_KEY=... python3 autocode/tests/pty/pty_e2e_real_gateway.py
 ```
 
 ---
@@ -126,7 +124,7 @@ cd autocode/rtui && cargo build --release
 
 **Live gateway (only for `pty_e2e_real_gateway.py`).** The LiteLLM
 gateway must be running and reachable. Auth is derived via
-`LITELLM_MASTER_KEY` → `LITELLM_API_KEY` → `OPENROUTER_API_KEY`. Per
+`LITELLM_API_KEY` → `LITELLM_MASTER_KEY` → `OPENROUTER_API_KEY`. Per
 the repo's operating rules: **never restart the gateway yourself** —
 if it's down, report and wait.
 
@@ -166,6 +164,9 @@ header). Failing runs produce a concise bug report with severities
   and host load all affect runs. Budget generously and treat one-off
   hangs as environmental, not as test signal — unless they're
   reproducible.
+- **PTY smoke predicates must key off stream tokens, not final-screen
+  layout.** The harness consumes an ANSI-stripped byte stream; do not
+  assume a stable final buffer row like a screenshot harness would.
 - **Live-gateway harness is rate-limit-aware.** Keep new harnesses
   under that umbrella small-and-trivial; do NOT add a harness that
   makes many real LLM calls. Broad benchmarking lives in

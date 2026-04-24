@@ -1,0 +1,50 @@
+                                                                                                                                                                
+    ┌ AutoCode ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐    
+    │tools | openrouter | suggest | ● command | mock-ses | tasks:0 | agents:0 | q:0 | sandbox:local                                                        │    
+    │┌ Command Center ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐│    
+    ││Delegate →( doc-writer subagent )                                                                                                                   ││    
+    ││Delegate →( lint-scout subagent )                                                                                                                   ││    
+    ││Delegate →( test-runner subagent )                                                                                                                  ││    
+    ││Planning                                                                                                                                            ││    
+    ││Main thread will handle import extraction while subagents clear lint/docs.                                                                          ││    
+    ││Waiting on test-runner for matrix test completion.                                                                                                  ││    
+    ││Search ( "extractImports" src)                                                                                                                      ││    
+    ││Read ( src/utils/parser.ts )                                                                                                                        ││    
+    ││Edit ( src/types.ts )                                                                                                                               ││    
+    ││Run ( bun run typecheck )                                                                                                                           ││    
+    ││                                                                                                                                                    ││    
+    ││SUBAGENTS                                                                                                                                           ││    
+    ││doc-writer done · returned: docs/parser.md now explains missing import fallback and restore guidance                                                ││    
+    ││lint-scout active · scope: sweep src/resolver.ts and src/types.ts for redundant null checks                                                         ││    
+    ││test-runner waiting · waiting on matrix shard 3 before full-suite summary can return                                                                ││    
+    ││RISK                                                                                                                                                ││    
+    ││writes local only · protected path touched no · network off · reversible yes                                                                        ││    
+    ││matrix tests ● running                                                                                                                              ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    │└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘│    
+    │┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐│    
+    ││❯ Ask AutoCode                                                                                                                                      ││    
+    │└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘│    
+    │Subagents are visible here; use the main thread to coordinate queue pressure and validation.                                                          │    
+    │Ctrl+Enter send · Esc back · Ctrl+R history · Ctrl+Shift+P palette · Tab focus · / @ #                                                                │    
+    └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘    
+                                                                                                                                                                

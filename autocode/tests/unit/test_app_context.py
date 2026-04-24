@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from autocode.app.commands import AppContext
 from autocode.config import AutoCodeConfig
-from autocode.tui.commands import AppContext
 
 
 class TestAppContextProtocol:

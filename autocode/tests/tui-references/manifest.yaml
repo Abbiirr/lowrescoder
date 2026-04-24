@@ -139,7 +139,7 @@ scenes:
   - scene_id: multi
     label: "03 Multitasking"
     page_number: 3
-    populated: false
+    populated: true
     raw_inner_length: 3606
     region_classes:
       - composer
@@ -202,7 +202,7 @@ scenes:
   - scene_id: plan
     label: "04 Plan"
     page_number: 4
-    populated: false
+    populated: true
     raw_inner_length: 3929
     region_classes:
       - composer
@@ -268,7 +268,7 @@ scenes:
   - scene_id: review
     label: "04 Review"
     page_number: 4
-    populated: false
+    populated: true
     raw_inner_length: 7451
     region_classes:
       - composer
@@ -349,7 +349,7 @@ scenes:
   - scene_id: cc
     label: "05 Command center"
     page_number: 5
-    populated: false
+    populated: true
     raw_inner_length: 7225
     region_classes:
       - composer
@@ -510,7 +510,7 @@ scenes:
   - scene_id: restore
     label: "08 Restore"
     page_number: 8
-    populated: false
+    populated: true
     raw_inner_length: 3809
     region_classes:
       - composer
@@ -575,7 +575,7 @@ scenes:
   - scene_id: sessions
     label: "09 Sessions"
     page_number: 9
-    populated: false
+    populated: true
     raw_inner_length: 3966
     region_classes:
       - composer
@@ -633,7 +633,7 @@ scenes:
   - scene_id: palette
     label: "10 Palette"
     page_number: 10
-    populated: false
+    populated: true
     raw_inner_length: 4079
     region_classes:
       - composer
@@ -698,7 +698,7 @@ scenes:
   - scene_id: diff
     label: "11 Diff focus"
     page_number: 11
-    populated: false
+    populated: true
     raw_inner_length: 6748
     region_classes:
       - composer
@@ -776,7 +776,7 @@ scenes:
   - scene_id: grep
     label: "12 Search"
     page_number: 12
-    populated: false
+    populated: true
     raw_inner_length: 4719
     region_classes:
       - composer
@@ -835,7 +835,7 @@ scenes:
   - scene_id: escalation
     label: "13 Escalation"
     page_number: 13
-    populated: false
+    populated: true
     raw_inner_length: 5982
     region_classes:
       - composer

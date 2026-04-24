@@ -11,6 +11,7 @@ future sprints are skipped until implemented.
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
@@ -105,9 +106,17 @@ class TestSprint1CLI:
         assert result.exit_code == 0
         assert "not yet implemented" in result.output
 
-    def test_no_args_shows_help(self) -> None:
-        result = runner.invoke(app, [])
-        assert result.exit_code in (0, 2)
+    def test_no_args_launches_default_chat_entrypoint(self) -> None:
+        mock_result = MagicMock(returncode=0)
+
+        with patch("autocode.cli._find_tui_binary", return_value="/tmp/autocode-tui"):
+            with patch("subprocess.run", return_value=mock_result) as mock_run:
+                result = runner.invoke(app, [])
+
+        assert result.exit_code == 0
+        mock_run.assert_called_once()
+        args, _kwargs = mock_run.call_args
+        assert args[0][0] == "/tmp/autocode-tui"
 
 
 class TestSprint1LLMProvider:
@@ -387,10 +396,10 @@ class TestSprint2Agent:
 
 
 class TestSprint2Commands:
-    """S2.5: All slash commands registered (16 with /tasks)."""
+    """S2.5: Canonical slash command surface is registered."""
 
     def test_all_commands_registered(self) -> None:
-        from autocode.tui.commands import create_default_router
+        from autocode.app.commands import create_default_router
 
         router = create_default_router()
         commands = router.get_all()
@@ -423,8 +432,7 @@ class TestSprint2Commands:
             "shell",
             "tasks",
             "thinking",
+            "tui",
             "undo",
         }
         assert names == expected
-
-

@@ -20,6 +20,8 @@ load_dotenv()
 
 DEFAULT_OLLAMA_MODEL = "qwen3:8b"
 DEFAULT_OLLAMA_API_BASE = "http://localhost:11434"
+DEFAULT_GATEWAY_MODEL = "coding"
+DEFAULT_GATEWAY_API_BASE = "http://localhost:4000/v1"
 
 
 # --- Sub-config models ---
@@ -327,6 +329,65 @@ def _apply_openrouter_env(data: dict[str, object]) -> dict[str, object]:
     return data
 
 
+def _llm_value(data: dict[str, object], key: str) -> object | None:
+    """Read an llm subkey from merged config data when present."""
+    llm = data.get("llm")
+    if isinstance(llm, dict):
+        return llm.get(key)
+    return None
+
+
+def _is_local_gateway_api_base(value: object) -> bool:
+    """Return True when the api_base targets the local model gateway."""
+    return isinstance(value, str) and value.rstrip("/") == DEFAULT_GATEWAY_API_BASE
+
+
+def _apply_gateway_model_defaults(
+    data: dict[str, object],
+    *,
+    global_data: dict[str, object],
+    project_data: dict[str, object],
+) -> dict[str, object]:
+    """Apply gateway-specific model defaults and migrate the legacy ``tools`` default.
+
+    Rules:
+    - If the merged config targets the local gateway via ``openrouter`` and the
+      model is otherwise unspecified, default to the ``coding`` alias.
+    - If the only model selection comes from the legacy global default
+      ``tools`` alias on that same gateway path, upgrade it to ``coding``.
+    - Explicit project or env model selections still win unchanged.
+    """
+    llm = data.get("llm")
+    if not isinstance(llm, dict):
+        return data
+
+    provider = llm.get("provider")
+    api_base = llm.get("api_base")
+    if provider != "openrouter" or not _is_local_gateway_api_base(api_base):
+        return data
+
+    env_model = _get_legacy_env("AUTOCODE_LLM_MODEL", "HYBRIDCODER_LLM_MODEL")
+    if env_model is None:
+        env_model = os.environ.get("OPENROUTER_MODEL")
+    if env_model is not None:
+        return data
+
+    project_model = _llm_value(project_data, "model")
+    if project_model is not None:
+        return data
+
+    global_model = _llm_value(global_data, "model")
+    current_model = llm.get("model")
+    if global_model == "tools":
+        llm["model"] = DEFAULT_GATEWAY_MODEL
+        return data
+
+    if current_model in (None, ""):
+        llm["model"] = DEFAULT_GATEWAY_MODEL
+
+    return data
+
+
 def _resolve_global_config() -> tuple[Path, Path]:
     """Resolve global config dir and file, with legacy fallback.
 
@@ -389,6 +450,11 @@ def load_config(
     data = _apply_env_overrides(data)
     data = _apply_ollama_env(data)
     data = _apply_openrouter_env(data)
+    data = _apply_gateway_model_defaults(
+        data,
+        global_data=global_data,
+        project_data=project_data,
+    )
 
     config = AutoCodeConfig.model_validate(data)
 

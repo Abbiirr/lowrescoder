@@ -71,6 +71,7 @@ def spec(
     use_mock_backend: bool = True,
     backend_script: str = "mock_backend.py",
     boot_budget_s: float = 6.0,
+    suppress_startup_warning: bool = False,
 ) -> LaunchSpec:
     """Build a LaunchSpec for the autocode TUI.
 
@@ -102,6 +103,8 @@ def spec(
         # with a shebang. Both mock_backend.py and silent_backend.py carry
         # `#!/usr/bin/env python3` and ignore their argv.
         env_extra["AUTOCODE_PYTHON_CMD"] = str(backend_path)
+        if suppress_startup_warning and backend_script == "mock_backend.py":
+            env_extra["AUTOCODE_MOCK_SUPPRESS_STARTUP_WARNING"] = "1"
     return LaunchSpec(
         tool=TOOL,
         argv=[str(bin_path)],

@@ -1,0 +1,50 @@
+                                                                                                                                                                
+                                ┌ AutoCode ────────────────────────────────────────────────────────────────────────────────────┐                                
+                                │tools | openrouter | suggest | ● halted | mock-ses | 5↑0↓ | tasks:0 | agents:0 | q:0 | sandbox│                                
+                                │⚠ [backend] WARNING: mock backend starting — this is a test warning                           │                                
+                                │> __HALT_FAILURE__                                                                            │                                
+                                │Error: halted after matrix shard failure; retry, inspect, restore, rewind, compact, or        │                                
+                                │planning are available                                                                        │                                
+                                │                                                                                              │                                
+                                │Recovery                                                                                      │                                
+                                │Retry  Inspect  Restore                                                                       │                                
+                                │Rewind  Compact  Planning                                                                     │                                
+                                │Esc stay halted                                                                               │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │┌────────────────────────────────────────────────────────────────────────────────────────────┐│                                
+                                ││❯ Ask AutoCode                                                                              ││                                
+                                │└────────────────────────────────────────────────────────────────────────────────────────────┘│                                
+                                │Choose a recovery action or edit the draft before retrying.                                   │                                
+                                │Enter retry · E inspect · R restore · W rewind · C compact · P planning · Esc stay halted     │                                
+                                └──────────────────────────────────────────────────────────────────────────────────────────────┘                                
+                                                                                                                                                                

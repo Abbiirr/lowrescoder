@@ -246,32 +246,20 @@ class AgentLoop:
 
             if layer2_enabled:
                 try:
-                    from autocode.agent.tools import warm_code_index
-                    from autocode.layer2.repomap import RepoMapGenerator
+                    from autocode.agent.tools import get_code_index_cache_stats
 
-                    _index, stats = warm_code_index(str(root))
-                    lines.append(
-                        "- Retrieval index: "
-                        f"{stats['files_scanned']} files scanned, "
-                        f"{stats['total_chunks']} chunks cached"
-                    )
-
-                    budget_tokens = 160
-                    if self._layer2_config is not None:
-                        budget_tokens = max(
-                            80,
-                            min(int(getattr(self._layer2_config, "repomap_budget", 160)), 160),
+                    stats = get_code_index_cache_stats(str(root))
+                    if stats is not None:
+                        lines.append(
+                            "- Retrieval index: warm, "
+                            f"{stats['files_indexed']} files indexed, "
+                            f"{stats['total_chunks']} chunks cached"
                         )
-
-                    repo_map = RepoMapGenerator(budget_tokens=budget_tokens).generate(root)
-                    preview_lines = [
-                        line.rstrip()
-                        for line in repo_map.splitlines()
-                        if line.strip() and line.strip() != "# Repo Map"
-                    ][:8]
-                    if preview_lines:
-                        lines.append("- Repo map preview:")
-                        lines.extend(f"  {line}" for line in preview_lines)
+                    else:
+                        lines.append(
+                            "- Retrieval index: cold; synchronous warmup deferred "
+                            "until an explicit retrieval request"
+                        )
                 except Exception as exc:
                     logger.debug("Layer2 warmup skipped: %s", exc)
 
@@ -370,6 +358,7 @@ class AgentLoop:
         *,
         on_chunk: Callable[[str], None] | None = None,
         on_thinking_chunk: Callable[[str], None] | None = None,
+        on_retry_notice: Callable[[str], None] | None = None,
         on_tool_call: Callable[[str, str, str], None] | None = None,
         approval_callback: Callable[[str, dict[str, Any]], Awaitable[bool]] | None = None,
         ask_user_callback: Callable[[str, list[str], bool], Awaitable[str]] | None = None,
@@ -381,6 +370,7 @@ class AgentLoop:
             user_message: The user's input text.
             on_chunk: Called with text chunks as they stream.
             on_thinking_chunk: Called with thinking/reasoning chunks.
+            on_retry_notice: Called with non-fatal retry/degraded upstream notices.
             on_tool_call: Called with (tool_name, status, result) for display.
             approval_callback: Async callable for user approval. Returns bool.
             ask_user_callback: Async callable when the LLM invokes ask_user.
@@ -546,6 +536,7 @@ class AgentLoop:
                     messages, tool_schemas,
                     on_chunk=on_chunk,
                     on_thinking_chunk=on_thinking_chunk,
+                    on_retry_notice=on_retry_notice,
                     reasoning_enabled=reasoning_enabled,
                 )
             finally:

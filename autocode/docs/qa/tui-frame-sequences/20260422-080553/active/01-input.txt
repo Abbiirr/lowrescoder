@@ -1,0 +1,50 @@
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│tools | openrouter | suggest | ⠙ working | mock-ses | tasks:6 | agents:2 | q:0 | sandbox:local                                                                │
+│> refactor parser.ts to safely handle missing imports and run tests                                                                                           │
+│                                                                                                                                                              │
+│Planning                                                                                                                                                      │
+│Will inspect parser flow, extend ASTNode with an optional imports field, patch extractImports to guard against undefined,                                     │
+│then run the targeted parser tests.                                                                                                                           │
+│                                                                                                                                                              │
+│Read(src/utils/parser.ts)                                                                                                                                     │
+│Search "extractImports|ASTNode" src                                                                                                                           │
+│Read(src/types.ts)                                                                                                                                            │
+│Edit(src/types.ts)                                                                                                                                            │
+│42 - imports: ImportNode[]                                                                                                                                    │
+│42 + imports?: ImportNode[]                                                                                                                                   │
+│Edit(src/utils/parser.ts)                                                                                                                                     │
+│71 - const nodes = extractImports(ast.imports)                                                                                                                │
+│71 + const nodes = ast.imports ? extractImports(ast.imports) : []                                                                                             │
+│                                                                                                                                                              │
+│draft stays live while validation streams                                                                                                                     │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐│
+││Run(bun test ./tests/parser.test.ts)                                                                                                                        ││
+││√ parsed simple ast                                                                                                                                         ││
+││√ extracted full imports                                                                                                                                    ││
+││                                                                                                                                                            ││
+││                                                                                                                                                            ││
+│└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘│
+│┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐│
+││❯ Ask AutoCode                                                                                                                                              ││
+│└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘│
+│Type the next step or use / commands.                                                                                                                         │
+│Ctrl+Enter send · Esc interrupt · Ctrl+R history · Ctrl+Shift+P palette · / commands                                                                          │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘

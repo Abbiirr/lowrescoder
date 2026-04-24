@@ -1,0 +1,50 @@
+                                                                                                                                                                
+    ┌ AutoCode ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐    
+    │tools | openrouter | suggest | ● multi | mock-ses | tasks:0 | agents:0 | q:0 | sandbox:local                                                          │    
+    │┌ Multitasking ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐│    
+    ││● 2 jobs running                                                                                                                                    ││    
+    ││Edit ( src/utils/parser.ts )                                                                                                                        ││    
+    ││Note: discovered a potential circular import recursion issue. Adding a visited-set guard.                                                           ││    
+    ││Edit ( src/utils/resolver.ts )                                                                                                                      ││    
+    ││Run ( bun test --watch ./tests/parser.test.ts )                                                                                                     ││    
+    ││√ 14 passing                                                                                                                                        ││    
+    ││● resolving deeply nested imports… (5s)                                                                                                             ││    
+    ││                                                                                                                                                    ││    
+    ││[prioritized] update the ImportNode type definitions after the parser guard lands                                                                   ││    
+    ││[blocked: tests] run the full suite once watch mode stabilizes                                                                                      ││    
+    ││[next] inspect docs/parser.md for import behavior notes                                                                                             ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    ││                                                                                                                                                    ││    
+    │└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘│    
+    │┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐│    
+    ││❯ Ask AutoCode                                                                                                                                      ││    
+    │└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘│    
+    │Queue pressure is visible; keep the composer focused on the next highest-value action.                                                                │    
+    │Ctrl+Enter send · Esc back · Ctrl+R history · Ctrl+Shift+P palette · Tab focus · / @ #                                                                │    
+    └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘    
+                                                                                                                                                                

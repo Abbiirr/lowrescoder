@@ -1,0 +1,50 @@
+                                                                                                                                                                
+                                ┌──────────────────────────────────────────────────────────────────────────────────────────────┐                                
+                                │tools | openrouter | suggest | ● command | mock-ses | tasks:0 | agents:0 | q:0 | sandbox:local│                                
+                                │Delegate →( doc-writer subagent )                                   SUBAGENTS                 │                                
+                                │Delegate →( lint-scout subagent )                                   doc-writer done           │                                
+                                │Delegate →( test-runner subagent )                                  lint-scout active         │                                
+                                │Planning                                                            test-runner waiting       │                                
+                                │Main thread will handle import extraction while subagents clear                               │                                
+                                │lint/docs.                                                          RISK                      │                                
+                                │Waiting on test-runner for matrix test completion.                  writes local              │                                
+                                │Search ( "extractImports" src )                                     protected no              │                                
+                                │Read ( src/utils/parser.ts )                                        network off               │                                
+                                │Edit ( src/types.ts )                                               reversible yes            │                                
+                                │Run ( bun run typecheck )                                                                     │                                
+                                │                                                                    QUEUE                     │                                
+                                │queue pressure moderate · 2 followups waiting                       matrix tests ● running    │                                
+                                │                                                                    2 followups               │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │┌────────────────────────────────────────────────────────────────────────────────────────────┐│                                
+                                ││❯ Ask AutoCode                                                                              ││                                
+                                │└────────────────────────────────────────────────────────────────────────────────────────────┘│                                
+                                │Subagents are visible here; use the main thread to coordinate queue pressure and validation.  │                                
+                                │Ctrl+Enter send · Esc back · Ctrl+R history · Ctrl+Shift+P palette · Tab focus · / @ #        │                                
+                                └──────────────────────────────────────────────────────────────────────────────────────────────┘                                
+                                                                                                                                                                

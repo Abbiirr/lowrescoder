@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """End-to-end PTY smoke against the REAL Python backend + real LLM gateway.
 
-Proves the TUI→backend→gateway chain works for an ordinary turn without
-burning many tokens. A single trivial prompt (``/help`` — pure slash-command
-handler, no LLM round-trip needed) exercises the full subprocess + RPC path.
+This validates the current Rust TUI contract, not the deleted Go-era header:
 
-Exit code is 0 if ``AutoCode`` header renders, ``suggest`` status bar
-appears (backend connected), and no panic/traceback/RPC-error surfaces.
-Does NOT run the full benchmark suite — that is a separate multi-hour
-session per ``feedback_full_benchmark_runs.md``.
+- renderer-owned status lane appears (`tools | openrouter | suggest`)
+- non-LLM slash commands work against the live backend (`/help`, `/cost`)
+- a real chat turn completes against the configured gateway
+- command discovery remains usable while a real chat turn is in flight
+
+The harness keys off ANSI-stripped stream tokens, not a final-screen layout.
 """
 from __future__ import annotations
 
@@ -34,8 +34,10 @@ RUST_TUI = os.environ.get(
 )
 COLS, ROWS = 160, 50
 ANSI = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+KITTY_CSI_U = re.compile(rb"\x1b\[[?>=<0-9;:]*u")
 BUGS: list[dict] = []
 LOG: list[str] = []
+AUTH_ENV_VARS = ("LITELLM_API_KEY", "LITELLM_MASTER_KEY", "OPENROUTER_API_KEY")
 
 
 def log(msg: str) -> None:
@@ -53,7 +55,37 @@ def ok(label: str, detail: str = "") -> None:
 
 
 def strip(raw: bytes) -> str:
-    return ANSI.sub("", raw.decode("utf-8", errors="replace"))
+    cleaned = KITTY_CSI_U.sub(b"", raw)
+    text = ANSI.sub("", cleaned.decode("utf-8", errors="replace"))
+    return text.replace("\r", "\n")
+
+
+def ready_surface_visible(text: str) -> bool:
+    return (
+        "openrouter" in text
+        and "suggest" in text
+        and ("● ready" in text or "Describe a change, ask a question" in text)
+    )
+
+
+def command_palette_visible(text: str) -> bool:
+    return ("Slash Commands" in text or "Command Palette" in text) and any(
+        token in text for token in ("/help", "/model", "/cost", "/plan")
+    )
+
+
+def unhealthy_runtime(text: str) -> bool:
+    lowered = text.lower()
+    return any(
+        token in lowered
+        for token in (
+            "requests timed out",
+            "panic:",
+            "traceback",
+            "backend not responding",
+            "authentication error",
+        )
+    )
 
 
 def _winsize(fd: int) -> None:
@@ -135,64 +167,85 @@ def main() -> int:
         bug("E2E_binary_missing", f"not found at {RUST_TUI}", "CRITICAL")
         return 1
 
+    auth_source = next((name for name in AUTH_ENV_VARS if os.environ.get(name, "").strip()), None)
+    if auth_source:
+        ok("E2E_auth_env", f"using {auth_source}")
+    else:
+        bug(
+            "E2E_auth_env_missing",
+            "set one of LITELLM_API_KEY, LITELLM_MASTER_KEY, or OPENROUTER_API_KEY",
+            "CRITICAL",
+        )
+        return 1
+
     # Spawn real TUI (NO mock backend — real subprocess)
     fd, pid = spawn([RUST_TUI])
     try:
-        # Wait for header + backend-connected status bar
+        # Wait for ready surface + backend-connected status line
         raw = read_until(fd, quiet=2.0, maxwait=20.0, stop_on=b"suggest")
         text = strip(raw)
-        if "AutoCode" in text:
-            ok("E2E_header", "AutoCode header visible")
+        if ready_surface_visible(text):
+            ok("E2E_ready", "status line + prompt visible")
         else:
-            bug("E2E_header", f"no header after 20s: {text[:200]}", "CRITICAL")
+            bug("E2E_ready", f"no ready surface after 20s: {text[:300]}", "CRITICAL")
             return 1
-        if "suggest" in text or "planning" in text or "autonomous" in text:
-            ok("E2E_status", "status bar visible (backend connected)")
-        else:
-            bug("E2E_status", f"no status bar mode token: {text[:300]}", "HIGH")
 
         # Send a non-LLM slash command that exercises the JSON-RPC path
-        os.write(fd, b"/help\n")
+        os.write(fd, b"/help\r")
         time.sleep(0.4)
         raw = read_until(fd, quiet=2.0, maxwait=10.0)
         text = strip(raw)
-        if "panic:" in text:
-            bug("E2E_help_panic", f"panic on /help: {text[:300]}", "CRITICAL")
-        elif "Traceback" in text:
-            bug("E2E_help_traceback", f"traceback on /help: {text[:300]}", "CRITICAL")
+        if unhealthy_runtime(text):
+            bug("E2E_help_runtime", f"runtime failure on /help: {text[:300]}", "CRITICAL")
         elif any(w in text.lower() for w in ("help", "command", "/model", "/diff")):
             ok("E2E_help", "help response rendered")
         else:
             bug("E2E_help_empty", f"no visible help text: {text[:200]}", "HIGH")
 
         # Send /cost — another non-LLM command that exercises session store
-        os.write(fd, b"/cost\n")
+        os.write(fd, b"/cost\r")
         time.sleep(0.4)
         raw = read_until(fd, quiet=2.0, maxwait=10.0)
         text = strip(raw)
-        if "panic:" in text:
-            bug("E2E_cost_panic", f"panic on /cost: {text[:300]}", "CRITICAL")
+        if unhealthy_runtime(text):
+            bug("E2E_cost_runtime", f"runtime failure on /cost: {text[:300]}", "CRITICAL")
         elif any(w in text for w in ("Session", "tokens", "usage", "Messages")):
             ok("E2E_cost", "cost response rendered")
         else:
             bug("E2E_cost_empty", f"no visible cost text: {text[:200]}", "MEDIUM")
 
-        # Optional: send a tiny real chat turn — smallest possible LLM call
-        # to prove the full TUI→backend→gateway→LLM chain works.
-        log("\n[chat] sending tiny LLM turn 'say OK'")
-        os.write(fd, b"say OK\n")
-        time.sleep(0.5)
-        raw = read_until(fd, quiet=3.0, maxwait=45.0, stop_on=b"OK")
+        # Start a real chat turn, then immediately request the command palette.
+        # This verifies backend-owned command discovery remains usable while
+        # a real turn is in flight instead of wedging behind the chat request.
+        log("\n[chat] sending live turn and probing async command discovery")
+        os.write(fd, b"Count from 1 to 20, one number per line, then say OK.\r")
+        time.sleep(1.5)
+        os.write(fd, b"/")
+        time.sleep(0.2)
+        raw = read_until(fd, quiet=2.0, maxwait=15.0, stop_on=b"Slash Commands")
         text = strip(raw)
-        if "panic:" in text:
-            bug("E2E_chat_panic", f"panic on chat: {text[:300]}", "CRITICAL")
-        elif "Traceback" in text:
-            bug("E2E_chat_traceback", f"traceback on chat: {text[:300]}", "CRITICAL")
+        if unhealthy_runtime(text):
+            bug("E2E_async_palette_runtime", f"runtime failure during live-turn palette probe: {text[:400]}", "CRITICAL")
+        elif command_palette_visible(text):
+            ok("E2E_async_palette", "command palette loaded during live turn")
+        else:
+            bug(
+                "E2E_async_palette_missing",
+                f"palette did not render command entries during live turn: {text[:400]}",
+                "HIGH",
+            )
+
+        # Close the palette if it is open, then wait for the live turn to finish.
+        os.write(fd, b"\x1b")
+        time.sleep(0.2)
+        raw = read_until(fd, quiet=3.0, maxwait=60.0, stop_on=b"OK")
+        text = strip(raw)
+        if unhealthy_runtime(text):
+            bug("E2E_chat_runtime", f"runtime failure on live chat: {text[:400]}", "CRITICAL")
         elif "OK" in text or len(raw) > 500:
             ok("E2E_chat", f"chat turn completed ({len(raw)} bytes)")
         else:
-            # Not a hard bug — LLM might be slow/quiet; record as informational
-            log(f"  ℹ E2E_chat — no 'OK' token within 45s (raw {len(raw)}B)")
+            bug("E2E_chat_incomplete", f"no visible live-turn completion: {text[:400]}", "HIGH")
 
     finally:
         kill(pid)

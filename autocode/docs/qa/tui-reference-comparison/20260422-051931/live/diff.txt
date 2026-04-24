@@ -1,0 +1,50 @@
+                                                                                                                                                                
+                                ┌──────────────────────────────────────────────────────────────────────────────────────────────┐                                
+                                │tools | openrouter | suggest | ● diff | mock-ses | tasks:0 | agents:0 | q:0 | sandbox:local   │                                
+                                │files changed · 3                                                     RAW COMMAND             │                                
+                                │src/utils/parser.ts +2 −1                                             Edit(src/utils/         │                                
+                                │src/utils/resolver.ts +6 −2                                           resolver.ts)            │                                
+                                │src/types.ts +1 −0                                                    plan step 5             │                                
+                                │                                                                                              │                                
+                                │src/utils/resolver.ts (lines 108–128)                                 APPROVAL PATTERN        │                                
+                                │+6 −2 · 1 hunk                                                        ● This hunk             │                                
+                                │114 + if (!n || seen.has(n)) return null                              ○ This file             │                                
+                                │116 + const kind = n.kind ?? 'module'                                 ○ Whole patch           │                                
+                                │117 + if (kind === 'dyn') return null                                                         │                                
+                                │118 + const target = lookup(n.name)                                   RISK                    │                                
+                                │                                                                      parser only             │                                
+                                │                                                                      network off             │                                
+                                │                                                                      reversible yes          │                                
+                                │                                                                      [a]pprove               │                                
+                                │                                                                      [r]eject                │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │┌────────────────────────────────────────────────────────────────────────────────────────────┐│                                
+                                ││❯ Ask AutoCode                                                                              ││                                
+                                │└────────────────────────────────────────────────────────────────────────────────────────────┘│                                
+                                │Diff focus stays scoped to the selected file and hunk until you back out.                     │                                
+                                │↑↓ file · j/k hunk · a approve · r reject · D raw cmd · Esc back to transcript                │                                
+                                └──────────────────────────────────────────────────────────────────────────────────────────────┘                                
+                                                                                                                                                                

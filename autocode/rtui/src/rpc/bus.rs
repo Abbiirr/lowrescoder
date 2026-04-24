@@ -107,6 +107,12 @@ fn run_writer<W: Write>(
     while let Some(msg) = rpc_rx.blocking_recv() {
         match codec::encode(&msg) {
             Ok(json) => {
+                tracing::info!(
+                    method = msg.method.as_deref().unwrap_or("<response>"),
+                    request_id = msg.id.unwrap_or_default(),
+                    bytes = json.len(),
+                    "sending rpc message"
+                );
                 if let Err(err) = writer.write_all(json.as_bytes()) {
                     let _ = event_tx.send(Event::BackendWriteFailed(format!(
                         "backend RPC write failed: {}",

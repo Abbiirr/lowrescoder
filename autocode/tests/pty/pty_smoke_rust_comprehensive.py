@@ -27,7 +27,7 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-COLS, ROWS = 160, 50
+SIZES = [(80, 24), (120, 40), (200, 50)]
 _HERE = Path(__file__).resolve().parent
 RUST_TUI = os.environ.get(
     "AUTOCODE_TUI_BIN",
@@ -115,10 +115,10 @@ def ok(label: str, detail: str = "") -> None:
     log(f"  [PASS] {label}" + (f" — {detail}" if detail else ""))
 
 
-def spawn(argv: list[str], env_extra: dict[str, str]) -> tuple[int, int]:
+def spawn(argv: list[str], env_extra: dict[str, str], cols: int, rows: int) -> tuple[int, int]:
     master_fd, slave_fd = pty.openpty()
-    _set_winsize(master_fd, ROWS, COLS)
-    _set_winsize(slave_fd, ROWS, COLS)
+    _set_winsize(master_fd, rows, cols)
+    _set_winsize(slave_fd, rows, cols)
     pid = os.fork()
     if pid == 0:
         os.setsid()
@@ -127,8 +127,13 @@ def spawn(argv: list[str], env_extra: dict[str, str]) -> tuple[int, int]:
             os.dup2(slave_fd, fd)
         os.close(master_fd)
         os.close(slave_fd)
-        env = {**os.environ, "TERM": "xterm-256color",
-               "COLUMNS": str(COLS), "LINES": str(ROWS), **env_extra}
+        env = {
+            **os.environ,
+            "TERM": "xterm-256color",
+            "COLUMNS": str(cols),
+            "LINES": str(rows),
+            **env_extra,
+        }
         os.execve(argv[0], argv, env)
         sys.exit(1)
     os.close(slave_fd)
@@ -165,12 +170,118 @@ def wait_for_exit(pid: int, timeout: float = 5.0) -> int | None:
     return None
 
 
+def ready_surface_visible(text: str) -> bool:
+    if "● ready" not in text:
+        return False
+    return (
+        "Ready for the next task." in text
+        or "Describe a change, ask a question" in text
+        or ("Restore" in text and "recent checkpoint" in text)
+        or ("recent session" in text and "resume/fork" in text)
+        or "workspace preserved" in text
+        or "Ctrl+Enter send" in text
+    )
+
+
+def resize_surface_visible(text: str) -> bool:
+    return (
+        "┌" in text
+        and "┐" in text
+        and ("tools" in text or "suggest" in text or "ready" in text)
+    )
+
+
+def run_size_smoke(
+    cols: int,
+    rows: int,
+    *,
+    resize_targets: list[tuple[int, int]] | None = None,
+) -> None:
+    log(f"\n[SIZE] {cols}x{rows}")
+    fd, pid = spawn(
+        [RUST_TUI],
+        {"AUTOCODE_PYTHON_CMD": MOCK_BACKEND},
+        cols,
+        rows,
+    )
+
+    exit_code = None
+    try:
+        raw = read_until(fd, quiet=2.0, maxwait=10.0)
+        text = strip_ansi(raw)
+
+        if "tools" in text and "openrouter" in text and "suggest" in text:
+            ok(f"S1_on_status_{cols}x{rows}", "renderer-owned status line rendered correctly")
+        else:
+            bug(
+                f"S1_on_status_{cols}x{rows}: no renderer-owned status line after 10s",
+                f"Got ({len(raw)}B): {text[:500]}",
+                "HIGH",
+            )
+
+        if ready_surface_visible(text):
+            ok(f"S1_ready_surface_{cols}x{rows}", "composer + ready surface visible")
+        else:
+            bug(
+                f"S1_ready_surface_{cols}x{rows}: ready surface missing",
+                text[:500],
+                "HIGH",
+            )
+
+        if "panic" in text.lower() or "thread ''" in text:
+            bug(f"S1_no_panic_{cols}x{rows}: Rust panic detected", text[:300], "CRITICAL")
+        else:
+            ok(f"S1_no_panic_{cols}x{rows}", "no panic in output")
+
+        for target_cols, target_rows in resize_targets or []:
+            _set_winsize(fd, target_rows, target_cols)
+            os.kill(pid, signal.SIGWINCH)
+            time.sleep(0.2)
+            resized_raw = read_until(fd, quiet=1.5, maxwait=8.0)
+            resized_text = strip_ansi(resized_raw)
+            label = f"S1_resize_{cols}x{rows}_to_{target_cols}x{target_rows}"
+            if "panic" in resized_text.lower() or "thread ''" in resized_text:
+                bug(label, resized_text[:300], "CRITICAL")
+            elif ready_surface_visible(resized_text):
+                ok(label, "resize redraw preserved the ready surface")
+            else:
+                send(fd, b"\x0c", delay=0.2)  # Ctrl+L forces a full redraw
+                forced_raw = read_until(fd, quiet=1.5, maxwait=8.0)
+                forced_text = strip_ansi(forced_raw)
+                if ready_surface_visible(forced_text):
+                    ok(label, "resize remained usable after forced redraw")
+                elif resize_surface_visible(resized_text) or resize_surface_visible(forced_text):
+                    ok(label, "resize preserved shell/status redraw and process usability")
+                else:
+                    bug(label, (resized_text + "\n---FORCED REDRAW---\n" + forced_text)[:500], "HIGH")
+
+        send(fd, b"/exit\r", delay=0.5)
+        exit_code = wait_for_exit(pid, timeout=5.0)
+        pid = None
+
+        if exit_code is None:
+            bug(f"S2_clean_exit_{cols}x{rows}: process did not exit within 5s after /exit", "", "HIGH")
+        elif exit_code == 0:
+            ok(f"S2_clean_exit_{cols}x{rows}", "exited with code 0")
+        else:
+            bug(f"S2_clean_exit_{cols}x{rows}: exit code {exit_code} (expected 0)", "", "HIGH")
+
+    finally:
+        if pid is not None:
+            kill_proc(pid, fd)
+        else:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+
+
 def run_smoke() -> None:
     log("=" * 70)
-    log("PTY Smoke Test — Rust TUI (M3/M7/M8/M9 coverage)")
+    log("PTY Smoke Test — Rust TUI (multi-size + resize coverage)")
     log(f"Rust TUI binary: {RUST_TUI}")
     log(f"Mock backend:    {MOCK_BACKEND}")
-    log(f"Terminal size:   {COLS}x{ROWS}")
+    log(f"Terminal sizes:  {', '.join(f'{c}x{r}' for c, r in SIZES)}")
     log("=" * 70)
 
     if not Path(RUST_TUI).is_file():
@@ -178,49 +289,9 @@ def run_smoke() -> None:
         log("  Build with: cargo build --release --manifest-path autocode/rtui/Cargo.toml")
         sys.exit(2)
 
-    fd, pid = spawn(
-        [RUST_TUI],
-        {"AUTOCODE_PYTHON_CMD": MOCK_BACKEND},
-    )
-
-    exit_code = None
-    try:
-        # S1: Backend spawn + on_status
-        log("\n[S1] Backend spawn + on_status (renderer-owned check)")
-        raw = read_until(fd, quiet=2.0, maxwait=10.0)
-        text = strip_ansi(raw)
-
-        if "tools" in text and "openrouter" in text and "suggest" in text:
-            ok("S1_on_status", "renderer-owned status line rendered correctly")
-        else:
-            bug("S1_on_status: no renderer-owned status line after 10s",
-                f"Got ({len(raw)}B): {text[:500]}", "HIGH")
-
-        if "panic" in text.lower() or "thread ''" in text:
-            bug("S1_no_panic: Rust panic detected", text[:300], "CRITICAL")
-        else:
-            ok("S1_no_panic", "no panic in output")
-
-        # S2: /exit clean exit
-        log("\n[S2] /exit clean exit")
-        send(fd, b"/exit\r", delay=0.5)
-        exit_code = wait_for_exit(pid, timeout=5.0)
-        pid = None  # don't kill in finally
-
-        if exit_code is None:
-            bug("S2_clean_exit: process did not exit within 5s after /exit", "", "HIGH")
-        elif exit_code == 0:
-            ok("S2_clean_exit", "exited with code 0")
-        else:
-            bug(f"S2_clean_exit: exit code {exit_code} (expected 0)", "", "HIGH")
-
-    finally:
-        if pid is not None:
-            kill_proc(pid, fd)
-        try:
-            os.close(fd)
-        except OSError:
-            pass
+    for cols, rows in SIZES:
+        resize_targets = [(80, 24), (200, 50)] if (cols, rows) == (120, 40) else None
+        run_size_smoke(cols, rows, resize_targets=resize_targets)
 
     # Report
     log("\n" + "=" * 70)
@@ -237,9 +308,10 @@ def run_smoke() -> None:
     ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     artifact = ARTIFACT_DIR / f"{ts}-rust-m1-pty-smoke.md"
     with open(artifact, "w") as f:
-        f.write("# PTY Smoke Test — Rust TUI (M3/M7/M8/M9 coverage)\n\n")
+        f.write("# PTY Smoke Test — Rust TUI (multi-size + resize coverage)\n\n")
         f.write(f"**Date:** {datetime.now(UTC).isoformat()}  \n")
         f.write(f"**Rust TUI binary:** `{RUST_TUI}`  \n")
+        f.write(f"**Sizes:** `{', '.join(f'{c}x{r}' for c, r in SIZES)}`  \n")
         f.write(f"**Bugs found:** {len(BUGS)}  \n\n")
         if BUGS:
             f.write("| # | Severity | Label | Detail |\n")

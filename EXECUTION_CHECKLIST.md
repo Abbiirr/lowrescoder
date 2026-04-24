@@ -1,10 +1,15 @@
 # Execution Checklist
 
-Last updated: 2026-04-21 (Stabilization Sprint complete. Stages 0A, 1, 2, 3A, 3B, and 4 are closed; Stage 0B remains intentionally skipped.)
+Last updated: 2026-04-23 (Stabilization Sprint complete. Stages 0A, 1, 2, 3A, 3B, and 4 are closed; Stage 0B remains intentionally skipped.)
 Owner: Codex (Stabilization Sprint, Entry 1266)
 Purpose: live status checklist for source-of-truth work, active next-frontier research-to-implementation items, and any benchmark/harness follow-up. Re-check this file every 10 minutes during active work.
 
 Detailed implementation map:
+- **`docs/tui-testing/tui_implementation_plan.md`** — active next-slice execution plan for HR-5 follow-through
+- **`docs/tui-testing/tui_implementation_todo.md`** — active next-slice checklist for the follow-through program
+- **`docs/plan/backend-tightening-refinement-plan.md`** — user-directed backend-first tranche before more frontend binding
+- `docs/plan/hr5-phase-a-benchmark-latency-plan.md` — closed Phase A execution record for HR-5(c)
+- `docs/plan/hr5-phase-a-benchmark-latency-checklist.md` — closed Phase A checklist and exit-gate record
 - **`docs/plan/stabilization-and-parity-plan.md`** — APPROVED 2026-04-20; primary source of truth for the sprint
 - `PLAN.md` — long-form roadmap; stabilization sits ahead of everything else
 - `bugs/codex-tui-issue-inventory.md` — 60 items + §S1–§S12 adversarial sweeps
@@ -25,7 +30,8 @@ Execution order (2026-04-20, Stabilization Sprint active):
 5. **Stabilization Stage 3B COMPLETE** — inspection panels + queue visibility (plan §7.2). Artifact: `autocode/docs/qa/test-results/20260421-103256-stage3b-inspection-queue-verification.md`. Closed §11, §34, §37, §39.
 6. **Stabilization Stage 4 COMPLETE** — canonical-name-only shim removal + final stabilization gate (plan §8). Artifact: `autocode/docs/qa/test-results/20260421-104354-stabilization-verification.md`.
 7. **§1h Rust TUI Migration (engineering gate — COMPLETE 2026-04-19)** — M1–M11 done. Historical reference only; stabilization supersedes as the active slice.
-8. Section 1g TUI Testing Strategy — committed (`a9cc315`); canonical guide at `docs/tui-testing/tui-testing-strategy.md`; Slice 2 themed renderer deferred (user-gated).
+8. Section 1g TUI Testing Strategy — committed (`a9cc315`); canonical guide at `docs/tui-testing/tui-testing-strategy.md`; Slice 2 themed renderer deferred (user-gated). **TUI runtime + parity program active under HR-5:** Stage 0 harness-signal fix is COMPLETE via `autocode/docs/qa/test-results/20260421-160214-tui-stage0-predicate-verification.md`. Stage 1 reachable-scene promotion is COMPLETE via `autocode/docs/qa/test-results/20260421-172147-tui-stage1-reference-promotion.md` as the historical promotion slice. Stages 2 and 3 are now COMPLETE via `autocode/docs/qa/test-results/20260421-195645-tui-stage2-stage3-implementation.md`: dedicated live surfaces and deterministic triggers now exist for `multi`, `plan`, `review`, `cc`, `restore`, `diff`, `grep`, and `escalation`, and all 14 scenes are `direct` in `autocode/docs/qa/test-results/20260422-114357-tui-14-scene-capture-matrix.md`. The latest runtime-correctness slice is verified in `autocode/docs/qa/test-results/20260422-114723-tui-runtime-gateway-pass.md`, with the authoritative screenshot baseline in `autocode/docs/qa/test-results/20260422-114357-tui-reference-gap.md`. The benchmark-owned Rust TUI PTY runner is now implemented, instrumented, and canary-verified on the real gateway via `docs/qa/test-results/20260423-040320-B13-PROXY-autocode.json` and `docs/qa/test-results/20260423-100635-tui-benchmark-latency-verification.md`. **Active work is now Phase B under HR-5(a): `/cc` real-data binding.** The active next-slice source of truth is `docs/tui-testing/tui_implementation_plan.md` plus `docs/tui-testing/tui_implementation_todo.md`; the closed Phase A record remains in `docs/plan/hr5-phase-a-benchmark-latency-plan.md` and `docs/plan/hr5-phase-a-benchmark-latency-checklist.md`.
+   - **User-directed temporary override (2026-04-24):** before more frontend binding, execute the backend-first tranche in `docs/plan/backend-tightening-refinement-plan.md`, then return to `/cc` real-data binding.
 9. Section 1f Milestone C/D/E/F — **FROZEN** on Go; gates absorbed into Rust-M5 through Rust-M10.
 10. Section 1 large-repo validation / retrieval contract (next backlog item after stabilization).
 11. Section 2 external-harness event normalization + deeper adapters (post-stabilization backlog).

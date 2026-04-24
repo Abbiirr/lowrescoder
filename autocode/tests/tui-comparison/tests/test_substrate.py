@@ -160,7 +160,7 @@ def test_turn_predicates_na_on_startup_scenario():
         b"AutoCode \xe2\x94\x80 Edge-native AI coding assistant\r\n"
         b"\r\n"
         + b"\r\n" * 30
-        + b"\xe2\x9d\xaf Ask AutoCode\xe2\x80\xa6\r\n"
+        + b"\xe2\x9d\xaf \r\n"
         b"suggest master\r\n"
     )
     report = run_predicates(synthetic, scenario="startup", rows=50, cols=160)
@@ -191,7 +191,7 @@ def test_turn_predicates_pass_on_complete_turn_fixture():
         b"\xe2\xa0\x99 Thinking\xe2\x80\xa6 (1s)\r\n"                # ⠙ Thinking... (1s)
         b"The answer to your question is that autocode is an AI coding assistant.\r\n"  # response
         b"\r\n"
-        b"\xe2\x9d\xaf Ask AutoCode\xe2\x80\xa6\r\n"                # composer regained
+        b"\xe2\x9d\xaf \r\n"                                        # composer regained
         b"tools openrouter suggest mock-session-001\r\n"
     )
     report = run_predicates(synthetic, scenario="first-prompt-text", rows=50, cols=160)
@@ -251,6 +251,58 @@ def test_basic_turn_accepts_rust_minimal_prompt_after_turn():
     )
 
 
+def test_basic_turn_accepts_composer_above_footer_rows():
+    """Helper/footer rows below the composer must not hide regained input."""
+    synthetic = (
+        b"\x1b[2J\x1b[H"
+        b"AutoCode\r\n"
+        b"> hello\r\n"
+        b"\xe2\xa0\x99 Thinking\xe2\x80\xa6\r\n"
+        b"Response content line one has substantial text here to pass response pred\r\n"
+        b"\r\n"
+        b"\xe2\x9d\xaf \r\n"
+        b"ctrl+j newline  ctrl+e editor\r\n"
+        b"tools openrouter suggest mock-session-001\r\n"
+    )
+    report = run_predicates(synthetic, scenario="first-prompt-text", rows=50, cols=160)
+
+    basic = _find_hard(report, "basic_turn_returns_to_usable_input")
+    assert basic.passed, (
+        "basic_turn should PASS when the composer is still within the bottom "
+        f"visible window above helper/footer rows; detail={basic.detail}"
+    )
+
+
+def test_basic_turn_accepts_bordered_shell_composer_after_turn():
+    """Framed-shell chrome must not hide regained input from the detector."""
+    synthetic = (
+        b"\x1b[2J\x1b[H"
+        b"\xe2\x94\x8c AutoCode \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\r\n"
+        b"\xe2\x94\x82tools | openrouter | suggest | \xe2\x97\x8f ready\r\n"
+        b"\xe2\x94\x82\xe2\x94\x8c Transcript \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\r\n"
+        b"\xe2\x94\x82\xe2\x94\x82> hello\r\n"
+        b"\xe2\x94\x82\xe2\x94\x82Hello from the mock backend!\r\n"
+        b"\xe2\x94\x82\xe2\x94\x82\r\n"
+        b"\xe2\x94\x82\xe2\x94\x82\r\n"
+        b"\xe2\x94\x82\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\r\n"
+        b"\xe2\x94\x82\xe2\x94\x8c Composer \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\r\n"
+        b"\xe2\x94\x82\xe2\x94\x82\xe2\x9d\xaf \r\n"
+        b"\xe2\x94\x82\xe2\x94\x82\r\n"
+        b"\xe2\x94\x82\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\r\n"
+        b"\xe2\x94\x82\xe2\x94\x8c Keys \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\r\n"
+        b"\xe2\x94\x82\xe2\x94\x82Ctrl+Enter send \xc2\xb7 Esc interrupt\r\n"
+        b"\xe2\x94\x82\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\r\n"
+        b"\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\r\n"
+    )
+    report = run_predicates(synthetic, scenario="first-prompt-text", rows=50, cols=160)
+
+    basic = _find_hard(report, "basic_turn_returns_to_usable_input")
+    assert basic.passed, (
+        "basic_turn should PASS when the composer is inside a bordered shell "
+        f"above the footer pane; detail={basic.detail}"
+    )
+
+
 def test_spinner_observed_fails_when_no_activity_seen():
     """spinner_observed_during_turn must FAIL on a turn with zero spinner evidence."""
     synthetic = (
@@ -258,13 +310,32 @@ def test_spinner_observed_fails_when_no_activity_seen():
         b"AutoCode\r\n"
         b"> hello\r\n"
         b"Response content without any spinner chars or verb markers at all.\r\n"
-        b"\xe2\x9d\xaf Ask AutoCode\xe2\x80\xa6\r\n"
+        b"\xe2\x9d\xaf \r\n"
     )
     report = run_predicates(synthetic, scenario="first-prompt-text", rows=50, cols=160)
 
     spin = _find_hard(report, "spinner_observed_during_turn")
     assert not spin.passed, (
         "spinner should FAIL when no braille chars or verb markers present; "
+        f"detail={spin.detail}"
+    )
+
+
+def test_spinner_observed_passes_on_raw_working_marker_even_if_final_frame_is_ready():
+    """Raw in-flight `working` evidence should count for turn scenarios."""
+    synthetic = (
+        b"\x1b[2J\x1b[H"
+        b"AutoCode\r\n"
+        b"> hello\r\n"
+        b"\x1b[3;65H\x1b[1m\x1b[;m\xe2\x97\x8f working\x1b[0m\r\n"
+        b"Hello from the mock backend!\r\n"
+        b"\xe2\x9d\xaf \r\n"
+    )
+    report = run_predicates(synthetic, scenario="first-prompt-text", rows=50, cols=160)
+
+    spin = _find_hard(report, "spinner_observed_during_turn")
+    assert spin.passed, (
+        "spinner should PASS when raw bytes contain an in-flight working marker; "
         f"detail={spin.detail}"
     )
 
@@ -281,7 +352,7 @@ def test_response_followed_generalized_prompt_detection_passes_on_non_hello_body
         b"> __WARNING__ deliberate test\r\n"                          # non-"hello" prompt body
         b"\xe2\xa0\x99 Thinking\xe2\x80\xa6 (1s)\r\n"
         b"Warning emitted and the response contains enough real text.\r\n"
-        b"\xe2\x9d\xaf Ask AutoCode\xe2\x80\xa6\r\n"
+        b"\xe2\x9d\xaf \r\n"
     )
     report = run_predicates(synthetic, scenario="error-state", rows=50, cols=160)
     resp = _find_hard(report, "response_followed_user_prompt")
@@ -289,15 +360,37 @@ def test_response_followed_generalized_prompt_detection_passes_on_non_hello_body
     assert "substantial content after prompt" in resp.detail
 
 
+def test_response_followed_accepts_bordered_prompt_echo_line():
+    """Border glyphs before the prompt echo must not hide a real user turn."""
+    synthetic = (
+        b"\x1b[2J\x1b[H"
+        b"\xe2\x94\x8c AutoCode \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\r\n"
+        b"\xe2\x94\x82\xe2\x94\x8c Transcript \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\r\n"
+        b"\xe2\x94\x82\xe2\x94\x82> hello\r\n"
+        b"\xe2\x94\x82\xe2\x94\x82Hello from the mock backend with enough real text to count.\r\n"
+        b"\xe2\x94\x82\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\r\n"
+        b"\xe2\x94\x82\xe2\x94\x8c Composer \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\r\n"
+        b"\xe2\x94\x82\xe2\x94\x82\xe2\x9d\xaf \r\n"
+        b"\xe2\x94\x82\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\r\n"
+    )
+    report = run_predicates(synthetic, scenario="first-prompt-text", rows=50, cols=160)
+
+    resp = _find_hard(report, "response_followed_user_prompt")
+    assert resp.passed, (
+        "response should PASS when the prompt echo lives inside bordered "
+        f"transcript chrome; detail={resp.detail}"
+    )
+
+
 def test_response_followed_ignores_composer_placeholder_as_prompt_line():
-    """The `❯ Ask AutoCode…` composer placeholder must NOT be mistaken
-    for a user-prompt echo. Without a real prompt body the predicate
-    must report "no user-prompt echo visible".
+    """The bare composer prompt must NOT be mistaken for a user-prompt
+    echo. Without a real prompt body the predicate must report
+    "no user-prompt echo visible".
     """
     synthetic = (
         b"\x1b[2J\x1b[H"
         b"AutoCode\r\n"
-        b"\xe2\x9d\xaf Ask AutoCode\xe2\x80\xa6\r\n"                 # composer placeholder
+        b"\xe2\x9d\xaf \r\n"                                         # composer placeholder
         b"some other long line of output that could otherwise trick the check\r\n"
     )
     report = run_predicates(synthetic, scenario="error-state", rows=50, cols=160)
@@ -314,7 +407,7 @@ def test_response_followed_fails_when_only_prompt_echo():
         b"> hello\r\n"
         b"\xe2\xa0\x99 Thinking\xe2\x80\xa6\r\n"
         # No substantive content after the prompt — response never rendered
-        b"\xe2\x9d\xaf Ask AutoCode\xe2\x80\xa6\r\n"
+        b"\xe2\x9d\xaf \r\n"
     )
     report = run_predicates(synthetic, scenario="first-prompt-text", rows=50, cols=160)
 
@@ -346,7 +439,7 @@ def test_picker_filter_passes_when_filter_header_visible():
         b"Select a model:  [filter: cod]\r\n"
         b"  coding         (tools, openrouter)\r\n"
         b"  coding_cloud   (cloud)\r\n"
-        b"\xe2\x9d\xaf Ask AutoCode\xe2\x80\xa6\r\n"
+        b"\xe2\x9d\xaf \r\n"
     )
     report = run_predicates(synthetic, scenario="model-picker", rows=50, cols=160)
     pred = _find_hard(report, "picker_filter_accepts_input")
@@ -361,7 +454,7 @@ def test_picker_filter_fails_when_picker_never_opened():
     synthetic = (
         b"\x1b[2J\x1b[H"
         b"AutoCode \xe2\x94\x80 Edge-native AI coding assistant\r\n"
-        b"\xe2\x9d\xaf Ask AutoCode\xe2\x80\xa6\r\n"
+        b"\xe2\x9d\xaf \r\n"
     )
     report = run_predicates(synthetic, scenario="model-picker", rows=50, cols=160)
     pred = _find_hard(report, "picker_filter_accepts_input")
@@ -382,7 +475,7 @@ def test_composer_present_false_positive_on_picker_row_fixed():
         b"Select a model:  [filter: cod]\r\n"
         b"  \xe2\x9d\xaf coding\r\n"                                 # ❯ coding (picker row)
         b"  Type to filter \xc2\xb7 Up/Down select \xc2\xb7 Enter apply\r\n"
-        # NO composer marker — Ask AutoCode / ❯ Ask / > Ask absent
+        # NO composer marker — the picker row alone must not satisfy it
     )
 
     # Evaluate as `first-prompt-text` (non-picker). Should FAIL because
@@ -416,7 +509,7 @@ def test_picker_filter_fails_when_picker_open_but_no_filter():
         b"  coding         (tools, openrouter)\r\n"
         b"  fast           (fast, cheap)\r\n"
         # No [filter:] header despite user having typed chars
-        b"\xe2\x9d\xaf Ask AutoCode\xe2\x80\xa6\r\n"
+        b"\xe2\x9d\xaf \r\n"
     )
     report = run_predicates(synthetic, scenario="model-picker", rows=50, cols=160)
     pred = _find_hard(report, "picker_filter_accepts_input")
@@ -549,7 +642,7 @@ def test_warnings_dim_banner_passes_on_deliberate_mid_session_dim_marker():
         b"> __WARNING__ deliberate test\r\n"
         b"\xe2\x9a\xa0 [backend] WARNING: deliberate mid-session warning from mock backend\r\n"
         b"Warning emitted.\r\n"
-        b"\xe2\x9d\xaf Ask AutoCode\xe2\x80\xa6\r\n"
+        b"\xe2\x9d\xaf \r\n"
     )
     report = run_predicates(synthetic, scenario="error-state", rows=50, cols=160)
     pred = _find_hard(report, "warnings_render_dim_not_red_banner")
@@ -585,7 +678,7 @@ def test_warnings_dim_banner_fails_on_startup_only_warning():
         # Only the startup warning from mock_backend.py's initial print
         b"\xe2\x9a\xa0 [backend] WARNING: mock backend starting "
         b"\xe2\x80\x94 this is a test warning\r\n"
-        b"\xe2\x9d\xaf Ask AutoCode\xe2\x80\xa6\r\n"
+        b"\xe2\x9d\xaf \r\n"
     )
     report = run_predicates(synthetic, scenario="error-state", rows=50, cols=160)
     pred = _find_hard(report, "warnings_render_dim_not_red_banner")
@@ -630,7 +723,7 @@ def test_startup_timeout_passes_when_banner_visible():
         b"AutoCode \xe2\x94\x80 Edge-native AI coding assistant\r\n"
         b"Error: Backend not connected (startup timeout). "
         b"Commands requiring the backend will fail.\r\n"
-        b"\xe2\x9d\xaf Ask AutoCode\xe2\x80\xa6\r\n"
+        b"\xe2\x9d\xaf \r\n"
     )
     report = run_predicates(synthetic, scenario="orphaned-startup", rows=50, cols=160)
     pred = _find_hard(report, "startup_timeout_fires_when_backend_absent")

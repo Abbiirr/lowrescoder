@@ -1,4 +1,4 @@
-"""JSON-RPC backend server for the Go Bubble Tea TUI frontend.
+"""JSON-RPC backend server for the Rust TUI and compatible frontend clients.
 
 Communicates via newline-delimited JSON-RPC 2.0 over stdin/stdout.
 Mirrors the InlineApp agent loop but exposes it via RPC instead of a
@@ -8,10 +8,12 @@ prompt_toolkit UI.
 from __future__ import annotations
 
 import asyncio
-import json
+import contextlib
 import logging
+import os
 import sys
 import time
+from collections.abc import Coroutine
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +26,14 @@ from autocode.agent.subagent import LLMScheduler, SubagentManager
 from autocode.agent.subagent_tools import register_subagent_tools
 from autocode.agent.task_tools import register_task_tools
 from autocode.agent.tools import ToolRegistry, create_default_registry
+from autocode.app.commands import CommandRouter, create_default_router
+from autocode.backend import chat as backend_chat
 from autocode.backend import schema as rpc_schema
+from autocode.backend import services as backend_services
+from autocode.backend.dispatcher import dispatch_request
+from autocode.backend.stdio_host import StdioJsonRpcHost
+from autocode.backend.tcp_host import TcpJsonRpcHost
+from autocode.backend.transport import BackendTransport, PendingRequestBroker, StdoutTransport
 from autocode.config import AutoCodeConfig, load_config
 from autocode.core.blob_store import BlobStore
 from autocode.core.logging import log_event, setup_session_logging
@@ -33,7 +42,6 @@ from autocode.session.checkpoint_store import CheckpointStore
 from autocode.session.episode_store import EpisodeStore
 from autocode.session.store import SessionStore
 from autocode.session.task_store import TaskStore
-from autocode.tui.commands import CommandRouter, create_default_router
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +52,7 @@ _PYTHON_REQUEST_ID_START = 1000
 class _ServerAppContext:
     """Minimal adapter implementing the AppContext protocol for slash commands.
 
-    Routes UI operations to JSON-RPC notifications so the Go frontend can
+    Routes UI operations to JSON-RPC notifications so the frontend can
     display them.
     """
 
@@ -123,7 +131,7 @@ class _ServerAppContext:
         return [m.content for m in messages if m.role == "assistant"]
 
     def copy_to_clipboard(self, text: str) -> bool:
-        from autocode.tui.commands import _copy_to_clipboard
+        from autocode.app.commands import _copy_to_clipboard
 
         return _copy_to_clipboard(text)
 
@@ -157,7 +165,7 @@ class _ServerAppContext:
 
 
 class BackendServer:
-    """JSON-RPC server that manages the agent loop and communicates with Go TUI."""
+    """JSON-RPC server that manages the agent loop and communicates with the frontend."""
 
     def __init__(
         self,
@@ -217,10 +225,27 @@ class BackendServer:
         self._session_stats: Any | None = None
 
         # Wire protocol state
-        self._next_request_id: int = _PYTHON_REQUEST_ID_START
-        self._pending_futures: dict[int, asyncio.Future[dict[str, Any]]] = {}
+        self._request_broker = PendingRequestBroker(next_request_id=_PYTHON_REQUEST_ID_START)
         self._running: bool = True
-        self._writer: asyncio.StreamWriter | None = None
+        self._transport: BackendTransport | None = StdoutTransport()
+
+    @property
+    def _next_request_id(self) -> int:
+        return self._request_broker.next_request_id
+
+    @_next_request_id.setter
+    def _next_request_id(self, value: int) -> None:
+        self._request_broker.next_request_id = value
+
+    @property
+    def _pending_futures(self) -> dict[int, asyncio.Future[dict[str, Any]]]:
+        return self._request_broker.pending_futures
+
+    def set_transport(self, transport: BackendTransport | None) -> None:
+        """Attach or detach the active frontend transport."""
+        if transport is None and self._transport is not None:
+            self._request_broker.cancel_all("backend transport detached")
+        self._transport = transport
 
     # --- Wire protocol ---
 
@@ -249,7 +274,7 @@ class BackendServer:
         return message
 
     def emit_notification(self, method: str, params: dict[str, Any]) -> None:
-        """Send a JSON-RPC notification (no ID) to the Go frontend."""
+        """Send a JSON-RPC notification (no ID) to the frontend."""
         msg = {"jsonrpc": "2.0", "method": method, "params": params}
         self._write_message(msg)
 
@@ -259,32 +284,14 @@ class BackendServer:
         self._write_message(msg)
 
     async def emit_request(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
-        """Send a JSON-RPC request to the Go frontend and wait for the response."""
-        request_id = self._next_request_id
-        self._next_request_id += 1
-
-        loop = asyncio.get_running_loop()
-        future: asyncio.Future[dict[str, Any]] = loop.create_future()
-        self._pending_futures[request_id] = future
-
-        msg = {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "method": method,
-            "params": params,
-        }
-        self._write_message(msg)
-
-        try:
-            return await future
-        finally:
-            self._pending_futures.pop(request_id, None)
+        """Send a JSON-RPC request to the frontend and wait for the response."""
+        return await self._request_broker.emit_request(self._transport, method, params)
 
     def _write_message(self, msg: dict[str, Any]) -> None:
-        """Write a JSON message to stdout (newline-delimited)."""
-        line = json.dumps(msg, separators=(",", ":")) + "\n"
-        sys.stdout.write(line)
-        sys.stdout.flush()
+        """Write one JSON-RPC message through the active transport."""
+        if self._transport is None:
+            raise RuntimeError("No backend transport attached")
+        self._transport.send_message(msg)
 
     def _emit_status(self) -> None:
         """Emit current status to the frontend."""
@@ -302,7 +309,7 @@ class BackendServer:
         )
 
     def _emit_cost_update(self) -> None:
-        """Emit per-turn cost/token update to the Go TUI status bar.
+        """Emit per-turn cost/token update to the frontend status bar.
 
         This is a per-turn notification emitted alongside ``on_done``.
         Honest contract: this is *not* live-streaming cost — it is a
@@ -322,6 +329,49 @@ class BackendServer:
                 "cost": "0.0000",
                 "tokens_in": self._total_tokens_in,
                 "tokens_out": self._total_tokens_out,
+            },
+        )
+
+    @staticmethod
+    def _env_flag_enabled(name: str) -> bool:
+        value = os.environ.get(name, "").strip().lower()
+        return value in {"1", "true", "yes", "on"}
+
+    def _force_l4_routing(self) -> bool:
+        return self._env_flag_enabled("AUTOCODE_FORCE_L4")
+
+    def _select_chat_layer(self, message: str) -> tuple[int, str, bool]:
+        if self._force_l4_routing():
+            return 4, "forced_l4", True
+
+        try:
+            from autocode.core.router import RequestRouter
+            from autocode.core.types import RequestType
+        except ImportError:
+            return 4, "router_unavailable", False
+
+        router = RequestRouter(self.config.layer1)
+        request_type = router.classify(message)
+
+        if self.config.layer1.enabled and request_type == RequestType.DETERMINISTIC_QUERY:
+            return 1, request_type.value, False
+
+        if self.config.layer2.enabled and self._context_assembler:
+            if request_type == RequestType.SEMANTIC_SEARCH:
+                return 2, request_type.value, False
+
+        if self.config.layer3.enabled and self._l3_provider:
+            if request_type == RequestType.SIMPLE_EDIT:
+                return 3, request_type.value, False
+
+        return 4, request_type.value, False
+
+    def _emit_chat_ack(self, request_id: int) -> None:
+        self.emit_notification(
+            rpc_schema.METHOD_ON_CHAT_ACK,
+            {
+                "request_id": request_id,
+                "session_id": self.session_id,
             },
         )
 
@@ -455,79 +505,23 @@ class BackendServer:
 
     def _on_chunk(self, text: str) -> None:
         """Stream token callback -> notification on_token."""
-        self.emit_notification("on_token", {"text": text})
+        backend_chat.on_chunk(self, text)
 
     def _on_thinking_chunk(self, text: str) -> None:
         """Thinking token callback -> notification on_thinking."""
-        self.emit_notification("on_thinking", {"text": text})
+        backend_chat.on_thinking_chunk(self, text)
 
     def _on_tool_call(self, tool_name: str, status: str, result: str = "") -> None:
         """Tool call status callback -> notification on_tool_call."""
-        self.emit_notification(
-            "on_tool_call",
-            {
-                "name": tool_name,
-                "status": status,
-                "result": result,
-            },
-        )
-        # Track edits
-        if status in ("completed", "success") and tool_name in ("write_file", "edit_file"):
-            self._edit_count += 1
-
-        # BUG-20: emit task state on task-related tool completions
-        task_tools = {"create_task", "update_task", "add_task_dependency", "list_tasks"}
-        if tool_name in task_tools and status in ("completed", "success"):
-            self._emit_task_state()
+        backend_chat.on_tool_call(self, tool_name, status, result)
 
     def _emit_task_state(self) -> None:
         """Emit on_task_state notification with tasks and subagents."""
-        tasks: list[dict[str, Any]] = []
-        if self._task_store:
-            for t in self._task_store.list_tasks():
-                tasks.append(t.model_dump(mode="json"))
-        subagents: list[dict[str, Any]] = []
-        if self._subagent_manager:
-            subagents = self._subagent_manager.list_all()
-        self.emit_notification(
-            rpc_schema.METHOD_ON_TASK_STATE,
-            {
-                "tasks": tasks,
-                "subagents": subagents,
-            },
-        )
+        backend_chat.emit_task_state(self)
 
     async def _approval_callback(self, tool_name: str, arguments: dict[str, Any]) -> bool:
         """Approval callback -> request on_tool_request, waits for Go response."""
-        # Check session-level auto-approve
-        if tool_name in self._session_approved_tools:
-            self._on_tool_call(tool_name, "pending", "(auto-approved)")
-            if tool_name == "run_command" and self._approval_manager:
-                self._approval_manager.enable_shell()
-            return True
-
-        args_str = json.dumps(arguments, indent=2)
-        try:
-            result = await self.emit_request(
-                rpc_schema.METHOD_ON_TOOL_REQUEST,
-                {
-                    "tool": tool_name,
-                    "args": args_str,
-                },
-            )
-        except asyncio.CancelledError:
-            return False
-
-        approved = result.get("approved", False)
-        session_approve = result.get("session_approve", False)
-
-        if approved and session_approve:
-            self._session_approved_tools.add(tool_name)
-
-        if approved and tool_name == "run_command" and self._approval_manager:
-            self._approval_manager.enable_shell()
-
-        return approved  # type: ignore[no-any-return]
+        return await backend_chat.approval_callback(self, tool_name, arguments)
 
     async def _ask_user_callback(
         self,
@@ -536,19 +530,7 @@ class BackendServer:
         allow_text: bool,
     ) -> str:
         """Ask-user callback -> request on_ask_user, waits for Go response."""
-        try:
-            result = await self.emit_request(
-                rpc_schema.METHOD_ON_ASK_USER,
-                {
-                    "question": question,
-                    "options": options,
-                    "allow_text": allow_text,
-                },
-            )
-        except asyncio.CancelledError:
-            return options[0] if options else ""
-
-        return result.get("answer", "")  # type: ignore[no-any-return]
+        return await backend_chat.ask_user_callback(self, question, options, allow_text)
 
     # --- Lifecycle helpers ---
 
@@ -557,6 +539,17 @@ class BackendServer:
 
         Called on session transitions and shutdown to prevent orphan tasks.
         """
+        current_task = asyncio.current_task()
+
+        if self._agent_task and self._agent_task is not current_task:
+            if not self._agent_task.done():
+                if self._agent_loop:
+                    self._agent_loop.cancel()
+                self._agent_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await self._agent_task
+            self._agent_task = None
+
         # Learn from session before teardown
         if self._memory_store and self.session_store and self.session_id:
             try:
@@ -589,191 +582,23 @@ class BackendServer:
         self._checkpoint_store = None
         self._context_assembler = None
 
+    def _apply_session_transition(self, transition: backend_services.SessionTransition) -> None:
+        """Apply the host-visible state from a session transition."""
+        self.session_id = transition.session_id
+        self._session_log_dir = transition.session_log_dir
+        self._session_titled = transition.session_titled
+        self._session_approved_tools.clear()
+
     # --- Request handlers ---
 
     async def handle_chat(self, message: str, session_id: str | None, request_id: int) -> None:
-        """Handle a chat request from the Go frontend."""
-
-        def _done_params(*, cancelled: bool = False) -> dict[str, Any]:
-            params: dict[str, Any] = {"layer_used": layer_used}
-            if cancelled:
-                params["cancelled"] = True
-            if self._session_stats:
-                tokens = self._session_stats.token_tracker.total
-                params["tokens_in"] = tokens.prompt_tokens
-                params["tokens_out"] = tokens.completion_tokens
-                params["session_summary"] = self._session_stats.summary()
-            else:
-                params["tokens_in"] = 0
-                params["tokens_out"] = 0
-            return params
-
-        if session_id and session_id != self.session_id:
-            await self._teardown_agent_resources()
-            self.session_id = session_id
-            self._session_log_dir = setup_session_logging(
-                self.config.logging,
-                self.session_id,
-            )
-            self._session_approved_tools.clear()
-
-        # Auto-title session from first user message
-        if not self._session_titled:
-            title = message[:60] + ("..." if len(message) > 60 else "")
-            self.session_store.update_session(self.session_id, title=title)
-            self._session_titled = True
-
-        # --- @file mention expansion ---
-        message = self._expand_file_mentions(message)
-
-        # --- Layer routing (Phase 3) ---
-        layer_used = 4  # Default to L4
-
-        try:
-            from autocode.core.router import RequestRouter
-            from autocode.core.types import RequestType
-
-            router = RequestRouter(self.config.layer1)
-
-            if self.config.layer1.enabled:
-                request_type = router.classify(message)
-
-                # L1 bypass: deterministic queries (zero tokens, <50ms)
-                if request_type == RequestType.DETERMINISTIC_QUERY:
-                    try:
-                        from autocode.layer1.queries import DeterministicQueryHandler
-
-                        handler = DeterministicQueryHandler(
-                            project_root=self.project_root,
-                        )
-                        response = handler.handle(message)
-                        self.emit_notification("on_token", {"text": response.content})
-                        self.emit_notification(
-                            "on_done",
-                            {
-                                **_done_params(),
-                                "layer_used": 1,
-                            },
-                        )
-                        return
-                    except ImportError:
-                        pass  # tree-sitter not available, fall through to L4
-        except ImportError:
-            pass  # Router not available, use L4
-
-        # Ensure agent loop for L2/L3/L4 routing (must be before L2/L3 checks)
-        try:
-            agent_loop = self._ensure_agent_loop()
-            agent_loop.session_id = self.session_id
-        except Exception as e:
-            logger.exception("Error initializing agent loop: %s", e)
-            self.emit_notification("on_error", {"message": str(e)})
-            self.emit_notification("on_done", _done_params())
-            return
-
-        # --- L2 routing: semantic search + context assembly ---
-        if layer_used == 4:
-            try:
-                from autocode.core.router import RequestRouter
-                from autocode.core.types import RequestType
-
-                router = RequestRouter(self.config.layer1)
-                if self.config.layer2.enabled and self._context_assembler:
-                    request_type = router.classify(message)
-                    if request_type == RequestType.SEMANTIC_SEARCH:
-                        try:
-                            from autocode.agent.tools import _code_index_cache
-                            from autocode.layer2.rules import RulesLoader
-                            from autocode.layer2.search import HybridSearch
-
-                            if _code_index_cache is not None:
-                                search = HybridSearch(_code_index_cache)
-                                top_k = self.config.layer2.search_top_k
-                                results = search.search(message, top_k=top_k)
-                                rules_loader = RulesLoader()
-                                rules_text = rules_loader.load(self.project_root)
-                                assembled = self._context_assembler.assemble(
-                                    message,
-                                    rules=rules_text,
-                                    search_results=results,
-                                )
-                                # Run agent loop with injected L2 context
-                                await agent_loop.run(
-                                    message,
-                                    on_chunk=self._on_chunk,
-                                    on_thinking_chunk=self._on_thinking_chunk,
-                                    on_tool_call=self._on_tool_call,
-                                    approval_callback=self._approval_callback,
-                                    ask_user_callback=self._ask_user_callback,
-                                    injected_context=assembled,
-                                )
-                                self._emit_cost_update()
-                                self.emit_notification(
-                                    "on_done",
-                                    {
-                                        **_done_params(),
-                                        "layer_used": 2,
-                                    },
-                                )
-                                return
-                        except ImportError:
-                            pass  # L2 deps not available, fall through
-            except ImportError:
-                pass
-
-        # --- L3 routing: constrained generation ---
-        if layer_used == 4:
-            try:
-                from autocode.core.router import RequestRouter
-                from autocode.core.types import RequestType
-
-                router = RequestRouter(self.config.layer1)
-                if self.config.layer3.enabled and self._l3_provider:
-                    request_type = router.classify(message)
-                    if request_type == RequestType.SIMPLE_EDIT:
-                        try:
-                            result_text = await self._l3_provider.generate(message)
-                            self.session_store.add_message(self.session_id, "user", message)
-                            self.session_store.add_message(
-                                self.session_id,
-                                "assistant",
-                                result_text,
-                            )
-                            self.emit_notification("on_token", {"text": result_text})
-                            self.emit_notification(
-                                "on_done",
-                                {
-                                    **_done_params(),
-                                    "layer_used": 3,
-                                },
-                            )
-                            return
-                        except Exception:
-                            pass  # L3 failed, fall through to L4
-            except ImportError:
-                pass
-
-        try:
-            # Always stream thinking tokens to the frontend — the Go TUI
-            # decides whether to display them based on its own showThinking flag.
-            await agent_loop.run(
-                message,
-                on_chunk=self._on_chunk,
-                on_thinking_chunk=self._on_thinking_chunk,
-                on_tool_call=self._on_tool_call,
-                approval_callback=self._approval_callback,
-                ask_user_callback=self._ask_user_callback,
-            )
-        except asyncio.CancelledError:
-            self._emit_cost_update()
-            self.emit_notification("on_done", _done_params(cancelled=True))
-            return
-        except Exception as e:
-            logger.exception("Error in handle_chat: %s", e)
-            self.emit_notification("on_error", {"message": str(e)})
-
-        self._emit_cost_update()
-        self.emit_notification("on_done", _done_params())
+        """Handle a chat request from the frontend."""
+        await backend_chat.run_chat_turn(
+            self,
+            message=message,
+            session_id=session_id,
+            request_id=request_id,
+        )
 
     async def handle_cancel(self, request_id: int) -> None:
         """Cancel the active agent loop and propagate to subagents."""
@@ -793,374 +618,261 @@ class BackendServer:
         """Dispatch a slash command via the CommandRouter.
 
         After any slash command that can mutate model/provider/mode state,
-        emit a fresh status notification so the Go TUI footer reflects the
+        emit a fresh status notification so the frontend footer reflects the
         new value immediately (fixes Codex Entry 1071 blocker #1: visible
         current-model state was stale after switching).
         """
-        # Snapshot state that slash commands are allowed to mutate
-        before_model = self.config.llm.model
-        before_provider = self.config.llm.provider
-        before_mode = self.config.tui.approval_mode
-        result_payload: dict[str, Any] = {"ok": True}
+        try:
+            result = await backend_services.execute_command(
+                cmd=cmd,
+                command_router=self.command_router,
+                app_context=self._app_context,
+                config=self.config,
+            )
+        except EOFError:
+            self._running = False
+            self.emit_response(request_id, {"ok": True})
+            return
 
-        stripped = cmd.strip()
-        if stripped == "/compact":
-            messages = self.session_store.get_messages(self.session_id)
-            kept_messages = 4
-            if len(messages) > kept_messages:
-                summary_parts = [f"{m.role}: {m.content[:100]}" for m in messages[:-kept_messages]]
-                summary = "Summary of previous conversation:\n" + "\n".join(summary_parts)
-                result_payload.update(
-                    {
-                        "compacted": True,
-                        "messages_compacted": len(messages) - kept_messages,
-                        "summary_tokens": max(1, len(summary) // 4),
-                    }
-                )
-
-        result = self.command_router.dispatch(cmd)
-        if result is not None:
-            slash_cmd, args = result
-            try:
-                await slash_cmd.handler(self._app_context, args)
-            except EOFError:
-                self._running = False
-        else:
-            self._app_context.add_system_message(f"Unknown command: {cmd}")
-
-        # Re-emit status if any tracked field changed
-        if (
-            self.config.llm.model != before_model
-            or self.config.llm.provider != before_provider
-            or self.config.tui.approval_mode != before_mode
-        ):
+        if result.status_changed:
             self._emit_status()
 
-        self.emit_response(request_id, result_payload)
+        self.emit_response(request_id, result.payload)
 
     async def handle_command_list(self, request_id: int) -> None:
         """List backend-owned slash commands for Stage 2 surfaces."""
-        commands = [
-            {
-                "name": cmd.name,
-                "aliases": list(cmd.aliases),
-                "description": cmd.description,
-            }
-            for cmd in self.command_router.get_all()
-        ]
-        self.emit_response(request_id, {"commands": commands})
+        self.emit_response(
+            request_id,
+            backend_services.build_command_list_payload(self.command_router),
+        )
 
     async def handle_session_new(self, title: str, request_id: int) -> None:
         """Create a new session."""
-        await self._teardown_agent_resources()
-        self.session_id = self.session_store.create_session(
-            title=title or "New session",
-            model=self.config.llm.model,
-            provider=self.config.llm.provider,
-            project_dir=str(self.project_root),
+        transition = await backend_services.create_session_transition(
+            title=title,
+            config=self.config,
+            project_root=self.project_root,
+            session_store=self.session_store,
+            teardown_agent_resources=self._teardown_agent_resources,
         )
-        self._session_log_dir = setup_session_logging(self.config.logging, self.session_id)
-        self._session_titled = bool(title)
-        self._session_approved_tools.clear()
+        self._apply_session_transition(transition)
         self._emit_status()
-        self.emit_response(request_id, {"session_id": self.session_id})
+        self.emit_response(
+            request_id,
+            {"session_id": transition.session_id, "title": transition.title},
+        )
 
     async def handle_session_list(self, request_id: int) -> None:
         """List all sessions."""
-        sessions = self.session_store.list_sessions()
-        result = [
-            {"id": s.id, "title": s.title, "model": s.model, "provider": s.provider}
-            for s in sessions[:20]
-        ]
-        self.emit_response(request_id, {"sessions": result})
+        self.emit_response(
+            request_id,
+            backend_services.build_session_list_payload(self.session_store),
+        )
 
     async def handle_provider_list(self, request_id: int) -> None:
-        """List supported LLM providers (for the Go TUI picker).
+        """List supported LLM providers (for the frontend picker).
 
         Returns the same ``_SUPPORTED_PROVIDERS`` tuple the ``/provider``
         handler validates against, so the picker always agrees with the
         text-input path.
         """
-        from autocode.tui.commands import _SUPPORTED_PROVIDERS
-
-        self.emit_response(
-            request_id,
-            {
-                "providers": list(_SUPPORTED_PROVIDERS),
-                "current": self.config.llm.provider,
-            },
-        )
+        self.emit_response(request_id, backend_services.build_provider_list_payload(self.config))
 
     async def handle_model_list(self, request_id: int) -> None:
-        """List available models for the current provider (for the Go TUI picker)."""
-        from autocode.tui.commands import _list_models
-
-        provider = self.config.llm.provider
-        api_base = self.config.llm.api_base
-        current = self.config.llm.model
+        """List available models for the current provider (for the frontend picker)."""
         try:
-            models = _list_models(provider, api_base)
-        except Exception as exc:  # noqa: BLE001 — backend must not crash on this
-            self.emit_response(
-                request_id,
-                {"error": f"model.list failed: {exc}"},
-            )
+            payload = backend_services.build_model_list_payload(self.config)
+        except backend_services.BackendServiceError as exc:
+            self.emit_response(request_id, {"error": str(exc)})
             return
-        self.emit_response(
-            request_id,
-            {"models": models, "current": current},
-        )
+        self.emit_response(request_id, payload)
 
     async def handle_session_resume(self, session_id: str, request_id: int) -> None:
         """Resume a session by ID."""
-        session_id = session_id.strip()
-        if not session_id:
-            msg = "Session ID is required"
-            self.emit_notification("on_error", {"message": msg})
-            self.emit_response(request_id, {"error": msg})
-            return
-
-        sessions = self.session_store.list_sessions()
-        matches = [s for s in sessions if s.id.startswith(session_id)]
-
-        if not matches:
-            msg = f"Session not found: {session_id}"
-            self.emit_notification("on_error", {"message": msg})
-            self.emit_response(request_id, {"error": msg})
-            return
-
-        if len(matches) > 1:
-            sample = ", ".join(s.id[:8] for s in matches[:5])
-            msg = f"Ambiguous session prefix '{session_id}'. Matches: {sample}"
-            self.emit_notification("on_error", {"message": msg})
-            self.emit_response(
-                request_id,
-                {"error": msg},
+        try:
+            transition = await backend_services.resume_session_transition(
+                session_id=session_id,
+                config=self.config,
+                session_store=self.session_store,
+                teardown_agent_resources=self._teardown_agent_resources,
             )
+        except backend_services.BackendServiceError as exc:
+            msg = str(exc)
+            self.emit_notification("on_error", {"message": msg})
+            self.emit_response(request_id, {"error": msg})
             return
 
-        match = matches[0]
-        await self._teardown_agent_resources()
-        self.session_id = match.id
-        self._session_log_dir = setup_session_logging(self.config.logging, self.session_id)
-        self._session_titled = True
-        self._session_approved_tools.clear()
+        self._apply_session_transition(transition)
         self._emit_status()
-        self.emit_response(request_id, {"session_id": match.id, "title": match.title})
+        self.emit_response(
+            request_id,
+            {"session_id": transition.session_id, "title": transition.title},
+        )
 
     async def handle_task_list(self, request_id: int) -> None:
         """List tasks for the current session."""
-        if self._task_store is None:
-            self._task_store = TaskStore(
-                self.session_store.get_connection(),
-                self.session_id,
-            )
-        tasks = self._task_store.list_tasks()
-        self.emit_response(
-            request_id,
-            {
-                "tasks": [t.model_dump(mode="json") for t in tasks],
-            },
+        self._task_store = backend_services.ensure_task_store(
+            self._task_store,
+            session_store=self.session_store,
+            session_id=self.session_id,
         )
+        self.emit_response(request_id, backend_services.build_task_list_payload(self._task_store))
 
     async def handle_subagent_list(self, request_id: int) -> None:
         """List all subagents (active and completed)."""
-        if self._subagent_manager is None:
-            self.emit_response(request_id, {"subagents": []})
-            return
         self.emit_response(
             request_id,
-            {
-                "subagents": self._subagent_manager.list_all(),
-            },
+            backend_services.build_subagent_list_payload(self._subagent_manager),
         )
 
     async def handle_subagent_cancel(self, subagent_id: str, request_id: int) -> None:
         """Cancel a running subagent."""
-        if self._subagent_manager is None:
-            self.emit_response(request_id, {"success": False})
-            return
-        success = self._subagent_manager.cancel(subagent_id)
-        self.emit_response(request_id, {"success": success})
+        self.emit_response(
+            request_id,
+            backend_services.cancel_subagent(self._subagent_manager, subagent_id),
+        )
 
     async def handle_plan_status(self, request_id: int) -> None:
         """Return current plan mode status (from persisted server state)."""
-        if self._agent_loop:
-            mode = self._agent_loop.get_mode().value
-        else:
-            mode = self._agent_mode.value
-        self.emit_response(request_id, {"mode": mode})
+        self.emit_response(
+            request_id,
+            backend_services.build_plan_status_payload(self._agent_loop, self._agent_mode),
+        )
 
     async def handle_plan_set(self, mode: str, request_id: int) -> None:
         """Set plan mode (persisted on server, applied to loop if exists)."""
         try:
-            agent_mode = AgentMode(mode)
-        except ValueError:
-            self.emit_response(
-                request_id,
-                {
-                    "error": f"Invalid mode '{mode}'. Use 'normal', 'planning', or 'research'.",
-                },
+            update = backend_services.update_plan_mode(
+                mode=mode,
+                current_mode=self._agent_mode,
+                agent_loop=self._agent_loop,
             )
+        except backend_services.BackendServiceError as exc:
+            self.emit_response(request_id, {"error": str(exc)})
             return
-        old_mode = self._agent_mode
-        self._agent_mode = agent_mode
-        self._plan_mode_enabled = agent_mode == AgentMode.PLANNING
-        if self._agent_loop:
-            self._agent_loop.set_mode(agent_mode)
+
+        self._agent_mode = update.agent_mode
+        self._plan_mode_enabled = update.plan_mode_enabled
         self.emit_response(
             request_id,
             {
-                "mode": agent_mode.value,
-                "changed": old_mode != self._agent_mode,
+                "mode": update.agent_mode.value,
+                "changed": update.changed,
             },
         )
 
     async def handle_config_get(self, request_id: int) -> None:
         """Return current configuration."""
-        self.emit_response(request_id, self.config.model_dump())
+        self.emit_response(request_id, backend_services.build_config_payload(self.config))
 
     async def handle_config_set(self, key: str, value: str, request_id: int) -> None:
         """Set a configuration value."""
-        parts = key.split(".")
-        if len(parts) != 2:  # noqa: PLR2004
-            self.emit_response(request_id, {"error": "Key must be section.field"})
+        try:
+            update = backend_services.update_config(
+                config=self.config,
+                key=key,
+                value=value,
+            )
+        except backend_services.BackendServiceError as exc:
+            self.emit_response(request_id, {"error": str(exc)})
             return
 
-        section, field = parts
-        data = self.config.model_dump()
-        if section not in data:
-            self.emit_response(request_id, {"error": f"Unknown section: {section}"})
-            return
-        if field not in data[section]:
-            self.emit_response(request_id, {"error": f"Unknown field: {section}.{field}"})
-            return
-
-        data[section][field] = value
-        self.config = AutoCodeConfig.model_validate(data)
+        self.config = update.config
         self._emit_status()
         self.emit_response(request_id, {"ok": True})
 
     async def handle_memory_list(self, request_id: int) -> None:
         """List learned memories for the current project."""
-        if self._memory_store is None:
-            self.emit_response(request_id, {"memories": []})
-            return
-        memories = self._memory_store.get_memories()
-        self.emit_response(request_id, {"memories": memories})
+        self.emit_response(
+            request_id,
+            backend_services.build_memory_list_payload(self._memory_store),
+        )
 
     async def handle_checkpoint_list(self, request_id: int) -> None:
         """List checkpoints for the current session."""
-        if self._checkpoint_store is None:
-            self.emit_response(request_id, {"checkpoints": []})
-            return
-        checkpoints = self._checkpoint_store.list_checkpoints()
         self.emit_response(
             request_id,
-            {
-                "checkpoints": [cp.model_dump(mode="json") for cp in checkpoints],
-            },
+            backend_services.build_checkpoint_list_payload(self._checkpoint_store),
         )
 
     async def handle_checkpoint_restore(self, checkpoint_id: str, request_id: int) -> None:
         """Restore a checkpoint for the current session."""
-        if self._checkpoint_store is None or self._task_store is None:
-            self.emit_response(request_id, {"error": "No checkpoint or task store"})
-            return
         try:
-            result = self._checkpoint_store.restore_checkpoint(
-                checkpoint_id,
-                self._task_store,
-                self.session_store,
+            payload = backend_services.restore_checkpoint(
+                checkpoint_store=self._checkpoint_store,
+                task_store=self._task_store,
+                session_store=self.session_store,
+                checkpoint_id=checkpoint_id,
             )
-            self.emit_response(request_id, {"ok": True, **result})
-        except Exception as e:
-            self.emit_response(request_id, {"error": str(e)})
+        except backend_services.BackendServiceError as exc:
+            self.emit_response(request_id, {"error": str(exc)})
+            return
+        self.emit_response(request_id, payload)
 
     async def handle_plan_export(self, request_id: int) -> None:
         """Export task state as a markdown plan artifact."""
-        if self._task_store is None:
-            self.emit_response(request_id, {"error": "No task store"})
-            return
         try:
-            from autocode.agent.plan_artifact import export
-
-            path = export(
-                self.session_id,
-                self._task_store,
-                self._subagent_manager,
-                self.project_root,
+            payload = backend_services.export_plan_artifact(
+                session_id=self.session_id,
+                task_store=self._task_store,
+                subagent_manager=self._subagent_manager,
+                project_root=self.project_root,
             )
-            self.emit_response(request_id, {"path": str(path)})
-        except Exception as e:
-            self.emit_response(request_id, {"error": str(e)})
+        except backend_services.BackendServiceError as exc:
+            self.emit_response(request_id, {"error": str(exc)})
+            return
+        self.emit_response(request_id, payload)
 
     async def handle_plan_sync(self, path: str, request_id: int) -> None:
         """Sync task state from a markdown plan artifact."""
-        if self._task_store is None:
-            self.emit_response(request_id, {"error": "No task store"})
-            return
         try:
-            from autocode.agent.plan_artifact import sync_from_markdown
-
-            updated = sync_from_markdown(self.session_id, self._task_store, path)
-            self.emit_response(request_id, {"updated": updated})
-        except Exception as e:
-            self.emit_response(request_id, {"error": str(e)})
+            payload = backend_services.sync_plan_artifact(
+                session_id=self.session_id,
+                task_store=self._task_store,
+                path=path,
+            )
+        except backend_services.BackendServiceError as exc:
+            self.emit_response(request_id, {"error": str(exc)})
+            return
+        self.emit_response(request_id, payload)
 
     async def handle_steer(self, message: str, request_id: int) -> None:
         """Inject a steer message into the active agent run.
 
         If a run is active, cancel it and persist the steer message as a
-        user message in the current session.  The Go TUI receives the
+        user message in the current session. The frontend receives the
         ``on_done`` notification from the cancelled run and can present
         the steer result immediately.
 
         If no run is active, returns a structured error so the caller can
         distinguish "nothing to steer" from a real failure.
         """
-        if not message.strip():
-            self.emit_response(request_id, {"error": "Steer message is empty"})
-            return
-
-        if self._agent_task is None or self._agent_task.done():
-            self.emit_response(
-                request_id,
-                {"error": "No active run to steer", "active": False},
-            )
-            return
-
-        if self._agent_loop:
-            self._agent_loop.cancel()
-
-        self.session_store.add_message(
-            self.session_id,
-            "user",
-            f"[steer] {message}",
+        self.emit_response(
+            request_id,
+            backend_services.inject_steer(
+                message=message,
+                agent_task=self._agent_task,
+                agent_loop=self._agent_loop,
+                session_store=self.session_store,
+                session_id=self.session_id,
+            ),
         )
-
-        self.emit_response(request_id, {"ok": True, "injected": True})
 
     async def handle_session_fork(self, request_id: int) -> None:
         """Fork the current session into a new one.
 
         Creates a new session with the same messages as the current
         session.  The backend does *not* switch to the new session — the
-        Go TUI controls session switching via ``session.resume``.
+        The frontend controls session switching via ``session.resume``.
         """
-        new_id = self.session_store.create_session(
-            title=f"Fork of {self.session_id[:8]}",
-            model=self.config.llm.model,
-            provider=self.config.llm.provider,
-            project_dir=str(self.project_root),
+        payload = backend_services.fork_session(
+            session_store=self.session_store,
+            source_session_id=self.session_id,
+            config=self.config,
+            project_root=self.project_root,
         )
-
-        messages = self.session_store.get_messages(self.session_id)
-        for msg in messages:
-            self.session_store.add_message(new_id, msg.role, msg.content)
-
         self._emit_status()
-        self.emit_response(request_id, {"new_session_id": new_id})
+        self.emit_response(request_id, payload)
 
     async def handle_shutdown(self, request_id: int) -> None:
         """Gracefully shut down the server."""
@@ -1171,147 +883,26 @@ class BackendServer:
     # --- Main loop ---
 
     async def run(self) -> None:
-        """Main event loop: read JSON-RPC messages from stdin and dispatch."""
-        self._emit_status()
-
-        loop = asyncio.get_running_loop()
-        line_queue: asyncio.Queue[str | None] = asyncio.Queue()
-
-        # Read stdin in a thread to avoid Windows ProactorEventLoop issues
-        # with connect_read_pipe (AttributeError: '_empty_waiter').
-        import threading
-
-        def _stdin_reader() -> None:
-            """Read lines from stdin in a background thread."""
-            try:
-                for raw_line in sys.stdin:
-                    loop.call_soon_threadsafe(line_queue.put_nowait, raw_line)
-            except (EOFError, OSError, ValueError):
-                pass
-            finally:
-                loop.call_soon_threadsafe(line_queue.put_nowait, None)
-
-        reader_thread = threading.Thread(target=_stdin_reader, daemon=True)
-        reader_thread.start()
-
-        while self._running:
-            try:
-                line_str_raw = await line_queue.get()
-            except Exception:
-                break
-
-            if line_str_raw is None:
-                break
-
-            line_str = line_str_raw.strip()
-            if not line_str:
-                continue
-
-            try:
-                msg = json.loads(line_str)
-            except json.JSONDecodeError:
-                log_event(logger, logging.WARNING, "rpc_error", error="invalid_json")
-                continue
-
-            # Route message
-            msg_id = msg.get("id")
-            method = msg.get("method")
-
-            # Response to a request we sent (Python->Go, returned)
-            if msg_id is not None and method is None:
-                self._route_response(msg_id, msg.get("result", {}))
-                continue
-
-            # Request from Go
-            if method is None:
-                continue
-
-            request_id = msg_id if msg_id is not None else 0
-            params = msg.get("params", {})
-
-            try:
-                await self._dispatch(method, params, request_id)
-            except Exception as e:
-                logger.exception("Error dispatching %s: %s", method, e)
-                if request_id:
-                    self.emit_response(request_id, {"error": str(e)})
+        """Main event loop for the default stdio host."""
+        await StdioJsonRpcHost(self, stdin=sys.stdin, stdout=sys.stdout).run()
 
     def _route_response(self, request_id: int, result: dict[str, Any]) -> None:
         """Route a response from Go to a pending future."""
-        future = self._pending_futures.get(request_id)
-        if future and not future.done():
-            future.set_result(result)
+        self._request_broker.route_response(request_id, result)
+
+    def _loop_create_task(self, coroutine: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]:
+        """Create a task on the current event loop.
+
+        Exposed as a small host hook so dispatch ownership can live outside
+        ``BackendServer`` without reaching for global asyncio helpers directly.
+        """
+        return asyncio.create_task(coroutine)
 
     async def _dispatch(self, method: str, params: dict[str, Any], request_id: int) -> None:
         """Dispatch a JSON-RPC request to the appropriate handler."""
         _dispatch_start = time.monotonic()
         log_event(logger, logging.DEBUG, "rpc_request", method=method, request_id=request_id)
-        if method == "chat":
-            message = params.get("message", "")
-            session_id = params.get("session_id")
-            # Run agent in background task
-            self._agent_task = asyncio.create_task(
-                self.handle_chat(message, session_id, request_id)
-            )
-        elif method == "cancel":
-            await self.handle_cancel(request_id)
-        elif method == "command":
-            cmd = params.get("cmd", "")
-            await self.handle_command(cmd, request_id)
-        elif method == rpc_schema.METHOD_COMMAND_LIST:
-            await self.handle_command_list(request_id)
-        elif method == rpc_schema.METHOD_SESSION_NEW:
-            title = params.get("title", "")
-            await self.handle_session_new(title, request_id)
-        elif method == rpc_schema.METHOD_SESSION_LIST:
-            await self.handle_session_list(request_id)
-        elif method == rpc_schema.METHOD_MODEL_LIST:
-            await self.handle_model_list(request_id)
-        elif method == rpc_schema.METHOD_PROVIDER_LIST:
-            await self.handle_provider_list(request_id)
-        elif method == "session.resume":
-            sid = params.get("session_id", "")
-            await self.handle_session_resume(sid, request_id)
-        elif method == "task.list":
-            await self.handle_task_list(request_id)
-        elif method == "subagent.list":
-            await self.handle_subagent_list(request_id)
-        elif method == "subagent.cancel":
-            sid = params.get("subagent_id", "")
-            await self.handle_subagent_cancel(sid, request_id)
-        elif method == "plan.status":
-            await self.handle_plan_status(request_id)
-        elif method == "plan.set":
-            mode = params.get("mode", "normal")
-            await self.handle_plan_set(mode, request_id)
-        elif method == "config.get":
-            await self.handle_config_get(request_id)
-        elif method == "config.set":
-            key = params.get("key", "")
-            value = params.get("value", "")
-            await self.handle_config_set(key, value, request_id)
-        elif method == "memory.list":
-            await self.handle_memory_list(request_id)
-        elif method == "checkpoint.list":
-            await self.handle_checkpoint_list(request_id)
-        elif method == "checkpoint.restore":
-            cp_id = params.get("checkpoint_id", "")
-            await self.handle_checkpoint_restore(cp_id, request_id)
-        elif method == "plan.export":
-            await self.handle_plan_export(request_id)
-        elif method == "plan.sync":
-            path = params.get("path", "")
-            await self.handle_plan_sync(path, request_id)
-        elif method == "steer":
-            message = params.get("message", "")
-            await self.handle_steer(message, request_id)
-        elif method == rpc_schema.METHOD_SESSION_FORK:
-            await self.handle_session_fork(request_id)
-        elif method == "shutdown":
-            await self.handle_shutdown(request_id)
-        else:
-            if request_id:
-                self.emit_response(request_id, {"error": f"Unknown method: {method}"})
+        await dispatch_request(self, method, params, request_id)
         log_event(
             logger,
             logging.DEBUG,
@@ -1322,11 +913,19 @@ class BackendServer:
         )
 
 
-async def main() -> None:
+async def main(
+    *,
+    transport: str = "stdio",
+    bind_host: str = "127.0.0.1",
+    port: int = 8765,
+) -> None:
     """Entry point for the JSON-RPC backend server."""
     from autocode.core.logging import setup_logging
 
     config = load_config()
     setup_logging(config.logging)
     server = BackendServer(config=config)
+    if transport == "tcp":
+        await TcpJsonRpcHost(server, bind_host=bind_host, port=port).run()
+        return
     await server.run()

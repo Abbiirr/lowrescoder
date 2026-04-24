@@ -27,11 +27,18 @@ Run from superproject root:
 - `make tui-build` — build Rust TUI binary (`autocode/rtui/target/release/autocode-tui`)
 - `uv run pytest autocode/tests/unit/ -v --cov=src/autocode` — autocode unit tests
 - `uv run pytest -m integration autocode/tests/integration/` — integration (self-skips without API keys / gateway)
-- `uv run autocode chat` — run autocode
+- `uv run autocode` — run autocode
 - `cd autocode/rtui && cargo test` — Rust TUI unit tests
 - `cd autocode/rtui && cargo clippy -- -D warnings` — Rust TUI lint
 
 Full command reference: `autocode/TESTING.md`.
+
+## User Launch Preference
+
+- For this user, the canonical interactive launch command is bare `autocode`, not `autocode chat`.
+- Bare `autocode --mode inline|altscreen` is supported and should be preferred over `autocode chat --mode ...` in user-facing guidance.
+- When giving run instructions, examples, or UX guidance, prefer `autocode` unless you are explicitly discussing a subcommand-specific implementation detail.
+- If the CLI surface differs between `autocode` and `autocode chat`, call that out explicitly instead of silently rewriting the user's workflow.
 
 ## TUI Testing
 

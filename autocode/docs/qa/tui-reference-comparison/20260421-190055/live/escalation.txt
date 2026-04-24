@@ -1,0 +1,50 @@
+                                                                                                                                                                
+                                ┌──────────────────────────────────────────────────────────────────────────────────────────────┐                                
+                                │tools | openrouter | suggest | ● escalated | mock-ses | tasks:0 | agents:0 | q:0 | sandbox:loc│                                
+                                │⚑ Permission escalation · protected path touched                                              │                                
+                                │Auto-accept was on, but this edit would modify .github/workflows/ci.yml                       │                                
+                                │which is in .autocode/protect . Mode bumped to [review-needed] for this hunk only.            │                                
+                                │                                                                                              │                                
+                                │path .github/workflows/ci.yml matched rule .autocode/protect → ".github/**"                   │                                
+                                │edit origin auto-planning · propagating bun version bump                                      │                                
+                                │blast radius CI for all branches · reversible yes · local only until push                     │                                
+                                │                                                                                              │                                
+                                │CHOICES                                                                                       │                                
+                                │● Approve this edit only                                                                      │                                
+                                │○ Approve for this session                                                                    │                                
+                                │○ Open diff in focus mode                                                                     │                                
+                                │○ Remove rule from .autocode/protect                                                          │                                
+                                │○ Reject · keep CI unchanged                                                                  │                                
+                                │[a]pprove [r]eject                                                                            │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │                                                                                              │                                
+                                │┌────────────────────────────────────────────────────────────────────────────────────────────┐│                                
+                                ││❯ Ask AutoCode                                                                              ││                                
+                                │└────────────────────────────────────────────────────────────────────────────────────────────┘│                                
+                                │Protected-path escalation pauses the agent before the write and preserves the composer.       │                                
+                                │a approve-once · s approve-session · r reject · d focus diff · Esc stay paused                │                                
+                                └──────────────────────────────────────────────────────────────────────────────────────────────┘                                
+                                                                                                                                                                

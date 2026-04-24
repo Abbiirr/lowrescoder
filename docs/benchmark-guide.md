@@ -15,12 +15,17 @@ How to run AutoCode benchmarks and interpret results.
 
 ### Environment Setup
 
-Ensure your `.env` file has:
+For benchmark gateway aliases such as `swebench` and `terminal_bench`, the
+effective benchmark-owned execution path is OpenAI-compatible gateway routing
+through `http://localhost:4000/v1`. Ambient shell defaults must not be treated
+as authoritative if the harness is explicitly pinning a benchmark model.
+
+Typical local gateway env looks like:
 
 ```bash
-AUTOCODE_LLM_PROVIDER=ollama
-OLLAMA_HOST=http://localhost:4000
-OLLAMA_MODEL=coding
+AUTOCODE_LLM_PROVIDER=openrouter
+AUTOCODE_LLM_API_BASE=http://localhost:4000/v1
+OPENROUTER_MODEL=tools
 ```
 
 Verify the LLM Gateway is reachable:
@@ -29,6 +34,14 @@ Verify the LLM Gateway is reachable:
 curl http://localhost:4000/health/readiness
 ```
 
+For human-operated TUI prep, use:
+
+```bash
+uv run python benchmarks/prepare_tui_benchmark_run.py --scope full --mode inline --strict
+```
+
+See `docs/benchmark-tui-runbook.md` for the operator workflow.
+
 ---
 
 ## Quick Start
@@ -36,7 +49,7 @@ curl http://localhost:4000/health/readiness
 ### Run all lanes (B7-B14)
 
 ```bash
-bash scripts/run_all_benchmarks.sh
+bash benchmarks/run_all_benchmarks.sh
 ```
 
 This runs all 8 lanes sequentially with `--resume` (skips completed tasks). Halts automatically if Ollama goes down.
@@ -44,7 +57,7 @@ This runs all 8 lanes sequentially with `--resume` (skips completed tasks). Halt
 ### Run a single lane
 
 ```bash
-uv run python scripts/benchmark_runner.py \
+uv run python benchmarks/benchmark_runner.py \
   --agent autocode \
   --lane B7 \
   --model glm-4.7-flash
@@ -53,17 +66,28 @@ uv run python scripts/benchmark_runner.py \
 ### Run with task limit (for testing)
 
 ```bash
-uv run python scripts/benchmark_runner.py \
+uv run python benchmarks/benchmark_runner.py \
   --agent autocode \
   --lane B11 \
   --model glm-4.7-flash \
   --max-tasks 2
 ```
 
+### Run AutoCode through the Rust TUI in a PTY
+
+```bash
+uv run python benchmarks/benchmark_runner.py \
+  --agent autocode \
+  --autocode-runner tui \
+  --lane B7 \
+  --model swebench \
+  --max-tasks 1
+```
+
 ### Resume after interruption
 
 ```bash
-uv run python scripts/benchmark_runner.py \
+uv run python benchmarks/benchmark_runner.py \
   --agent autocode \
   --lane B7 \
   --model glm-4.7-flash \
@@ -74,7 +98,7 @@ uv run python scripts/benchmark_runner.py \
 ### List available lanes
 
 ```bash
-uv run python scripts/benchmark_runner.py --list-lanes
+uv run python benchmarks/benchmark_runner.py --list-lanes
 ```
 
 ---
@@ -82,7 +106,7 @@ uv run python scripts/benchmark_runner.py --list-lanes
 ## CLI Reference
 
 ```
-uv run python scripts/benchmark_runner.py [OPTIONS]
+uv run python benchmarks/benchmark_runner.py [OPTIONS]
 ```
 
 | Flag | Default | Description |
@@ -90,6 +114,7 @@ uv run python scripts/benchmark_runner.py [OPTIONS]
 | `--agent` | `autocode` | Agent: `autocode`, `codex`, `claude-code`, or `all` |
 | `--lane` | *required* | Benchmark lane (B6-B14) |
 | `--model` | from `.env` | Override LLM model name |
+| `--autocode-runner` | `loop` | AutoCode execution path: internal loop or Rust TUI PTY (`tui`) |
 | `--max-tasks N` | `0` (all) | Limit tasks per lane (useful for testing) |
 | `--resume` | off | Resume a previously started run; requires `--run-id` |
 | `--run-id` | auto-generated | Explicit benchmark run identifier used for progress/locks |
@@ -124,12 +149,14 @@ Proxy fixture lanes that run in Docker can declare a lightweight `build_deps_pro
 
 ### SWE-bench runner (B7, B8, B9-B12)
 
-1. Load manifest (`scripts/e2e/external/*.json`)
+1. Load manifest (`benchmarks/e2e/external/*.json`)
 2. For each task:
    - Create sandbox directory
    - Start Docker container (if `python_version` specified) or use host
    - Clone repo at `base_commit`, apply `test_patch`
    - Run agent with task prompt
+     - default: internal `AgentLoop`
+     - optional: Rust TUI in a PTY via `--autocode-runner tui`, which launches `autocode --mode altscreen`
    - Grade by running `grading_command` (pytest, verify.sh, etc.)
    - Up to 3 grading retries with feedback
 3. Save results to `docs/qa/test-results/`
@@ -146,6 +173,33 @@ Each task gets up to **3 grading attempts**:
 - After each failed attempt, the agent receives structured feedback (failing tests, error messages, source file candidates)
 - If the agent produces **zero file changes** on 2 consecutive attempts, it stops early (`NO_EFFECTIVE_EDITS`)
 - If the agent produces the **same diff** 3 times, it stops early (stagnation)
+
+### AutoCode Pre-Task Alias Probe
+
+For AutoCode benchmark runs that use gateway aliases such as `swebench` or
+`terminal_bench`, the adapter now performs a one-time pre-task model-route
+probe before the task starts.
+
+- If the alias route is healthy, the lane proceeds normally.
+- If the alias route is invalid or pointed at the wrong backend, the lane halts
+  immediately with a provider health failure instead of spending the full task
+  budget or a long Rust TUI stale-request timeout on an avoidable infra error.
+
+### Benchmark-Owned Provider Resolution
+
+For benchmark aliases served by the gateway:
+
+- the loop/control runner now uses the OpenAI-compatible provider path instead
+  of the Ollama SDK path, avoiding false `404` failures against `/v1`
+- the Rust TUI PTY runner now exports benchmark-owned provider/model/api-base
+  env vars so ambient `.env` defaults cannot silently replace `swebench` with a
+  user-default model such as `tools`
+
+The Phase A canary on `B13-PROXY` now proves that the benchmark-owned Rust TUI
+path can reach `ready -> streaming -> completed` on the real gateway route:
+see `docs/qa/test-results/20260423-040320-B13-PROXY-autocode.json` and
+`docs/qa/test-results/20260423-100635-tui-benchmark-latency-verification.md`.
+Use the same canary-first discipline before launching a larger TUI sweep.
 
 ---
 
@@ -206,14 +260,17 @@ The result JSON contains per-task details:
 
 ## Fail-Fast Mode
 
-`run_all_benchmarks.sh` sets `BENCHMARK_NO_RETRY=1` which enables:
+`benchmarks/run_all_benchmarks.sh` sets `BENCHMARK_NO_RETRY=1` which enables:
 
 - **Provider pre-task health check** — the adapter performs a provider-specific health probe before each task. For LLM Gateway-backed AutoCode runs this pings `/health/readiness`; if the provider is down, the lane halts immediately (exit code 2).
+- **Gateway-alias route check for AutoCode** — when the benchmark model is a
+  gateway alias such as `swebench`, AutoCode also probes the alias route itself
+  before task execution and halts early if the alias is rejected.
 - **No LLM connection retries** — instead of 10 retries with exponential backoff, fails on first connection error.
 - **Shorter per-request timeout** — 5 minutes per LLM call (vs 1 hour in normal mode).
 - **Lane-level halt** — if any lane exits non-zero, the shell script stops all remaining lanes.
 
-To disable fail-fast (e.g., for unreliable networks), remove `export BENCHMARK_NO_RETRY=1` from `run_all_benchmarks.sh`.
+To disable fail-fast (e.g., for unreliable networks), remove `export BENCHMARK_NO_RETRY=1` from `benchmarks/run_all_benchmarks.sh`.
 
 ---
 
@@ -249,7 +306,7 @@ pkill -f benchmark_runner
 docker rm -f $(docker ps -a --filter "name=bench-" -q)
 
 # Resume where you left off
-bash scripts/run_all_benchmarks.sh   # has --resume flag built in
+bash benchmarks/run_all_benchmarks.sh   # has --resume flag built in
 ```
 
 ---
@@ -265,12 +322,12 @@ The LLM Gateway went down. Fix it, then re-run with the same `--run-id` and `--r
 curl http://localhost:4000/health/readiness
 
 # Resume
-bash scripts/run_all_benchmarks.sh
+bash benchmarks/run_all_benchmarks.sh
 ```
 
 ### "NOT_EXECUTABLE" for a lane
 
-The lane's manifest is missing required fields (e.g., `grading_command`, `setup_commands`). Check the manifest in `scripts/e2e/external/`.
+The lane's manifest is missing required fields (e.g., `grading_command`, `setup_commands`). Check the manifest in `benchmarks/e2e/external/`.
 
 ### Stale Docker containers blocking new tasks
 
@@ -283,7 +340,7 @@ docker rm -f $(docker ps -a --filter "name=bench-" -q)
 ```bash
 rm -f sandboxes/progress/*.json
 docker rm -f $(docker ps -a --filter "name=bench-" -q)
-bash scripts/run_all_benchmarks.sh
+bash benchmarks/run_all_benchmarks.sh
 ```
 
 ### Embedding model warning

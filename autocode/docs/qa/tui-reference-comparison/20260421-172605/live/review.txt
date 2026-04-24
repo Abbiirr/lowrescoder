@@ -1,0 +1,50 @@
+tools | openrouter | suggest | ● review | mock-ses | tasks:0 | agents:0 | q:0 | sandbox:local                                                                   
+All edits staged. Waiting for review.                                                                                                                           
+                                                                                                                                                                
+── src/utils/parser.ts (lines 38–54) ─────────────────────────────                                                                                              
++2 −1 · 1 hunk                                                                                                                                                  
+38 function extractImports(nodes: ImportNode[] | undefined) {                                                                                                   
+39 if (!nodes) return []                                                                                                                                        
+40 const seen = new Set ()                                                                                                                                      
+45 + const r = resolve(n)                                                                                                                                       
+46 + if (r) out.push(r)                                                                                                                                         
+                                                                                                                                                                
+VALIDATION                                                                                                                                                      
+targeted tests passed · full suite not run                                                                                                                      
+REVIEW NEEDED                                                                                                                                                   
+files changed 2 · blast radius parser + tests                                                                                                                   
+network off · reversible yes · protected path no                                                                                                                
+[a]pprove [r]eject                                                                                                                                              
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+❯ Ask AutoCode                                                                                                                                                  
+Evidence is staged for approval; accept or reject before resuming auto mode.                                                                                    
+[a]pprove · [r]eject · Esc back · Ctrl+Shift+P palette · / commands                                                                                             

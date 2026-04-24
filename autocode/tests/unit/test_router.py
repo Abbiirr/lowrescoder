@@ -95,6 +95,26 @@ class TestRequestRouter:
         )
         assert self.router.classify(msg) == RequestType.COMPLEX_TASK
 
+    def test_benchmark_prompt_routes_to_complex_task(self):
+        msg = textwrap.dedent("""\
+            WORKING DIRECTORY: /tmp/sandbox
+
+            BUG REPORT:
+            Fix the failing benchmark task.
+
+            GRADING COMMAND (wrapped by run_tests):
+            pytest -q
+
+            MANDATORY WORKFLOW — follow these steps exactly:
+            1. Inspect the repo.
+            2. Make the smallest correct change.
+            3. Re-run the grading command.
+
+            INITIAL TEST OUTPUT (current failures):
+            AssertionError: expected 2 == 1
+        """)
+        assert self.router.classify(msg) == RequestType.COMPLEX_TASK
+
     def test_simple_chat(self):
         assert self.router.classify("hello") == RequestType.CHAT
 

@@ -228,3 +228,74 @@ class TestOpenRouterApiBase:
         )
         config = load_config(project_root=tmp_path)
         assert config.llm.api_base == "https://custom.api/v1"
+
+
+class TestGatewayAliasDefaults:
+    """Test gateway-alias defaults and legacy default migration."""
+
+    def test_global_gateway_tools_default_migrates_to_coding(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import autocode.config as cfg
+
+        global_dir = tmp_path / ".autocode"
+        global_dir.mkdir()
+        global_file = global_dir / "config.yaml"
+        global_file.write_text(
+            yaml.dump(
+                {
+                    "llm": {
+                        "provider": "openrouter",
+                        "model": "tools",
+                        "api_base": "http://localhost:4000/v1",
+                    }
+                }
+            )
+        )
+        monkeypatch.setattr(cfg, "_GLOBAL_CONFIG_DIR", global_dir)
+        monkeypatch.setattr(cfg, "_GLOBAL_CONFIG_FILE", global_file)
+        monkeypatch.delenv("AUTOCODE_LLM_MODEL", raising=False)
+        monkeypatch.delenv("HYBRIDCODER_LLM_MODEL", raising=False)
+        monkeypatch.delenv("AUTOCODE_LLM_PROVIDER", raising=False)
+        monkeypatch.delenv("HYBRIDCODER_LLM_PROVIDER", raising=False)
+        monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+        monkeypatch.delenv("OLLAMA_MODEL", raising=False)
+
+        config = cfg.load_config(project_root=tmp_path)
+
+        assert config.llm.provider == "openrouter"
+        assert config.llm.api_base == "http://localhost:4000/v1"
+        assert config.llm.model == "coding"
+
+    def test_project_gateway_tools_override_is_preserved(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import autocode.config as cfg
+
+        _patch_no_global_config(monkeypatch, tmp_path)
+        project_config = tmp_path / ".autocode.yaml"
+        project_config.write_text(
+            yaml.dump(
+                {
+                    "llm": {
+                        "provider": "openrouter",
+                        "model": "tools",
+                        "api_base": "http://localhost:4000/v1",
+                    }
+                }
+            )
+        )
+        monkeypatch.delenv("AUTOCODE_LLM_MODEL", raising=False)
+        monkeypatch.delenv("HYBRIDCODER_LLM_MODEL", raising=False)
+        monkeypatch.delenv("AUTOCODE_LLM_PROVIDER", raising=False)
+        monkeypatch.delenv("HYBRIDCODER_LLM_PROVIDER", raising=False)
+        monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+        monkeypatch.delenv("OLLAMA_MODEL", raising=False)
+
+        config = cfg.load_config(project_root=tmp_path)
+
+        assert config.llm.provider == "openrouter"
+        assert config.llm.api_base == "http://localhost:4000/v1"
+        assert config.llm.model == "tools"

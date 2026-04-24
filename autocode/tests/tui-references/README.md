@@ -26,11 +26,10 @@ target** the product owner handed us in the mockup bundle?"
 - [Dependencies](#dependencies)
 - [Usage](#usage)
 - [Scene inventory](#scene-inventory)
-- [The ratchet — how `strict=True` xfail works](#the-ratchet--how-stricttrue-xfail-works)
-- [Flipping a scene off xfail (DoD for a UI feature slice)](#flipping-a-scene-off-xfail-dod-for-a-ui-feature-slice)
-- [Adding a new MVP scene](#adding-a-new-mvp-scene)
+- [The ratchet](#the-ratchet)
+- [Changing a scene](#changing-a-scene)
 - [Caveats](#caveats)
-- [Slice 2+ roadmap](#slice-2-roadmap)
+- [Fidelity roadmap](#fidelity-roadmap)
 
 ---
 
@@ -60,28 +59,19 @@ automatically.
 
 - Extract deterministic scene structure from the HTML bundle (no OCR, no
   PyYAML, no `lxml` — stdlib only).
-- Run a live PTY capture of the real Rust TUI against each of the 4 MVP
-  scenes and assert the scene's structural predicates.
-- Signal via pytest **XPASS** the instant a UI feature lands that closes
-  one of the design-to-implementation gaps. `strict=True` xfail turns
-  that XPASS into a suite failure, forcing the developer to flip the
-  decorator and promote the scene to a hard regression gate.
+- Run a live PTY capture of the real Rust TUI against all 14 scenes and
+  assert the scene's structural predicates.
+- Ratchet scene drivers, predicates, and preset wiring together so new
+  surfaces become hard regression gates in the same slice they ship.
 
 ### Cannot
 
 - **Pixel-diff against the mockup JPG exports.** The JPG exports use a
   font (`JetBrains Mono`), theme (Tokyo Night), and renderer we do not
-  currently match in any pyte pipeline. Pixel-level fidelity is Slice 2
-  + Slice 3 work (themed parallel renderer and optional headless
-  Chromium rendering).
-- **Drive every scene into state.** Today only 4 of 14 scenes are MVP
-  populated, and one of those (`recovery`) requires a mock-backend
-  `__HALT_FAILURE__` trigger that does not yet exist. That trigger is a
-  Slice 2 deliverable.
-- **Prove parity when all xfails are still XFAIL.** Strict-XFAIL tests
-  encode the contract but do not themselves prove live parity. Parity is
-  claimed one scene at a time, as each xfail decorator is removed by the
-  developer who shipped the matching UI feature.
+  currently match in any pyte pipeline. Pixel-level fidelity would
+  require future higher-fidelity rendering or comparison tooling.
+- **Prove final pixel parity on their own.** The PTY predicates prove
+  triggerability and scene structure, not final visual fidelity.
 
 ---
 
@@ -91,14 +81,14 @@ automatically.
 autocode/tests/tui-references/
 ├── __init__.py              # package marker + docstring
 ├── extract_scenes.py        # HTML bundler decoder + scene walker + YAML emitter
-├── manifest.yaml            # auto-generated; 14 scenes (4 populated)
+├── manifest.yaml            # auto-generated; 14 scenes (14 populated)
 ├── predicates.py            # reference-contract predicates + stdlib YAML reader
-├── test_reference_scenes.py # 4-scene live PTY ratchet (strict=True xfail)
+├── test_reference_scenes.py # 14-scene live PTY regression gate
 └── README.md                # this file
 
 autocode/tests/unit/
 ├── test_tui_reference_extractor.py   # 12 unit tests locking the scene-extraction contract
-└── test_tui_reference_predicates.py  # 31 unit tests covering every predicate + the YAML reader
+└── test_tui_reference_predicates.py  # 38 unit tests covering every predicate + the YAML reader
 
 autocode/docs/qa/test-results/
 └── 20260418-*-slice1-*.md            # stored artifacts per milestone (extractor, finalization, remediation)
@@ -115,7 +105,7 @@ autocode/docs/qa/test-results/
  AutoCode TUI _standalone_.html  + json + zlib + base64
                                         │
                                         ▼
-                                 manifest.yaml  (14 scenes, 4 populated)
+                                 manifest.yaml  (14 scenes, 14 populated)
                                         │
                                         ▼
                           predicates.load_scene_records()
@@ -126,7 +116,7 @@ autocode/docs/qa/test-results/
 
                                  test_reference_scenes.py
                                  ────────────────────────
- autocode-tui (Go binary) ──▶ PTY capture (tests/tui-comparison substrate)
+ autocode-tui (Rust binary) ──▶ PTY capture (tests/tui-comparison substrate)
                                         │
                                         ▼
                                  pyte.Screen + rendered text
@@ -138,7 +128,7 @@ autocode/docs/qa/test-results/
                           ReferenceReport → assert all predicates pass
                                         │
                                         ▼
-                          @pytest.mark.xfail(strict=True) gate
+                          scene-specific pytest gate
 ```
 
 ---
@@ -155,8 +145,8 @@ autocode/docs/qa/test-results/
 - **Mock backend** at `autocode/tests/pty/mock_backend.py` — already in
   tree; no edits needed for Slice 1.
 
-Slice 2 will add `scikit-image` and `imagehash` as dev-deps for the
-non-blocking region-SSIM metric. Not required for Slice 1.
+Optional future fidelity tooling may add `scikit-image` and `imagehash` for
+region-level metrics, but the current hard gate does not depend on them.
 
 ---
 
@@ -179,7 +169,7 @@ uv run pytest autocode/tests/unit/test_tui_reference_extractor.py \
               autocode/tests/unit/test_tui_reference_predicates.py -v
 ```
 
-43 tests, ~0.12 s.
+50 tests, ~0.12 s.
 
 ### Run the live PTY ratchet (requires the Rust TUI binary)
 
@@ -193,96 +183,119 @@ Or directly:
 uv run pytest autocode/tests/tui-references/ -v
 ```
 
-Expected outcome today: **4 XFAILED**. Each one's reason names the
-concrete design-to-implementation gap that is blocking promotion.
+Expected outcome today: **14 passed**.
+
+### Build the screenshot-first comparison bundle
+
+For visual review work where you want actual side-by-side evidence against
+the exported mockup JPGs, use:
+
+```bash
+make tui-reference-gap
+```
+
+This generates:
+
+- fresh live PNG captures under `autocode/docs/qa/tui-reference-comparison/<stamp>/live/`
+- side-by-side sheets under `.../compare/`
+- a markdown artifact under
+  `autocode/docs/qa/test-results/<stamp>-tui-reference-gap.md`
+
+This is a **manual evidence generator**, not a regression gate.
+
+### Capture the current AutoCode analog for all 14 scenes
+
+If you want a stored sweep of what the current product can actually show for
+every reference scene, run:
+
+```bash
+make tui-scene-matrix
+```
+
+This generates:
+
+- per-scene frame directories under `autocode/docs/qa/tui-frame-sequences/<stamp>/`
+- an overview grid for the whole sweep
+- a markdown matrix artifact under
+  `autocode/docs/qa/test-results/<stamp>-tui-14-scene-capture-matrix.md`
+
+Important: this is a **current-state capture sweep**. As of the current tree,
+all 14 scenes have direct capture paths; the remaining gap is visual fidelity
+against the mockup JPGs.
+
+### Capture mid-run frames for benchmark or system-feature flows
+
+Some important surfaces are not idle-state frontend chrome:
+
+- planning / todo list
+- restore / checkpoints
+- subagent / task activity
+- review / diff / escalation flows
+
+For those, a final-state snapshot is often the wrong evidence. Use the
+frame-sequence helper to grab multiple screenshots while the session is in
+flight:
+
+```bash
+cd autocode
+uv run python tests/tui-references/capture_frame_sequence.py --list-presets
+uv run python tests/tui-references/capture_frame_sequence.py \
+  --name sessions-demo \
+  --preset sessions
+```
+
+The helper writes a sequence of `PNG + TXT` frames under:
+
+`autocode/docs/qa/tui-frame-sequences/<stamp>/<name>/`
+
+The canonical trigger map for those presets lives in:
+
+- `docs/tui-testing/tui-reference-scene-trigger-guide.md`
+- `docs/tui-testing/tui-system-feature-coverage-guide.md`
 
 ---
 
 ## Scene inventory
 
-All 14 scenes from the bundle live in `manifest.yaml`. MVP coverage is
-4; the other 10 are stubbed with captured anchor data so they can be
-promoted without re-extracting.
+All 14 scenes from the bundle live in `manifest.yaml` and are now populated.
 
-| # | scene_id | Label | MVP | Gap blocking promotion |
+| # | scene_id | Label | PTY gate | Current gap |
 |---|---|---|---|---|
-| 01 | ready | 01 Ready | ✓ | HUD chip row + composer box + keybind footer |
-| 02 | active | 02 Active | ✓ | Tool-chain panel + inline diff hunks + test-output panel |
-| 03 | multi | 03 Multitasking | — | stubbed |
-| 04 | plan | 04 Plan | — | stubbed |
-| 04 | review | 04 Review | — | stubbed |
-| 05 | cc | 05 Command center | — | stubbed |
-| 07 | recovery | 07 Recovery | ✓ | 6 safe-option recovery cards + `__HALT_FAILURE__` mock-backend trigger |
-| 08 | restore | 08 Restore | — | stubbed |
-| 09 | sessions | 09 Sessions | — | stubbed |
-| 10 | palette | 10 Palette | — | stubbed |
-| 11 | diff | 11 Diff focus | — | stubbed |
-| 12 | grep | 12 Search | — | stubbed |
-| 13 | escalation | 13 Escalation | — | stubbed |
-| 14 | narrow | 14 Narrow | ✓ | Narrow-layout branch (rail → tabs, drawer bounded to 3 rows) |
+| 01 | ready | 01 Ready | ✓ | visual fidelity |
+| 02 | active | 02 Active | ✓ | visual fidelity |
+| 03 | multi | 03 Multitasking | ✓ | visual fidelity |
+| 04 | plan | 04 Plan | ✓ | visual fidelity |
+| 05 | review | 05 Review | ✓ | visual fidelity |
+| 06 | cc | 06 Command center | ✓ | visual fidelity |
+| 07 | recovery | 07 Recovery | ✓ | visual fidelity |
+| 08 | restore | 08 Restore | ✓ | visual fidelity |
+| 09 | sessions | 09 Sessions | ✓ | visual fidelity |
+| 10 | palette | 10 Palette | ✓ | visual fidelity |
+| 11 | diff | 11 Diff focus | ✓ | visual fidelity |
+| 12 | grep | 12 Search | ✓ | visual fidelity |
+| 13 | escalation | 13 Escalation | ✓ | visual fidelity |
+| 14 | narrow | 14 Narrow | ✓ | visual fidelity |
 
 ---
 
-## The ratchet — how `strict=True` xfail works
+## The ratchet
 
-Every MVP test is `@pytest.mark.xfail(strict=True, reason="...")`.
-
-- The predicates today **fail** because the UI does not yet match the
-  mockup → pytest reports **XFAIL** → the suite stays green. No CI drama.
-- When a developer ships the matching UI feature and the predicates
-  start passing → pytest reports **XPASS** → `strict=True` turns that
-  XPASS into a **suite failure** → the developer must flip the
-  decorator off.
-- Once the decorator is flipped, the test becomes a **hard regression
-  gate** for that scene. Any future change that regresses the layout
-  fails CI.
-
-This is the ratchet: the slice ships green and converts gap-by-gap into
-enforcement.
+The old xfail ratchet is now fully consumed: every current reference scene is a
+hard regression gate. Future scene work should keep the same discipline:
+surface, trigger, predicate, and gate promotion should land together.
 
 ---
 
-## Flipping a scene off xfail (DoD for a UI feature slice)
+## Changing a scene
 
-When you implement the UI feature that closes a scene's gap (e.g., the
-HUD chip row for `test_scene_ready`):
+When you change a shipped reference scene or add a new one:
 
-1. **Run the live test locally**:
-   ```bash
-   uv run pytest autocode/tests/tui-references/test_reference_scenes.py::test_scene_ready -v
-   ```
-2. **Expect `XPASS` with `strict=True` → suite failure.** This is the
-   signal that the feature closed the gap.
-3. **Remove the `@pytest.mark.xfail(...)` decorator** from the test.
-4. **Re-run.** The test now gates against regressions — any future
-   change that breaks the HUD / composer / keybinds on the Ready scene
-   will fail this test.
-5. **Commit** the decorator removal alongside the UI feature change.
-6. **Update this README's Scene inventory table** — move the scene out
-   of the "Gap blocking promotion" column.
-
-Never leave an xfail'd test that is visibly passing on your machine.
-
----
-
-## Adding a new MVP scene
-
-To promote one of the 10 stubbed scenes (e.g., `palette`) to MVP:
-
-1. Edit `extract_scenes.py` — add `"palette"` to `_MVP_SCENES`.
-2. Regenerate: `uv run python autocode/tests/tui-references/extract_scenes.py`.
-3. Write a scene-specific predicate in `predicates.py` (e.g., a
-   `_pred_scene_palette_entries` check for the palette command list).
-4. Wire the scene-specific predicate into `run_scene_predicates()`'s
-   scene-id dispatch.
-5. Add a test function in `test_reference_scenes.py`. Drive the TUI
-   into the scene's state (slash command, keystrokes, mock-backend
-   trigger) via the existing PTY substrate.
-6. Decorate with `@pytest.mark.xfail(strict=True, reason=...)` naming
-   the current gap. Flip it off only when the gap is closed (see
-   previous section).
-7. Add unit coverage to `test_tui_reference_predicates.py` for any new
-   predicate helper.
+1. Update `scene_presets.py` if the deterministic trigger changes.
+2. Update `build_visual_gap_report.py` if the screenshot bundle should expose the new capture directly.
+3. Update `predicates.py` for any new scene-specific token checks.
+4. Update `test_reference_scenes.py` so the live PTY gate exercises the shipped trigger.
+5. Regenerate `manifest.yaml` if the bundle or populated-scene set changes.
+6. Run `make tui-references`, `make tui-scene-matrix`, and `make tui-reference-gap`.
 
 ---
 
@@ -316,32 +329,47 @@ To promote one of the 10 stubbed scenes (e.g., `palette`) to MVP:
 
 ---
 
-## Slice 2+ roadmap
+## Fidelity roadmap
 
-**Slice 2 (next):**
+Stage 2 / 3 implementation is complete: all 14 reference scenes are now live
+PTY gates and all 14 have direct capture paths in the scene matrix.
 
-- Themed parallel renderer: Tokyo Night palette + vendored JetBrains
-  Mono font, producing PNG frames that can be visually compared to the
-  mockup JPGs without touching `tests/vhs/` self-vs-self baselines.
-- Side-by-side HTML artifact report per scene (cropped mockup | live
-  render | per-region SSIM scores | failed predicate surface).
-- Mock-backend `__HALT_FAILURE__` trigger so `test_scene_recovery` can
-  capture a real halted state instead of the default idle frame.
-- Dev-deps: `scikit-image`, `imagehash` (both pure-Python on numpy).
+Current focus:
 
-**Slice 3 (optional, later):**
+- tighten typography, spacing, density, and information hierarchy against the
+  screenshot bundle from
+  `autocode/docs/qa/test-results/20260422-092151-tui-reference-gap.md`
+- use `autocode/docs/qa/test-results/20260421-235651-tui-stage4-fidelity-pass.md`
+  as the first authoritative renderer-pass verification note for the rebuilt
+  release binary
+- use `autocode/docs/qa/test-results/20260422-112207-tui-stage4-search-escalation-cc-split-pass.md`
+  as the current structural-fidelity slice covering the untitled shell,
+  review/diff/grep/escalation/cc split-detail surfaces, and the restored Track 1 spinner gates
+- use `autocode/docs/qa/test-results/20260422-113800-tui-stage4-recovery-density-pass.md`
+  as the current recovery-fidelity slice covering the structured halted/error
+  surface with context and action detail
+- use `autocode/docs/qa/test-results/20260422-131037-tui-fullscreen-hard-requirements-pass.md`
+  as the fullscreen-compliance slice that replaces the centered shell and
+  codifies the user-locked render contract
+- use `autocode/docs/qa/test-results/20260422-081639-tui-stage4-ready-active-density-pass.md`
+  as the ready/active fidelity slice that lands the quiet idle surface, the
+  structured active surface, and the mid-run active screenshot fix in the gap
+  report
+- use `autocode/docs/qa/test-results/20260422-152822-tui-stage4-overlay-narrow-pass.md`
+  as the overlay / narrow fidelity slice that compacts the fullscreen
+  `sessions` / `palette` cards and keeps the narrow ready HUD/footer readable
+- refine the remaining scene-specific emphasis, density, hierarchy, and
+  real-data-binding gaps so the live TUI moves from "structurally correct" to
+  "visually close"
+- keep `make tui-references`, `make tui-scene-matrix`, and
+  `make tui-reference-gap` green while these fidelity adjustments land
 
-- Headless Chromium + xterm.js live-side rendering — accepts stdin ANSI,
-  renders with the same JetBrains Mono webfont + Tokyo Night CSS the
-  mockup bundle ships, emits PNG. Enables defensible pixel-level diff.
-- Opt-in Make target (`make tui-references-highfi`), not on every PR.
+Optional future work:
 
-**Future:**
-
-- Flip the 4 MVP `strict=True` xfails off as each matching UI feature
-  ships (HUD chip row, composer box, tool cards, narrow-layout branch,
-  recovery action cards).
-- Promote stubbed scenes as new UI features come online.
+- add higher-fidelity rendering or image metrics if the current pyte/Pillow
+  evidence bundle becomes too weak for late-stage polish
+- add an opt-in headless Chromium path if pixel-level validation becomes worth
+  the extra dependency cost
 
 ---
 

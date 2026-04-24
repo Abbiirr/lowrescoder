@@ -6,6 +6,7 @@ specific scenarios without a real LLM:
   - emits on_status on startup (lets TUI reach stageInput)
   - responds to chat requests with a short token stream + on_done
   - emits a WARNING to stderr (to test severity classification)
+  - can emit an approval request modal for permission-surface capture
   - never opens a model list (C1 regression guard)
   - if chat body contains ``__ASK_USER__``, emit an on_ask_user request
     and wait for the TUI's answer before completing the turn (Phase 2
@@ -16,6 +17,7 @@ Usage: set AUTOCODE_PYTHON_CMD to this script.
 from __future__ import annotations
 
 import json
+import os
 import sys
 import threading
 import time
@@ -83,7 +85,12 @@ def _ask_user_blocking(
 
 def main() -> None:
     # Emit a WARNING to stderr — should appear as ⚠ dim, not red Error: banner
-    print("WARNING: mock backend starting — this is a test warning", file=sys.stderr, flush=True)
+    if os.environ.get("AUTOCODE_MOCK_SUPPRESS_STARTUP_WARNING", "").strip() not in {
+        "1",
+        "true",
+        "yes",
+    }:
+        print("WARNING: mock backend starting — this is a test warning", file=sys.stderr, flush=True)
 
     # Small delay then send on_status so TUI transitions stageInit → stageInput
     time.sleep(0.3)
@@ -173,9 +180,57 @@ def main() -> None:
                                 "aliases": ["m"],
                                 "description": "Show or switch the LLM model",
                             },
+                            {
+                                "name": "plan",
+                                "aliases": [],
+                                "description": "Open the plan surface",
+                            },
+                            {
+                                "name": "multi",
+                                "aliases": [],
+                                "description": "Open the multitasking surface",
+                            },
+                            {
+                                "name": "review",
+                                "aliases": [],
+                                "description": "Open the review surface",
+                            },
+                            {
+                                "name": "diff",
+                                "aliases": [],
+                                "description": "Open the diff surface",
+                            },
+                            {
+                                "name": "grep",
+                                "aliases": ["search"],
+                                "description": "Open the search surface",
+                            },
+                            {
+                                "name": "restore",
+                                "aliases": [],
+                                "description": "Open the restore browser",
+                            },
+                            {
+                                "name": "cc",
+                                "aliases": [],
+                                "description": "Open the command center",
+                            },
+                            {
+                                "name": "escalation",
+                                "aliases": [],
+                                "description": "Open the escalation surface",
+                            },
                         ]
                     },
                 )
+
+        elif method == rpc_schema.METHOD_PLAN_SET:
+            params = req.get("params") or {}
+            mode = "planning"
+            if isinstance(params, dict):
+                mode = params.get("mode", "planning") or "planning"
+            if req_id is not None:
+                respond(req_id, {"mode": mode, "changed": True})
 
         elif req_id is not None:
             respond(req_id, {"ok": True})
@@ -192,6 +247,27 @@ def _handle_chat(req_id: int | None, message: str) -> None:
             allow_text=False,
         )
         tokens = [f"You chose: {answer or '(cancelled)'}"]
+    elif "__APPROVAL__" in message:
+        request(
+            rpc_schema.METHOD_ON_TOOL_REQUEST,
+            {
+                "tool": "write_file",
+                "args": "{\"path\":\"/tmp/demo.txt\",\"content\":\"example\"}",
+            },
+            9100,
+        )
+        tokens = []
+    elif "__HALT_FAILURE__" in message:
+        send(
+            rpc_schema.METHOD_ON_ERROR,
+            {
+                "message": (
+                    "halted after matrix shard failure; retry, inspect, restore, "
+                    "rewind, compact, or planning are available"
+                ),
+            },
+        )
+        tokens = []
     elif "__WARNING__" in message:
         # Phase 2 Scenario 3: emit a WARNING to stderr mid-chat. The
         # TUI should render it as a dim scrollback line, NOT as a red
@@ -203,6 +279,55 @@ def _handle_chat(req_id: int | None, message: str) -> None:
         )
         time.sleep(0.1)
         tokens = ["Warning", " emitted", "."]
+    elif (
+        "__ACTIVE_FIXTURE__" in message
+        or "refactor parser.ts to safely handle missing imports and run tests" in message
+    ):
+        send(
+            rpc_schema.METHOD_ON_TASK_STATE,
+            {
+                "tasks": [
+                    {"id": "task-1", "title": "Inspect parser flow", "status": "done"},
+                    {"id": "task-2", "title": "Search extractImports references", "status": "done"},
+                    {"id": "task-3", "title": "Update AST types", "status": "done"},
+                    {"id": "task-4", "title": "Patch parser import handling", "status": "running"},
+                    {"id": "task-5", "title": "Run targeted parser tests", "status": "running"},
+                    {"id": "task-6", "title": "Write changelog note", "status": "pending"},
+                ],
+                "subagents": [
+                    {"id": "agent-1", "role": "lint-scout", "status": "running"},
+                    {"id": "agent-2", "role": "doc-writer", "status": "waiting"},
+                ],
+            },
+        )
+        scripted = [
+            "Planning\n",
+            "Will inspect parser flow, extend ASTNode with an optional imports field, patch extractImports to guard against undefined,\n",
+            "then run the targeted parser tests.\n",
+            "\n",
+            "Read(src/utils/parser.ts)\n",
+            "Search \"extractImports|ASTNode\" src\n",
+            "Read(src/types.ts)\n",
+            "Edit(src/types.ts)\n",
+            "42 - imports: ImportNode[]\n",
+            "42 + imports?: ImportNode[]\n",
+            "Edit(src/utils/parser.ts)\n",
+            "71 - const nodes = extractImports(ast.imports)\n",
+            "71 + const nodes = ast.imports ? extractImports(ast.imports) : []\n",
+            "Run(bun test ./tests/parser.test.ts)\n",
+            "√ parsed simple ast\n",
+            "√ extracted full imports\n",
+        ]
+        for tok in scripted:
+            send("on_token", {"text": tok})
+            time.sleep(0.05)
+        time.sleep(3.5)
+        tokens = [
+            "[bun v1.1] √ parses optional import list\n",
+            "[bun v1.1] √ extracts nested imports\n",
+            "[bun v1.1] √ parser smoke path\n",
+            "[bun v1.1] ● tests/parser.test.ts…\n",
+        ]
     elif "__SLOW__" in message:
         # Phase 2 Scenario 5: hold the spinner for multiple ticks by
         # emitting one token immediately, then inserting a longer gap

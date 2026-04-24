@@ -12,22 +12,22 @@ The **External-Pilot** lane evaluates AutoCode's agent quality against published
 
 ### Implemented (verified 2026-02-13)
 
-- Runner script: `scripts/e2e/external/run_external_pilot.py`
+- Runner script: `benchmarks/e2e/external/run_external_pilot.py`
   - CLI flags: `--agent`, `--suite`, `--model`, `--parity-runs`, `--dry-run`
   - Prerequisite checks: Docker, Harbor CLI, API keys
   - Artifact pipeline: config.json, summary.json, summary.md, per-task/*.json
   - Dry-run mode for pipeline validation without Harbor invocation
   - Harbor CLI auto-discovery (PATH, `HARBOR_EXE` env var, `K:\tools\harbor-venv`)
 - Pilot subset manifests:
-  - `scripts/e2e/external/swebench-pilot-subset.json` (25 tasks, 5 repos x 5 tiers)
-  - `scripts/e2e/external/terminalbench-pilot-subset.json` (10 tasks, real Terminal-Bench 2.0 IDs)
+  - `benchmarks/e2e/external/swebench-pilot-subset.json` (25 tasks, 5 repos x 5 tiers)
+  - `benchmarks/e2e/external/terminalbench-pilot-subset.json` (10 tasks, real Terminal-Bench 2.0 IDs)
 - Harbor CLI installed: v0.1.44 at `K:\tools\harbor-venv\Scripts\harbor.exe`
 - Scoring framework lane: External-Pilot row in `scoring-framework.md`
 
 ### Blocked (requires action)
 
 - **Real pilot run**: Needs first end-to-end Harbor execution with Docker containers
-  - Next command: `uv run python scripts/e2e/external/run_external_pilot.py --agent codex --suite terminalbench --dry-run`
+  - Next command: `uv run python benchmarks/e2e/external/run_external_pilot.py --agent codex --suite terminalbench --dry-run`
   - Blocker: Harbor job output format parsing needs validation against real output
 - **Dataset download**: SWE-bench Verified (500 tasks) and Terminal-Bench 2.0 (89 tasks) not yet cached locally
   - Next command: `K:\tools\harbor-venv\Scripts\harbor.exe datasets download terminal-bench@2.0`
@@ -102,7 +102,7 @@ Proves at least one real task per suite runs and produces a meaningful verdict.
 
 ### Manifest File
 
-`scripts/e2e/external/swebench-pilot-subset.json`
+`benchmarks/e2e/external/swebench-pilot-subset.json`
 
 Contains 25 task IDs with metadata (repo, difficulty, estimated complexity).
 
@@ -136,7 +136,7 @@ Contains 25 task IDs with metadata (repo, difficulty, estimated complexity).
 
 ### Manifest File
 
-`scripts/e2e/external/terminalbench-pilot-subset.json`
+`benchmarks/e2e/external/terminalbench-pilot-subset.json`
 
 Contains 10 task IDs with metadata (category, description, estimated time).
 
@@ -176,7 +176,7 @@ docs/qa/test-results/
   "agent": "codex|claude-code",
   "model": "model-id",
   "harbor_dataset": "swebench-verified@1.0",
-  "subset_manifest": "scripts/e2e/external/swebench-pilot-subset.json",
+  "subset_manifest": "benchmarks/e2e/external/swebench-pilot-subset.json",
   "budget": {
     "wall_time_per_task_s": 600,
     "token_cap_per_task": 50000,
@@ -237,13 +237,13 @@ The `E2E-CLI` scenario is a known capability-floor test. Under the current model
 
 ```bash
 # With codex agent
-uv run python scripts/e2e/external/run_external_pilot.py \
+uv run python benchmarks/e2e/external/run_external_pilot.py \
   --agent codex \
   --suite swebench \
   --model gpt-4o
 
 # With claude-code agent
-uv run python scripts/e2e/external/run_external_pilot.py \
+uv run python benchmarks/e2e/external/run_external_pilot.py \
   --agent claude-code \
   --suite swebench \
   --model claude-sonnet-4-5-20250929
@@ -253,13 +253,13 @@ uv run python scripts/e2e/external/run_external_pilot.py \
 
 ```bash
 # With codex agent
-uv run python scripts/e2e/external/run_external_pilot.py \
+uv run python benchmarks/e2e/external/run_external_pilot.py \
   --agent codex \
   --suite terminalbench \
   --model gpt-4o
 
 # With claude-code agent
-uv run python scripts/e2e/external/run_external_pilot.py \
+uv run python benchmarks/e2e/external/run_external_pilot.py \
   --agent claude-code \
   --suite terminalbench \
   --model claude-sonnet-4-5-20250929
@@ -270,7 +270,7 @@ uv run python scripts/e2e/external/run_external_pilot.py \
 Run the same subset 3 times to measure orchestration/config variance:
 
 ```bash
-uv run python scripts/e2e/external/run_external_pilot.py \
+uv run python benchmarks/e2e/external/run_external_pilot.py \
   --agent claude-code \
   --suite swebench \
   --parity-runs 3 \
@@ -280,7 +280,7 @@ uv run python scripts/e2e/external/run_external_pilot.py \
 ### Dry-Run (Pipeline Validation Only)
 
 ```bash
-uv run python scripts/e2e/external/run_external_pilot.py \
+uv run python benchmarks/e2e/external/run_external_pilot.py \
   --agent codex \
   --suite terminalbench \
   --dry-run
@@ -304,7 +304,7 @@ uv run python scripts/e2e/external/run_external_pilot.py \
 
 ## Unified Benchmark Runner (Recommended)
 
-The unified benchmark runner (`scripts/benchmark_runner.py`) supersedes the Harbor-based pilot runner for local benchmarking. It provides Docker-based isolation, resumability, and exponential backoff for remote Ollama servers.
+The unified benchmark runner (`benchmarks/benchmark_runner.py`) supersedes the Harbor-based pilot runner for local benchmarking. It provides Docker-based isolation, resumability, and exponential backoff for remote Ollama servers.
 
 ### Run All Lanes
 
@@ -315,7 +315,7 @@ export OLLAMA_HOST=http://localhost:4000
 export OLLAMA_MODEL=coding
 
 # Run all lanes sequentially with resume (B7-B14)
-bash scripts/run_all_benchmarks.sh
+bash benchmarks/run_all_benchmarks.sh
 
 # Monitor progress
 tail -50 /tmp/claude-1000/-home-bs01763-projects-ai-lowrescoder/benchmark_full_run.log
@@ -337,15 +337,15 @@ Temporary LLM Gateway outages are handled by the LLM layer with exponential back
 
 - [ ] `docker run hello-world` succeeds
 - [ ] `K:\tools\harbor-venv\Scripts\harbor.exe --version` returns `0.1.44` or later
-- [ ] `uv run python scripts/e2e/external/run_external_pilot.py --help` shows usage
+- [ ] `uv run python benchmarks/e2e/external/run_external_pilot.py --help` shows usage
 - [ ] API key is set in environment (OPENROUTER_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY)
 
 ### Gate A Validation (Wiring)
 
-- [ ] `uv run python scripts/e2e/external/run_external_pilot.py --agent codex --suite swebench --dry-run` exits 0
+- [ ] `uv run python benchmarks/e2e/external/run_external_pilot.py --agent codex --suite swebench --dry-run` exits 0
 - [ ] Artifact directory created: `docs/qa/test-results/*external-pilot-swebench-codex*/`
 - [ ] Files present: config.json, summary.json, summary.md, per-task/ (25 files)
-- [ ] `uv run python scripts/e2e/external/run_external_pilot.py --agent claude-code --suite terminalbench --dry-run` exits 0
+- [ ] `uv run python benchmarks/e2e/external/run_external_pilot.py --agent claude-code --suite terminalbench --dry-run` exits 0
 - [ ] Artifact directory created: `docs/qa/test-results/*external-pilot-terminalbench-claude-code*/`
 
 ### Gate B Validation (Performance)

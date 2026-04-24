@@ -159,6 +159,9 @@ uv run python benchmarks/benchmark_runner.py --list-lanes
 # Run a specific lane
 uv run python benchmarks/benchmark_runner.py --agent autocode --lane B9-PROXY --model swebench
 
-# Run all B7-B29
+# Prepare a human-operated TUI benchmark sweep
+uv run python benchmarks/prepare_tui_benchmark_run.py --scope full --mode inline --strict
+
+# Run all B7-B14
 bash benchmarks/run_all_benchmarks.sh
 ```

@@ -984,6 +984,22 @@ def set_code_index_cache(index: Any) -> None:
     _code_index_cache = index
 
 
+def get_code_index_cache_stats(project_root: str = "") -> dict[str, int] | None:
+    """Return cached index stats when the shared CodeIndex is already warm.
+
+    This is intentionally read-only: callers that only need observability
+    should not trigger a full synchronous `build()` on the interactive path.
+    """
+    root = str(Path(project_root).resolve()) if project_root else str(Path(".").resolve())
+    if _code_index_cache is None or _code_index_project_root != root:
+        return None
+
+    return {
+        "files_indexed": int(getattr(_code_index_cache, "file_count", 0)),
+        "total_chunks": int(getattr(_code_index_cache, "chunk_count", 0)),
+    }
+
+
 def warm_code_index(
     project_root: str = "",
     *,

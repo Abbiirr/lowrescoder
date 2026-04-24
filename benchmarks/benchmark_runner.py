@@ -506,13 +506,25 @@ AGENT_REGISTRY: dict[str, type] = {
 }
 
 
-def get_adapter(agent_name: str, model: str = "") -> AgentAdapter:
+def get_adapter(
+    agent_name: str,
+    model: str = "",
+    *,
+    autocode_runner: str = "loop",
+    autocode_tui_connection: str = "spawn",
+) -> AgentAdapter:
     """Create an agent adapter by name."""
     cls = AGENT_REGISTRY.get(agent_name)
     if cls is None:
         raise ValueError(
             f"Unknown agent: {agent_name}. "
             f"Available: {', '.join(AGENT_REGISTRY)}"
+        )
+    if agent_name == "autocode":
+        return cls(
+            model=model,
+            runner=autocode_runner,
+            tui_connection=autocode_tui_connection,
         )
     return cls(model=model)
 
@@ -1510,6 +1522,21 @@ async def main() -> int:
         help="Override model for the agent",
     )
     parser.add_argument(
+        "--autocode-runner",
+        choices=("loop", "tui"),
+        default="loop",
+        help="AutoCode execution path: internal loop (default) or Rust TUI in PTY",
+    )
+    parser.add_argument(
+        "--autocode-tui-connection",
+        choices=("spawn", "attach"),
+        default="spawn",
+        help=(
+            "Benchmark TUI backend path: spawn-managed (default) or attach to "
+            "a separately launched TCP backend host."
+        ),
+    )
+    parser.add_argument(
         "--strict",
         action="store_true",
         help="Use strict mode (higher thresholds)",
@@ -1628,7 +1655,12 @@ async def main() -> int:
     print(f"Benchmark run_id: {run_id}")
 
     for agent_name in agent_names:
-        adapter = get_adapter(agent_name, model=args.model)
+        adapter = get_adapter(
+            agent_name,
+            model=args.model,
+            autocode_runner=args.autocode_runner,
+            autocode_tui_connection=args.autocode_tui_connection,
+        )
 
         # Validate provider policy (Entry 530)
         if adapter.provider_mode == "paid_metered":

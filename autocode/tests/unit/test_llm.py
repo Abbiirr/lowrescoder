@@ -5,7 +5,10 @@ from __future__ import annotations
 from autocode.layer4.llm import (
     ConversationHistory,
     _extract_tool_calls_from_text,
+    _format_openrouter_error,
     _is_connection_error,
+    _is_loopback_api_base,
+    _is_openrouter_retryable_error,
 )
 
 
@@ -215,3 +218,58 @@ class TestConnectionErrorClassification:
 
         exc = ConnectError("cannot connect to host")
         assert _is_connection_error(exc) is True
+
+
+class TestOpenRouterRetryClassification:
+    def test_invalid_model_is_not_retryable(self) -> None:
+        class BadRequestError(Exception):
+            def __init__(self, msg: str, status_code: int) -> None:
+                super().__init__(msg)
+                self.status_code = status_code
+
+        exc = BadRequestError("Error code: 400 - model not found", 400)
+
+        assert _is_openrouter_retryable_error(
+            exc,
+            api_base="http://localhost:4000/v1",
+        ) is False
+
+    def test_loopback_connection_error_is_not_retryable(self) -> None:
+        exc = ConnectionRefusedError("[Errno 111] Connection refused")
+
+        assert _is_openrouter_retryable_error(
+            exc,
+            api_base="http://localhost:4000/v1",
+        ) is False
+
+    def test_rate_limit_is_retryable(self) -> None:
+        class RateLimitError(Exception):
+            def __init__(self, msg: str, status_code: int) -> None:
+                super().__init__(msg)
+                self.status_code = status_code
+
+        exc = RateLimitError("Error code: 429 - rate limit", 429)
+
+        assert _is_openrouter_retryable_error(
+            exc,
+            api_base="https://openrouter.ai/api/v1",
+        ) is True
+
+    def test_loopback_detection(self) -> None:
+        assert _is_loopback_api_base("http://localhost:4000/v1") is True
+        assert _is_loopback_api_base("http://127.0.0.1:4000/v1") is True
+        assert _is_loopback_api_base("https://openrouter.ai/api/v1") is False
+
+    def test_invalid_model_error_message_is_human_readable(self) -> None:
+        class NotFoundError(Exception):
+            def __init__(self, msg: str, status_code: int) -> None:
+                super().__init__(msg)
+                self.status_code = status_code
+
+        exc = NotFoundError("Error code: 404 - model not found", 404)
+
+        assert _format_openrouter_error(
+            exc,
+            model="definitely-not-real",
+            api_base="http://localhost:4000/v1",
+        ) == "Model alias 'definitely-not-real' is not available on the configured gateway."

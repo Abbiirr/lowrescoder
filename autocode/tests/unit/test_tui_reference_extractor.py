@@ -3,7 +3,7 @@
 Locks the contract between the design bundle
 (``tui-references/AutoCode TUI _standalone_.html``) and the reference-driven
 parity tests: 14 scenes, stable ids, label + page-number extraction, and
-region-class detection for the 4 MVP scenes.
+region-class detection for the current live-gated scenes.
 
 Stdlib-only.
 """
@@ -72,17 +72,18 @@ def test_scene_ids_match_bundle(scenes):
 
 
 def test_mvp_scenes_are_populated(scenes):
-    mvp = {"ready", "active", "recovery", "narrow"}
+    mvp = {
+        "ready", "active", "multi", "plan", "review", "cc", "recovery",
+        "restore", "sessions", "palette", "diff", "grep", "escalation",
+        "narrow",
+    }
     populated = {s.scene_id for s in scenes if s.populated}
     assert populated == mvp
 
 
 def test_non_mvp_scenes_are_stubbed(scenes):
     non_mvp = {s.scene_id for s in scenes if not s.populated}
-    assert non_mvp == {
-        "multi", "plan", "review", "cc", "restore",
-        "sessions", "palette", "diff", "grep", "escalation",
-    }
+    assert non_mvp == set()
 
 
 # ------------------------------------------------------------------ label + order
@@ -110,7 +111,7 @@ def test_scenes_sorted_by_page_then_id(scenes):
 def test_mvp_scenes_have_expected_regions(scenes):
     by_id = {s.scene_id: s for s in scenes}
     # Every MVP frame must include the top HUD strip + the composer wrapper.
-    for scene_id in ("ready", "active", "recovery", "narrow"):
+    for scene_id in ("ready", "active", "recovery", "sessions", "palette", "narrow"):
         regions = set(by_id[scene_id].region_classes)
         assert "hud" in regions, f"{scene_id} missing hud"
         assert "composer-wrap" in regions, f"{scene_id} missing composer-wrap"

@@ -1,0 +1,50 @@
+tools | openrouter | suggest | ● search | mock-ses | tasks:0 | agents:0 | q:0 | sandbox:local                                                                   
+Search "extractImports|ASTNode\.kind" src · 14 hits across 5 files                                                                                              
+                                                                                                                                                                
+src/utils/parser.ts · 4 hits                                                                                                                                    
+12 import { extractImports , ASTNode } from '../types'                                                                                                          
+71 const nodes = ast.imports ? extractImports (ast.imports) : []                                                                                                
+                                                                                                                                                                
+src/utils/resolver.ts · 5 hits                                                                                                                                  
+116 const kind = n.kind ?? 'module'                                                                                                                             
+117 if ( kind === 'dyn') return null                                                                                                                            
+                                                                                                                                                                
+@attach src/types.ts · #extractImports · press Tab to pull into composer                                                                                        
+symbol: #extractImports · file: @src/types.ts · 3 attached                                                                                                      
+↵ open hit · Tab attach to composer · Ctrl+] next file · / refine query · Esc back                                                                              
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+❯ Ask AutoCode                                                                                                                                                  
+Search results can be attached directly into the composer for the next prompt.                                                                                  
+↵ open hit · Tab attach to composer · Ctrl+] next file · / refine query · Esc back                                                                              

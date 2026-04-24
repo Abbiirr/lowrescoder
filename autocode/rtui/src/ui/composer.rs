@@ -94,6 +94,7 @@ impl Composer {
                                 sent_at: std::time::Instant::now(),
                             },
                         );
+                        state.stage = crate::state::model::Stage::Streaming;
                         state.scrollback.push_back(format!("> {}", user_text));
                         state.composer_text.clear();
                         state.composer_lines.clear();

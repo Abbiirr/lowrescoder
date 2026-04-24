@@ -37,6 +37,27 @@ If any gate fails, **stop and fix**. Do not proceed.
 
 ---
 
+## Section 1A — Hard Rendering Requirements (user-locked 2026-04-22)
+
+- ☐ **HR-1 Full-screen:** default inline mode uses the full terminal width and
+  height
+- ☐ **HR-2 Resize:** large-to-small and small-to-large terminal resize redraw
+  correctly without renderer or PTY breakage
+- ☐ **HR-3 Multi-size:** validation covers at least `80x24`, `120x40`, and
+  `200x50`
+- ☐ **HR-4 Native scrollback:** default mode stays inline; no unconditional
+  alt-screen entry
+- ☐ **HR-5 Real-feature correctness gates visual polish:** every TUI change
+  must either (a) bind a previously-mockup surface to real session state,
+  (b) fix a real-runtime correctness gap from the Entry 1338 audit, or
+  (c) address a user-reported runtime regression. Visual-only polish is
+  paused until ≥4 of 10 Entry-1338 detail surfaces are real-data bound.
+  Evidence: the slice's verification artifact must state which of (a),
+  (b), (c) it satisfies.
+- **Evidence:** `_________________________`
+
+---
+
 ## Section 2 — Visible Surface Rule (§3.0 in strategy)
 
 For every modal, picker, palette, banner: the captured terminal frame must contain the renderable content, not just a prompt label. This is the single most-common Rust-TUI failure pattern (Codex Inventory §2, §3, §4, §14, §15).

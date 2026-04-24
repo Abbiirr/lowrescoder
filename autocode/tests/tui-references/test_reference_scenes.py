@@ -1,27 +1,14 @@
-"""Live PTY parity tests for the 4 MVP reference scenes — **design-target
-ratchet**, not a regression gate.
+"""Live PTY parity tests for the current live-gated reference scenes.
 
 Reuses the existing ``autocode/tests/tui-comparison/`` substrate (capture
 driver, DSR responder, autocode launcher, pyte render helper) so there is
 no duplicated process-launch code.
 
-**Why every scene is xfail'd (and why `strict=True`):**
-
 The reference contract encodes the design target described by
-``tui-references/AutoCode TUI _standalone_.html`` — that target is not
-yet shipped in the Rust TUI (no HUD chip row, no composer box, no tool
-cards, no narrow-layout branch, no recovery action cards). Each scene's
-xfail reason names the concrete gap. Using ``strict=True`` means:
-
-- while the gap remains, ``XFAIL`` is the expected outcome — CI stays
-  green.
-- as soon as the matching feature ships and the predicates start passing,
-  pytest reports ``XPASS`` as a **failure**, forcing whoever landed the
-  feature to flip the decorator off and turn the test into a real
-  regression check — the ratchet.
-
-This file is not a "gate". It becomes a gate one scene at a time, only
-after the matching UI work lands and the xfail decorator is removed.
+``tui-references/AutoCode TUI _standalone_.html``. The shipped direct
+scenes covered here act as hard regression gates. The still-partial
+`/plan` surface remains an honest strict xfail until a real plan panel
+exists.
 
 Environment:
 
@@ -128,8 +115,13 @@ def _capture_and_render(
     boot_budget_s: float = 6.0,
     drain_quiet_s: float = 1.2,
     drain_maxwait_s: float = 6.0,
+    suppress_startup_warning: bool = False,
 ):
-    launch = launcher_mod.spec(use_mock_backend=True, boot_budget_s=boot_budget_s)
+    launch = launcher_mod.spec(
+        use_mock_backend=True,
+        boot_budget_s=boot_budget_s,
+        suppress_startup_warning=suppress_startup_warning,
+    )
     opts = capture_mod.CaptureOptions(
         argv=launch.argv,
         cols=cols,
@@ -165,21 +157,25 @@ def _assert_scene_passes(
     return report
 
 
+def _assert_plan_surface_materialized(text: str) -> None:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    checklist_rows = [
+        line for line in lines if line.startswith(("√ ", "● ", "○ "))
+    ]
+    has_step_language = any(
+        "step" in line.lower() or "queued" in line.lower() for line in lines
+    )
+    has_plan_detail = any(
+        "checkpoint" in line.lower() or "editable" in line.lower() for line in lines
+    )
+    assert len(checklist_rows) >= 2, "expected visible plan checklist rows"
+    assert has_step_language, "expected visible step/queue language"
+    assert has_plan_detail, "expected checkpoint/editability detail"
+
+
 # ---------------------------------------------------------------- scene tests
-# Every MVP scene is xfail'd with ``strict=True`` — see the module docstring
-# for the ratchet semantics. Flip the decorator off per-scene as the matching
-# UI feature lands.
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Mockup page 01 shows a HUD chip-row (model·think·branch·tokens·$·timer·"
-        "Δ·tasks·agents·q·sandbox) + composer-box + keybind footer. Live Go TUI "
-        "on idle currently shows only a welcome banner. Flip to non-xfail once "
-        "the Ready-state HUD + composer chrome ships."
-    ),
-)
 def test_scene_ready(predicates_mod, capture_mod, render_mod, launcher_mod, scenes):
     scene = scenes["ready"]
     cols, rows = 160, 50
@@ -193,19 +189,11 @@ def test_scene_ready(predicates_mod, capture_mod, render_mod, launcher_mod, scen
         boot_budget_s=4.0,
         drain_quiet_s=1.0,
         drain_maxwait_s=3.0,
+        suppress_startup_warning=True,
     )
     _assert_scene_passes(predicates_mod, text, scene, cols=cols)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Mockup page 02 shows HUD + tool-chain panel (Read/Search/Edit/Run) + "
-        "inline diff hunks + live test-output panel + composer. Live Go TUI "
-        "renders a plain token stream when a turn is in flight. Flip once "
-        "the Active-turn chrome (tool cards + diff hunks) ships."
-    ),
-)
 def test_scene_active(predicates_mod, capture_mod, render_mod, launcher_mod, scenes):
     scene = scenes["active"]
     cols, rows = 160, 50
@@ -215,24 +203,19 @@ def test_scene_active(predicates_mod, capture_mod, render_mod, launcher_mod, sce
         launcher_mod=launcher_mod,
         cols=cols,
         rows=rows,
-        # Send a message; mock backend streams "Hello from the mock backend!"
-        # and the spinner-with-working-status renders while it is in-flight.
-        steps=["hello\r", 0.4, 1.0],
+        steps=[
+            "refactor parser.ts to safely handle missing imports and run tests\r",
+            0.4,
+            1.0,
+        ],
         boot_budget_s=4.0,
         drain_quiet_s=0.6,
         drain_maxwait_s=3.0,
+        suppress_startup_warning=True,
     )
     _assert_scene_passes(predicates_mod, text, scene, cols=cols)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Mockup page 14 shows a narrow-geometry adaptation: rail → tabs, drawer "
-        "bounded to 3 rows, composer + transcript always visible. Live Go TUI "
-        "has no narrow-layout branch yet. Flip once narrow-layout mode ships."
-    ),
-)
 def test_scene_narrow(predicates_mod, capture_mod, render_mod, launcher_mod, scenes):
     scene = scenes["narrow"]
     # Narrow TUI geometry; well below the 80-col convention, matching page 14.
@@ -251,32 +234,90 @@ def test_scene_narrow(predicates_mod, capture_mod, render_mod, launcher_mod, sce
     _assert_scene_passes(predicates_mod, text, scene, cols=cols)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Recovery action cards (Mockup page 07) — 6 safe-option buttons "
-        "(retry · inspect · restore · rewind · compact · planning) — are not "
-        "implemented in the Go TUI. No mock-backend trigger drives the TUI "
-        "into a halted state yet either. Flip after the recovery-cards UI "
-        "and a __HALT_FAILURE__ mock-backend trigger both land."
-    ),
-)
 def test_scene_recovery(predicates_mod, capture_mod, render_mod, launcher_mod, scenes):
     scene = scenes["recovery"]
     cols, rows = 160, 50
-    # No backend trigger yet drives the TUI into a halted/recovery state; the
-    # mock backend happily streams a reply for any message. Slice 2 (or the
-    # recovery-cards implementation slice) should add `__HALT_FAILURE__`
-    # handling so this test can drive the real state.
     _, text = _capture_and_render(
         capture_mod=capture_mod,
         render_mod=render_mod,
         launcher_mod=launcher_mod,
         cols=cols,
         rows=rows,
-        steps=[0.6],
+        steps=["__HALT_FAILURE__\r", 0.4, 1.0],
         boot_budget_s=4.0,
         drain_quiet_s=1.0,
         drain_maxwait_s=3.0,
+    )
+    _assert_scene_passes(predicates_mod, text, scene, cols=cols)
+
+
+def test_scene_sessions(predicates_mod, capture_mod, render_mod, launcher_mod, scenes):
+    scene = scenes["sessions"]
+    cols, rows = 160, 50
+    _, text = _capture_and_render(
+        capture_mod=capture_mod,
+        render_mod=render_mod,
+        launcher_mod=launcher_mod,
+        cols=cols,
+        rows=rows,
+        steps=[0.8, "/sessions\r", 2.0],
+        boot_budget_s=4.0,
+        drain_quiet_s=1.0,
+        drain_maxwait_s=4.0,
+    )
+    _assert_scene_passes(predicates_mod, text, scene, cols=cols)
+
+
+def test_scene_palette(predicates_mod, capture_mod, render_mod, launcher_mod, scenes):
+    scene = scenes["palette"]
+    cols, rows = 160, 50
+    _, text = _capture_and_render(
+        capture_mod=capture_mod,
+        render_mod=render_mod,
+        launcher_mod=launcher_mod,
+        cols=cols,
+        rows=rows,
+        steps=[0.8, "\x0b", 0.6],
+        boot_budget_s=4.0,
+        drain_quiet_s=1.0,
+        drain_maxwait_s=4.0,
+    )
+    _assert_scene_passes(predicates_mod, text, scene, cols=cols)
+
+
+@pytest.mark.parametrize(
+    ("scene_id", "steps"),
+    [
+        ("multi", [0.8, "/multi\r", 1.0]),
+        ("plan", [0.8, "/plan\r", 1.2]),
+        ("review", [0.8, "/review\r", 1.0]),
+        ("cc", [0.8, "/cc\r", 1.0]),
+        ("restore", [0.8, "/restore\r", 1.0]),
+        ("diff", [0.8, "/diff\r", 1.0]),
+        ("grep", [0.8, "/grep\r", 1.0]),
+        ("escalation", [0.8, "/escalation\r", 1.0]),
+    ],
+)
+def test_scene_stage2_and_stage3_surfaces(
+    predicates_mod,
+    capture_mod,
+    render_mod,
+    launcher_mod,
+    scenes,
+    scene_id,
+    steps,
+):
+    scene = scenes[scene_id]
+    cols, rows = 160, 50
+    _, text = _capture_and_render(
+        capture_mod=capture_mod,
+        render_mod=render_mod,
+        launcher_mod=launcher_mod,
+        cols=cols,
+        rows=rows,
+        steps=steps,
+        boot_budget_s=4.0,
+        drain_quiet_s=1.0,
+        drain_maxwait_s=4.0,
     )
     _assert_scene_passes(predicates_mod, text, scene, cols=cols)

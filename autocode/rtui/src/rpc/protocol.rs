@@ -60,11 +60,26 @@ pub struct ErrorParams {
     pub message: String,
 }
 
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct WarningParams {
+    pub message: String,
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct StatusParams {
     pub model: String,
     pub provider: String,
     pub mode: String,
+    #[serde(default)]
+    pub session_id: Option<String>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct ChatAckParams {
+    #[serde(default)]
+    pub request_id: Option<i64>,
     #[serde(default)]
     pub session_id: Option<String>,
 }
@@ -156,6 +171,14 @@ pub struct SessionListParams {}
 #[derive(Debug, Deserialize)]
 pub struct SessionListResult {
     pub sessions: Vec<SessionInfo>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct SessionChangeResult {
+    pub session_id: String,
+    #[serde(default)]
+    pub title: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -371,6 +394,14 @@ mod tests {
         let info = serde_json::from_str::<SessionInfo>(json).unwrap();
         assert_eq!(info.id, "sess-123");
         assert_eq!(info.title, "my session");
+    }
+
+    #[test]
+    fn session_change_result_roundtrip() {
+        let json = r#"{"session_id":"sess-123","title":"Fresh session"}"#;
+        let result = serde_json::from_str::<SessionChangeResult>(json).unwrap();
+        assert_eq!(result.session_id, "sess-123");
+        assert_eq!(result.title.as_deref(), Some("Fresh session"));
     }
 
     #[test]

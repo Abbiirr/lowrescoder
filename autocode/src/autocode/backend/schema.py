@@ -27,6 +27,8 @@ except ModuleNotFoundError:  # pragma: no cover - direct PTY stubs only need con
 
 METHOD_ON_STATUS = "on_status"
 METHOD_ON_ERROR = "on_error"
+METHOD_ON_WARNING = "on_warning"
+METHOD_ON_CHAT_ACK = "on_chat_ack"
 METHOD_ON_TOKEN = "on_token"
 METHOD_ON_THINKING = "on_thinking"
 METHOD_ON_DONE = "on_done"
@@ -88,10 +90,19 @@ class ErrorParams(StrictModel):
     message: str
 
 
+class WarningParams(StrictModel):
+    message: str
+
+
 class StatusParams(StrictModel):
     model: str
     provider: str
     mode: str
+    session_id: str | None = None
+
+
+class ChatAckParams(StrictModel):
+    request_id: int | None = None
     session_id: str | None = None
 
 
@@ -256,6 +267,7 @@ class ForkSessionResult(StrictModel):
 CANONICAL_METHODS = (
     METHOD_ON_STATUS,
     METHOD_ON_ERROR,
+    METHOD_ON_CHAT_ACK,
     METHOD_ON_TOKEN,
     METHOD_ON_THINKING,
     METHOD_ON_DONE,
@@ -295,6 +307,7 @@ COMPAT_METHOD_ALIASES: dict[str, str] = {}
 PARAM_MODELS: dict[str, type[BaseModel]] = {
     METHOD_ON_STATUS: StatusParams,
     METHOD_ON_ERROR: ErrorParams,
+    METHOD_ON_CHAT_ACK: ChatAckParams,
     METHOD_ON_TOKEN: TokenParams,
     METHOD_ON_THINKING: ThinkingParams,
     METHOD_ON_DONE: DoneParams,

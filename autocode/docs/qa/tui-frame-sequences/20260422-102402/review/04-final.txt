@@ -1,0 +1,50 @@
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│tools | openrouter | suggest | ● review | mock-sessi | tasks:0 | agents:0 | q:0 | sandbox:local                                                               │
+│All edits staged. Waiting for review.                                                                                                 PLAN                    │
+│                                                                                                                                      √ Inspect parser flow   │
+│src/utils/parser.ts (lines 38–54)                                                                                                     √ Update AST types      │
+│+2 −1 · 1 hunk                                                                                                                        √ Patch imports         │
+│38 function extractImports(nodes: ImportNode[] | undefined) {                                                                         √ Targeted tests        │
+│39 if (!nodes) return []                                                                                                              ● Review diff           │
+│40 const seen = new Set ()                                                                                                                                    │
+│45 + const r = resolve(n)                                                                                                             VALIDATION              │
+│46 + if (r) out.push(r)                                                                                                               targeted tests          │
+│                                                                                                                                      passed                  │
+│tests/parser.test.ts · +4 assertions · details                                                                                        full suite not run      │
+│                                                                                                                                                              │
+│                                                                                                                                      REVIEW NEEDED           │
+│                                                                                                                                      files 2                 │
+│                                                                                                                                      blast parser+tests      │
+│                                                                                                                                      network off             │
+│                                                                                                                                      reversible yes          │
+│                                                                                                                                      protected no            │
+│                                                                                                                                      severity high           │
+│                                                                                                                                      [a]pprove               │
+│                                                                                                                                      [r]eject                │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐│
+││❯                                                                                                                                                           ││
+│└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘│
+│Evidence is staged for approval; accept or reject before resuming auto mode.                                                                                  │
+│[a]pprove · [r]eject · Esc back · Ctrl+Shift+P palette · / commands                                                                                           │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘

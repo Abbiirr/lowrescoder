@@ -18,6 +18,7 @@ from benchmarks.benchmark_runner import (  # noqa: E402  # isort: skip
     LANE_CONFIGS,
     _build_host_setup_env,
     build_run_contract,
+    get_adapter,
     run_lane,
 )
 
@@ -214,6 +215,25 @@ def test_build_host_setup_env_adds_pip_shims_when_missing(tmp_path: Path):
     assert (shim_dir / "pip").exists()
     assert (shim_dir / "pip3").exists()
     assert "python -m pip" in (shim_dir / "pip").read_text(encoding="utf-8")
+
+
+def test_get_adapter_passes_tui_runner_to_autocode() -> None:
+    adapter = get_adapter("autocode", model="test-model", autocode_runner="tui")
+
+    assert adapter.name == "autocode"
+    assert getattr(adapter, "_runner") == "tui"
+
+
+def test_get_adapter_passes_tui_connection_to_autocode() -> None:
+    adapter = get_adapter(
+        "autocode",
+        model="test-model",
+        autocode_runner="tui",
+        autocode_tui_connection="attach",
+    )
+
+    assert adapter.name == "autocode"
+    assert getattr(adapter, "_tui_connection") == "attach"
 
 
 # --- Extra deps (manifest-driven) ---

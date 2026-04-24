@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 from typer.testing import CliRunner
 
 from autocode.cli import app
+from autocode.config import AutoCodeConfig
 
 runner = CliRunner()
 
@@ -76,12 +79,164 @@ class TestCLIHelp:
     """Test help output."""
 
     def test_no_args_starts_chat(self) -> None:
-        # Bare `autocode` launches inline chat (shows welcome banner), not help text
-        result = runner.invoke(app, [])
-        assert result.exit_code in (0, 2)
-        # Welcome banner or usage — either is acceptable
-        assert (
-            "AutoCode" in result.output
-            or "Usage" in result.output
-            or "Edge-native" in result.output
+        # Bare `autocode` launches the chat command, not help text.
+        mock_result = MagicMock(returncode=0)
+        config = AutoCodeConfig()
+        config.tui.alternate_screen = False
+
+        with patch("autocode.cli.load_config", return_value=config):
+            with patch("autocode.cli._find_tui_binary", return_value="/tmp/autocode-tui"):
+                with patch("subprocess.run", return_value=mock_result) as mock_run:
+                    result = runner.invoke(app, [])
+
+        assert result.exit_code == 0
+        mock_run.assert_called_once()
+        args, _kwargs = mock_run.call_args
+        assert args[0] == ["/tmp/autocode-tui"]
+
+    def test_top_level_mode_launches_altscreen(self) -> None:
+        mock_result = MagicMock(returncode=0)
+
+        with patch("autocode.cli._find_tui_binary", return_value="/tmp/autocode-tui"):
+            with patch("subprocess.run", return_value=mock_result) as mock_run:
+                result = runner.invoke(app, ["--mode", "altscreen"])
+
+        assert result.exit_code == 0
+        mock_run.assert_called_once()
+        args, _kwargs = mock_run.call_args
+        assert args[0] == ["/tmp/autocode-tui", "--altscreen"]
+
+    def test_top_level_attach_forwards_backend_address(self) -> None:
+        mock_result = MagicMock(returncode=0)
+        config = AutoCodeConfig()
+        config.tui.alternate_screen = False
+
+        with patch("autocode.cli.load_config", return_value=config):
+            with patch("autocode.cli._find_tui_binary", return_value="/tmp/autocode-tui"):
+                with patch("subprocess.run", return_value=mock_result) as mock_run:
+                    result = runner.invoke(app, ["--attach", "127.0.0.1:8765"])
+
+        assert result.exit_code == 0
+        mock_run.assert_called_once()
+        args, _kwargs = mock_run.call_args
+        assert args[0] == ["/tmp/autocode-tui", "--attach", "127.0.0.1:8765"]
+
+
+class TestCLIChat:
+    def test_chat_launches_rust_tui_inline_by_default(self) -> None:
+        mock_result = MagicMock(returncode=0)
+        config = AutoCodeConfig()
+        config.tui.alternate_screen = False
+
+        with patch("autocode.cli.load_config", return_value=config):
+            with patch("autocode.cli._find_tui_binary", return_value="/tmp/autocode-tui"):
+                with patch("subprocess.run", return_value=mock_result) as mock_run:
+                    result = runner.invoke(app, ["chat"])
+
+        assert result.exit_code == 0
+        mock_run.assert_called_once()
+        args, kwargs = mock_run.call_args
+        assert args[0] == ["/tmp/autocode-tui"]
+        assert "env" in kwargs
+
+    def test_chat_uses_saved_altscreen_default_when_configured(self) -> None:
+        from autocode.config import AutoCodeConfig
+
+        mock_result = MagicMock(returncode=0)
+        config = AutoCodeConfig()
+        config.tui.alternate_screen = True
+
+        with patch("autocode.cli.load_config", return_value=config):
+            with patch("autocode.cli._find_tui_binary", return_value="/tmp/autocode-tui"):
+                with patch("subprocess.run", return_value=mock_result) as mock_run:
+                    result = runner.invoke(app, ["chat"])
+
+        assert result.exit_code == 0
+        mock_run.assert_called_once()
+        args, kwargs = mock_run.call_args
+        assert args[0] == ["/tmp/autocode-tui", "--altscreen"]
+        assert "env" in kwargs
+
+    def test_chat_can_launch_rust_tui_in_alternate_screen_mode(self) -> None:
+        mock_result = MagicMock(returncode=0)
+
+        with patch("autocode.cli._find_tui_binary", return_value="/tmp/autocode-tui"):
+            with patch("subprocess.run", return_value=mock_result) as mock_run:
+                result = runner.invoke(app, ["chat", "--rust-altscreen"])
+
+        assert result.exit_code == 0
+        mock_run.assert_called_once()
+        args, kwargs = mock_run.call_args
+        assert args[0] == ["/tmp/autocode-tui", "--altscreen"]
+        assert "env" in kwargs
+
+    def test_chat_mode_flag_can_force_inline_over_saved_altscreen_default(self) -> None:
+        from autocode.config import AutoCodeConfig
+
+        mock_result = MagicMock(returncode=0)
+        config = AutoCodeConfig()
+        config.tui.alternate_screen = True
+
+        with patch("autocode.cli.load_config", return_value=config):
+            with patch("autocode.cli._find_tui_binary", return_value="/tmp/autocode-tui"):
+                with patch("subprocess.run", return_value=mock_result) as mock_run:
+                    result = runner.invoke(app, ["chat", "--mode", "inline"])
+
+        assert result.exit_code == 0
+        mock_run.assert_called_once()
+        args, kwargs = mock_run.call_args
+        assert args[0] == ["/tmp/autocode-tui"]
+        assert "env" in kwargs
+
+    def test_chat_mode_flag_can_request_altscreen(self) -> None:
+        mock_result = MagicMock(returncode=0)
+
+        with patch("autocode.cli._find_tui_binary", return_value="/tmp/autocode-tui"):
+            with patch("subprocess.run", return_value=mock_result) as mock_run:
+                result = runner.invoke(app, ["chat", "--mode", "altscreen"])
+
+        assert result.exit_code == 0
+        mock_run.assert_called_once()
+        args, kwargs = mock_run.call_args
+        assert args[0] == ["/tmp/autocode-tui", "--altscreen"]
+        assert "env" in kwargs
+
+    def test_chat_attach_forwards_backend_address(self) -> None:
+        mock_result = MagicMock(returncode=0)
+        config = AutoCodeConfig()
+        config.tui.alternate_screen = False
+
+        with patch("autocode.cli.load_config", return_value=config):
+            with patch("autocode.cli._find_tui_binary", return_value="/tmp/autocode-tui"):
+                with patch("subprocess.run", return_value=mock_result) as mock_run:
+                    result = runner.invoke(app, ["chat", "--attach", "127.0.0.1:9000"])
+
+        assert result.exit_code == 0
+        mock_run.assert_called_once()
+        args, kwargs = mock_run.call_args
+        assert args[0] == ["/tmp/autocode-tui", "--attach", "127.0.0.1:9000"]
+        assert "env" in kwargs
+
+
+class TestCLIServe:
+    def test_serve_accepts_tcp_transport_options(self) -> None:
+        with patch("autocode.cli.load_config", return_value=AutoCodeConfig()):
+            with patch("autocode.core.logging.setup_logging"):
+                with patch("autocode.backend.server.main", new=AsyncMock()) as mock_main:
+                    result = runner.invoke(
+                        app,
+                        ["serve", "--transport", "tcp", "--host", "0.0.0.0", "--port", "9900"],
+                    )
+
+        assert result.exit_code == 0
+        mock_main.assert_awaited_once_with(
+            transport="tcp",
+            bind_host="0.0.0.0",
+            port=9900,
         )
+
+    def test_serve_rejects_invalid_transport(self) -> None:
+        result = runner.invoke(app, ["serve", "--transport", "udp"])
+
+        assert result.exit_code == 2
+        assert "Invalid --transport" in result.output

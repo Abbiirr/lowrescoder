@@ -16,7 +16,7 @@ An end-to-end benchmark that tests whether AutoCode's AI agent can **autonomousl
 .\scripts\run_e2e_benchmark.ps1 -MinScore 50
 
 # Direct Python run
-uv run python scripts/run_calculator_benchmark.py
+uv run python benchmarks/run_calculator_benchmark.py
 ```
 
 **Prerequisites:** `.env` must have valid LLM config. Node.js and npm must be installed.
@@ -25,7 +25,7 @@ uv run python scripts/run_calculator_benchmark.py
 
 Three components work together:
 
-### 1. `scripts/run_calculator_benchmark.py` — Benchmark Engine
+### 1. `benchmarks/run_calculator_benchmark.py` — Benchmark Engine
 
 Core Python script with 6 phases:
 
@@ -49,7 +49,7 @@ Key features:
 Convenience script for CI/CD:
 - Cleans old sandboxes, runs benchmarks, parses results
 - `-MinScore` parameter (default 30) -- exits 0 on pass, 1 on fail
-- `-Scenario` parameter (default `calculator`) -- dispatches to `scripts/e2e/run_scenario.py` for non-calculator scenarios
+- `-Scenario` parameter (default `calculator`) -- dispatches to `benchmarks/e2e/run_scenario.py` for non-calculator scenarios
 
 ### 3. `tests/benchmark/test_project_creation.py` — Scoring Rubric
 
@@ -130,17 +130,17 @@ Note: Scores above are from the pre-UI-rubric version (max UI was 0). New runs w
 .\scripts\run_e2e_benchmark.ps1 -Scenario E2E-CLI
 
 # Direct Python with full options
-uv run python scripts/run_calculator_benchmark.py --help
-uv run python scripts/run_calculator_benchmark.py --strict --min-score 50
-uv run python scripts/run_calculator_benchmark.py --runs 3
-uv run python scripts/run_calculator_benchmark.py --replay sandboxes/bench_20260212_203313
-uv run python scripts/run_calculator_benchmark.py --matrix benchmark-matrix.json
-uv run python scripts/run_calculator_benchmark.py --flake-triage
+uv run python benchmarks/run_calculator_benchmark.py --help
+uv run python benchmarks/run_calculator_benchmark.py --strict --min-score 50
+uv run python benchmarks/run_calculator_benchmark.py --runs 3
+uv run python benchmarks/run_calculator_benchmark.py --replay sandboxes/bench_20260212_203313
+uv run python benchmarks/run_calculator_benchmark.py --matrix benchmark-matrix.json
+uv run python benchmarks/run_calculator_benchmark.py --flake-triage
 
 # External benchmarks (requires Docker + Harbor)
-uv run python scripts/e2e/external/run_external_pilot.py --agent codex --suite swebench
-uv run python scripts/e2e/external/run_external_pilot.py --agent claude-code --suite terminalbench
-uv run python scripts/e2e/external/run_external_pilot.py --help
+uv run python benchmarks/e2e/external/run_external_pilot.py --agent codex --suite swebench
+uv run python benchmarks/e2e/external/run_external_pilot.py --agent claude-code --suite terminalbench
+uv run python benchmarks/e2e/external/run_external_pilot.py --help
 ```
 
 ## Verdict System
@@ -171,20 +171,20 @@ Each scenario implements the `ScenarioManifest` contract defined in `scripts/e2e
 
 ```bash
 # List all available local scenarios
-uv run python scripts/e2e/run_scenario.py --list
+uv run python benchmarks/e2e/run_scenario.py --list
 
 # Run a specific local scenario (Python)
-uv run python scripts/e2e/run_scenario.py E2E-BugFix
-uv run python scripts/e2e/run_scenario.py E2E-CLI
+uv run python benchmarks/e2e/run_scenario.py E2E-BugFix
+uv run python benchmarks/e2e/run_scenario.py E2E-CLI
 
 # Run via PowerShell wrapper
 .\scripts\run_e2e_benchmark.ps1 -Scenario E2E-BugFix
 .\scripts\run_e2e_benchmark.ps1 -Scenario E2E-CLI
 
 # Run external pilot (requires Docker + Harbor CLI)
-uv run python scripts/e2e/external/run_external_pilot.py --agent codex --suite swebench
-uv run python scripts/e2e/external/run_external_pilot.py --agent claude-code --suite terminalbench
-uv run python scripts/e2e/external/run_external_pilot.py --dry-run --agent codex --suite swebench
+uv run python benchmarks/e2e/external/run_external_pilot.py --agent codex --suite swebench
+uv run python benchmarks/e2e/external/run_external_pilot.py --agent claude-code --suite terminalbench
+uv run python benchmarks/e2e/external/run_external_pilot.py --dry-run --agent codex --suite swebench
 ```
 
 Exit codes: 0=PASS, 1=FAIL, 2=INFRA_FAIL.
@@ -196,27 +196,27 @@ See `TESTING.md` for the full testing & evaluation guide, or `docs/plan/agentic-
 1. Create `scripts/e2e/scenarios/<name>.py` with `SCENARIO_ID` and `MANIFEST`
 2. Define prompt, acceptance checks, scoring categories, and budgets
 3. Optionally add a seed fixture under `scripts/e2e/fixtures/<name>/`
-4. Register in `scripts/e2e/run_scenario.py`'s `SCENARIO_REGISTRY`
+4. Register in `benchmarks/e2e/run_scenario.py`'s `SCENARIO_REGISTRY`
 5. Tag as `regression-lane` (deterministic, CI-gatable) or `capability-lane` (exploratory)
 
 ## Unified Benchmark Runner (B7-B14)
 
-The unified runner (`scripts/benchmark_runner.py`) replaces the Harbor-based external pilot for local evaluation. It runs benchmark tasks directly with Docker isolation, supports resumability, and includes exponential backoff for remote Ollama servers.
+The unified runner (`benchmarks/benchmark_runner.py`) replaces the Harbor-based external pilot for local evaluation. It runs benchmark tasks directly with Docker isolation, supports resumability, and includes exponential backoff for remote Ollama servers.
 
 ### Quick Start
 
 ```bash
 # Run a single lane
-uv run python scripts/benchmark_runner.py --agent autocode --lane B7 --model glm-4.7-flash
+uv run python benchmarks/benchmark_runner.py --agent autocode --lane B7 --model glm-4.7-flash
 
 # Run all lanes sequentially (B7-B14) with resume enabled
-bash scripts/run_all_benchmarks.sh
+bash benchmarks/run_all_benchmarks.sh
 
 # Resume after a crash (skips completed tasks)
-uv run python scripts/benchmark_runner.py --agent autocode --lane B7 --resume --run-id <run-id> --model glm-4.7-flash
+uv run python benchmarks/benchmark_runner.py --agent autocode --lane B7 --resume --run-id <run-id> --model glm-4.7-flash
 
 # List available lanes
-uv run python scripts/benchmark_runner.py --list-lanes
+uv run python benchmarks/benchmark_runner.py --list-lanes
 ```
 
 ### Monitoring
@@ -255,25 +255,25 @@ The framework is designed for reuse. To add a new benchmark:
 
 | File | Purpose |
 |------|---------|
-| `scripts/run_calculator_benchmark.py` | Core benchmark engine |
+| `benchmarks/run_calculator_benchmark.py` | Core benchmark engine |
 | `scripts/run_e2e_benchmark.ps1` | PowerShell wrapper (CI/CD ready) |
 | `tests/benchmark/test_project_creation.py` | Scoring rubric |
 | `tests/benchmark/golden_vectors.py` | Golden test vectors (data-only, deferred) |
 | `tests/benchmark/metamorphic_stubs.py` | Metamorphic invariants (data-only, deferred) |
 | `scripts/e2e/scenario_contract.py` | Scenario manifest contract |
-| `scripts/e2e/run_scenario.py` | Generic scenario runner |
+| `benchmarks/e2e/run_scenario.py` | Generic scenario runner |
 | `scripts/e2e/scenarios/bugfix.py` | E2E-BugFix scenario |
 | `scripts/e2e/scenarios/cli_tool.py` | E2E-CLI scenario |
 | `scripts/e2e/scoring.py` | Acceptance check runner + scoring |
 | `tests/benchmark/fixtures/bugfix-seed/` | BugFix seed project (3 bugs, 8 tests) |
-| `scripts/e2e/external/run_external_pilot.py` | External benchmark pilot runner |
-| `scripts/e2e/external/swebench-pilot-subset.json` | SWE-bench pilot: 25 task IDs |
-| `scripts/e2e/external/terminalbench-pilot-subset.json` | Terminal-Bench pilot: 10 task IDs |
+| `benchmarks/e2e/external/run_external_pilot.py` | External benchmark pilot runner |
+| `benchmarks/e2e/external/swebench-pilot-subset.json` | SWE-bench pilot: 25 task IDs |
+| `benchmarks/e2e/external/terminalbench-pilot-subset.json` | Terminal-Bench pilot: 10 task IDs |
 | `docs/plan/agentic-benchmarks/external-benchmark-runbook.md` | External benchmark runbook |
 | `benchmark-matrix.json` | Multi-model matrix config |
 | `docs/qa/e2e-tests/calculator-app/` | UI reference images |
-| `scripts/benchmark_runner.py` | Unified benchmark runner (B7-B14 lanes) |
-| `scripts/run_all_benchmarks.sh` | Run all lanes sequentially with resume |
+| `benchmarks/benchmark_runner.py` | Unified benchmark runner (B7-B14 lanes) |
+| `benchmarks/run_all_benchmarks.sh` | Run all lanes sequentially with resume |
 | `scripts/adapters/autocode_adapter.py` | AutoCode agent adapter for benchmarks |
 | `docs/qa/test-results/` | Stored benchmark reports |
 | `sandboxes/` | Benchmark sandbox outputs |

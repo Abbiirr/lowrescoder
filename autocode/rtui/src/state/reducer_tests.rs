@@ -1,18 +1,36 @@
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
     use portable_pty::ExitStatus;
 
     use crate::rpc::protocol::RPCMessage;
     use crate::state::model::{
-        AppState, AskUserRequest, AskUserSource, InboundId, PaletteMode, Stage,
+        AppState, AskUserRequest, AskUserSource, DetailSurface, InboundId, PaletteMode, Stage,
     };
-    use crate::state::reducer::{reduce, Effect, Event};
+    use crate::state::reducer::{reduce, stale_request_timeout, Effect, Event};
     use crate::ui::textbuf::TextBuf;
 
     fn new_state() -> AppState {
         AppState::new((80, 24), false)
+    }
+
+    #[test]
+    fn stale_request_timeout_respects_env_override() {
+        let old = std::env::var_os("AUTOCODE_STALE_REQUEST_TIMEOUT_SECS");
+        std::env::set_var("AUTOCODE_STALE_REQUEST_TIMEOUT_SECS", "120");
+
+        let timeout = stale_request_timeout();
+
+        if let Some(value) = old {
+            std::env::set_var("AUTOCODE_STALE_REQUEST_TIMEOUT_SECS", value);
+        } else {
+            std::env::remove_var("AUTOCODE_STALE_REQUEST_TIMEOUT_SECS");
+        }
+
+        assert_eq!(timeout, Duration::from_secs(120));
     }
 
     fn on_status_msg() -> RPCMessage {
@@ -36,6 +54,17 @@ mod tests {
             id: None,
             method: Some("on_token".to_string()),
             params: Some(serde_json::json!({"text": text})),
+            result: None,
+            error: None,
+        }
+    }
+
+    fn on_chat_ack_msg() -> RPCMessage {
+        RPCMessage {
+            jsonrpc: "2.0".to_string(),
+            id: None,
+            method: Some("on_chat_ack".to_string()),
+            params: Some(serde_json::json!({"request_id": 1})),
             result: None,
             error: None,
         }
@@ -125,6 +154,68 @@ mod tests {
     }
 
     #[test]
+    fn on_done_clears_pending_chat_request_but_keeps_other_pending_requests() {
+        let mut state = new_state();
+        state.pending_requests.insert(
+            1,
+            crate::state::model::PendingRequest {
+                method: "chat".into(),
+                sent_at: std::time::Instant::now(),
+            },
+        );
+        state.pending_requests.insert(
+            2,
+            crate::state::model::PendingRequest {
+                method: "command.list".into(),
+                sent_at: std::time::Instant::now(),
+            },
+        );
+
+        let (state, _) = reduce(state, Event::RpcNotification(on_done_msg()));
+
+        assert!(!state.pending_requests.contains_key(&1));
+        assert!(state.pending_requests.contains_key(&2));
+    }
+
+    #[test]
+    fn on_token_keeps_active_chat_request_from_timing_out() {
+        let mut state = new_state();
+        state.pending_requests.insert(
+            1,
+            crate::state::model::PendingRequest {
+                method: "chat".into(),
+                sent_at: std::time::Instant::now() - std::time::Duration::from_secs(31),
+            },
+        );
+
+        let (state, _) = reduce(state, Event::RpcNotification(on_token_msg("still working")));
+        let (state, _) = reduce(state, Event::Tick);
+
+        assert!(state.pending_requests.contains_key(&1));
+        assert!(state.error_banner.is_none());
+    }
+
+    #[test]
+    fn on_chat_ack_keeps_active_chat_request_from_timing_out_without_render() {
+        let mut state = new_state();
+        state.pending_requests.insert(
+            1,
+            crate::state::model::PendingRequest {
+                method: "chat".into(),
+                sent_at: std::time::Instant::now() - std::time::Duration::from_secs(31),
+            },
+        );
+
+        let (state, effects) = reduce(state, Event::RpcNotification(on_chat_ack_msg()));
+        let (state, _) = reduce(state, Event::Tick);
+
+        assert!(state.pending_requests.contains_key(&1));
+        assert!(state.error_banner.is_none());
+        assert!(effects.is_empty());
+        assert_eq!(state.stage, Stage::Idle);
+    }
+
+    #[test]
     fn chat_submission_echoes_user_message_immediately() {
         let mut state = new_state();
         state.composer_text.set_text("hello world");
@@ -136,6 +227,7 @@ mod tests {
 
         assert!(state.scrollback.iter().any(|line| line == "> hello world"));
         assert!(find_sent_rpc(&effects, "chat").is_some());
+        assert_eq!(state.stage, Stage::Streaming);
     }
 
     #[test]
@@ -475,6 +567,27 @@ mod tests {
     }
 
     #[test]
+    fn on_warning_adds_dim_warning_line_to_scrollback() {
+        let state = new_state();
+        let msg = RPCMessage {
+            jsonrpc: "2.0".to_string(),
+            id: None,
+            method: Some("on_warning".to_string()),
+            params: Some(serde_json::json!({
+                "message": "WARNING: gateway connection retry in 5s"
+            })),
+            result: None,
+            error: None,
+        };
+        let (state, effects) = reduce(state, Event::RpcNotification(msg));
+        assert!(state
+            .scrollback
+            .iter()
+            .any(|line| line == "WARNING: gateway connection retry in 5s"));
+        assert!(has_effect(&effects, &Effect::Render));
+    }
+
+    #[test]
     fn on_cost_update_updates_status() {
         let state = new_state();
         let msg = RPCMessage {
@@ -682,7 +795,26 @@ mod tests {
             Some(PaletteMode::SlashAutocomplete)
         );
         assert!(find_sent_rpc(&effects, "command.list").is_some());
-        assert!(state.composer_text.is_empty());
+        assert_eq!(state.composer_text.as_str(), "/");
+    }
+
+    #[test]
+    fn slash_opens_backend_command_overlay_while_streaming() {
+        let mut state = new_state();
+        state.stage = Stage::Streaming;
+
+        let (state, effects) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Char('/'), KeyModifiers::NONE)),
+        );
+
+        assert_eq!(state.stage, Stage::Palette);
+        assert!(state.palette.is_some());
+        assert_eq!(
+            state.palette.as_ref().map(|palette| palette.mode.clone()),
+            Some(PaletteMode::SlashAutocomplete)
+        );
+        assert!(find_sent_rpc(&effects, "command.list").is_some());
     }
 
     #[test]
@@ -743,20 +875,24 @@ mod tests {
     }
 
     #[test]
-    fn unknown_slash_command_surfaces_feedback() {
+    fn backend_owned_slash_command_dispatches_via_command_rpc() {
         let mut state = new_state();
-        state.composer_text.set_text("/wat");
+        state.composer_text.set_text("/tui");
 
         let (state, effects) = reduce(
             state,
             Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
         );
 
-        assert!(state
-            .scrollback
-            .iter()
-            .any(|line| line == "Unknown command: `/wat` — try `/help`"));
-        assert!(has_effect(&effects, &Effect::Render));
+        assert!(state.scrollback.iter().any(|line| line == "/tui"));
+        let rpc = find_sent_rpc(&effects, "command").expect("command rpc");
+        assert_eq!(
+            rpc.params
+                .as_ref()
+                .and_then(|v| v.get("cmd"))
+                .and_then(|v| v.as_str()),
+            Some("/tui")
+        );
     }
 
     #[test]
@@ -903,6 +1039,25 @@ mod tests {
     }
 
     #[test]
+    fn new_command_uses_session_new_rpc() {
+        let mut state = new_state();
+        state.composer_text.set_text("/new Fresh start");
+
+        let (state, effects) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+        );
+
+        let msg = find_sent_rpc(&effects, "session.new").expect("session.new");
+        assert_eq!(
+            msg.params.as_ref().and_then(|params| params.get("title")),
+            Some(&serde_json::json!("Fresh start"))
+        );
+        assert!(state.composer_text.is_empty());
+        assert!(find_sent_rpc(&effects, "command").is_none());
+    }
+
+    #[test]
     fn plan_command_uses_plan_set_rpc() {
         let mut state = new_state();
         state.composer_text.set_text("/plan");
@@ -918,12 +1073,63 @@ mod tests {
             Some(&serde_json::json!("planning"))
         );
         assert!(state.scrollback.iter().any(|line| line == "/plan"));
+        assert_eq!(state.detail_surface, Some(DetailSurface::Plan));
+    }
+
+    #[test]
+    fn stage2_and_stage3_commands_open_detail_surfaces() {
+        let cases = [
+            ("/restore", DetailSurface::Restore),
+            ("/review", DetailSurface::Review),
+            ("/diff", DetailSurface::Diff),
+            ("/grep", DetailSurface::Grep),
+            ("/escalation", DetailSurface::Escalation),
+            ("/cc", DetailSurface::CommandCenter),
+            ("/multi", DetailSurface::Multi),
+        ];
+
+        for (cmd, expected) in cases {
+            let mut state = new_state();
+            state.composer_text.set_text(cmd);
+
+            let (state, effects) = reduce(
+                state,
+                Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+            );
+
+            assert_eq!(
+                state.detail_surface,
+                Some(expected.clone()),
+                "command {cmd}"
+            );
+            assert!(
+                state.scrollback.iter().any(|line| line == cmd),
+                "command {cmd}"
+            );
+            assert!(has_effect(&effects, &Effect::Render), "command {cmd}");
+        }
+    }
+
+    #[test]
+    fn escape_closes_detail_surface_without_quitting() {
+        let mut state = new_state();
+        state.detail_surface = Some(DetailSurface::Review);
+
+        let (state, effects) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)),
+        );
+
+        assert!(state.detail_surface.is_none());
+        assert!(has_effect(&effects, &Effect::Render));
+        assert!(!has_effect(&effects, &Effect::Quit));
     }
 
     #[test]
     fn slash_overlay_enter_completes_selected_command_into_composer() {
         let mut state = new_state();
         state.stage = Stage::Palette;
+        state.composer_text.set_text("/mo");
         let mut filter = TextBuf::default();
         filter.set_text("mo");
         state.palette = Some(crate::state::model::PaletteState {
@@ -956,6 +1162,7 @@ mod tests {
     fn slash_overlay_enter_dispatches_exact_match() {
         let mut state = new_state();
         state.stage = Stage::Palette;
+        state.composer_text.set_text("/model");
         let mut filter = TextBuf::default();
         filter.set_text("model");
         state.palette = Some(crate::state::model::PaletteState {
@@ -982,6 +1189,7 @@ mod tests {
     fn slash_overlay_tab_completes_selected_command_into_composer() {
         let mut state = new_state();
         state.stage = Stage::Palette;
+        state.composer_text.set_text("/pro");
         let mut filter = TextBuf::default();
         filter.set_text("pro");
         state.palette = Some(crate::state::model::PaletteState {
@@ -1004,6 +1212,168 @@ mod tests {
         assert!(effects
             .iter()
             .all(|effect| !matches!(effect, Effect::SendRpc(_))));
+    }
+
+    #[test]
+    fn slash_overlay_typing_stays_visible_in_main_composer() {
+        let state = new_state();
+        let (state, _) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Char('/'), KeyModifiers::NONE)),
+        );
+        let (state, _) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Char('t'), KeyModifiers::NONE)),
+        );
+        let (state, _) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Char('u'), KeyModifiers::NONE)),
+        );
+        let (state, _) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Char('i'), KeyModifiers::NONE)),
+        );
+
+        assert_eq!(state.stage, Stage::Palette);
+        assert_eq!(state.composer_text.as_str(), "/tui");
+        assert_eq!(
+            state
+                .palette
+                .as_ref()
+                .map(|palette| palette.filter.as_str()),
+            Some("tui")
+        );
+    }
+
+    #[test]
+    fn slash_overlay_backspace_from_empty_filter_closes_and_clears_draft() {
+        let state = new_state();
+        let (state, _) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Char('/'), KeyModifiers::NONE)),
+        );
+
+        let (state, _) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE)),
+        );
+
+        assert_eq!(state.stage, Stage::Idle);
+        assert!(state.palette.is_none());
+        assert!(state.composer_text.is_empty());
+    }
+
+    #[test]
+    fn session_new_response_resets_streaming_state_and_pending_requests() {
+        let mut state = new_state();
+        state.stage = Stage::Streaming;
+        state.scrollback.push_back("> old task".into());
+        state.stream_buf = "old reply".into();
+        state.stream_lines = vec!["old reply".into()];
+        state.pending_requests.insert(
+            1,
+            crate::state::model::PendingRequest {
+                method: "chat".into(),
+                sent_at: std::time::Instant::now(),
+            },
+        );
+        state.pending_requests.insert(
+            2,
+            crate::state::model::PendingRequest {
+                method: "session.new".into(),
+                sent_at: std::time::Instant::now(),
+            },
+        );
+        state.error_banner = Some("timeout".into());
+        state.status.tokens_in = 77;
+        state.status.tokens_out = 88;
+        state.status.cost = Some("$1.23".into());
+        state.tasks.push(crate::rpc::protocol::TaskEntry {
+            id: "task-1".into(),
+            title: "Lingering task".into(),
+            status: "running".into(),
+        });
+        state.subagents.push(crate::rpc::protocol::SubagentEntry {
+            id: "agent-1".into(),
+            role: "coder".into(),
+            status: "running".into(),
+        });
+
+        let (state, _) = reduce(
+            state,
+            Event::RpcResponse(RPCMessage {
+                jsonrpc: "2.0".into(),
+                id: Some(2),
+                method: None,
+                params: None,
+                result: Some(serde_json::json!({
+                    "session_id": "sess-new",
+                    "title": "Fresh session"
+                })),
+                error: None,
+            }),
+        );
+
+        assert_eq!(state.stage, Stage::Idle);
+        assert!(state.pending_requests.is_empty());
+        assert!(state.stream_buf.is_empty());
+        assert!(state.stream_lines.is_empty());
+        assert!(state.error_banner.is_none());
+        assert_eq!(state.status.session_id.as_deref(), Some("sess-new"));
+        assert_eq!(state.status.tokens_in, 0);
+        assert_eq!(state.status.tokens_out, 0);
+        assert!(state.status.cost.is_none());
+        assert!(state.tasks.is_empty());
+        assert!(state.subagents.is_empty());
+        assert_eq!(
+            state.scrollback.back().map(|line| line.as_str()),
+            Some("[System] Started new session: Fresh session")
+        );
+    }
+
+    #[test]
+    fn session_resume_response_resets_streaming_state_and_pending_requests() {
+        let mut state = new_state();
+        state.stage = Stage::Streaming;
+        state.scrollback.push_back("> old task".into());
+        state.stream_lines = vec!["old reply".into()];
+        state.pending_requests.insert(
+            3,
+            crate::state::model::PendingRequest {
+                method: "chat".into(),
+                sent_at: std::time::Instant::now(),
+            },
+        );
+        state.pending_requests.insert(
+            4,
+            crate::state::model::PendingRequest {
+                method: "session.resume".into(),
+                sent_at: std::time::Instant::now(),
+            },
+        );
+
+        let (state, _) = reduce(
+            state,
+            Event::RpcResponse(RPCMessage {
+                jsonrpc: "2.0".into(),
+                id: Some(4),
+                method: None,
+                params: None,
+                result: Some(serde_json::json!({
+                    "session_id": "sess-2",
+                    "title": "Recovered work"
+                })),
+                error: None,
+            }),
+        );
+
+        assert_eq!(state.stage, Stage::Idle);
+        assert!(state.pending_requests.is_empty());
+        assert_eq!(state.status.session_id.as_deref(), Some("sess-2"));
+        assert_eq!(
+            state.scrollback.back().map(|line| line.as_str()),
+            Some("[System] Resumed session: Recovered work")
+        );
     }
 
     #[test]
@@ -1037,6 +1407,34 @@ mod tests {
             .scrollback
             .iter()
             .any(|line| line == "Compacted 6 turns → 42 tokens"));
+    }
+
+    #[test]
+    fn recovery_navigation_moves_selection_and_enter_opens_selected_surface() {
+        let mut state = new_state();
+        state.stage = Stage::Shutdown;
+        state.error_banner = Some("matrix shard failure".into());
+
+        let (state, effects) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE)),
+        );
+        assert_eq!(state.recovery_action_idx, 1);
+        assert!(has_effect(&effects, &Effect::Render));
+
+        let (state, effects) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE)),
+        );
+        assert_eq!(state.recovery_action_idx, 2);
+        assert!(has_effect(&effects, &Effect::Render));
+
+        let (state, effects) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+        );
+        assert_eq!(state.detail_surface, Some(DetailSurface::Restore));
+        assert!(has_effect(&effects, &Effect::Render));
     }
 
     #[test]

@@ -52,6 +52,16 @@ def _default(
         is_eager=True,
         help="Show version and exit.",
     ),
+    mode: str | None = typer.Option(
+        None,
+        "--mode",
+        help="Default chat launch mode: inline or altscreen.",
+    ),
+    attach: str | None = typer.Option(
+        None,
+        "--attach",
+        help="Attach the Rust TUI to an already-running backend at HOST:PORT.",
+    ),
 ) -> None:
     """Edge-native AI coding assistant."""
     if ctx.invoked_subcommand is None:
@@ -62,6 +72,9 @@ def _default(
             session=None,
             tui=False,
             alternate_screen=False,
+            mode=mode,
+            attach=attach,
+            rust_altscreen=False,
             legacy=False,
         )
 
@@ -215,6 +228,21 @@ def chat(
     session: str | None = typer.Option(None, "--session", "-s", help="Resume a session by ID"),
     tui: bool = typer.Option(False, "--tui", help="Use fullscreen Textual TUI (fallback)"),
     alternate_screen: bool = typer.Option(False, "--alternate-screen", help="Alias for --tui"),
+    mode: str | None = typer.Option(
+        None,
+        "--mode",
+        help="Rust TUI launch mode: inline or altscreen. Overrides the saved default.",
+    ),
+    attach: str | None = typer.Option(
+        None,
+        "--attach",
+        help="Attach the Rust TUI to an already-running backend at HOST:PORT.",
+    ),
+    rust_altscreen: bool = typer.Option(
+        False,
+        "--rust-altscreen",
+        help="Run the Rust TUI in alternate-screen mode instead of inline mode",
+    ),
     legacy: bool = typer.Option(False, "--legacy", help="Use legacy Rich REPL (no agent loop)"),
 ) -> None:
     """Start an interactive chat session.
@@ -261,7 +289,24 @@ def chat(
     if session:
         env["AUTOCODE_SESSION_ID"] = session
 
-    result = subprocess.run([rust_bin], env=env)
+    argv = [rust_bin]
+    resolved_mode = mode.strip().lower() if mode is not None else None
+    if resolved_mode not in {None, "inline", "altscreen"}:
+        console.print("[red]Invalid --mode.[/] Choose `inline` or `altscreen`.")
+        raise typer.Exit(2)
+
+    use_altscreen = config.tui.alternate_screen
+    if rust_altscreen:
+        use_altscreen = True
+    if resolved_mode is not None:
+        use_altscreen = resolved_mode == "altscreen"
+
+    if use_altscreen:
+        argv.append("--altscreen")
+    if attach:
+        argv.extend(["--attach", attach])
+
+    result = subprocess.run(argv, env=env)
     raise typer.Exit(result.returncode)
 
 
@@ -344,14 +389,34 @@ def config(
 @app.command()
 def serve(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
+    transport: str = typer.Option(
+        "stdio",
+        "--transport",
+        help="Backend host transport: stdio or tcp.",
+    ),
+    host: str = typer.Option(
+        "127.0.0.1",
+        "--host",
+        help="Bind host for TCP backend transport.",
+    ),
+    port: int = typer.Option(
+        8765,
+        "--port",
+        help="Bind port for TCP backend transport.",
+    ),
 ) -> None:
-    """Start JSON-RPC backend server for the Go TUI frontend."""
+    """Start the JSON-RPC backend server for the Rust TUI or other clients."""
     from autocode.backend.server import main as server_main
     from autocode.core.logging import setup_logging
 
+    resolved_transport = transport.strip().lower()
+    if resolved_transport not in {"stdio", "tcp"}:
+        console.print("[red]Invalid --transport.[/] Choose `stdio` or `tcp`.")
+        raise typer.Exit(2)
+
     config = load_config()
     setup_logging(config.logging, verbose=verbose)
-    asyncio.run(server_main())
+    asyncio.run(server_main(transport=resolved_transport, bind_host=host, port=port))
 
 
 @app.command()

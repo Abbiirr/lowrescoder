@@ -1,0 +1,50 @@
+                                                                                                                                                                
+                                ┌ AutoCode ────────────────────────────────────────────────────────────────────────────────────┐                                
+                                │tools | openrouter | suggest | ● planning | mock-ses | tasks:0 | agents:0 | q:0 | sandbox:loca│                                
+                                │┌ Plan ──────────────────────────────────────────────────────────────────────────────────────┐│                                
+                                ││Planning                                                                                    ││                                
+                                ││Seven steps queued. Step 4 is active; step 5 is blocked on the watch-mode shard finishing.  ││                                
+                                ││Remaining steps will run after review.                                                      ││                                
+                                ││                                                                                            ││                                
+                                ││√ Inspect parser flow & call sites                                                          ││                                
+                                ││√ Extend ASTNode with optional imports                                                      ││                                
+                                ││√ Patch extractImports guard                                                                ││                                
+                                ││● Run targeted parser tests                                                                 ││                                
+                                ││◐ Run full matrix suite                                                                     ││                                
+                                ││○ Update docs/parser.md                                                                     ││                                
+                                ││○ Write changelog entry after review                                                        ││                                
+                                ││○ Review & approve                                                                          ││                                
+                                ││                                                                                            ││                                
+                                ││VALIDATION                                                                                  ││                                
+                                ││targeted tests passed · full suite not run                                                  ││                                
+                                ││plan stays editable · Tab to open step 4 detail                                             ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                ││                                                                                            ││                                
+                                │└────────────────────────────────────────────────────────────────────────────────────────────┘│                                
+                                │┌────────────────────────────────────────────────────────────────────────────────────────────┐│                                
+                                ││❯ Ask AutoCode                                                                              ││                                
+                                │└────────────────────────────────────────────────────────────────────────────────────────────┘│                                
+                                │Plan persisted and stays editable while validation is still running.                          │                                
+                                │Ctrl+Enter send · Esc back · Ctrl+R history · Ctrl+Shift+P palette · Tab focus · / @ #        │                                
+                                └──────────────────────────────────────────────────────────────────────────────────────────────┘                                
+                                                                                                                                                                

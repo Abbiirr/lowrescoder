@@ -74,7 +74,7 @@ The 17-item benchmark hardening plan (Entries 207/209/214/219) built the **infra
 
 The runner still defines `B15`-`B29`, and this folder now again carries the
 supporting portfolio docs for those lanes. The manifests live under
-`scripts/e2e/external/` and cover a restored `17` task prototype batch:
+`benchmarks/e2e/external/` and cover a restored `17` task prototype batch:
 
 - `B15` realistic intake mutation
 - `B16` requirement-driven feature delivery

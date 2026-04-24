@@ -162,16 +162,18 @@ async fn main() -> Result<()> {
     let mut state = AppState::new((cols, rows), altscreen);
     state.history = ui::history::load_history();
 
-    let pty_handle = backend::pty::spawn_backend(cols, rows).context("failed to spawn backend")?;
-    let mut child_guard =
-        backend::process::ChildGuard::with_master(pty_handle.child, pty_handle.master);
+    let connection_mode =
+        backend::connection::resolve_connection_mode(&args).context("invalid backend mode")?;
+    let backend_handle = backend::connection::connect_backend(&connection_mode, cols, rows)
+        .context("failed to connect backend")?;
+    let mut child_guard = backend::process::ChildGuard::from_optional(backend_handle.child);
 
     let (event_tx, mut event_rx) = mpsc::unbounded_channel::<Event>();
     let (rpc_tx, rpc_rx) = mpsc::unbounded_channel::<rpc::protocol::RPCMessage>();
 
-    let reader = std::io::BufReader::new(pty_handle.reader);
+    let reader = std::io::BufReader::new(backend_handle.reader);
     let _reader_handle = rpc::RpcBus::start_reader(reader, event_tx.clone());
-    let _writer_handle = rpc::RpcBus::start_writer(pty_handle.writer, rpc_rx, event_tx.clone());
+    let _writer_handle = rpc::RpcBus::start_writer(backend_handle.writer, rpc_rx, event_tx.clone());
     let _key_handle = ui::event_loop::start_key_reader(event_tx.clone());
 
     let tick_tx = event_tx.clone();

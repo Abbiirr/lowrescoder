@@ -1,7 +1,7 @@
 # Testing & Evaluation Guide
 
 > How to test, evaluate, and interpret results for AutoCode.
-> Last updated: 2026-04-20
+> Last updated: 2026-04-22
 
 > **For TUI testing specifically** (the 4-dimension matrix — runtime invariants, design-target ratchet, self-vs-self PNG regression, live PTY smoke), see `docs/tui-testing/tui-testing-strategy.md` and the enforced checklist at `docs/tui-testing/tui_testing_checklist.md`. This guide's `Rust TUI tests` row below is only the `cargo test` unit-test slice.
 
@@ -22,15 +22,17 @@
 | Rust TUI release build | `cd autocode/rtui && cargo build --release` | ~30s (first) / ~2s (cached) |
 | Integration tests | `uv run pytest -m integration tests/integration/` | Varies |
 | External project benchmark | `uv run pytest tests/benchmark/test_project_creation.py::test_project_creation_real_life_task_external_project -v` | ~5s |
-| E2E Calculator benchmark | `uv run python scripts/run_calculator_benchmark.py` | 10-30 min |
-| E2E BugFix scenario | `uv run python scripts/e2e/run_scenario.py E2E-BugFix` | 5-15 min |
-| E2E CLI scenario | `uv run python scripts/e2e/run_scenario.py E2E-CLI` | 5-20 min |
-| List all E2E scenarios | `uv run python scripts/e2e/run_scenario.py --list` | Instant |
-| External pilot (SWE-bench) | `uv run python scripts/e2e/external/run_external_pilot.py --agent claude-code --suite swebench` | Varies |
-| External pilot (Terminal-Bench) | `uv run python scripts/e2e/external/run_external_pilot.py --agent claude-code --suite terminalbench` | Varies |
-| Unified benchmark (single lane) | `uv run python scripts/benchmark_runner.py --agent autocode --lane B7 --model glm-4.7-flash` | 1-10 hrs |
-| Unified benchmark (all lanes) | `bash scripts/run_all_benchmarks.sh` | 8-40 hrs |
-| List benchmark lanes | `uv run python scripts/benchmark_runner.py --list-lanes` | Instant |
+| E2E Calculator benchmark | `uv run python benchmarks/run_calculator_benchmark.py` | 10-30 min |
+| E2E BugFix scenario | `uv run python benchmarks/e2e/run_scenario.py E2E-BugFix` | 5-15 min |
+| E2E CLI scenario | `uv run python benchmarks/e2e/run_scenario.py E2E-CLI` | 5-20 min |
+| List all E2E scenarios | `uv run python benchmarks/e2e/run_scenario.py --list` | Instant |
+| External pilot (SWE-bench) | `uv run python benchmarks/e2e/external/run_external_pilot.py --agent claude-code --suite swebench` | Varies |
+| External pilot (Terminal-Bench) | `uv run python benchmarks/e2e/external/run_external_pilot.py --agent claude-code --suite terminalbench` | Varies |
+| Unified benchmark (single lane) | `uv run python benchmarks/benchmark_runner.py --agent autocode --lane B7 --model glm-4.7-flash` | 1-10 hrs |
+| Unified benchmark via Rust TUI canary | `uv run python benchmarks/benchmark_runner.py --agent autocode --autocode-runner tui --lane B7 --model swebench --max-tasks 1` | 10-30 min |
+| Unified benchmark (all lanes) | `bash benchmarks/run_all_benchmarks.sh` | 8-40 hrs |
+| List benchmark lanes | `uv run python benchmarks/benchmark_runner.py --list-lanes` | Instant |
+| TUI benchmark prep | `uv run python benchmarks/prepare_tui_benchmark_run.py --scope full --mode inline --strict` | ~2-4 min |
 
 ---
 
@@ -214,22 +216,22 @@ The original and most comprehensive benchmark. Tests whether the agent can build
 
 ```bash
 # Standard run
-uv run python scripts/run_calculator_benchmark.py
+uv run python benchmarks/run_calculator_benchmark.py
 
 # PowerShell wrapper
 .\scripts\run_e2e_benchmark.ps1
 
 # Multi-run (aggregated stats)
-uv run python scripts/run_calculator_benchmark.py --runs 3
+uv run python benchmarks/run_calculator_benchmark.py --runs 3
 
 # Re-score an existing sandbox (no LLM tokens spent)
-uv run python scripts/run_calculator_benchmark.py --replay sandboxes/bench_20260212_203313
+uv run python benchmarks/run_calculator_benchmark.py --replay sandboxes/bench_20260212_203313
 
 # Strict mode (higher thresholds)
-uv run python scripts/run_calculator_benchmark.py --strict
+uv run python benchmarks/run_calculator_benchmark.py --strict
 
 # Flake triage (reruns on failure to classify deterministic vs flaky)
-uv run python scripts/run_calculator_benchmark.py --flake-triage
+uv run python benchmarks/run_calculator_benchmark.py --flake-triage
 ```
 
 **Scoring rubric (100 points):**
@@ -252,7 +254,7 @@ Tests whether the agent can diagnose and fix bugs in an existing project without
 
 ```bash
 # Direct Python run
-uv run python scripts/e2e/run_scenario.py E2E-BugFix
+uv run python benchmarks/e2e/run_scenario.py E2E-BugFix
 
 # PowerShell wrapper
 .\scripts\run_e2e_benchmark.ps1 -Scenario E2E-BugFix
@@ -274,7 +276,7 @@ Tests whether the agent can build a CLI tool from scratch with proper structure.
 
 ```bash
 # Direct Python run
-uv run python scripts/e2e/run_scenario.py E2E-CLI
+uv run python benchmarks/e2e/run_scenario.py E2E-CLI
 
 # PowerShell wrapper
 .\scripts\run_e2e_benchmark.ps1 -Scenario E2E-CLI
@@ -305,23 +307,23 @@ External benchmarks run published third-party task suites via Harbor (Docker-bas
 
 ```bash
 # SWE-bench pilot (25 tasks) with codex
-uv run python scripts/e2e/external/run_external_pilot.py \
+uv run python benchmarks/e2e/external/run_external_pilot.py \
   --agent codex --suite swebench --model gpt-4o
 
 # Terminal-Bench pilot (10 tasks) with claude-code
-uv run python scripts/e2e/external/run_external_pilot.py \
+uv run python benchmarks/e2e/external/run_external_pilot.py \
   --agent claude-code --suite terminalbench --model claude-sonnet-4-5-20250929
 
 # Dry run (validates setup, skips actual Harbor invocation)
-uv run python scripts/e2e/external/run_external_pilot.py \
+uv run python benchmarks/e2e/external/run_external_pilot.py \
   --agent codex --suite swebench --dry-run
 
 # Parity mode (3 runs for variance estimation)
-uv run python scripts/e2e/external/run_external_pilot.py \
+uv run python benchmarks/e2e/external/run_external_pilot.py \
   --agent claude-code --suite swebench --parity-runs 3
 
 # Show all options
-uv run python scripts/e2e/external/run_external_pilot.py --help
+uv run python benchmarks/e2e/external/run_external_pilot.py --help
 ```
 
 **Cadence:** Per-PR = none. Weekly = pilot subsets. Release = larger subsets.
@@ -332,24 +334,32 @@ uv run python scripts/e2e/external/run_external_pilot.py --help
 
 ### 5.6 Unified Benchmark Runner (B7-B14)
 
-The unified benchmark runner (`scripts/benchmark_runner.py`) runs all benchmark lanes sequentially with identical budgets for parity comparisons. It supports Docker-based isolation, resumability, and exponential backoff for remote Ollama servers.
+The unified benchmark runner (`benchmarks/benchmark_runner.py`) runs all benchmark lanes sequentially with identical budgets for parity comparisons. It supports Docker-based isolation, resumability, and exponential backoff for remote Ollama servers.
 
 ```bash
 # Run a single lane
-uv run python scripts/benchmark_runner.py --agent autocode --lane B7 --model glm-4.7-flash
+uv run python benchmarks/benchmark_runner.py --agent autocode --lane B7 --model glm-4.7-flash
 
 # Run with task limit
-uv run python scripts/benchmark_runner.py --agent autocode --lane B7 --max-tasks 5 --model glm-4.7-flash
+uv run python benchmarks/benchmark_runner.py --agent autocode --lane B7 --max-tasks 5 --model glm-4.7-flash
 
 # Resume from crash (skips already-completed tasks)
-uv run python scripts/benchmark_runner.py --agent autocode --lane B7 --max-tasks 5 --model glm-4.7-flash --resume
+uv run python benchmarks/benchmark_runner.py --agent autocode --lane B7 --max-tasks 5 --model glm-4.7-flash --resume
 
 # Run ALL lanes sequentially (B7-B14) with resume
-bash scripts/run_all_benchmarks.sh
+bash benchmarks/run_all_benchmarks.sh
 
 # List available lanes
-uv run python scripts/benchmark_runner.py --list-lanes
+uv run python benchmarks/benchmark_runner.py --list-lanes
 ```
+
+For a human-operated TUI sweep, use the prep flow first:
+
+```bash
+uv run python benchmarks/prepare_tui_benchmark_run.py --scope full --mode inline --strict
+```
+
+See `docs/benchmark-tui-runbook.md` for the operator workflow.
 
 **Monitoring a running benchmark:**
 
@@ -428,8 +438,8 @@ If the agent exceeds any budget, execution stops early. This prevents runaway to
 1. Create `scripts/e2e/scenarios/<name>.py` with a `MANIFEST` (type `ScenarioManifest`)
 2. Define: `scenario_id`, `prompt`, `follow_ups`, `acceptance_checks`, `budgets`
 3. Optionally add a seed fixture directory under `scripts/e2e/fixtures/<name>/`
-4. Register it in `scripts/e2e/run_scenario.py`'s `SCENARIO_REGISTRY`
-5. Run: `uv run python scripts/e2e/run_scenario.py <YOUR-SCENARIO-ID>`
+4. Register it in `benchmarks/e2e/run_scenario.py`'s `SCENARIO_REGISTRY`
+5. Run: `uv run python benchmarks/e2e/run_scenario.py <YOUR-SCENARIO-ID>`
 
 The manifest contract is defined in `scripts/e2e/scenario_contract.py`.
 
@@ -455,9 +465,9 @@ All stored artifacts live in `docs/qa/test-results/`. Naming convention:
 |-------|-----------|---------|
 | `uv run pytest tests/ -v` | 0 = pass | Required |
 | `uv run ruff check src/ tests/` | 0 = clean | Required |
-| `uv run python scripts/e2e/run_scenario.py E2E-BugFix` | 0=PASS, 1=FAIL, 2=INFRA | Regression lane |
-| `uv run python scripts/e2e/run_scenario.py E2E-CLI` | 0=PASS, 1=FAIL, 2=INFRA | Regression lane |
-| `uv run python scripts/run_calculator_benchmark.py` | 0=PASS, 1=FAIL, 2=INFRA | Capability lane |
+| `uv run python benchmarks/e2e/run_scenario.py E2E-BugFix` | 0=PASS, 1=FAIL, 2=INFRA | Regression lane |
+| `uv run python benchmarks/e2e/run_scenario.py E2E-CLI` | 0=PASS, 1=FAIL, 2=INFRA | Regression lane |
+| `uv run python benchmarks/run_calculator_benchmark.py` | 0=PASS, 1=FAIL, 2=INFRA | Capability lane |
 
 **Regression lane** (BugFix, CLI): Deterministic, CI-gatable. Failures indicate real regressions.
 **Capability lane** (Calculator): Exploratory, model-dependent. Failures may be model quality, not code bugs.
@@ -480,21 +490,22 @@ All stored artifacts live in `docs/qa/test-results/`. Naming convention:
 
 | File | Purpose |
 |------|---------|
-| `scripts/run_calculator_benchmark.py` | Calculator benchmark engine (1,888 lines) |
-| `scripts/e2e/run_scenario.py` | Generic scenario runner (BugFix, CLI) |
+| `benchmarks/run_calculator_benchmark.py` | Calculator benchmark engine |
+| `benchmarks/e2e/run_scenario.py` | Generic scenario runner (BugFix, CLI) |
 | `scripts/e2e/scenario_contract.py` | Scenario manifest dataclass |
 | `scripts/e2e/scoring.py` | Acceptance check runner + scoring |
 | `scripts/e2e/scenarios/bugfix.py` | E2E-BugFix manifest |
 | `scripts/e2e/scenarios/cli_tool.py` | E2E-CLI manifest |
 | `tests/benchmark/fixtures/bugfix-seed/` | Seed project with 3 bugs (8 tests) |
-| `scripts/e2e/external/run_external_pilot.py` | External benchmark pilot runner (SWE-bench/Terminal-Bench) |
-| `scripts/e2e/external/swebench-pilot-subset.json` | SWE-bench pilot: 25 task IDs |
-| `scripts/e2e/external/terminalbench-pilot-subset.json` | Terminal-Bench pilot: 10 task IDs |
+| `benchmarks/e2e/external/run_external_pilot.py` | External benchmark pilot runner (SWE-bench/Terminal-Bench) |
+| `benchmarks/e2e/external/swebench-pilot-subset.json` | SWE-bench pilot: 25 task IDs |
+| `benchmarks/e2e/external/terminalbench-pilot-subset.json` | Terminal-Bench pilot: 10 task IDs |
 | `scripts/run_e2e_benchmark.ps1` | PowerShell wrapper for all E2E scenarios |
 | `docs/plan/agentic-benchmarks/external-benchmark-runbook.md` | External benchmark setup + rerun instructions |
 | `tests/benchmark/test_project_creation.py` | Calculator scoring rubric |
-| `scripts/benchmark_runner.py` | Unified benchmark runner (B7-B14, Docker, resumability) |
-| `scripts/run_all_benchmarks.sh` | Shell script to run all lanes sequentially with resume |
+| `benchmarks/benchmark_runner.py` | Unified benchmark runner (B7-B14, Docker, resumability) |
+| `benchmarks/run_all_benchmarks.sh` | Shell script to run all lanes sequentially with resume |
+| `benchmarks/prepare_tui_benchmark_run.py` | Human-operated TUI benchmark prep and operator-pack generator |
 | `scripts/adapters/autocode_adapter.py` | AutoCode agent adapter for benchmarks |
 | `docs/qa/test-results/` | Stored benchmark reports |
 | `sandboxes/` | Benchmark sandbox outputs |

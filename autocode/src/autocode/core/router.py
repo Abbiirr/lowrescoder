@@ -106,6 +106,23 @@ _EDIT_PATTERNS: list[tuple[re.Pattern[str], float]] = [
 _FILE_REF_PATTERN = re.compile(r"[\w./\\-]+\.(?:py|go|js|ts|rs|java|c|cpp|h)\b")
 _SYMBOL_REF_PATTERN = re.compile(r"`([^`]+)`")
 _QUESTION_WORDS = re.compile(r"^(?:what|how|where|why|when|which|can|does|is|are)\b", re.IGNORECASE)
+_BENCHMARK_PROMPT_MARKERS = (
+    "WORKING DIRECTORY:",
+    "BUG REPORT:",
+    "GRADING COMMAND",
+    "MANDATORY WORKFLOW",
+    "INITIAL TEST OUTPUT",
+)
+
+
+def _looks_like_benchmark_prompt(message: str) -> bool:
+    upper = message.upper()
+    marker_hits = sum(marker in upper for marker in _BENCHMARK_PROMPT_MARKERS)
+    if marker_hits >= 2:
+        return True
+    if marker_hits >= 1 and (message.count("\n") >= 8 or len(message.split()) >= 80):
+        return True
+    return "```" in message and len(message.split()) >= 120
 
 
 def _extract_features(message: str) -> dict[str, float]:
@@ -129,6 +146,9 @@ def _extract_features(message: str) -> dict[str, float]:
         features["short_query"] = 0.05
     elif word_count >= 20:
         features["long_query"] = 0.1  # Favour L4 for complex
+
+    if message.count("\n") >= 3:
+        features["multiline_query"] = 0.05
 
     return features
 
@@ -164,6 +184,9 @@ class RequestRouter:
         if message.lower() in ("help", "?"):
             return RequestType.HELP
 
+        if _looks_like_benchmark_prompt(message):
+            return RequestType.COMPLEX_TASK
+
         # Stage 1: Pattern matching
         det_score = self._match_patterns(message, _DETERMINISTIC_PATTERNS)
         search_score = self._match_patterns(message, _SEARCH_PATTERNS)
@@ -184,6 +207,9 @@ class RequestRouter:
         # Penalize deterministic for long queries
         if "long_query" in features:
             det_score *= 0.7
+            edit_score *= 0.5
+        if "multiline_query" in features:
+            edit_score *= 0.7
 
         # Stage 3: Decision
         # Layer 1 requires high confidence (>= 0.7)

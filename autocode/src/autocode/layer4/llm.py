@@ -9,15 +9,18 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
+from urllib.parse import urlparse
 
 from pydantic import BaseModel
 
 from autocode.config import AutoCodeConfig
 from autocode.core.logging import log_event
+from autocode.gateway_auth import get_gateway_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +77,7 @@ class LLMProvider(Protocol):
         *,
         on_chunk: Any | None = None,
         on_thinking_chunk: Any | None = None,
+        on_retry_notice: Any | None = None,
         reasoning_enabled: bool = True,
     ) -> LLMResponse:
         """Generate a response that may include tool calls."""
@@ -392,6 +396,96 @@ def _is_connection_error(exc: Exception) -> bool:
     return any(kw in msg for kw in network_keywords)
 
 
+def _extract_http_status_code(exc: Exception) -> int | None:
+    """Best-effort status-code extraction from API/client exceptions."""
+    status_code = getattr(exc, "status_code", None)
+    if isinstance(status_code, int):
+        return status_code
+
+    response = getattr(exc, "response", None)
+    response_status = getattr(response, "status_code", None)
+    if isinstance(response_status, int):
+        return response_status
+
+    match = re.search(r"\b(?:status code|error code)[: ]+(\d{3})\b", str(exc), re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+    return None
+
+
+def _is_loopback_api_base(api_base: str) -> bool:
+    """Return True when the configured API base is localhost/loopback."""
+    try:
+        host = (urlparse(api_base).hostname or "").lower()
+    except ValueError:
+        return False
+    return host in {"localhost", "127.0.0.1", "::1"}
+
+
+def _is_openrouter_retryable_error(exc: Exception, *, api_base: str) -> bool:
+    """Classify OpenRouter/OpenAI-compatible errors for retry policy."""
+    status_code = _extract_http_status_code(exc)
+    message = str(exc).lower()
+
+    if _is_connection_error(exc):
+        return not _is_loopback_api_base(api_base)
+
+    if status_code in {408, 409, 425, 429, 500, 502, 503, 504}:
+        return True
+    if status_code in {400, 401, 403, 404, 422}:
+        return False
+
+    if any(
+        token in message for token in (
+            "model not found",
+            "unknown model",
+            "invalid model",
+            "invalid request",
+            "unknown alias",
+        )
+    ):
+        return False
+
+    return False
+
+
+def _format_openrouter_error(exc: Exception, *, model: str, api_base: str) -> str:
+    """Generate a user-facing OpenRouter/gateway error message."""
+    status_code = _extract_http_status_code(exc)
+    message = str(exc)
+    lowered = message.lower()
+
+    if _is_connection_error(exc):
+        return f"Could not reach the configured gateway at {api_base}."
+
+    if status_code in {400, 404} and any(
+        token in lowered for token in ("model", "alias", "not found")
+    ):
+        return f"Model alias '{model}' is not available on the configured gateway."
+    if status_code == 401:
+        return "Gateway authentication failed (401). Check the configured API key."
+    if status_code == 403:
+        return "Gateway request was forbidden by the configured provider (403)."
+    if status_code == 429:
+        return "Provider rate limit reached (429)."
+
+    return message
+
+
+def _format_openrouter_retry_notice(
+    exc: Exception,
+    *,
+    model: str,
+    api_base: str,
+    attempt: int,
+    max_retries: int,
+    delay: float,
+) -> str:
+    """Human-readable retry notice for structured frontend warnings."""
+    summary = _format_openrouter_error(exc, model=model, api_base=api_base)
+    return f"WARNING: {summary} Retrying {attempt}/{max_retries} in {int(delay)}s."
+
+
 class OllamaProvider:
     """Ollama LLM provider for Layer 4 (production)."""
 
@@ -530,6 +624,7 @@ class OllamaProvider:
         *,
         on_chunk: Any | None = None,
         on_thinking_chunk: Any | None = None,
+        on_retry_notice: Any | None = None,
         reasoning_enabled: bool = True,
     ) -> LLMResponse:
         """Generate with tool calling via Ollama (non-streaming to avoid partial JSON)."""
@@ -679,7 +774,10 @@ class OpenRouterProvider:
         self.api_base = config.llm.api_base
         self.temperature = config.llm.temperature
         self.max_tokens = config.llm.max_tokens
-        self.api_key = os.environ.get("OPENROUTER_API_KEY", "")
+        if "openrouter.ai" in self.api_base:
+            self.api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+        else:
+            self.api_key = get_gateway_api_key()
 
     def _make_client(self) -> Any:
         """Create AsyncOpenAI client with robust timeout settings."""
@@ -819,6 +917,7 @@ class OpenRouterProvider:
         *,
         on_chunk: Any | None = None,
         on_thinking_chunk: Any | None = None,
+        on_retry_notice: Any | None = None,
         reasoning_enabled: bool = True,
     ) -> LLMResponse:
         """Generate with tool calling via OpenRouter with retry + non-streaming fallback."""
@@ -887,14 +986,26 @@ class OpenRouterProvider:
                 return result
 
             except Exception as e:
-                if attempt < self.MAX_RETRIES - 1:
+                retryable = _is_openrouter_retryable_error(e, api_base=self.api_base)
+                if retryable and attempt < self.MAX_RETRIES - 1:
                     # Longer delay on rate limit (429)
-                    is_rate_limit = "429" in str(e)
+                    is_rate_limit = _extract_http_status_code(e) == 429 or "429" in str(e)
                     delay = (
                         self.RATE_LIMIT_DELAY * (1 + attempt)
                         if is_rate_limit
                         else self.RETRY_BASE_DELAY * (2 ** attempt)
                     )
+                    if on_retry_notice is not None:
+                        on_retry_notice(
+                            _format_openrouter_retry_notice(
+                                e,
+                                model=self.model,
+                                api_base=self.api_base,
+                                attempt=attempt + 1,
+                                max_retries=self.MAX_RETRIES,
+                                delay=delay,
+                            )
+                        )
                     logger.warning(
                         "OpenRouter retry %d/%d%s: %s "
                         "(waiting %.0fs)",
@@ -904,12 +1015,17 @@ class OpenRouterProvider:
                     )
                     await _asyncio.sleep(delay)
                 else:
+                    user_error = _format_openrouter_error(
+                        e,
+                        model=self.model,
+                        api_base=self.api_base,
+                    )
                     log_event(
                         logger, logging.ERROR, "llm_error",
                         provider="openrouter", model=self.model,
-                        error=str(e), attempts=self.MAX_RETRIES,
+                        error=user_error, attempts=attempt + 1,
                     )
-                    raise
+                    raise RuntimeError(user_error) from e
 
         msg = "unreachable"
         raise RuntimeError(msg)

@@ -8,12 +8,15 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import os
 import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 
 # Add superproject root to path for benchmarks and autocode imports
 _BENCHMARKS_ROOT = Path(__file__).resolve().parent.parent
@@ -25,8 +28,18 @@ if str(_SUPERPROJECT_ROOT / "autocode" / "src") not in sys.path:
     sys.path.insert(0, str(_SUPERPROJECT_ROOT / "autocode" / "src"))
 
 from benchmarks.docker_helpers import docker_exec as _docker_exec  # noqa: E402
+from benchmarks.tui_benchmark_driver import (  # noqa: E402
+    AutoCodeTuiBenchmarkRunner,
+    TuiConnectionMode,
+    build_tui_runner_context,
+)
 
-from .base import AgentResult, BenchmarkTask, BudgetProfile  # noqa: E402
+from .base import (  # noqa: E402
+    AgentResult,
+    BenchmarkTask,
+    BudgetProfile,
+    ProviderHealthError,
+)
 
 # --- Retry loop constants ---
 MAX_GRADE_ATTEMPTS = 3
@@ -134,7 +147,13 @@ BENCHMARK_BOOKKEEPING_FILES: frozenset[str] = frozenset({
 class AutoCodeAdapter:
     """Runs benchmark tasks through AutoCode's AgentLoop or Orchestrator."""
 
-    def __init__(self, model: str = ""):
+    def __init__(
+        self,
+        model: str = "",
+        runner: str = "loop",
+        *,
+        tui_connection: str = "spawn",
+    ):
         self._provider = os.environ.get(
             "AUTOCODE_LLM_PROVIDER", "ollama",
         )
@@ -151,6 +170,17 @@ class AutoCodeAdapter:
             raise ValueError(
                 "No model specified. Set --model, AUTOCODE_MODEL, OLLAMA_MODEL, or OPENROUTER_MODEL."
             )
+        if runner not in {"loop", "tui"}:
+            raise ValueError(f"Unsupported AutoCode benchmark runner: {runner}")
+        if tui_connection not in {
+            TuiConnectionMode.SPAWN.value,
+            TuiConnectionMode.ATTACH.value,
+        }:
+            raise ValueError(f"Unsupported AutoCode TUI connection mode: {tui_connection}")
+        self._runner = runner
+        self._tui_connection = tui_connection
+        self._healthcheck_done = False
+        self._healthcheck_error: str | None = None
 
     @property
     def name(self) -> str:
@@ -170,7 +200,101 @@ class AutoCodeAdapter:
 
     def pre_task_healthcheck(self) -> None:
         """Check that the LLM provider is reachable before starting a task."""
-        pass  # Gateway health is checked by run_all_benchmarks.sh
+        if self._healthcheck_done:
+            if self._healthcheck_error:
+                raise ProviderHealthError(self._healthcheck_error)
+            return
+
+        try:
+            self._probe_gateway_alias_if_needed()
+        except Exception as exc:
+            self._healthcheck_error = str(exc)
+            self._healthcheck_done = True
+            raise ProviderHealthError(self._healthcheck_error) from exc
+
+        self._healthcheck_done = True
+
+    def _probe_gateway_alias_if_needed(self) -> None:
+        """Fail fast when a benchmark gateway alias is not actually routable.
+
+        Benchmark lanes use logical aliases like ``swebench`` and
+        ``terminal_bench``. When those aliases are pointed at a backend that
+        cannot serve them, the loop path fails quickly while the Rust TUI path
+        can sit in ``working`` until stale-request recovery fires. Probe once
+        before the task starts so the harness stops early with actionable
+        guidance instead of spending minutes on an avoidable infra failure.
+        """
+        if self._model not in GATEWAY_ALIASES:
+            return
+
+        api_base = self._resolve_api_base().rstrip("/")
+        if not api_base.startswith("http://") and not api_base.startswith("https://"):
+            return
+
+        try:
+            from autocode.gateway_auth import build_gateway_headers
+        except Exception as exc:  # pragma: no cover - defensive import path
+            raise RuntimeError(f"cannot load gateway auth helper: {exc}") from exc
+
+        payload = json.dumps(
+            {
+                "model": self._model,
+                "messages": [{"role": "user", "content": "ok"}],
+                "max_tokens": 1,
+                "stream": False,
+            }
+        ).encode("utf-8")
+        request = Request(
+            f"{api_base}/chat/completions",
+            data=payload,
+            headers=build_gateway_headers({"Content-Type": "application/json"}),
+        )
+
+        try:
+            with urlopen(request, timeout=15) as response:  # noqa: S310
+                body = response.read().decode("utf-8", errors="replace")
+                parsed = json.loads(body)
+        except HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")[:200]
+            raise RuntimeError(
+                f"benchmark model alias '{self._model}' rejected at {api_base}: "
+                f"HTTP {exc.code} {detail}. "
+                "Point benchmark runs at the LLM gateway with a valid alias route."
+            ) from exc
+        except Exception as exc:
+            raise RuntimeError(
+                f"benchmark model alias '{self._model}' probe failed at {api_base}: {exc}"
+            ) from exc
+
+        if "choices" not in parsed:
+            raise RuntimeError(
+                f"benchmark model alias '{self._model}' probe returned no choices at {api_base}: "
+                f"{body[:200]}"
+            )
+
+    def _resolve_api_base(self) -> str:
+        """Return the effective API base for benchmark execution."""
+        gateway_base = os.environ.get("AUTOCODE_LLM_API_BASE", "")
+        if gateway_base:
+            return gateway_base
+        if self._provider == "openrouter":
+            return "https://openrouter.ai/api/v1"
+        return os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+
+    def _resolve_execution_provider(self) -> str:
+        """Return the provider that matches the effective benchmark endpoint.
+
+        Benchmark aliases like ``swebench`` and ``terminal_bench`` are served by
+        the LiteLLM/OpenAI-compatible gateway. The Ollama SDK talks to Ollama
+        native endpoints and will 404 against ``/v1`` even when the alias probe
+        succeeds. Use the OpenAI-compatible provider whenever a gateway alias is
+        routed through an HTTP API base, while preserving the explicit provider
+        for non-gateway local models.
+        """
+        api_base = self._resolve_api_base().rstrip("/")
+        if self._model in GATEWAY_ALIASES and api_base.startswith(("http://", "https://")):
+            return "openrouter"
+        return self._provider
 
     def _find_work_dir(self, sandbox: Path, task: BenchmarkTask) -> Path:
         """Find the actual working directory for the agent.
@@ -324,6 +448,29 @@ class AutoCodeAdapter:
         budget: BudgetProfile,
     ) -> AgentResult:
         """Run AutoCode AgentLoop on the task with outer grading retry loop."""
+        self._bench_env = os.environ.copy()
+        venv_bin = str(PROJECT_ROOT / ".venv" / "bin")
+        if venv_bin not in self._bench_env.get("PATH", ""):
+            self._bench_env["PATH"] = (
+                f"{venv_bin}:{self._bench_env.get('PATH', '')}"
+            )
+
+        if self._runner == "tui":
+            runner = AutoCodeTuiBenchmarkRunner(
+                build_tui_runner_context(
+                    project_root=PROJECT_ROOT,
+                    provider=self._resolve_execution_provider(),
+                    model=self._model,
+                    api_base=self._resolve_api_base(),
+                    connection_mode=TuiConnectionMode(self._tui_connection),
+                    build_prompt=self._build_prompt,
+                    build_feedback_prompt=self._build_feedback_prompt,
+                    run_grading_command=self._run_grading_command,
+                    find_work_dir=self._find_work_dir,
+                )
+            )
+            return await runner.run_task(task, sandbox, budget)
+
         start = time.monotonic()
         tool_call_count = 0
         error = ""
@@ -335,14 +482,6 @@ class AutoCodeAdapter:
         index_build_ms = 0
         syntax_gate_checks = 0
         syntax_gate_rejections = 0
-
-        # Ensure venv bin is on PATH for grading subprocesses
-        self._bench_env = os.environ.copy()
-        venv_bin = str(PROJECT_ROOT / ".venv" / "bin")
-        if venv_bin not in self._bench_env.get("PATH", ""):
-            self._bench_env["PATH"] = (
-                f"{venv_bin}:{self._bench_env.get('PATH', '')}"
-            )
 
         try:
             from autocode.agent.approval import (
@@ -384,17 +523,8 @@ class AutoCodeAdapter:
             # Load config, override for benchmark
             config = load_config(project_root=PROJECT_ROOT)
             config.llm.model = self._model
-            config.llm.provider = self._provider
-            # Gateway-first: use AUTOCODE_LLM_API_BASE if set
-            gateway_base = os.environ.get("AUTOCODE_LLM_API_BASE", "")
-            if gateway_base:
-                config.llm.api_base = gateway_base
-            elif self._provider == "openrouter":
-                config.llm.api_base = "https://openrouter.ai/api/v1"
-            else:
-                config.llm.api_base = os.environ.get(
-                    "OLLAMA_HOST", "http://localhost:11434",
-                )
+            config.llm.provider = self._resolve_execution_provider()
+            config.llm.api_base = self._resolve_api_base()
             config.shell.enabled = True
             config.shell.timeout = 120
             config.shell.max_timeout = 300

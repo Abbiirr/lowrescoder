@@ -1,0 +1,50 @@
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│tools | openrouter | suggest | ● restore | mock-sessi | tasks:0 | agents:0 | q:0 | sandbox:local                                                              │
+│↻ 5 checkpoints · feat/parser-fix                                                                                                                             │
+│                                                                                                                                                              │
+│● step 3 · extractImports guard                                                                                                                               │
+│14:08 · 2 files · parser.ts + types.ts · 42 tests passed after                                                                                                │
+│↵ restore                                                                                                                                                     │
+│○ step 2 · ImportNode.visited added                                                                                                                           │
+│14:05 · 1 file · src/types.ts                                                                                                                                 │
+│○ step 1 · inspect parser flow                                                                                                                                │
+│14:02 · read-only · no writes                                                                                                                                 │
+│○ session start · parser import patch                                                                                                                         │
+│○ manual checkpoint · before resolver refactor                                                                                                                │
+│                                                                                                                                                              │
+│↑↓ move · ↵ restore · D diff from here · Esc cancel                                                                                                           │
+│safe · local only · reversible                                                                                                                                │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+│┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐│
+││❯                                                                                                                                                           ││
+│└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘│
+│Checkpoint browser is open; pick a restore point or diff from here before changing course.                                                                    │
+│↑↓ move · ↵ restore · D diff from here · Esc cancel                                                                                                           │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
