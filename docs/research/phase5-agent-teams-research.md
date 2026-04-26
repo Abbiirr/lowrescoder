@@ -2,7 +2,7 @@
 
 > Created: 2026-02-17
 > Scope: Validate current (2026) patterns for subagents, agent teams, model delegation, and A2A interoperability before Phase 5 implementation.
-> Related plan: `docs/plan/phase5-agent-teams.md`
+> Related plan: `docs/plan/archive/phase5-agent-teams.md`
 
 ---
 

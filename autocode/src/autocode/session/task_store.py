@@ -16,6 +16,28 @@ def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
+_STATUS_ORDER = {
+    "pending": 0,
+    "in_progress": 1,
+    "completed": 2,
+    "failed": 2,
+    "escalated": 2,
+}
+
+
+def _validate_status_transition(old_status: str, new_status: str) -> None:
+    new_rank = _STATUS_ORDER.get(new_status)
+    if new_rank is None:
+        valid = ", ".join(_STATUS_ORDER)
+        raise ValueError(f"invalid task status '{new_status}'. Use one of: {valid}")
+
+    old_rank = _STATUS_ORDER.get(old_status)
+    if old_rank is not None and new_rank < old_rank:
+        raise ValueError(
+            f"task status cannot move backward from '{old_status}' to '{new_status}'"
+        )
+
+
 class TaskStore:
     """Manages tasks and their dependencies within a session.
 
@@ -63,6 +85,14 @@ class TaskStore:
         filtered = {k: v for k, v in fields.items() if k in allowed}
         if not filtered:
             return
+        old_status = None
+        new_status = filtered.get("status")
+        if new_status is not None:
+            task = self.get_task(task_id)
+            if task is None:
+                return
+            old_status = task.status
+            _validate_status_transition(old_status, new_status)
         filtered["updated_at"] = _now_iso()
         set_clause = ", ".join(f"{k} = ?" for k in filtered)
         values = list(filtered.values()) + [task_id, self._session_id]
@@ -70,6 +100,8 @@ class TaskStore:
             f"UPDATE tasks SET {set_clause} WHERE id = ? AND session_id = ?",  # noqa: S608
             values,
         )
+        if old_status is not None and new_status is not None and old_status != new_status:
+            self._record_history(task_id, old_status, new_status)
         self._conn.commit()
 
     def list_tasks(self) -> list[TaskRow]:

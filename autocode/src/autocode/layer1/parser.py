@@ -94,6 +94,29 @@ class TreeSitterParser:
             language="python",
         )
 
+    def get_cached(self, file_path: str | Path) -> ParseResult | None:
+        """Return a cached parse result for an unchanged file without parsing."""
+        path = Path(file_path).resolve()
+        key = str(path)
+        try:
+            mtime = os.path.getmtime(key)
+        except OSError:
+            return None
+
+        with self._lock:
+            if key not in self._cache:
+                return None
+            cached_tree, cached_mtime = self._cache[key]
+            if cached_mtime != mtime:
+                return None
+            self._cache.move_to_end(key)
+            return ParseResult(
+                tree=cached_tree,
+                file_path=key,
+                mtime=cached_mtime,
+                language="python",
+            )
+
     def parse_string(self, source: str, file_path: str = "<string>") -> ParseResult:
         """Parse a Python source string (no caching).
 
@@ -123,3 +146,11 @@ class TreeSitterParser:
         """Clear the entire parse cache."""
         with self._lock:
             self._cache.clear()
+
+
+_SHARED_PARSER = TreeSitterParser()
+
+
+def get_shared_parser() -> TreeSitterParser:
+    """Return the process-local Layer 1 parser/cache."""
+    return _SHARED_PARSER

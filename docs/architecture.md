@@ -4,7 +4,7 @@
 
 AutoCode is a local-first AI coding assistant that runs on consumer hardware. It uses a **4-layer intelligence model** where classical AI techniques handle the majority of operations, invoking LLMs only when necessary.
 
-The system is split into a **Rust TUI frontend** and a **Python backend**, communicating via JSON-RPC 2.0 over PTY stdin/stdout.
+The system is split into a **Rust TUI frontend** and a **Python backend**, communicating via newline-delimited JSON-RPC 2.0. The default user path is bare `autocode`, which launches the Rust TUI in spawn-managed mode and starts a backend subprocess over stdio. The same frontend can also attach to an independently started backend over localhost TCP.
 
 ```
 ┌──────────────────────────────────────────┐
@@ -16,17 +16,17 @@ The system is split into a **Rust TUI frontend** and a **Python backend**, commu
 │  Autocomplete ─ History ─ Markdown       │
 └──────────────┬───────────────────────────┘
                │ JSON-RPC 2.0
-               │ (PTY stdin/stdout, newline-delimited)
+               │ (stdio subprocess or localhost TCP)
 ┌──────────────┴───────────────────────────┐
 │         Python Backend                   │
-│  (autocode serve)                        │
+│  (autocode serve --transport stdio|tcp)  │
 │                                          │
 │  Agent Loop ─ Tools ─ LLM Providers      │
 │  Session Store ─ Config ─ Commands       │
 └──────────────────────────────────────────┘
 ```
 
-The Go BubbleTea TUI and the Python `--inline` fallback were the previous frontends; both were deleted at M11 cutover (2026-04-19). See `docs/decisions/ADR-001-rust-tui-migration.md` for the decision record.
+The Go Bubble Tea TUI and the Python prompt-toolkit inline frontend were previous frontends; both were deleted at M11 cutover (2026-04-19). The remaining Python UI surfaces are fallbacks: `autocode chat --tui` for Textual fullscreen and `autocode chat --legacy` for the Rich REPL. See `docs/decisions/ADR-001-rust-tui-migration.md` for the decision record.
 
 ---
 
@@ -36,7 +36,7 @@ The Go BubbleTea TUI and the Python `--inline` fallback were the previous fronte
 **Binary:** `autocode/rtui/target/release/autocode-tui` (~2.4 MB stripped)
 **Stack:** `crossterm` 0.28 + `ratatui` 0.29 + `tokio` 1.x + `portable-pty` 0.8 + `serde_json` + `anyhow` + `tracing`
 
-The Rust frontend handles all terminal interaction using ratatui (immediate-mode widgets over crossterm). It runs in **inline mode by default** (no alternate screen) to preserve native terminal scrollback; `--altscreen` opts into full-screen mode.
+The Rust frontend handles terminal interaction using ratatui widgets over crossterm. It runs in **inline mode by default** to preserve native terminal scrollback; `autocode --mode altscreen` or `autocode chat --rust-altscreen` opts into the alternate-screen Rust TUI. `autocode --attach HOST:PORT` connects the same frontend to an already-running TCP backend.
 
 **Reference docs:** [`docs/reference/rust-tui-architecture.md`](reference/rust-tui-architecture.md) and [`docs/reference/rust-tui-rpc-contract.md`](reference/rust-tui-rpc-contract.md).
 
@@ -45,68 +45,72 @@ The Rust frontend handles all terminal interaction using ratatui (immediate-mode
 | Decision | Rationale |
 |----------|-----------|
 | Inline mode (no alt-screen) | Preserves native scrollback after exit |
-| `tea.Println()` for completed turns | Commits content above the live area — O(1) View() |
-| No viewport component | Scrollback is the terminal's job, not ours |
-| 16ms token batching | Accumulate chunks in `strings.Builder`, flush on tick |
-| Glamour markdown ONCE on done | Never render markdown during streaming (too expensive) |
-| Custom 3-option approval selector | Simpler than importing a form framework for 3 items |
+| Spawn-managed stdio backend by default | Keeps bare `autocode` self-contained while preserving frontend/backend separation |
+| Attach/TCP mode | Lets the backend and frontend run independently for benchmarking, debugging, and future frontend swaps |
+| Reducer/effects state model | Keeps rendering, input, RPC events, and side effects testable in isolation |
+| Native Rust modals/pickers | Approval, ask-user, model/provider/session pickers, palette, and recovery are frontend state, not nested Python prompts |
+| JSON-RPC schema parity | Python schema and Rust protocol structs track the same newline-delimited contract |
 
 ### File Structure
 
 | File | Purpose |
 |------|---------|
-| `main.go` | Entry point: detect terminal, find Python backend, launch program |
-| `model.go` | Root model struct, stage enum, `initialModel()` |
-| `view.go` | O(1) View: live area only (streaming + tools + input + status) |
-| `update.go` | Message routing, key handling, stage transitions |
-| `backend.go` | Subprocess manager: 3 goroutines (reader/writer/stderr drain) |
-| `backend_windows.go` | Windows process group management |
-| `backend_unix.go` | Unix process group management (Setpgid + SIGKILL) |
-| `protocol.go` | JSON-RPC 2.0 wire types (requests, responses, notifications) |
-| `messages.go` | Custom `tea.Msg` types for all backend events |
-| `styles.go` | Lip Gloss styles for all UI elements |
-| `statusbar.go` | Status bar: model, provider, mode, tokens, queue |
-| `approval.go` | Arrow-key tool approval selector (Yes/Yes session/No) |
-| `askuser.go` | Ask-user prompt (options + free text) |
-| `commands.go` | Slash command parsing and routing |
-| `completion.go` | Prefix + fuzzy autocomplete via sahilm/fuzzy |
-| `history.go` | Persistent command history (~/.autocode/go_history) |
-| `markdown.go` | Glamour markdown rendering (called once per turn) |
-| `detect.go` | Terminal detection (dumb term, isatty) + Python discovery |
+| `src/main.rs` | Entry point: launch-mode parsing, connection-mode resolution, raw-mode guard, event/effect loop |
+| `src/backend/connection.rs` | Spawn-managed vs attach/TCP connection abstraction |
+| `src/backend/pty.rs` | Spawn-managed backend subprocess over piped stdio |
+| `src/backend/process.rs` | Child lifecycle and kill-on-drop cleanup |
+| `src/rpc/codec.rs` | JSON-RPC line encode/decode |
+| `src/rpc/protocol.rs` | Rust wire structs for backend notifications/requests |
+| `src/rpc/schema.rs` | Canonical method classification for reducer dispatch |
+| `src/rpc/bus.rs` | Reader/writer tasks over any backend connection handle |
+| `src/state/model.rs` | AppState, Stage, picker models, transcript/task state |
+| `src/state/reducer.rs` | Pure reducer for input, RPC events, and frontend state transitions |
+| `src/state/effects.rs` | Effect enum for outbound RPC, editor launch, and process actions |
+| `src/render/view.rs` | Ratatui layout, status bar, modals, pickers, detail surfaces |
+| `src/render/markdown.rs` | Inline markdown rendering |
+| `src/ui/composer.rs` | Multi-line composer |
+| `src/ui/textbuf.rs` | UTF-8-safe editable text buffer |
+| `src/ui/history.rs` | Persistent frecency history (`~/.autocode/history.json`) |
+| `src/ui/editor.rs` | External editor launch/return flow |
+| `src/ui/event_loop.rs` | crossterm EventStream to app events |
+| `src/commands/mod.rs` | Frontend slash/palette command routing |
 
 ### UI Stage Machine
 
 ```
-stageInit ──(on_status)──► stageInput
-                              │
-                    (Enter)   │   (on_tool_request)
-                              ▼
-                        stageStreaming ──────► stageApproval
-                              │                    │
-                    (on_done) │        (Enter/Esc)  │
-                              ▼                    │
-                        stageInput ◄───────────────┘
-                              │
-                    (on_ask_user)
-                              ▼
-                        stageAskUser
-                              │
-                    (Enter/Esc)
-                              ▼
-                        stageStreaming
+Idle ──(Enter/chat)──► Streaming ──(tool call)──► ToolCall
+  ▲                       │                         │
+  │                       ├──(on_tool_request)──► Approval
+  │                       ├──(on_ask_user)──────► AskUser
+  │                       └──(on_done/error)────► Idle
+  │
+  ├── Palette
+  ├── Picker(Model|Provider|Session)
+  ├── EditorLaunch
+  └── Shutdown
 ```
 
 ---
 
 ## Backend: Python JSON-RPC Server
 
-**Location:** `src/autocode/backend/server.py`
+**Location:** `autocode/src/autocode/backend/`
 
-The Python backend exposes the full agent loop, tools, LLM providers, session management, and slash commands over a JSON-RPC 2.0 protocol. Launched by `autocode serve`.
+The Python backend exposes the agent loop, tools, LLM providers, session management, slash commands, tasks, subagents, memory, checkpoints, and config over JSON-RPC 2.0. It is launched automatically by the Rust TUI in spawn-managed stdio mode, or independently with `autocode serve --transport stdio|tcp`.
+
+| Module | Responsibility |
+|--------|----------------|
+| `autocode/src/autocode/backend/server.py` | Backend application state, request dispatch surface, frontend notification helpers |
+| `autocode/src/autocode/backend/chat.py` | Chat-turn execution, callback wiring, layer selection, `on_done` shaping |
+| `autocode/src/autocode/backend/services.py` | Non-transport command/session/model/provider/task service helpers |
+| `autocode/src/autocode/backend/transport.py` | `BackendTransport`, JSON encode/decode, pending frontend-request broker |
+| `autocode/src/autocode/backend/stdio_host.py` | Stdio line framing/threading host adapter |
+| `autocode/src/autocode/backend/tcp_host.py` | Localhost TCP JSON-RPC host adapter |
+| `autocode/src/autocode/backend/schema.py` | Canonical JSON-RPC method names, params, and result models |
 
 ### Agent Loop
 
-**Location:** `src/autocode/agent/loop.py`
+**Location:** `autocode/src/autocode/agent/loop.py`
 
 The `AgentLoop` orchestrates multi-turn interactions:
 1. Receives user message
@@ -128,48 +132,50 @@ Callbacks map to JSON-RPC notifications/requests:
 
 ### LLM Providers
 
-**Location:** `src/autocode/layer4/llm.py`
+**Location:** `autocode/src/autocode/layer4/llm.py`
 
 | Provider | Use Case |
 |----------|----------|
 | `OllamaProvider` | Local inference (default). Connects to `ollama serve` |
-| `OpenRouterProvider` | Cloud development backend. Requires API key |
+| `OpenRouterProvider` | OpenRouter or OpenAI-compatible gateway path. Requires API key/gateway config |
 
-Both implement async streaming via `generate(messages, stream=True)`.
+Both implement async streaming and tool-calling through `generate_with_tools()`, with thinking/reasoning token streaming surfaced through `on_thinking`.
 
 ### Tools
 
-**Location:** `src/autocode/agent/tools.py`
+**Location:** `autocode/src/autocode/agent/tools.py`
 
-The agent has access to filesystem tools (read, write, edit, glob, grep), shell execution, and other coding-assistant tools. Each tool call goes through the approval system before execution.
+The agent has a 38-tool registry. Sixteen core tools are sent to the model by default, while deferred tools are discoverable through `tool_search` to reduce token pressure. Write/shell tools go through approval and hard-block checks before execution.
 
 ### Approval System
 
-**Location:** `src/autocode/agent/approval.py`
+**Location:** `autocode/src/autocode/agent/approval.py`
 
-Three modes:
-- **Ask**: Prompt user for every tool call (default)
-- **Auto-approve**: Skip prompts (for trusted operations)
-- **Session approve**: Remember approval for the rest of the session
+Four modes:
+- **read-only**: block mutating and shell operations
+- **suggest**: ask before mutating or shell operations
+- **auto**: auto-approve ordinary operations while respecting hard blocks
+- **autonomous**: least restrictive mode while still respecting hard blocks
 
-Blocked patterns prevent dangerous operations (e.g., `rm -rf /`).
+Blocked shell patterns and dangerous write paths/content are enforced before handlers run.
 
 ### Session Store
 
-**Location:** `src/autocode/session/store.py`
+**Location:** `autocode/src/autocode/session/store.py`
 
 SQLite-backed (WAL mode) conversation persistence. Stores messages, metadata, and session state. Located at `~/.autocode/sessions.db`.
 
 ### Slash Commands
 
-**Location:** `src/autocode/tui/commands.py`
+**Location:** `autocode/src/autocode/app/commands.py`
 
-15 commands handled by `CommandRouter`:
+29 backend-visible commands are handled by `CommandRouter` and exposed to the Rust TUI through `command.list`:
 
 | Command | Description |
 |---------|-------------|
 | `/help` | Show available commands |
 | `/model [name]` | Show or switch model |
+| `/provider [name]` | Show or switch provider |
 | `/mode [mode]` | Show or switch approval mode |
 | `/new [title]` | New session |
 | `/sessions` | List sessions |
@@ -181,14 +187,20 @@ SQLite-backed (WAL mode) conversation persistence. Stores messages, metadata, an
 | `/copy` | Copy last response |
 | `/clear` | Clear display |
 | `/exit` | Exit the application |
+| `/cost [--detail]` | Show session cost and token accounting |
+| `/memory` | Show session memory |
+| `/checkpoint` | Save/list/restore checkpoints |
+| `/tasks` | Show tasks/subagents |
+| `/plan` | Show or switch planning mode |
+| `/review`, `/diff`, `/grep`, `/cc`, `/restore`, `/escalation` | Open dedicated Rust TUI detail/picker surfaces |
 
-Go handles `/exit`, `/clear`, `/thinking` locally. All others are delegated to the Python backend via `command` JSON-RPC request.
+The Rust TUI owns local UI-only surfaces such as palette/pickers and recovery display, but backend command semantics are returned through `command` / `command.list`.
 
 ---
 
 ## JSON-RPC Protocol
 
-Wire format: newline-delimited JSON (one JSON object per line over stdin/stdout).
+Wire format: newline-delimited JSON (one JSON object per line) over either stdio pipes or localhost TCP.
 
 ### Rust → Python Requests
 
@@ -203,8 +215,20 @@ Wire format: newline-delimited JSON (one JSON object per line over stdin/stdout)
 | `model.list` | `{}` | List models for picker/autocomplete surfaces |
 | `provider.list` | `{}` | List providers for picker/autocomplete surfaces |
 | `session.resume` | `{session_id}` | Resume session |
+| `task.list` | `{}` | List task projection |
+| `subagent.list` | `{}` | List subagent projection |
+| `subagent.cancel` | `{subagent_id}` | Cancel subagent |
+| `plan.status` | `{}` | Get plan mode status |
+| `plan.set` | `{mode}` | Set plan mode |
 | `config.get` | `{}` | Get current config |
 | `config.set` | `{key, value}` | Set config value |
+| `memory.list` | `{}` | List session memory |
+| `checkpoint.list` | `{}` | List checkpoints |
+| `checkpoint.restore` | `{}` | Restore checkpoint |
+| `plan.export` | `{}` | Export plan artifact |
+| `plan.sync` | `{}` | Sync plan/task state |
+| `steer` | `{message}` | Send steering text during an active turn |
+| `session.fork` | `{}` | Fork current session |
 | `shutdown` | `{}` | Graceful shutdown |
 
 ### Python → Rust Notifications (no response expected)
@@ -214,8 +238,10 @@ Wire format: newline-delimited JSON (one JSON object per line over stdin/stdout)
 | `on_token` | `{text}` | Streaming token |
 | `on_thinking` | `{text}` | Thinking/reasoning token |
 | `on_tool_call` | `{name, status, result, args}` | Tool call status update |
-| `on_done` | `{tokens_in, tokens_out}` | Generation complete |
+| `on_done` | `{tokens_in, tokens_out, cancelled, layer_used}` | Generation complete |
 | `on_error` | `{message}` | Error occurred |
+| `on_warning` | `{message}` | Non-fatal warning |
+| `on_chat_ack` | `{request_id, session_id}` | Chat request accepted/session resolved |
 | `on_status` | `{model, provider, mode, session_id}` | Backend status info |
 | `on_task_state` | `{tasks, subagents}` | Background-task state update |
 | `on_cost_update` | `{cost, tokens_in, tokens_out}` | Per-turn cost/token snapshot |
@@ -231,8 +257,8 @@ Wire format: newline-delimited JSON (one JSON object per line over stdin/stdout)
 
 ### ID Ranges
 
-- Go → Python: monotonic from 1
-- Python → Go: monotonic from 1000
+- Frontend → backend: monotonic from 1
+- Backend → frontend: monotonic from 1000
 
 ---
 
@@ -272,20 +298,24 @@ autocode/
 │   ├── src/
 │   │   ├── main.rs                # Entry, arg parsing, raw-mode guard, effect dispatch
 │   │   ├── backend/
-│   │   │   ├── pty.rs             # portable-pty spawn
+│   │   │   ├── connection.rs      # spawn-managed vs attach/TCP backend selection
+│   │   │   ├── pty.rs             # spawn-managed stdio backend process
 │   │   │   └── process.rs         # Child lifecycle + kill-on-drop
 │   │   ├── rpc/
 │   │   │   ├── codec.rs           # encode/decode JSON lines
-│   │   │   ├── protocol.rs        # 16 serde structs
-│   │   │   └── bus.rs             # PTY reader + writer tasks (spawn_blocking)
+│   │   │   ├── protocol.rs        # serde structs for protocol payloads
+│   │   │   ├── schema.rs          # canonical method classification
+│   │   │   └── bus.rs             # backend reader + writer tasks
 │   │   ├── state/
-│   │   │   ├── model.rs           # AppState, Stage, scrollback
+│   │   │   ├── model.rs           # AppState, Stage, transcript, pickers
 │   │   │   ├── effects.rs         # Effect enum
 │   │   │   ├── reducer.rs         # Pure reduce() function
 │   │   │   └── reducer_tests.rs   # Unit tests
-│   │   ├── commands/mod.rs        # Slash-command router
+│   │   ├── commands/mod.rs        # Frontend slash-command/palette router
 │   │   ├── ui/
 │   │   │   ├── composer.rs        # Hand-roll multi-line editor
+│   │   │   ├── textbuf.rs         # UTF-8-safe text buffer
+│   │   │   ├── editor.rs          # External editor handoff
 │   │   │   ├── history.rs         # Frecency history
 │   │   │   ├── spinner.rs         # 194 verbs × 4 braille frames
 │   │   │   └── event_loop.rs      # crossterm EventStream → Event
@@ -302,14 +332,20 @@ autocode/
 │   │   ├── approval.py            # Approval system
 │   │   └── prompts.py             # System prompts
 │   ├── backend/
-│   │   └── server.py              # JSON-RPC server (stdin/stdout)
+│   │   ├── server.py              # Backend app + dispatch surface
+│   │   ├── chat.py                # Chat-turn execution and callbacks
+│   │   ├── services.py            # Command/session/model/task services
+│   │   ├── transport.py           # JSON-RPC transport protocol helpers
+│   │   ├── stdio_host.py          # Stdio host adapter
+│   │   └── tcp_host.py            # Localhost TCP host adapter
 │   ├── layer4/
 │   │   └── llm.py                 # LLM providers
 │   ├── session/
 │   │   └── store.py               # SQLite session store (WAL)
 │   ├── tui/
-│   │   ├── app.py                 # Textual fullscreen fallback (--tui)
-│   │   └── commands.py            # Slash command router (Python side)
+│   │   └── app.py                 # Textual fullscreen fallback (--tui)
+│   ├── app/
+│   │   └── commands.py            # Backend slash command router
 │   └── utils/
 │       └── file_tools.py          # File read/write utilities
 ├── tests/
@@ -352,7 +388,7 @@ cd autocode/rtui && cargo build --release
 # Python unit tests
 uv run pytest autocode/tests/unit/ -v
 
-# Rust TUI tests (59 tests)
+# Rust TUI tests
 cd autocode/rtui && cargo test
 
 # Rust TUI lint
@@ -373,8 +409,13 @@ make tui-references
 # Default: Rust TUI
 autocode
 
-# Or via explicit chat subcommand
-autocode chat
+# Explicit Rust TUI launch mode override
+autocode --mode inline
+autocode --mode altscreen
+
+# Attach frontend to an independently running backend
+uv run autocode serve --transport tcp --host 127.0.0.1 --port 8765
+autocode --attach 127.0.0.1:8765
 
 # Textual fullscreen fallback
 autocode chat --tui
@@ -382,6 +423,6 @@ autocode chat --tui
 # Rich REPL fallback
 autocode chat --legacy
 
-# Python backend only (used internally by the Rust TUI via PTY)
-uv run autocode serve
+# Python backend over stdio, used internally by the Rust TUI spawn-managed path
+uv run autocode serve --transport stdio
 ```

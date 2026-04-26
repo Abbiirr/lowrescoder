@@ -52,6 +52,34 @@ class TestTaskStoreCRUD:
         task = task_store.get_task(task_id)
         assert task.status == "completed"
 
+    def test_update_task_status_records_history(self, task_store):
+        task_id = task_store.create_task("Track lifecycle")
+
+        task_store.update_task(task_id, status="in_progress")
+        task_store.update_task(task_id, status="completed")
+
+        history = task_store.get_status_history(task_id)
+        statuses = [(row.old_status, row.new_status) for row in history]
+        assert statuses == [("pending", "in_progress"), ("in_progress", "completed")]
+
+    def test_update_task_rejects_backward_transition(self, task_store):
+        task_id = task_store.create_task("No regression")
+        task_store.update_task(task_id, status="in_progress")
+
+        with pytest.raises(ValueError, match="cannot move backward"):
+            task_store.update_task(task_id, status="pending")
+
+        assert task_store.get_task(task_id).status == "in_progress"
+
+    def test_update_task_rejects_completed_to_in_progress(self, task_store):
+        task_id = task_store.create_task("Terminal")
+        task_store.update_task(task_id, status="completed")
+
+        with pytest.raises(ValueError, match="cannot move backward"):
+            task_store.update_task(task_id, status="in_progress")
+
+        assert task_store.get_task(task_id).status == "completed"
+
     def test_list_tasks(self, task_store):
         task_store.create_task("Task A")
         task_store.create_task("Task B")

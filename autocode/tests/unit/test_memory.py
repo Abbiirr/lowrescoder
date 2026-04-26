@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import sqlite3
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -81,3 +83,38 @@ class TestMemoryStore:
         assert len(mem_store.get_memories()) == 0
         # Double delete returns False
         assert not mem_store.delete(mid)
+
+    @pytest.mark.asyncio
+    async def test_learn_from_session_with_bracketed_preamble(
+        self,
+        mem_store: MemoryStore,
+    ) -> None:
+        """A stray bracketed preamble should not break JSON memory extraction."""
+        session_store = SimpleNamespace(
+            get_messages=lambda _session_id: [
+                SimpleNamespace(role="user", content="Remember this project uses pytest."),
+                SimpleNamespace(role="assistant", content="Noted."),
+            ]
+        )
+        provider = AsyncMock()
+        provider.generate_with_tools = AsyncMock(
+            return_value=SimpleNamespace(
+                content=(
+                    "Notes [not json]\n"
+                    "```json\n"
+                    '[{"category":"project_fact","content":"Uses pytest for tests"}]\n'
+                    "```"
+                )
+            )
+        )
+
+        saved_ids = await mem_store.learn_from_session(
+            "sess-1",
+            session_store,
+            provider,
+        )
+
+        assert len(saved_ids) == 1
+        memories = mem_store.get_memories()
+        assert memories[0]["category"] == "project_fact"
+        assert memories[0]["content"] == "Uses pytest for tests"

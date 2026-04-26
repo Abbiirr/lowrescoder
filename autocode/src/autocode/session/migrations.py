@@ -140,10 +140,22 @@ def _migrate_v3(conn: sqlite3.Connection) -> None:
     """)
 
 
+def _migrate_v4(conn: sqlite3.Connection) -> None:
+    """v4: checkpoint message snapshot column."""
+    try:
+        conn.execute(
+            "ALTER TABLE checkpoints ADD COLUMN messages_snapshot TEXT NOT NULL "
+            "DEFAULT '{\"captured\": false, \"summary\": \"\", \"messages\": []}'"
+        )
+    except sqlite3.OperationalError:
+        pass  # column already exists
+
+
 MIGRATIONS: list[tuple[int, str, Callable[[sqlite3.Connection], None]]] = [
     (1, "orchestrator_events table", _migrate_v1),
     (2, "agent_mailbox table", _migrate_v2),
     (3, "task board columns and tables", _migrate_v3),
+    (4, "checkpoint message snapshots", _migrate_v4),
 ]
 """List of (version, description, function) in ascending order."""
 

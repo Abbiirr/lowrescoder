@@ -1,7 +1,7 @@
 """Real-life benchmark: project creation task (React calculator app).
 
 This benchmark scores a generated multi-page calculator web app against a
-pragmatic rubric adapted from docs/plan/react-calculator-benchmark.md.
+pragmatic rubric adapted from docs/plan/archive/react-calculator-benchmark.md.
 """
 
 from __future__ import annotations

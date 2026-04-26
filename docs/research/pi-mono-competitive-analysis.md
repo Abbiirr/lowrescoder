@@ -31,7 +31,7 @@ This analysis used:
 - upstream repo and package READMEs for `pi-mono`
 - upstream package manifests from the monorepo
 - a shallow local audit of the repo structure and test surface
-- AutoCode’s current internal docs: `README.md`, `docs/requirements_and_features.md`, `docs/session-onramp.md`, and `docs/plan/phase5-agent-teams.md`
+- AutoCode’s current internal docs: `README.md`, `docs/requirements_and_features.md`, `docs/session-onramp.md`, and `docs/plan/archive/phase5-agent-teams.md`
 
 Where a claim is inferred from manifests or file structure rather than explicitly stated in prose, it is labeled as an inference.
 
@@ -291,7 +291,7 @@ Sources:
 - [README.md](../../README.md)
 - [docs/requirements_and_features.md](../requirements_and_features.md)
 - [docs/session-onramp.md](../session-onramp.md)
-- [docs/plan/phase5-agent-teams.md](../plan/phase5-agent-teams.md)
+- [docs/plan/archive/phase5-agent-teams.md](../plan/archive/phase5-agent-teams.md)
 
 ## Head-to-Head Comparison
 
@@ -598,4 +598,4 @@ If AutoCode executes that strategy well, it can outshine pi in a more durable wa
 - [README.md](../../README.md)
 - [docs/requirements_and_features.md](../requirements_and_features.md)
 - [docs/session-onramp.md](../session-onramp.md)
-- [docs/plan/phase5-agent-teams.md](../plan/phase5-agent-teams.md)
+- [docs/plan/archive/phase5-agent-teams.md](../plan/archive/phase5-agent-teams.md)

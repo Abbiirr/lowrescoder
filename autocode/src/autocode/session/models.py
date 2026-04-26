@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS checkpoints (
     session_id TEXT NOT NULL REFERENCES sessions(id),
     label TEXT NOT NULL,
     tasks_snapshot TEXT NOT NULL DEFAULT '{}',
+    messages_snapshot TEXT NOT NULL DEFAULT '{"captured": false, "summary": "", "messages": []}',
     context_summary TEXT NOT NULL DEFAULT '',
     active_files TEXT NOT NULL DEFAULT '[]',
     created_at TEXT NOT NULL
@@ -224,6 +225,7 @@ class CheckpointRow(BaseModel):
     session_id: str
     label: str
     tasks_snapshot: str = "{}"
+    messages_snapshot: str = '{"captured": false, "summary": "", "messages": []}'
     context_summary: str = ""
     active_files: str = "[]"
     created_at: datetime

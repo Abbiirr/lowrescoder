@@ -251,6 +251,76 @@ def test_run_scene_predicates_includes_recovery_check(pm):
     assert "recovery_cards_visible" in names
 
 
+def test_run_scene_predicates_includes_live_multi_check(pm):
+    scene = _make_scene_dict(scene_id="multi", label="03 Multi")
+    text = "Concurrent work\nNo concurrent backend work is active\nVALIDATION"
+
+    report = pm.run_scene_predicates(text, scene, cols=160)
+
+    checks = {c.name: c for c in report.checks}
+    assert checks["multi_surface_tokens"].verdict is pm.ReferenceVerdict.PASS
+
+
+def test_run_scene_predicates_includes_live_restore_check(pm):
+    scene = _make_scene_dict(scene_id="restore", label="08 Restore")
+    text = "↻ 0 checkpoints · current session\nNo checkpoints available\nD diff from here"
+
+    report = pm.run_scene_predicates(text, scene, cols=160)
+
+    checks = {c.name: c for c in report.checks}
+    assert checks["restore_surface_tokens"].verdict is pm.ReferenceVerdict.PASS
+
+
+def test_run_scene_predicates_includes_live_plan_check(pm):
+    scene = _make_scene_dict(scene_id="plan", label="04 Plan")
+    text = "Planning\n0 steps · 0 complete · 0 active\nNo task plan is available\nVALIDATION"
+
+    report = pm.run_scene_predicates(text, scene, cols=160)
+
+    checks = {c.name: c for c in report.checks}
+    assert checks["plan_surface_tokens"].verdict is pm.ReferenceVerdict.PASS
+
+
+def test_run_scene_predicates_includes_live_review_check(pm):
+    scene = _make_scene_dict(scene_id="review", label="05 Review")
+    text = "Review evidence\n0 findings\nNo review evidence available\nCHANGES"
+
+    report = pm.run_scene_predicates(text, scene, cols=160)
+
+    checks = {c.name: c for c in report.checks}
+    assert checks["review_surface_tokens"].verdict is pm.ReferenceVerdict.PASS
+
+
+def test_run_scene_predicates_includes_live_diff_check(pm):
+    scene = _make_scene_dict(scene_id="diff", label="11 Diff")
+    text = "Diff evidence\n0 files\nNo diff evidence available\nAPPROVAL"
+
+    report = pm.run_scene_predicates(text, scene, cols=160)
+
+    checks = {c.name: c for c in report.checks}
+    assert checks["diff_surface_tokens"].verdict is pm.ReferenceVerdict.PASS
+
+
+def test_run_scene_predicates_includes_live_grep_check(pm):
+    scene = _make_scene_dict(scene_id="grep", label="12 Search")
+    text = "Search results\n0 hits\nNo search results available\nATTACH"
+
+    report = pm.run_scene_predicates(text, scene, cols=160)
+
+    checks = {c.name: c for c in report.checks}
+    assert checks["grep_surface_tokens"].verdict is pm.ReferenceVerdict.PASS
+
+
+def test_run_scene_predicates_includes_live_escalation_check(pm):
+    scene = _make_scene_dict(scene_id="escalation", label="13 Escalation")
+    text = "Permission escalation\nNo escalation is pending\nApprove this edit only"
+
+    report = pm.run_scene_predicates(text, scene, cols=160)
+
+    checks = {c.name: c for c in report.checks}
+    assert checks["escalation_surface_tokens"].verdict is pm.ReferenceVerdict.PASS
+
+
 def test_run_scene_predicates_includes_narrow_check(pm):
     scene = _make_scene_dict(scene_id="narrow", label="14 Narrow")
     report = pm.run_scene_predicates("text", scene, cols=68)

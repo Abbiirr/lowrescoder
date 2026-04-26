@@ -508,7 +508,11 @@ def run_scene_predicates(
             _pred_scene_signal_tokens(
                 text,
                 name="multi_surface_tokens",
-                expected_tokens=("jobs running", "[prioritized]", "[blocked: tests]"),
+                expected_tokens=(
+                    "Concurrent work",
+                    "No concurrent backend work",
+                    "VALIDATION",
+                ),
             )
         )
     if scene_id == "plan":
@@ -516,7 +520,7 @@ def run_scene_predicates(
             _pred_scene_signal_tokens(
                 text,
                 name="plan_surface_tokens",
-                expected_tokens=("Seven steps queued", "Run targeted parser tests", "VALIDATION"),
+                expected_tokens=("steps", "No task plan is available", "VALIDATION"),
             )
         )
     if scene_id == "review":
@@ -524,7 +528,11 @@ def run_scene_predicates(
             _pred_scene_signal_tokens(
                 text,
                 name="review_surface_tokens",
-                expected_tokens=("REVIEW NEEDED", "src/utils/parser.ts", "[a]pprove"),
+                expected_tokens=(
+                    "Review evidence",
+                    "No review evidence available",
+                    "CHANGES",
+                ),
             )
         )
     if scene_id == "cc":
@@ -566,7 +574,11 @@ def run_scene_predicates(
             _pred_scene_signal_tokens(
                 text,
                 name="restore_surface_tokens",
-                expected_tokens=("5 checkpoints", "extractImports guard", "diff from here"),
+                expected_tokens=(
+                    "checkpoints",
+                    "No checkpoints available",
+                    "diff from here",
+                ),
             )
         )
     if scene_id == "diff":
@@ -574,7 +586,11 @@ def run_scene_predicates(
             _pred_scene_signal_tokens(
                 text,
                 name="diff_surface_tokens",
-                expected_tokens=("files changed", "APPROVAL PATTERN", "src/utils/resolver.ts"),
+                expected_tokens=(
+                    "Diff evidence",
+                    "No diff evidence available",
+                    "APPROVAL",
+                ),
             )
         )
     if scene_id == "grep":
@@ -582,7 +598,11 @@ def run_scene_predicates(
             _pred_scene_signal_tokens(
                 text,
                 name="grep_surface_tokens",
-                expected_tokens=("14 hits across 5 files", "@attach", "extractImports"),
+                expected_tokens=(
+                    "Search results",
+                    "No search results available",
+                    "ATTACH",
+                ),
             )
         )
     if scene_id == "escalation":
@@ -592,7 +612,7 @@ def run_scene_predicates(
                 name="escalation_surface_tokens",
                 expected_tokens=(
                     "Permission escalation",
-                    ".github/workflows/ci.yml",
+                    "No escalation is pending",
                     "Approve this edit only",
                 ),
             )

@@ -1,7 +1,7 @@
 # AutoCode — Requirements & Feature Catalog
 
 > Comprehensive catalog of all features built, planned, current UX issues, and architecture decisions.
-> Last updated: 2026-02-17
+> Last updated: 2026-04-26
 
 ---
 
@@ -11,25 +11,29 @@
 
 ---
 
-## 2. Features Built (Phase 0-2) — DONE
+## 2. Current Feature Catalog
 
 ### 2.1 CLI Commands
 
 | Command | Description | File |
 |---------|-------------|------|
-| `autocode chat` | Interactive chat REPL (default: inline parallel mode) | `src/autocode/cli.py:142` |
-| `autocode ask` | Single question, streamed response | `src/autocode/cli.py:183` |
-| `autocode edit` | AI-assisted file editing (stub) | `src/autocode/cli.py:196` |
-| `autocode config` | Show/set/check/path for configuration | `src/autocode/cli.py:205` |
-| `autocode version` | Show version | `src/autocode/cli.py:255` |
+| `autocode` | Canonical interactive launch; starts the Rust TUI frontend | `autocode/src/autocode/cli.py` |
+| `autocode --mode inline|altscreen` | Override the Rust TUI launch mode for this run | `autocode/src/autocode/cli.py` |
+| `autocode --attach HOST:PORT` | Attach the Rust TUI to an already-running backend TCP transport | `autocode/src/autocode/cli.py` |
+| `autocode chat` | Back-compatible interactive command; default path also launches the Rust TUI | `autocode/src/autocode/cli.py` |
+| `autocode chat --tui` | Fullscreen Textual fallback UI | `autocode/src/autocode/cli.py` |
+| `autocode chat --legacy` | Legacy Rich REPL fallback without the agent loop | `autocode/src/autocode/cli.py` |
+| `autocode serve --transport stdio|tcp` | Start the backend JSON-RPC server independently | `autocode/src/autocode/cli.py` |
+| `autocode ask` | Single question, streamed response | `autocode/src/autocode/cli.py` |
+| `autocode edit` | AI-assisted file editing command surface | `autocode/src/autocode/cli.py` |
+| `autocode config` | Show/set/check/path for configuration | `autocode/src/autocode/cli.py` |
+| `autocode version` | Show version | `autocode/src/autocode/cli.py` |
+| `autocode doctor` | Environment and setup diagnostics | `autocode/src/autocode/cli.py` |
+| `autocode setup` | Initial setup helper | `autocode/src/autocode/cli.py` |
+| `autocode team` | Agent team management/listing surface | `autocode/src/autocode/cli.py` |
+| `autocode rename` | Rename the current or selected session | `autocode/src/autocode/cli.py` |
 
-**CLI flags for `chat`:**
-- `--verbose / -v` — Enable verbose output
-- `--session / -s ID` — Resume a session by ID
-- `--tui` — Use fullscreen Textual TUI
-- `--alternate-screen` — Alias for `--tui`
-- `--legacy` — Use legacy Rich REPL (no agent loop)
-- `--parallel / --sequential` — Inline mode: keep prompt active while streaming (default: parallel)
+**User-facing launch rule:** prefer bare `autocode`. Use `autocode chat ...` only when documenting a chat-subcommand fallback such as `--tui` or `--legacy`.
 
 ### 2.2 LLM Integration (Layer 4)
 
@@ -37,9 +41,10 @@
 |---------|--------|------|
 | Ollama provider (local) | DONE | `src/autocode/layer4/llm.py:103` |
 | OpenRouter provider (cloud dev) | DONE | `src/autocode/layer4/llm.py:237` |
+| LiteLLM-compatible local gateway path | DONE | `DEFAULT_GATEWAY_API_BASE = "http://localhost:4000/v1"` |
 | Streaming text generation | DONE | Both providers |
 | Tool calling (function calls) | DONE | `generate_with_tools()` on both |
-| Thinking/reasoning token parsing | DONE | `<think>` tag parsing + OpenRouter native reasoning |
+| Thinking/reasoning token parsing and request gating | DONE | Streaming `<think>` tag parser + OpenRouter native reasoning; `/thinking on|off` gates provider reasoning |
 | Conversation history management | DONE | `ConversationHistory` class |
 | Token budget trimming | DONE | `trim_to_budget()` |
 | JSON structured output | DONE | `generate_json()` on both |
@@ -49,28 +54,47 @@
 | Feature | Status | File |
 |---------|--------|------|
 | Agent loop (LLM ↔ tool cycle) | DONE | `src/autocode/agent/loop.py` |
-| Max 10 iterations per turn | DONE | `AgentLoop.MAX_ITERATIONS = 10` |
+| Max 1000 iterations per turn | DONE | `AgentLoop.MAX_ITERATIONS = 1000` |
 | Cancellation support | DONE | `AgentLoop.cancel()` |
 | System prompt builder | DONE | `src/autocode/agent/prompts.py` |
-| Project memory loading (`.autocode/memory.md`) | DONE | `InlineApp._ensure_agent_loop()` |
+| Project memory loading (`.autocode/memory.md`) | DONE | Agent factory / backend loop construction via `load_project_memory_content()` |
 
-### 2.4 Tool Registry (19 Tools)
+### 2.4 Tool Registry (38 Tools — 16 Core + 22 Deferred)
 
 | Tool | Requires Approval | Description |
 |------|-------------------|-------------|
 | `read_file` | No | Read file contents with optional line range |
 | `write_file` | **Yes** | Write/create files (`mutates_fs=True`) |
+| `edit_file` | **Yes** | Apply targeted text edits (`mutates_fs=True`) |
 | `list_files` | No | List files with glob patterns |
 | `search_text` | No | Regex search (ripgrep → grep → Python fallback) |
-| `run_command` | **Yes** | Execute shell commands (`executes_shell=True`) |
+| `run_command` | **Yes** | Execute shell commands (`executes_shell=True`, `interruptible=True`) |
+| `tool_search` | No | Discover deferred tool schemas on demand |
+| `git_status` | No | Typed read-only git status |
+| `git_diff` | No | Typed read-only git diff |
+| `git_log` | No | Typed read-only git log |
+| `web_fetch` | No | Fetch web content without shelling out to curl/wget |
+| `apply_patch` | **Yes** | Transactional multi-file patch application (`mutates_fs=True`) |
+| `list_tool_results` | No | List cached tool-call results with IDs and sizes |
+| `clear_tool_result` | No | Selectively clear cached tool-call results by ID, tool, age, or all |
+| `todo_write` | No | Write/update the session todo list |
+| `todo_read` | No | Read the session todo list |
 | `ask_user` | No | Ask the user questions with options or free-text |
 | `find_references` | No | Find all usages of a symbol across files (Phase 3) |
 | `find_definition` | No | Go to definition of a symbol (Phase 3) |
 | `get_type_info` | No | Get type annotation for a symbol (Phase 3) |
 | `list_symbols` | No | List functions/classes/methods in a file (Phase 3) |
+| `lsp_goto_definition` | No | Native LSP go-to-definition |
+| `lsp_find_references` | No | Native LSP reference lookup |
+| `lsp_get_type` | No | Native LSP type lookup |
+| `lsp_symbols` | No | Native LSP symbol listing |
 | `search_code` | No | Hybrid BM25 + vector code search (Phase 3) |
+| `semantic_search` | No | Vector-only semantic search |
+| `clear_tool_results` | No | Bulk/legacy cache-management interface |
+| `glob_files` | No | Glob expansion helper |
+| `grep_content` | No | Content grep helper |
 | `create_task` | No | Create a task with title and description (Phase 4) |
-| `update_task` | No | Update task status/metadata (Phase 4) |
+| `update_task` | No | Update task status/metadata; supports `pending`, `in_progress`, and `completed` lifecycle states with backward-transition rejection (Phase 4) |
 | `list_tasks` | No | List all tasks with status and dependencies (Phase 4) |
 | `add_task_dependency` | No | Add a dependency edge between tasks (Phase 4) |
 | `spawn_subagent` | No | Spawn a background subagent (explore/plan/execute) (Phase 4) |
@@ -78,19 +102,19 @@
 | `cancel_subagent` | No | Cancel a running subagent (Phase 4) |
 | `list_subagents` | No | List all subagents with status (Phase 4) |
 
-Base tools defined in `src/autocode/agent/tools.py`. Task tools in `src/autocode/agent/task_tools.py`. Subagent tools in `src/autocode/agent/subagent_tools.py`.
+Core tools are listed in `CORE_TOOL_NAMES` and sent to the model by default. Deferred tools are discoverable through `tool_search`. Base tools are defined in `autocode/src/autocode/agent/tools.py`, task tools in `autocode/src/autocode/agent/task_tools.py`, and subagent tools in `autocode/src/autocode/agent/subagent_tools.py`.
 
 ### 2.5 Approval System
 
 | Feature | Status | File |
 |---------|--------|------|
-| Three modes: read-only, suggest, auto | DONE | `src/autocode/agent/approval.py` |
-| Tool-level approval checking | DONE | `ApprovalManager.needs_approval()` |
+| Four modes: read-only, suggest, auto, autonomous | DONE | `src/autocode/agent/approval.py` |
+| Tool-level approval checking | DONE | `ApprovalManager.needs_approval()` plus hard-block checks for dangerous shell commands and write-tool paths/content |
 | Blocked operation detection | DONE | `is_blocked()`, `is_write_blocked()` |
 | Shell enable/disable | DONE | `enable_shell()`, `is_shell_disabled()` |
-| Session-level auto-approve tracking | DONE | `InlineApp._session_approved_tools` |
-| Arrow-key selector (sequential mode) | DONE | `InlineApp._arrow_select()` |
-| Typed y/s/n prompts (parallel mode) | DONE | `_approval_prompt_parallel()` |
+| Backend approval callbacks | DONE | `BackendServer` / `_ServerAppContext` approval callback wiring |
+| Frontend approval UI | DONE | Rust TUI approval modal over backend JSON-RPC requests |
+| Session-level approval state | DONE | Backend app context and frontend transport session state |
 
 ### 2.6 Session Management
 
@@ -101,7 +125,7 @@ Base tools defined in `src/autocode/agent/tools.py`. Task tools in `src/autocode
 | Message persistence (user, assistant, tool, system) | DONE | `add_message()`, `get_messages()` |
 | Tool call tracking with duration | DONE | `add_tool_call()`, `update_tool_call()` |
 | Session compaction (summarize old messages) | DONE | `compact_session()` |
-| Auto-titling from first message | DONE | `InlineApp._run_agent()` |
+| Auto-titling from first message | DONE | Backend chat execution / Rust TUI session bootstrap |
 
 ### 2.6b Structured Logging & Training Data
 
@@ -118,73 +142,80 @@ Base tools defined in `src/autocode/agent/tools.py`. Task tools in `src/autocode
 | SFT/DPO/Eval JSONL export stubs | DONE | `src/autocode/training/exporter.py` |
 | DPO provenance events (`human_edit` with draft/edited text) | DONE | `EventRecorder.on_human_edit()` |
 
-### 2.7 Inline REPL (Primary UI)
+### 2.7 Rust TUI (Primary UI)
 
 | Feature | Status | File |
 |---------|--------|------|
-| Sequential mode (prompt → response → prompt) | DONE | `InlineApp._run_sequential()` |
-| Parallel mode (always-on prompt, `patch_stdout(raw=True)`) | DONE | `InlineApp._run_parallel()` |
-| Type-ahead buffer (sequential mode) | DONE | `_typeahead_buffer`, `_listen_for_escape()` |
-| Message queue (parallel: FIFO, max 10) | DONE | `_parallel_queue` |
-| Queue count in status bar | DONE | `_get_status_text()`, `_get_status_rprompt_text()` |
-| Cancel generation (Escape / Ctrl+C) | DONE | `_cancel_generation()` |
-| Bottom toolbar (model/provider/mode/tokens/edits/files) | DONE | `_get_status_toolbar()` |
-| Right prompt (compact status) | DONE | `_get_status_rprompt()` |
-| Shift+Tab cycles approval modes | DONE | Key binding in `_create_key_bindings()` |
-| Draft stash/restore during approvals | DONE | `_stash_prompt_draft()`, `_restore_prompt_draft()` |
-| Pending prompt requests (parallel approvals/ask_user) | DONE | `_PendingPromptRequest` dataclass |
-| Rich-formatted streaming output | DONE | `src/autocode/inline/renderer.py` |
-| Thinking indicator | DONE | `InlineRenderer.print_thinking_indicator()` |
-| Tool call display with diffs | DONE | `InlineRenderer.print_tool_call()` |
+| Rust Ratatui frontend | DONE | `autocode/rtui/` |
+| Bare `autocode` launch | DONE | `autocode/src/autocode/cli.py` |
+| Inline default and altscreen opt-in | DONE | `autocode --mode inline|altscreen` and `/tui` |
+| Spawn-managed backend mode | DONE | Rust TUI launches a stdio backend server |
+| Attach frontend mode | DONE | Rust TUI connects to `autocode serve --transport tcp` via `--attach HOST:PORT` |
+| Streaming transcript and status bar | DONE | Rust reducer/rendering pipeline |
+| Slash palette and picker overlays | DONE | Rust TUI command/picker surfaces |
+| Recovery and approval surfaces | DONE | Rust TUI modal/recovery states |
 
-### 2.8 Textual TUI (Fullscreen Mode)
+Historical note: the Python prompt-toolkit inline REPL and the Go Bubble Tea TUI were removed at the Rust M11 cutover on 2026-04-19. The supported interactive frontend is now the Rust TUI.
+
+### 2.8 Textual TUI (Fallback Fullscreen Mode)
 
 | Feature | Status | File |
 |---------|--------|------|
-| Full-screen Textual app | DONE | `src/autocode/tui/app.py` |
+| Full-screen Textual app | FALLBACK | `src/autocode/tui/app.py` |
 | Chat view widget (scrollable) | DONE | `src/autocode/tui/widgets/chat_view.py` |
 | Input bar widget | DONE | `src/autocode/tui/widgets/input_bar.py` |
 | Status bar widget | DONE | `src/autocode/tui/widgets/status_bar.py` |
 | Approval prompt widget | DONE | `src/autocode/tui/widgets/approval_prompt.py` |
 
-### 2.9 Input Features
+Use `autocode chat --tui` only as a fallback path. New frontend behavior should target the Rust TUI first.
+
+### 2.9 Rust TUI Input Features
 
 | Feature | Status | File |
 |---------|--------|------|
-| Command history (FileHistory) | DONE | `~/.autocode/history` |
-| Hybrid completer (commands + files) | DONE | `src/autocode/inline/completer.py` |
-| Conditional completer (`/` and `@` only) | DONE | `ConditionalCompleter` in `app.py` (no dropdown for prose) |
-| Auto-suggest (commands + `@` file paths) | DONE | `HybridAutoSuggest` (Python), Go TUI: `textinput.SetSuggestions` |
-| Ghost text (grayed-out inline suggestion) | DONE | Go TUI: `textinput.ShowSuggestions` + `CompletionStyle` |
-| Tab to accept suggestion | DONE | Go TUI: built-in `textinput.KeyMap.AcceptSuggestion` |
-| Autocomplete dropdown (multiple matches) | DONE | Go TUI: `renderCompletionDropdown()` in `view.go` |
-| @file reference expansion | DONE | `src/autocode/tui/file_completer.py` |
-| Session resume picker (arrow-key) | DONE | Go TUI: `session_picker.go`, reuses `stageAskUser` |
-| Slash commands disabled during streaming | DONE | Queued messages treated as plain chat text |
+| Frecency command history | DONE | `~/.autocode/history.json` |
+| Multi-line composer | DONE | Rust TUI composer |
+| Bracketed paste handling | DONE | Rust TUI input pipeline |
+| Slash autocomplete and command palette | DONE | `/` suggestions and `Ctrl+Shift+P` / palette |
+| Model/provider/session pickers | DONE | Rust TUI picker overlays |
+| External editor round-trip | DONE | `Ctrl+E` editor flow |
+| Approval and ask-user modals | DONE | Rust TUI modal state |
+| Native scrollback preservation | DONE | Inline launch mode preserves terminal scrollback |
+| Launch-mode preference | DONE | `/tui` / `/screen` command and CLI `--mode` |
 
-### 2.10 Slash Commands (19 Commands)
+### 2.10 Slash Commands (29 Commands)
 
 | Command | Aliases | Description |
 |---------|---------|-------------|
 | `/exit` | `/quit`, `/q` | Quit the application |
 | `/new` | — | Start a new session |
 | `/sessions` | `/s` | List sessions |
-| `/resume` | — | Resume a session; shows arrow-key picker when no ID given |
+| `/resume` | — | Resume a session by ID or picker |
 | `/help` | `/h`, `/?` | Show available commands |
 | `/model` | `/m` | Show or switch the LLM model |
+| `/provider` | — | Show, list, or switch the LLM provider |
 | `/mode` | `/permissions` | Show or switch approval mode |
+| `/tui` | `/screen` | Show or save the default Rust TUI launch mode |
 | `/compact` | — | Compact session history |
 | `/init` | — | Create project memory file |
 | `/shell` | — | Enable or disable shell execution |
-| `/copy` | `/cp` | Copy response to clipboard |
-| `/freeze` | `/scroll-lock` | Toggle auto-scroll |
-| `/thinking` | `/think` | Toggle thinking token visibility |
-| `/clear` | `/cls` | Clear terminal screen |
-| `/index` | — | Rebuild code search index (Phase 3) |
-| `/tasks` | `/t` | Show task board (Phase 4) |
-| `/plan` | — | Toggle plan mode: on/off/approve (Phase 4) |
-| `/memory` | `/mem` | Show learned patterns (Phase 4) |
-| `/checkpoint` | `/ckpt` | List/save/restore checkpoints (Phase 4) |
+| `/copy` | `/cp` | Copy last response, a specific response, or all responses |
+| `/freeze` | `/scroll-lock` | Toggle auto-scroll for text selection |
+| `/thinking` | `/think` | Toggle thinking token visibility and provider reasoning request gating |
+| `/clear` | `/cls` | Clear the terminal screen |
+| `/loop` | — | Recurring jobs: `/loop <interval> <payload>`, `/loop list`, `/loop cancel <id>` |
+| `/index` | — | Build or rebuild the code search index |
+| `/tasks` | `/t` | Show task board |
+| `/plan` | — | Plan mode: `/plan on`, `/plan approve`, `/plan off`, `/plan export`, `/plan sync` |
+| `/research` | `/comprehend` | Research mode: `/research on`, `/research off`, `/research status` |
+| `/build` | — | Build mode: `/build on` (verification required), `/build off` |
+| `/review` | — | Review mode: `/review on` (read-only review), `/review off` |
+| `/memory` | `/mem` | Show learned patterns |
+| `/checkpoint` | `/ckpt` | List or save checkpoints |
+| `/undo` | — | Undo by restoring the most recent checkpoint |
+| `/diff` | — | Show git diff of changes in the current session |
+| `/cost` | `/tokens`, `/usage` | Show token usage and estimated cost for this session |
+| `/export` | — | Export conversation to markdown file |
 
 ### 2.11 Configuration
 
@@ -199,15 +230,13 @@ Base tools defined in `src/autocode/agent/tools.py`. Task tools in `src/autocode
 
 ### 2.12 Tests
 
-- **275 Go + 1022 Python (collected) = 1297+ tests**
-- Python: 1015 passed, 7 skipped (integration self-skip), 0 failed
-- Go test files (16 files): update, protocol, session_picker, backend, completion, view, commands, askuser, history, approval, e2e, markdown, model, statusbar
-- Python test files cover: CLI, agent loop, tools, approval, session store, inline app, inline renderer, inline completer, TUI commands, file tools, config, type-ahead, parallel mode, backend server, parser, router, chunker, embeddings, index, search, repomap, context, new tools, integration router-agent, task store, context engine, task tools, carry-forward fixes, logging, blob store, episode store, event recorder, LLM scheduler, subagent loop/manager, subagent tools, plan mode
-- Benchmark tests: deterministic routing (50 queries), L1 latency, search relevance (precision@3), context budget compliance
-- Sprint verification tests: `tests/test_sprint_verify.py`
-- Integration tests (included by default, self-skip when requirements not met): `tests/integration/`
-- Full test catalog: `docs/tests/test_suite.md`
-- **Full testing & evaluation guide: `TESTING.md`**
+- **Python unit baseline:** `1961 passed` in the latest full unit sweep for this backend tranche.
+- **Rust TUI baseline:** `181` Rust tests passing across the Ratatui frontend test suite.
+- **Benchmark suite:** maintained separately under `benchmarks/`; do not combine file counts with unit-test totals.
+- **Go tests:** no longer applicable because the Go TUI was deleted at the Rust M11 cutover.
+- Python coverage includes CLI, backend server/transports, agent loop, tools, approval, sessions, context/search, task tools, subagents, cost, checkpoints, memory, logging, blob store, episode store, event recorder, and LLM scheduling.
+- Integration tests under `autocode/tests/integration/` self-skip when required services or credentials are unavailable.
+- Full testing and evaluation guide: `autocode/TESTING.md`.
 
 ### 2.13 E2E Evaluation System — DONE
 
@@ -215,13 +244,13 @@ Multi-scenario benchmark framework that drives AutoCode autonomously and produce
 
 | Component | Status | File |
 |-----------|--------|------|
-| Calculator benchmark engine (1,888 lines) | DONE | `scripts/run_calculator_benchmark.py` |
-| Generic scenario runner | DONE | `scripts/e2e/run_scenario.py` |
-| Scenario manifest contract | DONE | `scripts/e2e/scenario_contract.py` |
-| Acceptance check runner + scoring | DONE | `scripts/e2e/scoring.py` |
-| E2E-BugFix scenario (fix bugs in seeded project) | DONE | `scripts/e2e/scenarios/bugfix.py` |
-| E2E-CLI scenario (build CLI tool from scratch) | DONE | `scripts/e2e/scenarios/cli_tool.py` |
-| Seed fixture (3 intentional bugs, 5 tests) | DONE | `scripts/e2e/fixtures/bugfix-seed/` |
+| Calculator benchmark engine | DONE | `benchmarks/run_calculator_benchmark.py` |
+| Generic scenario runner | DONE | `benchmarks/e2e/run_scenario.py` |
+| Scenario manifest contract | DONE | `benchmarks/e2e/scenario_contract.py` |
+| Acceptance check runner + scoring | DONE | `benchmarks/e2e/scoring.py` |
+| E2E-BugFix scenario (fix bugs in seeded project) | DONE | `benchmarks/e2e/scenarios/bugfix.py` |
+| E2E-CLI scenario (build CLI tool from scratch) | DONE | `benchmarks/e2e/scenarios/cli_tool.py` |
+| Seed fixture (3 intentional bugs, 5 tests) | DONE | `benchmarks/e2e/fixtures/bugfix-seed/` |
 | Budget enforcement (wall time, tool calls, turns) | DONE | Inline in runner |
 | Manifest validation (fail-fast at startup) | DONE | `validate_manifest()` |
 | Verdict system (PASS/FAIL/INFRA_FAIL) | DONE | Exit codes 0/1/2 |
@@ -262,11 +291,11 @@ Phase 3 implemented 2026-02-13. All gates passed. 840 Python tests, all Go tests
 | Feature | Status | Files |
 |---------|--------|-------|
 | 5 new agent tools (11 total) | DONE | `src/autocode/agent/tools.py` |
-| `/index` slash command | DONE | `src/autocode/tui/commands.py` |
+| `/index` slash command | DONE | `autocode/src/autocode/app/commands.py` |
 | L1 bypass in backend server (0 tokens, <50ms) | DONE | `src/autocode/backend/server.py` |
-| Layer indicator in Go TUI (`[L1]`/`[L2]`/`[L4]`) | DONE | `cmd/autocode-tui/statusbar.go` |
+| `layer_used` metadata consumed by Rust TUI reducer | DONE | `autocode/src/autocode/backend/schema.py`, `autocode/rtui/src/rpc/protocol.rs`, `autocode/rtui/src/state/reducer.rs` |
 | Context injection in system prompt | DONE | `src/autocode/agent/prompts.py` |
-| `layer_used` in `on_done` notification | DONE | `cmd/autocode-tui/protocol.go`, `messages.go`, `backend.go`, `update.go` |
+| `layer_used` in `on_done` notification | DONE | `autocode/src/autocode/backend/chat.py`, `autocode/src/autocode/backend/schema.py`, `autocode/rtui/src/rpc/protocol.rs` |
 
 #### Gate Results
 
@@ -290,13 +319,15 @@ Phase 3 implemented 2026-02-13. All gates passed. 840 Python tests, all Go tests
 
 ### 3.1 Phase 4 — Agent Orchestration & Context Intelligence
 
-> Plan: `docs/plan/phase4-agent-orchestration.md` (v3.2a)
+> Plan: `docs/plan/archive/phase4-agent-orchestration.md` (v3.2a)
 
 #### Sprint 4A: Core Primitives — DONE (2026-02-14)
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| ContextEngine (auto-compaction) | DONE | Token budget (`len//4`), auto-compaction at 75%, tool result truncation (200+100 head/tail) |
+| ContextEngine (auto-compaction) | DONE | Provider-backed token counting when available, auto-compaction at 75%, adaptive tool-result truncation that preserves code/error/list signals and honors per-tool output budgets |
+| Iteration-zero symbol preview | DONE | Workspace bootstrap includes bounded cached Layer 1 symbols for active working-set files only; no cold parse, scan, or repomap generation |
+| ToolResultCache management tools | DONE | `list_tool_results` and `clear_tool_result` expose large tool-output cache inspection/clearing to the agent; enabled by `agent.tool_result_cache_enabled` |
 | TaskStore (DAG dependencies) | DONE | SQLite-backed CRUD, DAG deps, cycle detection via `graphlib.TopologicalSorter`, snapshot/restore |
 | Task LLM tools (create/update/list/dep) | DONE | 4 tools registered via factory pattern with closures over TaskStore |
 | `/tasks` slash command | DONE | Shows task board |
@@ -323,18 +354,22 @@ Phase 3 implemented 2026-02-13. All gates passed. 840 Python tests, all Go tests
 | Feature | Priority | Sprint | Description |
 |---------|----------|--------|-------------|
 | MemoryStore (episodic) | P1 | 4C | Relevance-decaying memories extracted from sessions |
-| CheckpointStore | P1 | 4C | Save/restore agent state with transactional guarantees |
+| Session consolidation persistence | DONE | 4C/Backend-tightening | Deterministic `SessionConsolidator` learnings can persist through `MemoryStore.save()` with durable filtering and dedup |
+| CheckpointStore | P1 | 4C/Backend-tightening | Save/restore task state plus bounded recent messages and assistant tool-call rows with transactional guarantees |
 | L2 runtime wiring | P0 | 4C | SEMANTIC_SEARCH → ContextAssembler → layer_used=2 |
 | L3 minimal wiring | P1 | 4C | SIMPLE_EDIT → L3Provider → layer_used=3 (L4 fallback) |
 | Markdown plan artifact | P1 | 4C | Export/import `.autocode/plans/<session-id>.md` |
-| Go TUI task panel | P2 | 4C | JSON-RPC backed task/subagent display |
+| Rust TUI task/subagent surfaces | P2 | 4C | JSON-RPC backed task/subagent display |
 | `/memory` and `/checkpoint` commands | P2 | 4C | View/save/restore memories and checkpoints |
 
-### 3.2 Phase 5 — Universal Orchestrator: Agent Teams & Multi-Model — PROVISIONAL_LOCKED
+### 3.2 Historical Phase 5 — Universal Orchestrator: Agent Teams & Multi-Model — COMPLETE / LEGACY ROADMAP
 
-> Plan: `docs/plan/phase5-agent-teams.md` (authoritative)
-> Lock checklist: `docs/plan/phase5-roadmap-lock-checklist.md`
-> Strategy: **"Standalone first, then interact."**
+> **Scope note:** this is the older agent-teams Phase 5 roadmap. It is not the Modular Migration Phase 5 swapability proof.
+> **Legacy plan:** `docs/plan/archive/phase5-agent-teams.md`
+> **Lock checklist:** `docs/plan/archive/phase5-roadmap-lock-checklist.md`
+> **Strategy:** **"Standalone first, then interact."**
+> **Current state:** the 5A0-5D agent-teams/delegation substrate is complete as historical product work; remaining active architecture cleanup lives in `modular_migration_todo.md`.
+> **Modular Phase 5:** swapability proof is complete separately via `autocode/docs/qa/test-results/20260423-210037-modular-phase5-closeout.md`, with attach/spawn benchmark artifacts `docs/qa/test-results/20260423-145703-B13-PROXY-autocode.json` and `docs/qa/test-results/20260423-150833-B13-PROXY-autocode.json`.
 
 | Sprint | Feature | Priority | Description |
 |--------|---------|----------|-------------|
@@ -354,11 +389,11 @@ All 8 Phase 2 UX issues have been resolved. Summary:
 
 | # | Issue | Resolution |
 |---|-------|-----------|
-| 4.1 | Arrow-key selects in parallel mode | Go TUI stage-based model with `stageApproval`/`stageAskUser` |
-| 4.2 | Input not fixed during streaming | Go Bubble Tea fixed input area via inline mode |
+| 4.1 | Arrow-key selects in parallel mode | Rust TUI modal/picker stages for approval, ask-user, and session selection |
+| 4.2 | Input not fixed during streaming | Rust TUI fixed composer/footer in inline mode |
 | 4.3 | Cancel and message queue | `_cancel_generation()` clears queue |
-| 4.4 | Streaming smoothness | Go Bubble Tea 16ms tick batching, `tea.Println()` scrollback |
-| 4.5 | `/resume` copy-paste | Arrow-key session picker in Go TUI |
+| 4.4 | Streaming smoothness | Rust reducer/render loop batches streaming and commits completed turns to transcript/scrollback |
+| 4.5 | `/resume` copy-paste | Arrow-key session picker in Rust TUI |
 | 4.6 | Shell enablement safety | Scoped to `run_command` tool only |
 | 4.7 | Backend shutdown race | Timeout-based wait: 5s grace, fallback kill, 2s drain |
 | 4.8 | Malformed JSON-RPC frames | Per-line unmarshal, invalid frames dropped not fatal |
@@ -368,22 +403,22 @@ All 8 Phase 2 UX issues have been resolved. Summary:
 
 **4.1 Arrow-key selects removed in parallel mode**
 Root cause: Nested prompt_toolkit Applications are unsafe while a `PromptSession` is active. Parallel mode replaced arrow-select with typed `y/s/n` responses.
-Resolution: Go Bubble Tea TUI uses stage-based model with dedicated `stageApproval` and `stageAskUser` stages. Arrow-key navigation works in all dialogs (approval, ask-user, session picker). 275 tests cover all interaction paths.
+Resolution: the Rust TUI uses explicit modal/picker state for approval, ask-user, and session selection. Arrow-key navigation works in dialogs while the composer remains owned by the TUI event loop.
 
 **4.2 Input not visually fixed during streaming**
 Root cause: `patch_stdout` is line-buffered. Token streaming causes frequent flushes that trigger prompt re-rendering mid-line, producing interleaving.
-Resolution: Go Bubble Tea renders a fixed input area at the bottom of the terminal via inline mode. `View()` always includes the input bar. Streaming content displays above it.
+Resolution: the Rust TUI renders a fixed composer/footer at the bottom of the terminal in inline mode. Streaming content displays above it without taking over the input area.
 
 **4.3 Cancel and message queue**
 Resolution: `_cancel_generation()` now calls `self._parallel_queue.clear()`. Cancel cancels current generation and clears the queue.
 
 **4.4 Streaming smoothness**
 Root cause: `patch_stdout`'s `StdoutProxy` line-buffering means tokens appear bursty without explicit flush, but flushing causes prompt interleaving.
-Resolution: Go Bubble Tea batches tokens at 16ms tick rate. Plain text streamed in `View()` live area, Glamour renders once on `on_done`, then `tea.Println()` commits to scrollback.
+Resolution: the Rust reducer/render loop batches streaming into the live transcript state, then `on_done` finalizes the turn for stable transcript/scrollback behavior.
 
 **4.5 `/resume` copy-paste issue**
 Root cause: `/resume` without args dumped a plain-text session list requiring copy-paste of UUIDs.
-Resolution: Arrow-key session picker added. `/resume` without args shows interactive picker via `stageAskUser`. User navigates with Up/Down, selects with Enter, cancels with Escape.
+Resolution: Arrow-key session picker added. `/resume` without args shows an interactive picker; user navigates with Up/Down, selects with Enter, and cancels with Escape.
 
 **4.6 Shell enablement safety**
 Root cause: `_approval_callback()` called `enable_shell()` for any "Yes, this session" approval regardless of tool type.
@@ -401,9 +436,17 @@ Resolution: Newline-framed reads with per-line unmarshal. Invalid frames are dro
 
 ---
 
-## 5. Architecture Decision: Go Bubble Tea TUI Rewrite
+## 5. Historical Architecture Decisions
 
-### Why
+This section preserves earlier architectural decisions that have been superseded.
+Keep it for design provenance, not as guidance for current behavior.
+
+### 5.1 Go Bubble Tea TUI Rewrite — SUPERSEDED 2026-04-19
+
+> **Status:** SUPERSEDED by the Rust + Ratatui TUI migration (§1h M11, 2026-04-19).
+> Original design rationale preserved below; the Go TUI codebase was deleted at M11.
+
+#### Why
 
 After extensive research (web search, Claude Code internals analysis, Ink/Bubble Tea/Textual/ANSI scroll region evaluation, and three research documents), the Python inline REPL has fundamental architectural limitations:
 
@@ -411,7 +454,7 @@ After extensive research (web search, Claude Code internals analysis, Ink/Bubble
 2. Nested prompt_toolkit Applications are unsafe — arrow-key selects can't coexist with an active prompt
 3. No true fixed areas — `patch_stdout` simulates a bottom-pinned prompt but flickers during streaming
 
-### How Claude Code Actually Renders
+#### How Claude Code Actually Renders
 
 - Uses React + Ink with a **custom differential renderer**
 - **Cursor-up-and-redraw** technique (NOT ANSI scroll regions, NOT alternate screen)
@@ -420,7 +463,7 @@ After extensive research (web search, Claude Code internals analysis, Ink/Bubble
 - **Synchronized Output (DEC 2026)** optionally prevents flicker (feature-detected, not required)
 - Codex CLI rewrote from Ink to Rust + Ratatui for performance
 
-### Why Go Bubble Tea
+#### Why Go Bubble Tea
 
 - Elm Architecture (Model-Update-View) — clean state management
 - **Inline mode is the default** (no alternate screen) — preserves native terminal scrollback (per Entry 146 consensus)
@@ -431,7 +474,7 @@ After extensive research (web search, Claude Code internals analysis, Ink/Bubble
 - Proven by OpenCode (production AI coding agent)
 - Lip Gloss for styling, Glamour for Markdown rendering, Huh for forms
 
-### Migration Strategy
+#### Migration Strategy
 
 - Go TUI is the **frontend only** — handles rendering, input, and interactive prompts
 - Python remains the **backend** — agent loop, tools, LLM providers, session store
@@ -453,7 +496,7 @@ See `docs/archive/plan/go-bubble-tea-migration.md` for the full migration plan.
 | Agentic task completion | >50% on custom test suite | E2E eval system built (3 scenarios: Calculator, BugFix, CLI) |
 | Memory usage (idle) | <2GB RAM (stretch: <500MB) | Not profiled |
 | Memory usage (inference) | <8GB VRAM | Not profiled |
-| Unit tests | 500+ passing | **275 Go + 942 Python (collected) = 1217+** |
+| Unit tests | 500+ passing | Python unit `1961 passed`; Rust TUI `181`; benchmark suite separate |
 
 ---
 
@@ -461,16 +504,21 @@ See `docs/archive/plan/go-bubble-tea-migration.md` for the full migration plan.
 
 | Component | Choice | Status |
 |-----------|--------|--------|
-| Language | Python 3.11+ | Active |
+| Language (backend) | Python 3.11+ | Active |
 | Package Manager | uv | Active |
 | CLI Framework | Typer + Rich | Active |
-| TUI Frontend | **Go + Bubble Tea** | Active |
+| TUI Frontend | **Rust + Ratatui 0.29** | Active |
+| TUI Terminal Layer | crossterm 0.28 (`event-stream`) | Active |
+| TUI PTY Layer | portable-pty 0.8 | Active |
+| TUI Async Runtime | tokio 1.x (`full`) | Active |
+| TUI Serialization | serde 1.x + serde_json 1.x | Active |
+| TUI Logging | tracing 0.1 + tracing-subscriber 0.3 (`env-filter`) | Active |
 | Parsing | tree-sitter 0.25.2 | Active |
-| Python Semantics | Jedi (cross-file goto, refs, types) | Planned (Phase 5) |
-| LSP Client | Deferred (Jedi preferred over multilspy) | Evaluating |
+| Python Semantics | Jedi 0.19.2+ (cross-file goto, refs, types) | Active |
+| LSP-style Tools | Jedi-backed `lsp_*` tools, no persistent LSP server required | Active |
 | Vector DB | LanceDB | Active |
 | Embeddings | jina-v2-base-code | Active |
 | L4 LLM Runtime | LLM Gateway (`http://localhost:4000/v1`) | Active |
-| L4 Model | `coding` alias (auto-routed across 9 providers) | Active |
-| L3 LLM Runtime | llama-cpp-python + native grammar | Planned (Phase 5) |
-| L3 Model | Qwen2.5-Coder-1.5B Q4_K_M | Planned |
+| L4 Model | `coding` alias (auto-routed) | Active |
+| L3 LLM Runtime | llama-cpp-python + Outlines | Optional extra (`autocode[layer3]`) |
+| L3 Model | Qwen2.5-Coder-1.5B Q4_K_M | Optional extra |

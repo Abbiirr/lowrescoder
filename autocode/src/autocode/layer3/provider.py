@@ -1,8 +1,19 @@
-"""Layer 3 provider: constrained generation via llama-cpp-python + Outlines.
+"""Layer 3 provider: opt-in local constrained generation.
 
-Lazy model loading (first call, not startup). Graceful degradation when
-dependencies are not installed — all ImportErrors are caught and the caller
-falls back to L4.
+Core installs do not include the heavy Layer 3 optional extra. When the
+`layer3` extra is installed, `BackendServer` can route SIMPLE_EDIT requests to
+this provider; without the extra, server startup catches the ImportError and
+leaves Layer 3 dormant so chat falls back to Layer 4.
+
+Purpose: constrained JSON/tool-argument generation via llama.cpp + Outlines for
+narrow mechanical tasks. It is opt-in because llama-cpp-python is a heavy native
+dependency and the active generate path is not yet validated end-to-end beyond
+unit coverage.
+
+Activation contract: new Layer 3 routing or generation work must update
+architecture docs, add integration tests for the live generate path, run
+SWE-bench or equivalent routed-task validation, document any new Layer3Config
+fields, and revise this opt-in notice once the activation surface is proven.
 """
 
 from __future__ import annotations
@@ -11,7 +22,7 @@ import asyncio
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +45,7 @@ class L3Provider:
         if self._loaded:
             return
 
-        from llama_cpp import Llama  # type: ignore[import-untyped]
+        from llama_cpp import Llama
 
         self._model = Llama(
             model_path=self._model_path,
@@ -49,7 +60,7 @@ class L3Provider:
     def is_available(self) -> bool:
         """Check if L3 dependencies and model file exist without loading."""
         try:
-            import llama_cpp  # type: ignore[import-untyped]  # noqa: F401
+            import llama_cpp  # noqa: F401
         except ImportError:
             return False
         return Path(self._model_path).exists()
@@ -73,7 +84,7 @@ class L3Provider:
         if grammar is not None:
             kwargs["grammar"] = grammar
         result = self._model(** kwargs)
-        return result["choices"][0]["text"].strip()
+        return str(result["choices"][0]["text"]).strip()
 
     async def generate_structured(self, prompt: str, schema: dict[str, Any]) -> dict[str, Any]:
         """Generate structured JSON output using Outlines schema constraint.
@@ -91,8 +102,8 @@ class L3Provider:
         """Synchronous structured generation."""
         self._ensure_loaded()
 
-        from outlines.integrations.llamacpp import (
-            JSONLogitsProcessor,  # type: ignore[import-untyped]
+        from outlines.integrations.llamacpp import (  # type: ignore[import-not-found]
+            JSONLogitsProcessor,
         )
 
         logits_processor = JSONLogitsProcessor(schema, self._model)
@@ -102,7 +113,7 @@ class L3Provider:
             logits_processor=logits_processor,
         )
         text = result["choices"][0]["text"].strip()
-        return json.loads(text)
+        return cast(dict[str, Any], json.loads(text))
 
     def cleanup(self) -> None:
         """Release VRAM and model resources."""

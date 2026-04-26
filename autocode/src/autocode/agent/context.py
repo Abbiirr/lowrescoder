@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum, auto
@@ -12,6 +14,73 @@ from autocode.session.consolidation import SessionConsolidator
 from autocode.session.store import SessionStore
 
 logger = logging.getLogger(__name__)
+
+_SIGNAL_LINE_RE = re.compile(
+    r"^\s*(?:async\s+def|def|class)\s+\w+"
+    r"|^\s*(?:pub\s+)?(?:async\s+)?fn\s+\w+"
+    r"|^\s*(?:export\s+)?(?:async\s+)?function\s+\w+"
+)
+_ERROR_MARKERS = (
+    "Traceback",
+    "Error:",
+    "Exception",
+    "AssertionError",
+    "ValueError",
+    "TypeError",
+    "RuntimeError",
+    "FAILED",
+    "ERROR",
+)
+
+
+def _line_char_count(lines: list[str]) -> int:
+    return sum(len(line) for line in lines) + max(0, len(lines) - 1)
+
+
+def _collect_head_indices(lines: list[str], char_budget: int) -> list[int]:
+    indices: list[int] = []
+    used = 0
+    for idx, line in enumerate(lines):
+        next_used = used + len(line) + (1 if indices else 0)
+        if indices and next_used > char_budget:
+            break
+        indices.append(idx)
+        used = next_used
+        if used >= char_budget:
+            break
+    return indices
+
+
+def _collect_tail_indices(lines: list[str], char_budget: int) -> list[int]:
+    indices: list[int] = []
+    used = 0
+    for idx in range(len(lines) - 1, -1, -1):
+        line = lines[idx]
+        next_used = used + len(line) + (1 if indices else 0)
+        if indices and next_used > char_budget:
+            break
+        indices.append(idx)
+        used = next_used
+        if used >= char_budget:
+            break
+    return list(reversed(indices))
+
+
+def _format_indexed_lines(lines: list[str], indices: list[int]) -> str:
+    output: list[str] = []
+    last_idx: int | None = None
+    for idx in sorted(set(indices)):
+        if last_idx is not None and idx > last_idx + 1:
+            output.append(f"[… {idx - last_idx - 1} lines omitted …]")
+        output.append(lines[idx])
+        last_idx = idx
+    return "\n".join(output)
+
+
+def _is_signal_line(line: str) -> bool:
+    return bool(_SIGNAL_LINE_RE.search(line)) or any(
+        marker in line for marker in _ERROR_MARKERS
+    )
 
 
 class ContextEngine:
@@ -34,20 +103,39 @@ class ContextEngine:
         self._compaction_threshold = compaction_threshold
 
     def count_tokens(self, text: str) -> int:
-        """Estimate token count using a simple heuristic (len // 4)."""
+        """Count tokens with the provider when possible, otherwise estimate."""
+        if self._provider is not None:
+            counter = getattr(self._provider, "count_tokens", None)
+            if callable(counter) and not inspect.iscoroutinefunction(counter):
+                try:
+                    return max(1, int(counter(text)))
+                except (TypeError, ValueError):
+                    logger.debug("Provider token count returned a non-integer")
+                except Exception:
+                    logger.debug("Provider token count failed", exc_info=True)
         return max(1, len(text) // 4)
 
     def truncate_tool_result(self, result: str, max_tokens: int = 500) -> str:
-        """MicroCompact: truncate tool output from the middle.
-
-        Keeps head (first ~60%) and tail (last ~40%) since useful info
-        like stack traces clusters at beginning and end. No API call needed.
-        """
+        """MicroCompact tool output while preserving high-signal structure."""
         token_count = self.count_tokens(result)
         if token_count <= max_tokens:
             return result
 
-        max_chars = max_tokens * 4
+        max_chars = max(32, max_tokens * 4)
+        lines = result.splitlines()
+        if len(lines) > 1:
+            signal_indices = [
+                idx for idx, line in enumerate(lines) if _is_signal_line(line)
+            ]
+            if signal_indices:
+                return self._truncate_signal_lines(lines, signal_indices, max_chars)
+            if len(lines) >= 12:
+                return self._truncate_line_output(lines, max_chars)
+
+        return self._truncate_middle_chars(result, max_chars)
+
+    def _truncate_middle_chars(self, result: str, max_chars: int) -> str:
+        """Fallback truncation for unstructured text and dense binary-like output."""
         head_chars = int(max_chars * 0.6)
         tail_chars = max_chars - head_chars
         omitted = len(result) - head_chars - tail_chars
@@ -56,6 +144,41 @@ class ContextEngine:
             + f"\n\n[… {omitted} chars omitted …]\n\n"
             + result[-tail_chars:]
         )
+
+    def _truncate_line_output(self, lines: list[str], max_chars: int) -> str:
+        """Preserve first and last logical records for list-like output."""
+        marker_budget = 48
+        line_budget = max(16, max_chars - marker_budget)
+        head_budget = max(8, int(line_budget * 0.55))
+        tail_budget = max(8, line_budget - head_budget)
+        indices = _collect_head_indices(lines, head_budget)
+        indices.extend(_collect_tail_indices(lines, tail_budget))
+        return _format_indexed_lines(lines, indices)
+
+    def _truncate_signal_lines(
+        self,
+        lines: list[str],
+        signal_indices: list[int],
+        max_chars: int,
+    ) -> str:
+        """Preserve signatures/errors plus enough edge context to orient the model."""
+        head_budget = max(16, int(max_chars * 0.25))
+        tail_budget = max(16, int(max_chars * 0.25))
+        selected = set(_collect_head_indices(lines, head_budget))
+        selected.update(_collect_tail_indices(lines, tail_budget))
+
+        used_for_signals = 0
+        signal_budget = max(64, max_chars - _line_char_count([lines[i] for i in selected]))
+        for idx in signal_indices:
+            if idx in selected:
+                continue
+            line_cost = len(lines[idx]) + 1
+            if selected and used_for_signals + line_cost > signal_budget:
+                break
+            selected.add(idx)
+            used_for_signals += line_cost
+
+        return _format_indexed_lines(lines, list(selected))
 
     async def build_messages(
         self,

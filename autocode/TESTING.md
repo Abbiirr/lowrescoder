@@ -1,9 +1,11 @@
 # Testing & Evaluation Guide
 
 > How to test, evaluate, and interpret results for AutoCode.
-> Last updated: 2026-04-22
+> Last updated: 2026-04-26
 
 > **For TUI testing specifically** (the 4-dimension matrix — runtime invariants, design-target ratchet, self-vs-self PNG regression, live PTY smoke), see `docs/tui-testing/tui-testing-strategy.md` and the enforced checklist at `docs/tui-testing/tui_testing_checklist.md`. This guide's `Rust TUI tests` row below is only the `cargo test` unit-test slice.
+>
+> Unless a command explicitly starts with `cd autocode` or `cd benchmarks`, run it from the superproject root.
 
 ---
 
@@ -11,17 +13,17 @@
 
 | What | Command | Time |
 |------|---------|------|
-| Unit tests | `uv run pytest tests/ -v` | ~180s |
-| Unit tests + coverage | `uv run pytest tests/ -v --cov=src/autocode` | ~200s |
-| Lint | `uv run ruff check src/ tests/` | ~5s |
-| Type check | `uv run mypy src/autocode/` | ~15s |
-| Sprint verification | `uv run pytest tests/test_sprint_verify.py -v` | ~10s |
+| Unit tests | `uv run pytest autocode/tests/unit/ -v` | ~180s |
+| Unit tests + coverage | `make test` | ~200s |
+| Lint | `make lint` | ~20s |
+| Type check | `cd autocode && uv run mypy src/autocode/` | ~15s |
+| Sprint verification | `uv run pytest autocode/tests/test_sprint_verify.py -v` | ~10s |
 | Rust TUI tests | `cd autocode/rtui && cargo test` | ~1s |
 | Rust TUI lint | `cd autocode/rtui && cargo clippy -- -D warnings` | ~10s |
 | Rust TUI fmt | `cd autocode/rtui && cargo fmt -- --check` | ~1s |
 | Rust TUI release build | `cd autocode/rtui && cargo build --release` | ~30s (first) / ~2s (cached) |
-| Integration tests | `uv run pytest -m integration tests/integration/` | Varies |
-| External project benchmark | `uv run pytest tests/benchmark/test_project_creation.py::test_project_creation_real_life_task_external_project -v` | ~5s |
+| Integration tests | `uv run pytest -m integration autocode/tests/integration/` | Varies |
+| External project benchmark | `uv run pytest autocode/tests/benchmark/test_project_creation.py::test_project_creation_real_life_task_external_project -v` | ~5s |
 | E2E Calculator benchmark | `uv run python benchmarks/run_calculator_benchmark.py` | 10-30 min |
 | E2E BugFix scenario | `uv run python benchmarks/e2e/run_scenario.py E2E-BugFix` | 5-15 min |
 | E2E CLI scenario | `uv run python benchmarks/e2e/run_scenario.py E2E-CLI` | 5-20 min |
@@ -42,11 +44,11 @@
 
 **How to run:**
 ```bash
-uv run pytest tests/ -v
+uv run pytest autocode/tests/unit/ -v
 ```
 
 **What the results mean:**
-- **1010+ passed** = everything works, safe to make changes
+- **1900+ passed** = everything works, safe to make changes
 - **Any failures** = something is broken, fix before continuing
 - **1 skip** = `test_non_tty_returns_false` (Unix-only, skips on Windows) is normal
 - **Integration tests** self-skip when external services are unavailable
@@ -57,7 +59,7 @@ All dependencies (including tree-sitter) MUST be installed for a valid test run.
 
 ```bash
 # Full dev setup (required for valid test results):
-uv pip install -e ".[dev]"
+uv sync
 
 # Verify tree-sitter is importable:
 uv run python -c "import tree_sitter; import tree_sitter_python; print('OK')"
@@ -93,10 +95,10 @@ If tree-sitter tests fail with `ImportError`, your environment is broken — do 
 
 | Directory | What | Count |
 |-----------|------|-------|
-| `tests/unit/` | Core features (30+ files) | ~950+ tests |
-| `tests/benchmark/` | Performance + quality rubrics (6 files) | ~60+ tests |
-| `tests/integration/` | External services (3 files) | Self-skip when unavailable |
-| `tests/test_sprint_verify.py` | Sprint exit criteria | Phase-specific |
+| `autocode/tests/unit/` | Core features (30+ files) | 1900+ tests |
+| `autocode/tests/benchmark/` | Performance + quality rubrics | ~60+ tests |
+| `autocode/tests/integration/` | External services | Self-skip when unavailable |
+| `autocode/tests/test_sprint_verify.py` | Sprint exit criteria | Phase-specific |
 | `autocode/rtui/src/**/*.rs` (inline `#[cfg(test)]`) + `autocode/rtui/tests/*.rs` | Rust TUI tests | 59 tests |
 
 **When to run:** After every code change. Non-negotiable.
@@ -107,13 +109,13 @@ If tree-sitter tests fail with `ImportError`, your environment is broken — do 
 
 **Ruff (linter/formatter):**
 ```bash
-uv run ruff check src/ tests/      # Check for issues
-uv run ruff format src/ tests/      # Auto-format
+make lint                           # Check Python lint + type issues
+cd autocode && uv run ruff format src/ tests/      # Auto-format
 ```
 
 **Mypy (type checker):**
 ```bash
-uv run mypy src/autocode/
+cd autocode && uv run mypy src/autocode/
 ```
 
 **What the results mean:**
@@ -136,8 +138,8 @@ cd autocode/rtui && cargo test
 **What the results mean:**
 - **59 passed** = Rust TUI unit + integration tests green
 - 57 inline unit tests in `src/**/*.rs` under `#[cfg(test)]`
-- 1 LinesCodec integration test in `tests/spike_linescodec.rs` (1MB no-truncation proof)
-- 1 design-record test in `tests/decision_tui_textarea.rs` (why tui-textarea was rejected in M1)
+- 1 LinesCodec integration test in `autocode/rtui/tests/spike_linescodec.rs` (1MB no-truncation proof)
+- 1 design-record test in `autocode/rtui/tests/decision_tui_textarea.rs` (why tui-textarea was rejected in M1)
 
 **Building the TUI:**
 ```bash
@@ -162,10 +164,10 @@ For full TUI testing (beyond `cargo test`), see [`docs/tui-testing/`](../docs/tu
 **How to run:**
 ```bash
 # Requires LLM Gateway running at http://localhost:4000
-uv run pytest -m integration tests/integration/test_ollama.py
+uv run pytest -m integration autocode/tests/integration/test_ollama.py
 
 # Requires OPENROUTER_API_KEY in .env
-uv run pytest -m integration tests/integration/test_openrouter.py
+uv run pytest -m integration autocode/tests/integration/test_openrouter.py
 ```
 
 **What the results mean:**
@@ -180,13 +182,57 @@ uv run pytest -m integration tests/integration/test_openrouter.py
 **What they test:** Exit criteria for each sprint/phase milestone.
 
 ```bash
-uv run pytest tests/test_sprint_verify.py -v
+uv run pytest autocode/tests/test_sprint_verify.py -v
 ```
 
 **What the results mean:**
 - Each test maps to a specific sprint exit criterion
 - Passing = the sprint's deliverables are working
 - Currently covers Sprints 1-3 + Sprint 4A (Phase 4 active)
+- For backend feature slices, see §4b for required live PTY smoke.
+
+---
+
+## 4b. Live PTY Smoke for Backend Slices
+
+Backend feature slices under `docs/plan/backend-feature-improvement-plan.md` use unit tests to verify code correctness and live PTY smoke to verify that behavior survives the JSON-RPC transport and Rust TUI frontend. This is required whenever the slice changes user-visible runtime behavior, stream ordering, tool-call state, cost display, approval surfaces, memory persistence, or backend lifecycle.
+
+### Existing harnesses
+
+Extend these harnesses instead of creating one-off scripts:
+
+| Harness | Use |
+|---|---|
+| `autocode/tests/pty/pty_e2e_real_gateway.py` | Real backend plus real LLM gateway, used for supported-path canaries |
+| `autocode/tests/pty/pty_smoke_rust_comprehensive.py` | Broad Rust TUI surfaces and slash-command smoke |
+| `autocode/tests/pty/pty_smoke_rust_stage3b.py` | Stage 3B inspection surfaces |
+| `autocode/tests/pty/pty_smoke_rust_m1.py` | M1 startup and scaffold checks |
+| `autocode/tests/pty/dead_backend.py` | Failure-mode backend for recovery behavior |
+| `autocode/tests/pty/mock_backend.py` | Deterministic mock backend for frontend assertions |
+| `autocode/tests/pty/silent_backend.py` | Timeout and no-output failure-mode backend |
+
+See `autocode/tests/pty/README.md` for the `pty.fork()` pattern and binary resolution rules. Current Rust harnesses use `$AUTOCODE_TUI_BIN` when set, otherwise `autocode/rtui/target/release/autocode-tui`.
+
+### When PTY smoke is required
+
+This table is a heuristic, not a substitute for judgment. If the user can observe the behavior through bare `autocode`, add or rerun a PTY smoke.
+
+| Slice family | Smoke required | Reason |
+|---|---|---|
+| Tool cache/search (`S-CLEAR-RESULTS`, `S-SEARCHRES`) | yes | Tool-call to cache/list/search context must round-trip through the transport |
+| Cost/threshold (`S-COST`) | yes | `/cost`, `/cost --detail`, and threshold-crossing warnings are user-visible |
+| Memory/consolidation (`S-MEMPERSIST`, `S-MEMROBUST`) | yes | Session teardown and restore paths must preserve persisted state |
+| Approval/blocked (`S-BLOCKED`) | yes | Hard-block surfaces must be visible before dangerous write handlers run |
+| Streaming/thinking/task lifecycle/interrupt (`S-THINK-*`, `S-INPROGRESS`, `S-INTERRUPT`) | yes | Correctness depends on stream-token ordering and live state transitions |
+| Episode summarization (`S-EPISODESUM`) | optional | Synchronous and mostly backend-internal unless a visible summary surface changes |
+| Doc-only slices (`S-DOCSREFRESH-*`) | no | No runtime behavior change |
+
+### Predicate guidance
+
+- Prefer stream tokens or JSON-RPC notifications as assertions; final-screen text is timing-sensitive and should only be supporting evidence.
+- Store live-PTY artifacts at `autocode/docs/qa/test-results/<timestamp>-<slice>-pty-smoke.md`.
+- Pair the PTY artifact with the unit-test verification artifact; PTY smoke does not replace targeted unit or transport-contract tests.
+- For benchmark-owned canaries, preserve the supported path: bare `autocode` for spawn-managed mode, or `autocode serve --transport tcp` plus `autocode --attach HOST:PORT` for attach mode.
 
 ---
 
@@ -217,9 +263,6 @@ The original and most comprehensive benchmark. Tests whether the agent can build
 ```bash
 # Standard run
 uv run python benchmarks/run_calculator_benchmark.py
-
-# PowerShell wrapper
-.\scripts\run_e2e_benchmark.ps1
 
 # Multi-run (aggregated stats)
 uv run python benchmarks/run_calculator_benchmark.py --runs 3
@@ -255,14 +298,11 @@ Tests whether the agent can diagnose and fix bugs in an existing project without
 ```bash
 # Direct Python run
 uv run python benchmarks/e2e/run_scenario.py E2E-BugFix
-
-# PowerShell wrapper
-.\scripts\run_e2e_benchmark.ps1 -Scenario E2E-BugFix
 ```
 
 **How it works:**
-- A seed project (`tests/benchmark/fixtures/bugfix-seed/`) is copied into the sandbox
-- The project has 3 intentional bugs in `src/index.js`: `capitalize()` crashes on empty string, `sumArray()` starts at 1 instead of 0, `findMax()` skips index 1 (off-by-one)
+- A seed project (`benchmarks/e2e/fixtures/bugfix-seed/`) is copied into the sandbox
+- The project has 3 intentional bugs in `benchmarks/e2e/fixtures/bugfix-seed/src/index.js`: `capitalize()` crashes on empty string, `sumArray()` starts at 1 instead of 0, `findMax()` skips index 1 (off-by-one)
 - 8 tests: 3 fail (one per bug), 5 pass (correct functions `reverseString`, `isEven`, plus `capitalize` with non-empty input)
 - Agent must fix the source code without modifying tests
 
@@ -277,9 +317,6 @@ Tests whether the agent can build a CLI tool from scratch with proper structure.
 ```bash
 # Direct Python run
 uv run python benchmarks/e2e/run_scenario.py E2E-CLI
-
-# PowerShell wrapper
-.\scripts\run_e2e_benchmark.ps1 -Scenario E2E-CLI
 ```
 
 **How it works:**
@@ -330,7 +367,7 @@ uv run python benchmarks/e2e/external/run_external_pilot.py --help
 
 **Budget caps:** 600s/task SWE-bench, 900s/task Terminal-Bench, 50K tokens/task.
 
-**Artifacts:** Saved under `docs/qa/test-results/<timestamp>-external-pilot-<suite>-<agent>/` with `config.json`, `summary.json`, `summary.md`, and per-task results.
+**Artifacts:** Saved under `docs/qa/test-results/<timestamp>-external-pilot-<suite>-<agent>/` with config, structured summary, human summary, and per-task results.
 
 ### 5.6 Unified Benchmark Runner (B7-B14)
 
@@ -435,24 +472,24 @@ If the agent exceeds any budget, execution stops early. This prevents runaway to
 
 ## 7. Adding a New E2E Scenario
 
-1. Create `scripts/e2e/scenarios/<name>.py` with a `MANIFEST` (type `ScenarioManifest`)
+1. Create `benchmarks/e2e/scenarios/<name>.py` with a `MANIFEST` (type `ScenarioManifest`)
 2. Define: `scenario_id`, `prompt`, `follow_ups`, `acceptance_checks`, `budgets`
-3. Optionally add a seed fixture directory under `scripts/e2e/fixtures/<name>/`
+3. Optionally add a seed fixture directory under `benchmarks/e2e/fixtures/<name>/`
 4. Register it in `benchmarks/e2e/run_scenario.py`'s `SCENARIO_REGISTRY`
 5. Run: `uv run python benchmarks/e2e/run_scenario.py <YOUR-SCENARIO-ID>`
 
-The manifest contract is defined in `scripts/e2e/scenario_contract.py`.
+The manifest contract is defined in `benchmarks/e2e/scenario_contract.py`.
 
 ---
 
 ## 8. Storing Results
 
-Use the storage wrapper to persist test output:
-```bash
-./scripts/store_test_results.sh <label> -- <command>
-```
+Store verification artifacts directly under the appropriate result directory:
 
-All stored artifacts live in `docs/qa/test-results/`. Naming convention:
+- Backend, Rust TUI, and PTY smoke artifacts: `autocode/docs/qa/test-results/`
+- Benchmark run artifacts: `docs/qa/test-results/`
+
+Use this naming convention:
 - `<timestamp>-<label>.md` — summary
 - `<timestamp>-<label>.log` — raw output
 - `<timestamp>-<label>.json` — structured data
@@ -463,8 +500,8 @@ All stored artifacts live in `docs/qa/test-results/`. Naming convention:
 
 | Check | Exit Code | CI Gate |
 |-------|-----------|---------|
-| `uv run pytest tests/ -v` | 0 = pass | Required |
-| `uv run ruff check src/ tests/` | 0 = clean | Required |
+| `make test` | 0 = pass | Required |
+| `make lint` | 0 = clean | Required |
 | `uv run python benchmarks/e2e/run_scenario.py E2E-BugFix` | 0=PASS, 1=FAIL, 2=INFRA | Regression lane |
 | `uv run python benchmarks/e2e/run_scenario.py E2E-CLI` | 0=PASS, 1=FAIL, 2=INFRA | Regression lane |
 | `uv run python benchmarks/run_calculator_benchmark.py` | 0=PASS, 1=FAIL, 2=INFRA | Capability lane |
@@ -492,21 +529,21 @@ All stored artifacts live in `docs/qa/test-results/`. Naming convention:
 |------|---------|
 | `benchmarks/run_calculator_benchmark.py` | Calculator benchmark engine |
 | `benchmarks/e2e/run_scenario.py` | Generic scenario runner (BugFix, CLI) |
-| `scripts/e2e/scenario_contract.py` | Scenario manifest dataclass |
-| `scripts/e2e/scoring.py` | Acceptance check runner + scoring |
-| `scripts/e2e/scenarios/bugfix.py` | E2E-BugFix manifest |
-| `scripts/e2e/scenarios/cli_tool.py` | E2E-CLI manifest |
-| `tests/benchmark/fixtures/bugfix-seed/` | Seed project with 3 bugs (8 tests) |
+| `benchmarks/e2e/scenario_contract.py` | Scenario manifest dataclass |
+| `benchmarks/e2e/scoring.py` | Acceptance check runner + scoring |
+| `benchmarks/e2e/scenarios/bugfix.py` | E2E-BugFix manifest |
+| `benchmarks/e2e/scenarios/cli_tool.py` | E2E-CLI manifest |
+| `benchmarks/e2e/fixtures/bugfix-seed/` | Seed project with 3 bugs (8 tests) |
 | `benchmarks/e2e/external/run_external_pilot.py` | External benchmark pilot runner (SWE-bench/Terminal-Bench) |
 | `benchmarks/e2e/external/swebench-pilot-subset.json` | SWE-bench pilot: 25 task IDs |
 | `benchmarks/e2e/external/terminalbench-pilot-subset.json` | Terminal-Bench pilot: 10 task IDs |
-| `scripts/run_e2e_benchmark.ps1` | PowerShell wrapper for all E2E scenarios |
 | `docs/plan/agentic-benchmarks/external-benchmark-runbook.md` | External benchmark setup + rerun instructions |
-| `tests/benchmark/test_project_creation.py` | Calculator scoring rubric |
+| `autocode/tests/benchmark/test_project_creation.py` | Calculator scoring rubric |
 | `benchmarks/benchmark_runner.py` | Unified benchmark runner (B7-B14, Docker, resumability) |
 | `benchmarks/run_all_benchmarks.sh` | Shell script to run all lanes sequentially with resume |
 | `benchmarks/prepare_tui_benchmark_run.py` | Human-operated TUI benchmark prep and operator-pack generator |
-| `scripts/adapters/autocode_adapter.py` | AutoCode agent adapter for benchmarks |
+| `benchmarks/adapters/autocode_adapter.py` | AutoCode agent adapter for benchmarks |
 | `docs/qa/test-results/` | Stored benchmark reports |
+| `autocode/docs/qa/test-results/` | Stored backend, Rust TUI, and PTY verification artifacts |
 | `sandboxes/` | Benchmark sandbox outputs |
 | `sandboxes/progress/` | Benchmark resume checkpoints |

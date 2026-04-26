@@ -172,12 +172,14 @@ class AgentConfig(BaseModel):
     compaction_threshold: float = Field(default=0.75, ge=0.5, le=0.95)
     compaction_kept_messages: int = Field(default=4, ge=1)
     tool_result_max_tokens: int = Field(default=500, ge=50)
+    tool_result_cache_enabled: bool = True
     max_subagents: int = Field(default=3, ge=1)  # Sprint 4B
     subagent_max_iterations: int = Field(default=5, ge=1)  # Sprint 4B
     subagent_timeout_seconds: int = Field(default=30, ge=5)  # Sprint 4B
     memory_max_entries: int = Field(default=50, ge=10)  # Sprint 4C
     memory_decay_factor: float = Field(default=0.95, ge=0.5, le=1.0)  # Sprint 4C
     memory_context_max_tokens: int = Field(default=500, ge=50)  # Sprint 4C
+    cost_limit_usd: float | None = Field(default=None, ge=0)
 
 
 # --- Top-level config ---

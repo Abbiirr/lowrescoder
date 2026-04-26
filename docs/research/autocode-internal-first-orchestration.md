@@ -61,7 +61,7 @@ Local implementation reviewed:
 - `autocode/src/autocode/external/mcp_server.py`
 - `autocode/src/autocode/external/tracker.py`
 - `autocode/src/autocode/external/config_merge.py`
-- `docs/plan/phase5-agent-teams.md`
+- `docs/plan/archive/phase5-agent-teams.md`
 - `docs/research/phase5-agent-teams-research.md`
 - `docs/research/multi-agent-landscape-2026.md`
 
@@ -590,7 +590,7 @@ That sequence fits both the local codebase reality and the strongest lessons fro
 
 ### Local code and local research
 
-- `docs/plan/phase5-agent-teams.md`
+- `docs/plan/archive/phase5-agent-teams.md`
 - `docs/research/phase5-agent-teams-research.md`
 - `docs/research/multi-agent-landscape-2026.md`
 - `research-components/t3code/AGENTS.md`

@@ -39,6 +39,7 @@ pub enum PaletteMode {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DetailSurface {
     Multi,
+    Tasks,
     Plan,
     Review,
     CommandCenter,
@@ -75,6 +76,32 @@ pub struct ToolCallInfo {
     pub status: String,
     pub args: Option<String>,
     pub result: Option<String>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GrepHit {
+    pub path: String,
+    pub line: u32,
+    pub snippet: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiffFileSummary {
+    pub path: String,
+    pub added: u32,
+    pub removed: u32,
+    pub hunks: Vec<String>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReviewFinding {
+    pub severity: String,
+    pub path: String,
+    pub line: Option<u32>,
+    pub message: String,
 }
 
 #[allow(dead_code)]
@@ -176,6 +203,12 @@ pub struct AppState {
     pub active_tools: Vec<ToolCallInfo>,
     pub tasks: Vec<protocol::TaskEntry>,
     pub subagents: Vec<protocol::SubagentEntry>,
+    pub checkpoints: Vec<protocol::CheckpointEntry>,
+    pub grep_query: Option<String>,
+    pub grep_results: Vec<GrepHit>,
+    pub diff_source: Option<String>,
+    pub diff_files: Vec<DiffFileSummary>,
+    pub review_findings: Vec<ReviewFinding>,
     pub picker: Option<PickerState>,
     pub palette: Option<PaletteState>,
     pub approval: Option<ApprovalRequest>,
@@ -217,6 +250,12 @@ impl AppState {
             active_tools: Vec::new(),
             tasks: Vec::new(),
             subagents: Vec::new(),
+            checkpoints: Vec::new(),
+            grep_query: None,
+            grep_results: Vec::new(),
+            diff_source: None,
+            diff_files: Vec::new(),
+            review_findings: Vec::new(),
             picker: None,
             palette: None,
             approval: None,
@@ -238,5 +277,11 @@ impl AppState {
             detail_surface: None,
             recovery_action_idx: 0,
         }
+    }
+
+    pub fn has_pending_chat_request(&self) -> bool {
+        self.pending_requests
+            .values()
+            .any(|pending| pending.method == "chat")
     }
 }

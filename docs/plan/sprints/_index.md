@@ -1,7 +1,7 @@
 # Phase 5 Sprint Tracker — Index
 
 > Last updated: 2026-02-18
-> Plan: `docs/plan/phase5-agent-teams.md` Rev 6
+> Plan: `docs/plan/archive/phase5-agent-teams.md` Rev 6
 > Strategy: **"Standalone first, then interact."**
 
 ---

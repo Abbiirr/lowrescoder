@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 import json
 import logging
 import subprocess
+import threading
 import time
 from collections.abc import Awaitable, Callable
 from enum import Enum
@@ -16,8 +19,10 @@ from autocode.agent.context import ContextEngine
 from autocode.agent.event_recorder import EventRecorder
 from autocode.agent.hooks import HookEvent
 from autocode.agent.prompts import build_dynamic_suffix, build_static_prefix
-from autocode.agent.tools import ToolRegistry
+from autocode.agent.tool_result_cache import ToolResultCache
+from autocode.agent.tools import CACHE_MANAGEMENT_TOOL_NAMES, ToolRegistry
 from autocode.core.logging import log_debug_prompt, log_event
+from autocode.layer1.preview import build_active_symbol_preview
 from autocode.layer4.llm import LLMResponse, ToolCall
 from autocode.session.store import SessionStore
 from autocode.session.task_store import TaskStore
@@ -25,6 +30,7 @@ from autocode.session.task_store import TaskStore
 logger = logging.getLogger(__name__)
 
 _TOOL_TERMINATION_PREFIX = "__AUTOCODE_TOOL_TERMINATE__:"
+_SYMBOL_PREVIEW_DEADLINE_MS = 100
 
 
 def encode_tool_termination(display_result: str, final_response: str) -> str:
@@ -50,6 +56,37 @@ def _decode_tool_termination(result: str) -> tuple[str, str | None]:
     display_result = str(data.get("display_result", ""))
     final_response = str(data.get("final_response", "")).strip()
     return display_result, final_response or display_result
+
+
+def _build_symbol_preview_with_timeout(
+    *,
+    project_root: Path,
+    working_set: list[str],
+    deadline_ms: int = _SYMBOL_PREVIEW_DEADLINE_MS,
+) -> str:
+    """Run symbol preview behind an outer soft deadline."""
+    result: list[str] = []
+
+    def _target() -> None:
+        try:
+            result.append(build_active_symbol_preview(
+                project_root=project_root,
+                working_set=working_set,
+                deadline_ms=deadline_ms,
+            ))
+        except Exception:
+            logger.debug("Layer 1 symbol preview skipped", exc_info=True)
+
+    thread = threading.Thread(
+        target=_target,
+        name="autocode-symbol-preview",
+        daemon=True,
+    )
+    thread.start()
+    thread.join(deadline_ms / 1000)
+    if thread.is_alive():
+        return ""
+    return result[0] if result else ""
 
 
 class ToolExecutionOutcome(tuple[str, str | None]):
@@ -102,6 +139,8 @@ class AgentLoop:
         tool_shim: Any | None = None,
         layer2_config: Any | None = None,
         hook_registry: Any | None = None,
+        tool_result_cache: ToolResultCache | None = None,
+        tool_result_cache_min_bytes: int = 1024,
     ) -> None:
         self.provider = provider
         self.tool_registry = tool_registry
@@ -122,6 +161,8 @@ class AgentLoop:
         self._tool_shim = tool_shim
         self._layer2_config = layer2_config
         self._hook_registry = hook_registry
+        self._tool_result_cache = tool_result_cache
+        self._tool_result_cache_min_bytes = tool_result_cache_min_bytes
         self._hook_session_started = False
         self._current_episode_id: str | None = None
         self._cancelled = False
@@ -130,6 +171,22 @@ class AgentLoop:
         self._static_prefix: str | None = None
         self._cached_tool_schemas: list[dict[str, Any]] | None = None
         self._environment_snapshot: str | None = None
+
+    def _token_provider_label(self) -> str:
+        """Return a stable provider/model label for token and cost reporting."""
+        provider_type = type(self.provider).__name__
+        model = str(getattr(self.provider, "model", "") or "").strip()
+        api_base = str(getattr(self.provider, "api_base", "") or "").lower().rstrip("/")
+        provider_type_lower = provider_type.lower()
+
+        if "openrouter" in provider_type_lower or api_base == "http://localhost:4000/v1":
+            provider = "openrouter"
+        elif "ollama" in provider_type_lower or "11434" in api_base:
+            provider = "ollama"
+        else:
+            return provider_type
+
+        return f"{provider} / {model}" if model else provider
 
     # ----- Hook lifecycle helpers -----
     # All three wrap hook_registry.fire in a try/except so a broken hook
@@ -171,6 +228,32 @@ class AgentLoop:
                 return f"Blocked by PreToolUse hook: {reason}"
         return None
 
+    def _fire_post_tool_use(
+        self,
+        tc: Any,
+        *,
+        status: str,
+        result: str,
+        duration_ms: int,
+    ) -> None:
+        """Fire PostToolUse hooks after an executed tool call. Advisory only."""
+        if self._hook_registry is None:
+            return
+        try:
+            self._hook_registry.fire(
+                HookEvent.POST_TOOL_USE,
+                {
+                    "session_id": self.session_id,
+                    "arguments": dict(tc.arguments),
+                    "status": status,
+                    "result_preview": result[:200] if result else "",
+                    "duration_ms": duration_ms,
+                },
+                tool_name=tc.name,
+            )
+        except Exception:  # noqa: BLE001
+            logger.debug("PostToolUse hook run failed", exc_info=True)
+
     def _fire_stop(
         self, final_text: str, *, outcome: str, failure: bool = False,
     ) -> None:
@@ -189,6 +272,21 @@ class AgentLoop:
             )
         except Exception:  # noqa: BLE001
             logger.debug("Stop hook run failed", exc_info=True)
+
+    def _record_tool_result_cache_entry(
+        self,
+        tc: ToolCall,
+        result: str,
+    ) -> None:
+        """Record large successful tool results for later selective clearing."""
+        if self._tool_result_cache is None:
+            return
+        if tc.name in CACHE_MANAGEMENT_TOOL_NAMES:
+            return
+        result_size = len(result.encode("utf-8", errors="replace"))
+        if result_size < self._tool_result_cache_min_bytes:
+            return
+        self._tool_result_cache.record(tc.name, tc.arguments, result)
 
     def _resolve_project_root(self) -> Path:
         """Return the current project root for environment bootstrap."""
@@ -279,6 +377,12 @@ class AgentLoop:
             working_set = get_active_working_set(str(root), limit=5)
             if working_set:
                 snapshot += "\n- Active working set: " + ", ".join(working_set)
+                symbol_preview = _build_symbol_preview_with_timeout(
+                    project_root=root,
+                    working_set=working_set,
+                )
+                if symbol_preview:
+                    snapshot += "\n" + symbol_preview
         except Exception:
             pass
         return snapshot
@@ -362,6 +466,7 @@ class AgentLoop:
         on_tool_call: Callable[[str, str, str], None] | None = None,
         approval_callback: Callable[[str, dict[str, Any]], Awaitable[bool]] | None = None,
         ask_user_callback: Callable[[str, list[str], bool], Awaitable[str]] | None = None,
+        reasoning_enabled: bool = True,
         injected_context: str = "",
     ) -> str:
         """Run the agent loop for a user message.
@@ -375,6 +480,8 @@ class AgentLoop:
             approval_callback: Async callable for user approval. Returns bool.
             ask_user_callback: Async callable when the LLM invokes ask_user.
                 Receives (question, options, allow_text), returns user's answer.
+            reasoning_enabled: User/session-level gate for provider reasoning.
+                Middleware may reduce this per iteration, but cannot re-enable it.
 
         Returns:
             The final assistant text response.
@@ -524,9 +631,12 @@ class AgentLoop:
                 break
             if _mw_ctx and _mw_ctx.messages is not messages:
                 messages = _mw_ctx.messages
-            reasoning_enabled = True
+            effective_reasoning_enabled = reasoning_enabled
             if _mw_ctx:
-                reasoning_enabled = bool(_mw_ctx.metadata.get("_reasoning_enabled", True))
+                effective_reasoning_enabled = (
+                    reasoning_enabled
+                    and bool(_mw_ctx.metadata.get("_reasoning_enabled", True))
+                )
 
             _llm_start = time.monotonic()
             if self._profiler:
@@ -537,7 +647,7 @@ class AgentLoop:
                     on_chunk=on_chunk,
                     on_thinking_chunk=on_thinking_chunk,
                     on_retry_notice=on_retry_notice,
-                    reasoning_enabled=reasoning_enabled,
+                    reasoning_enabled=effective_reasoning_enabled,
                 )
             finally:
                 if self._profiler:
@@ -559,14 +669,15 @@ class AgentLoop:
             if self._event_recorder and _episode_id:
                 self._event_recorder.on_model_response(
                     _episode_id, response, _llm_ms, _iteration,
-                )
+            )
             # Track token usage
             if self._token_tracker and response.usage:
-                provider_name = type(self.provider).__name__
+                provider_name = self._token_provider_label()
                 self._token_tracker.record(
                     prompt_tokens=response.usage.get("prompt_tokens", 0),
                     completion_tokens=response.usage.get("completion_tokens", 0),
                     provider=provider_name,
+                    cached_input_tokens=response.usage.get("cached_input_tokens", 0),
                 )
             else:
                 log_debug_prompt(self.session_id, messages, response)
@@ -860,6 +971,26 @@ class AgentLoop:
                 on_tool_call(tc.name, "error", error)
             return ToolExecutionOutcome((error, None))
 
+    async def _invoke_tool_handler(
+        self,
+        tool: Any,
+        arguments: dict[str, Any],
+    ) -> tuple[str, bool]:
+        """Run a tool handler and return (result, cancel_after_completion)."""
+        raw_result = tool.handler(**arguments)
+        if not inspect.isawaitable(raw_result):
+            return raw_result, False
+
+        if tool.interruptible:
+            return await raw_result, False
+
+        handler_task = asyncio.create_task(raw_result)
+        try:
+            return await asyncio.shield(handler_task), False
+        except asyncio.CancelledError:
+            result = await handler_task
+            return result, True
+
     async def _execute_tool_call(
         self,
         tc: ToolCall,
@@ -1051,11 +1182,16 @@ class AgentLoop:
         if self._profiler:
             self._profiler.start(profile_name)
         try:
-            raw_result = tool.handler(**tc.arguments)
+            raw_result, cancel_after_completion = await self._invoke_tool_handler(
+                tool, tc.arguments,
+            )
             result, terminate_final = _decode_tool_termination(raw_result)
             task_tools = {"create_task", "update_task", "add_task_dependency", "list_tasks"}
             if self._context_engine and tc.name not in task_tools:
-                result = self._context_engine.truncate_tool_result(result)
+                result = self._context_engine.truncate_tool_result(
+                    result,
+                    max_tokens=tool.output_budget_tokens,
+                )
             # Track tool usage and file changes in session stats
             if self._session_stats:
                 self._session_stats.record_tool_use(tc.name)
@@ -1074,6 +1210,7 @@ class AgentLoop:
             )
             if _after_ctx and _after_ctx.modified_result is not None:
                 result = _after_ctx.modified_result
+            self._record_tool_result_cache_entry(tc, result)
             self.session_store.update_tool_call(
                 tc_row_id, result=result, status="completed", duration_ms=duration_ms,
             )
@@ -1088,12 +1225,47 @@ class AgentLoop:
                 )
             if on_tool_call:
                 on_tool_call(tc.name, "completed", result)
+            self._fire_post_tool_use(
+                tc,
+                status="completed",
+                result=result,
+                duration_ms=duration_ms,
+            )
 
             # Also persist tool result as a message for session history
             self.session_store.add_message(
                 self.session_id, "tool", f"[{tc.name}] {result[:500]}"
             )
+            if cancel_after_completion:
+                raise asyncio.CancelledError
             return ToolExecutionOutcome((result, terminate_final))
+        except asyncio.CancelledError:
+            duration_ms = int((time.monotonic() - start) * 1000)
+            if self._profiler:
+                self._profiler.stop(profile_name, "tool", tool_name=tc.name, error=True)
+            if tool.interruptible:
+                result = "Tool call cancelled."
+                self.session_store.update_tool_call(
+                    tc_row_id, result=result, status="cancelled", duration_ms=duration_ms,
+                )
+                log_event(
+                    logger, logging.INFO, "tool_call_end",
+                    session_id=self.session_id, tool_name=tc.name,
+                    duration_ms=duration_ms, status="cancelled",
+                )
+                if self._event_recorder and self._current_episode_id:
+                    self._event_recorder.on_tool_result(
+                        self._current_episode_id, tc.name, result, "cancelled", duration_ms,
+                    )
+                if on_tool_call:
+                    on_tool_call(tc.name, "cancelled", result)
+                self._fire_post_tool_use(
+                    tc,
+                    status="cancelled",
+                    result=result,
+                    duration_ms=duration_ms,
+                )
+            raise
         except Exception as e:
             duration_ms = int((time.monotonic() - start) * 1000)
             if self._profiler:
@@ -1123,4 +1295,10 @@ class AgentLoop:
                 )
             if on_tool_call:
                 on_tool_call(tc.name, "error", error)
+            self._fire_post_tool_use(
+                tc,
+                status="error",
+                result=error,
+                duration_ms=duration_ms,
+            )
             return ToolExecutionOutcome((error, None))

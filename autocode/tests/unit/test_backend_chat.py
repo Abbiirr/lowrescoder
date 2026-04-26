@@ -7,6 +7,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from autocode.agent.completion import SessionStats
+from autocode.agent.cost_dashboard import CostDashboard
+from autocode.agent.token_tracker import TokenTracker
 from autocode.backend import chat as backend_chat
 
 
@@ -29,6 +32,7 @@ class FakeHost:
         self._task_store = None
         self._subagent_manager = None
         self._edit_count = 0
+        self._show_thinking = False
         self.notifications: list[tuple[str, dict[str, object]]] = []
         self.emit_request = AsyncMock(return_value={})
         self._emit_cost_update = MagicMock()
@@ -75,6 +79,25 @@ async def test_run_chat_turn_is_directly_testable_without_backend_server() -> No
     host.agent_loop.run.assert_awaited_once()
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("show_thinking", "expected"), [(False, False), (True, True)])
+async def test_show_thinking_propagates_to_agent_loop_reasoning(
+    show_thinking: bool,
+    expected: bool,
+) -> None:
+    host = FakeHost()
+    host._show_thinking = show_thinking
+
+    await backend_chat.run_chat_turn(
+        host,
+        message="hello",
+        session_id=None,
+        request_id=7,
+    )
+
+    assert host.agent_loop.run.await_args.kwargs["reasoning_enabled"] is expected
+
+
 def test_on_tool_call_emits_task_state_for_task_tools() -> None:
     host = FakeHost()
     task = MagicMock()
@@ -109,4 +132,74 @@ async def test_approval_callback_uses_session_auto_approve_before_transport_roun
     assert host.notifications[0] == (
         "on_tool_call",
         {"name": "run_command", "status": "pending", "result": "(auto-approved)"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_cost_warning_emitted_once_per_session() -> None:
+    host = FakeHost()
+    dashboard = CostDashboard()
+    tracker = TokenTracker(cost_dashboard=dashboard, cost_limit_usd=0.001)
+    stats = SessionStats()
+    stats.token_tracker = tracker
+    host._session_stats = stats
+
+    async def run_with_cost_record(_message: str, **_kwargs: object) -> None:
+        tracker.record(prompt_tokens=500, completion_tokens=0, provider="openrouter")
+
+    host.agent_loop.run = AsyncMock(side_effect=run_with_cost_record)
+
+    await backend_chat.run_chat_turn(
+        host,
+        message="first",
+        session_id=None,
+        request_id=10,
+    )
+    await backend_chat.run_chat_turn(
+        host,
+        message="second",
+        session_id=None,
+        request_id=11,
+    )
+
+    warnings = [
+        params["message"]
+        for method, params in host.notifications
+        if method == "on_warning"
+        and "Session cost limit reached" in str(params["message"])
+    ]
+    assert warnings == [
+        "Session cost limit reached: $0.0015 / $0.0010 threshold. Continuing; use /cost to view."
+    ]
+
+
+@pytest.mark.asyncio
+async def test_cost_warning_includes_total_and_threshold() -> None:
+    """Cost warnings include the observed total and configured threshold."""
+    host = FakeHost()
+    dashboard = CostDashboard()
+    tracker = TokenTracker(cost_dashboard=dashboard, cost_limit_usd=0.002)
+    stats = SessionStats()
+    stats.token_tracker = tracker
+    host._session_stats = stats
+
+    async def run_with_cost_record(_message: str, **_kwargs: object) -> None:
+        tracker.record(prompt_tokens=1_000, completion_tokens=0, provider="openrouter")
+
+    host.agent_loop.run = AsyncMock(side_effect=run_with_cost_record)
+
+    await backend_chat.run_chat_turn(
+        host,
+        message="first",
+        session_id=None,
+        request_id=12,
+    )
+
+    assert (
+        "Session cost limit reached: $0.0030 / $0.0020 threshold. Continuing; use /cost to view."
+        in [
+            params["message"]
+            for method, params in host.notifications
+            if method == "on_warning"
+        ]
     )

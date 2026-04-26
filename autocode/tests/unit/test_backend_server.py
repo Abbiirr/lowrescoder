@@ -66,7 +66,7 @@ class TestBackendServerInit:
         assert len(server.session_id) > 0
 
     def test_default_state(self, server: BackendServer) -> None:
-        assert server._show_thinking is False
+        assert server._show_thinking is True
         assert server._running is True
         assert server._edit_count == 0
         assert len(server._session_approved_tools) == 0
@@ -109,6 +109,61 @@ class TestBackendServerInit:
 
         if server._llm_scheduler is not None:
             await server._llm_scheduler.shutdown()
+
+    @pytest.mark.asyncio
+    async def test_backend_exposes_tool_result_cache_management_tools(
+        self,
+        server: BackendServer,
+    ) -> None:
+        """Backend-created loops should expose list/clear cache tools to the agent."""
+        mock_provider = AsyncMock()
+        mock_provider.generate_with_tools = AsyncMock()
+
+        with patch("autocode.backend.server.create_provider", return_value=mock_provider):
+            orchestrator = server._ensure_agent_loop()
+
+        assert orchestrator.agent_loop._tool_result_cache is server._tool_result_cache
+        assert server._tool_registry.get("list_tool_results") is not None
+        assert server._tool_registry.get("clear_tool_result") is not None
+
+        if server._llm_scheduler is not None:
+            await server._llm_scheduler.shutdown()
+
+    @pytest.mark.asyncio
+    async def test_teardown_persists_deterministic_session_consolidation(
+        self,
+        server: BackendServer,
+    ) -> None:
+        """Session teardown should persist deterministic consolidation memories."""
+        from autocode.agent.memory import MemoryStore
+
+        assistant_id = server.session_store.add_message(
+            server.session_id,
+            "assistant",
+            "Edited the cache implementation.",
+        )
+        server.session_store.add_tool_call(
+            session_id=server.session_id,
+            message_id=assistant_id,
+            tool_call_id="tc-edit",
+            tool_name="edit_file",
+            arguments={"path": "src/cache.py"},
+            status="completed",
+        )
+        memory_store = MemoryStore(
+            server.session_store.get_connection(),
+            str(server.project_root),
+        )
+        server._memory_store = memory_store
+        provider = AsyncMock()
+        provider.generate_with_tools = AsyncMock(return_value=MagicMock(content="[]"))
+        server._provider = provider
+
+        await server._teardown_agent_resources()
+
+        memories = memory_store.get_memories()
+        assert memories
+        assert any("src/cache.py" in memory["content"] for memory in memories)
 
 
 class TestWireProtocol:
@@ -579,6 +634,48 @@ class TestServerAppContext:
         ctx = _ServerAppContext(server)
         assert ctx.command_router is server.command_router
 
+    @pytest.mark.asyncio
+    async def test_cost_command_reads_live_session_stats(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        """Backend slash commands should see the same CostDashboard updated by chat."""
+        from types import SimpleNamespace
+
+        from autocode.agent.cost_dashboard import CostDashboard
+        from autocode.agent.token_tracker import TokenTracker
+        from autocode.app.commands import _handle_cost
+
+        server.config.llm.provider = "openrouter"
+        server.config.llm.model = "coding"
+        server.config.agent.cost_limit_usd = None
+
+        dashboard = CostDashboard()
+        dashboard.record(
+            "primary",
+            "session",
+            "external",
+            tokens_in=120,
+            cached_input_tokens=30,
+            tokens_out=40,
+            provider_model="openrouter / coding",
+        )
+        server._session_stats = SimpleNamespace(
+            token_tracker=TokenTracker(cost_dashboard=dashboard),
+        )
+        server.session_store.add_message(server.session_id, "user", "hello")
+
+        await _handle_cost(_ServerAppContext(server), "")
+
+        captured = capsys.readouterr()
+        msg = json.loads(captured.out.strip())
+        output = msg["params"]["text"]
+        assert "Session: $0.00 · 190 tokens · 1 turns" in output
+        assert "Input:  150 (30 cached, 20% hit) · $0.0004" in output
+        assert "Output: 40 · $0.0001" in output
+        assert "Provider: openrouter / coding" in output
+
     def test_approval_mode(self, server: BackendServer) -> None:
         ctx = _ServerAppContext(server)
         assert ctx.approval_mode == "suggest"
@@ -594,7 +691,7 @@ class TestServerAppContext:
 
     def test_show_thinking(self, server: BackendServer) -> None:
         ctx = _ServerAppContext(server)
-        assert ctx.show_thinking is False
+        assert ctx.show_thinking is True
 
     def test_show_thinking_setter(self, server: BackendServer) -> None:
         ctx = _ServerAppContext(server)
@@ -651,6 +748,70 @@ class TestCallbacks:
         assert msg["method"] == "on_tool_call"
         assert msg["params"]["name"] == "read_file"
         assert msg["params"]["status"] == "completed"
+
+    @pytest.mark.parametrize(
+        "tool_name",
+        ["search_text", "grep_content", "search_code", "semantic_search"],
+    )
+    def test_on_tool_call_emits_search_result_payload(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+        tool_name: str,
+    ) -> None:
+        server._on_tool_call(
+            tool_name,
+            "completed",
+            "src/autocode/agent/tools.py:1271: \"pattern\": {\"type\": \"string\"}",
+        )
+
+        captured = capsys.readouterr()
+        msg = json.loads(captured.out.strip())
+
+        assert msg["method"] == "on_tool_call"
+        payload = msg["params"]["result_payload"]
+        assert payload["kind"] == "search"
+        assert payload["query"] == tool_name
+        assert payload["hits"] == [
+            {
+                "path": "src/autocode/agent/tools.py",
+                "line": 1271,
+                "snippet": '"pattern": {"type": "string"}',
+            },
+        ]
+
+    @pytest.mark.parametrize(
+        "tool_name",
+        ["git_diff", "write_file", "edit_file", "apply_patch", "multi_edit"],
+    )
+    def test_on_tool_call_emits_diff_result_payload(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+        tool_name: str,
+    ) -> None:
+        server._on_tool_call(
+            tool_name,
+            "completed",
+            "diff --git a/src/autocode/layer1/parser.py b/src/autocode/layer1/parser.py\n"
+            "--- a/src/autocode/layer1/parser.py\n"
+            "+++ b/src/autocode/layer1/parser.py\n"
+            "@@ -41,6 +41,7 @@\n"
+            "-return []\n"
+            "+return parsed_symbols",
+        )
+
+        captured = capsys.readouterr()
+        msg = json.loads(captured.out.strip())
+
+        assert msg["method"] == "on_tool_call"
+        payload = msg["params"]["result_payload"]
+        assert payload["kind"] == "diff"
+        assert payload["source"] == tool_name
+        assert payload["files"][0]["path"] == "src/autocode/layer1/parser.py"
+        assert payload["files"][0]["added"] == 1
+        assert payload["files"][0]["removed"] == 1
+        assert "+return parsed_symbols" in payload["files"][0]["hunks"]
 
     def test_on_tool_call_tracks_edits(self, server: BackendServer) -> None:
         assert server._edit_count == 0
@@ -1223,12 +1384,12 @@ class TestSessionState:
             assert len(server._session_approved_tools) == 0
 
     def test_show_thinking_toggle(self, server: BackendServer) -> None:
-        assert server._show_thinking is False
-        ctx = _ServerAppContext(server)
-        ctx.show_thinking = True
         assert server._show_thinking is True
+        ctx = _ServerAppContext(server)
         ctx.show_thinking = False
         assert server._show_thinking is False
+        ctx.show_thinking = True
+        assert server._show_thinking is True
 
     @pytest.mark.asyncio
     async def test_session_new_resets_scheduler_and_manager(
@@ -1750,9 +1911,37 @@ class TestCostUpdateProducer:
         captured = capsys.readouterr()
         msg = json.loads(captured.out.strip())
         assert msg["method"] == "on_cost_update"
-        assert msg["params"]["cost"] == "0.0000"
+        assert msg["params"]["cost"] == "$0.0000"
         assert "tokens_in" in msg["params"]
         assert "tokens_out" in msg["params"]
+
+    @pytest.mark.asyncio
+    async def test_cost_update_uses_live_cost_dashboard(
+        self,
+        server: BackendServer,
+        capsys: CaptureFixture,
+    ) -> None:
+        from types import SimpleNamespace
+
+        from autocode.agent.cost_dashboard import CostDashboard
+        from autocode.agent.token_tracker import TokenTracker
+
+        tracker = TokenTracker(cost_dashboard=CostDashboard())
+        tracker.record(
+            prompt_tokens=100,
+            completion_tokens=50,
+            provider="openrouter / coding",
+            cached_input_tokens=20,
+        )
+        server._session_stats = SimpleNamespace(token_tracker=tracker)
+
+        server._emit_cost_update()
+
+        captured = capsys.readouterr()
+        msg = json.loads(captured.out.strip())
+        assert msg["params"]["cost"] == "$0.0004"
+        assert msg["params"]["tokens_in"] == 100
+        assert msg["params"]["tokens_out"] == 50
 
     @pytest.mark.asyncio
     async def test_cost_update_with_session_stats(

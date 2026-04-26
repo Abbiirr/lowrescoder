@@ -170,6 +170,11 @@ fn clear_transcript(state: &mut crate::state::model::AppState) {
     state.error_banner = None;
     state.current_tool = None;
     state.active_tools.clear();
+    state.grep_query = None;
+    state.grep_results.clear();
+    state.diff_source = None;
+    state.diff_files.clear();
+    state.review_findings.clear();
     state.followup_queue.clear();
     state.detail_surface = None;
     state.recovery_action_idx = 0;
@@ -194,6 +199,74 @@ fn clear_composer(state: &mut crate::state::model::AppState) {
     state.composer_lines.clear();
 }
 
+fn is_search_tool(name: &str) -> bool {
+    matches!(
+        name,
+        "search_text" | "grep_content" | "search_code" | "semantic_search"
+    )
+}
+
+fn is_diff_tool(name: &str) -> bool {
+    matches!(
+        name,
+        "git_diff" | "write_file" | "edit_file" | "apply_patch" | "multi_edit"
+    )
+}
+
+fn grep_hits_from_payload(
+    hits: Vec<crate::rpc::protocol::ToolSearchHit>,
+) -> Vec<crate::state::model::GrepHit> {
+    hits.into_iter()
+        .map(|hit| crate::state::model::GrepHit {
+            path: hit.path,
+            line: hit.line,
+            snippet: hit.snippet,
+        })
+        .collect()
+}
+
+fn diff_files_from_payload(
+    files: Vec<crate::rpc::protocol::ToolDiffFile>,
+) -> Vec<crate::state::model::DiffFileSummary> {
+    files
+        .into_iter()
+        .map(|file| crate::state::model::DiffFileSummary {
+            path: file.path,
+            added: file.added,
+            removed: file.removed,
+            hunks: file.hunks,
+        })
+        .collect()
+}
+
+fn review_findings_from_diff(
+    files: &[crate::state::model::DiffFileSummary],
+) -> Vec<crate::state::model::ReviewFinding> {
+    files
+        .iter()
+        .map(|file| crate::state::model::ReviewFinding {
+            severity: "review".into(),
+            path: file.path.clone(),
+            line: first_hunk_line(file),
+            message: format!(
+                "Review diff for {} (+{} -{})",
+                file.path, file.added, file.removed
+            ),
+        })
+        .collect()
+}
+
+fn first_hunk_line(file: &crate::state::model::DiffFileSummary) -> Option<u32> {
+    file.hunks.iter().find_map(|line| {
+        let rest = line.strip_prefix("@@ -")?;
+        let (_old, new_part) = rest.split_once(" +")?;
+        let (line_no, _suffix) = new_part
+            .split_once(',')
+            .or_else(|| new_part.split_once(' '))?;
+        line_no.parse::<u32>().ok()
+    })
+}
+
 fn reset_for_session_switch(
     state: &mut crate::state::model::AppState,
     session_id: String,
@@ -211,6 +284,11 @@ fn reset_for_session_switch(
     state.session_list = None;
     state.tasks.clear();
     state.subagents.clear();
+    state.grep_query = None;
+    state.grep_results.clear();
+    state.diff_source = None;
+    state.diff_files.clear();
+    state.review_findings.clear();
     state.status.session_id = Some(session_id);
     state.status.tokens_in = 0;
     state.status.tokens_out = 0;
@@ -597,8 +675,8 @@ fn run_recovery_action(
             (state, vec![Effect::Render])
         }
         2 | 3 => {
-            state.detail_surface = Some(DetailSurface::Restore);
-            (state, vec![Effect::Render])
+            let effects = handle_slash_command(&mut state, "/restore");
+            (state, effects)
         }
         4 => {
             let effects = handle_slash_command(&mut state, "/compact");
@@ -902,6 +980,11 @@ pub(crate) fn handle_slash_command(
             state.detail_surface = Some(DetailSurface::Multi);
             effects.push(Effect::Render);
         }
+        "/tasks" => {
+            state.scrollback.push_back("/tasks".into());
+            state.detail_surface = Some(DetailSurface::Tasks);
+            effects.push(Effect::Render);
+        }
         "/review" => {
             state.scrollback.push_back("/review".into());
             state.detail_surface = Some(DetailSurface::Review);
@@ -915,6 +998,24 @@ pub(crate) fn handle_slash_command(
         "/restore" => {
             state.scrollback.push_back("/restore".into());
             state.detail_surface = Some(DetailSurface::Restore);
+            let id = state.next_request_id;
+            state.next_request_id += 1;
+            let msg = crate::rpc::protocol::RPCMessage {
+                jsonrpc: "2.0".to_string(),
+                id: Some(id),
+                method: Some("checkpoint.list".to_string()),
+                params: Some(serde_json::json!({})),
+                result: None,
+                error: None,
+            };
+            state.pending_requests.insert(
+                id,
+                crate::state::model::PendingRequest {
+                    method: "checkpoint.list".to_string(),
+                    sent_at: std::time::Instant::now(),
+                },
+            );
+            effects.push(Effect::SendRpc(msg));
             effects.push(Effect::Render);
         }
         "/diff" => {
@@ -1063,7 +1164,9 @@ fn handle_tick(
     mut state: crate::state::model::AppState,
 ) -> (crate::state::model::AppState, Vec<Effect>) {
     // Spinner rotation
-    if state.stage == crate::state::model::Stage::Streaming {
+    let has_pending_chat = state.has_pending_chat_request();
+
+    if state.stage == crate::state::model::Stage::Streaming || has_pending_chat {
         state.spinner_frame = (state.spinner_frame + 1) % 4;
         if state.spinner_frame == 0 {
             state.spinner_verb_idx = (state.spinner_verb_idx + 1) % 194;
@@ -1109,6 +1212,7 @@ fn handle_tick(
     }
 
     if state.stage == crate::state::model::Stage::Streaming
+        || has_pending_chat
         || state.error_banner.is_some()
         || state.current_tool.is_some()
         || !state.active_tools.is_empty()
@@ -1257,6 +1361,7 @@ fn handle_notification(
                             sent_at: std::time::Instant::now(),
                         },
                     );
+                    state.stage = crate::state::model::Stage::Streaming;
                     effects.push(Effect::SendRpc(msg));
                 }
             }
@@ -1269,6 +1374,7 @@ fn handle_notification(
                     serde_json::from_value::<crate::rpc::protocol::ToolCallParams>(params.clone())
                 {
                     touch_oldest_pending_request_by_method(&mut state, "chat");
+                    let result_payload = tool.result_payload;
                     let tool_info = crate::state::model::ToolCallInfo {
                         name: tool.name,
                         status: tool.status,
@@ -1287,6 +1393,48 @@ fn handle_notification(
                         }
                     }
                     state.current_tool = Some(tool_info);
+                    if matches!(
+                        state
+                            .current_tool
+                            .as_ref()
+                            .map(|tool| tool.status.as_str())
+                            .unwrap_or_default(),
+                        "completed" | "success"
+                    ) {
+                        if let Some(payload) = result_payload {
+                            match payload {
+                                crate::rpc::protocol::ToolResultPayload::Search { query, hits }
+                                    if is_search_tool(
+                                        state
+                                            .current_tool
+                                            .as_ref()
+                                            .map(|tool| tool.name.as_str())
+                                            .unwrap_or_default(),
+                                    ) =>
+                                {
+                                    state.grep_query = Some(query);
+                                    state.grep_results = grep_hits_from_payload(hits);
+                                }
+                                crate::rpc::protocol::ToolResultPayload::Diff { source, files }
+                                    if is_diff_tool(
+                                        state
+                                            .current_tool
+                                            .as_ref()
+                                            .map(|tool| tool.name.as_str())
+                                            .unwrap_or_default(),
+                                    ) =>
+                                {
+                                    let files = diff_files_from_payload(files);
+                                    if !files.is_empty() {
+                                        state.diff_source = Some(source);
+                                        state.review_findings = review_findings_from_diff(&files);
+                                        state.diff_files = files;
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
                 }
             }
             (state, vec![Effect::Render])
@@ -1495,6 +1643,19 @@ fn handle_response(
                                 "normal"
                             }
                         ));
+                    }
+                }
+            }
+            "checkpoint.list" => {
+                if let Some(result) = &msg.result {
+                    if let Some(error) = result.get("error").and_then(|value| value.as_str()) {
+                        state.error_banner = Some(error.to_string());
+                    } else if let Ok(list_result) = serde_json::from_value::<
+                        crate::rpc::protocol::CheckpointListResult,
+                    >(result.clone())
+                    {
+                        state.checkpoints = list_result.checkpoints;
+                        state.detail_surface = Some(DetailSurface::Restore);
                     }
                 }
             }

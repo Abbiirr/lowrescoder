@@ -65,6 +65,7 @@ class AutoCodeApp(App[None]):
         self._agent_loop: AgentLoop | None = None
         self._session_stats: Any | None = None
         self._tool_registry: ToolRegistry | None = None
+        self._tool_result_cache: Any | None = None
         self._approval_manager: ApprovalManager | None = None
         self._generating = False
         self._show_thinking = True  # Show thinking tokens by default
@@ -142,7 +143,10 @@ class AutoCodeApp(App[None]):
 
         from autocode.agent.tool_result_cache import ToolResultCache
 
-        self._tool_result_cache = ToolResultCache()
+        cache_enabled = bool(
+            getattr(self.config.agent, "tool_result_cache_enabled", True)
+        )
+        self._tool_result_cache = ToolResultCache() if cache_enabled else None
         self._tool_registry = create_default_registry(
             project_root=str(self.project_root),
             tool_result_cache=self._tool_result_cache,
@@ -170,6 +174,8 @@ class AutoCodeApp(App[None]):
             context_length=self.config.llm.context_length,
             compaction_threshold=self.config.agent.compaction_threshold,
             layer2_config=self.config.layer2,
+            tool_result_cache=self._tool_result_cache,
+            cost_limit_usd=self.config.agent.cost_limit_usd,
         )
         if self._agent_mode != AgentMode.NORMAL:
             self._agent_loop.set_mode(self._agent_mode)

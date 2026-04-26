@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from autocode.agent.cost_dashboard import CostDashboard
 
 
@@ -85,3 +87,90 @@ def test_mixed_local_cloud() -> None:
     assert dash.local_tokens == 1000
     assert dash.cloud_tokens == 3000
     assert dash.total_cost > 0
+
+
+def test_check_limit_unset_never_fires() -> None:
+    """Unset cost limit never reports a threshold crossing."""
+    dash = CostDashboard()
+    dash.record("cloud", "t1", "external", tokens_in=1_000_000)
+
+    crossed, total_usd, threshold_usd = dash.check_limit(None)
+
+    assert crossed is False
+    assert total_usd == 3.0
+    assert threshold_usd == 0.0
+
+
+def test_check_limit_fires_once_until_threshold_raised_and_re_crossed() -> None:
+    """Cost limit warning fires once, then fires again only for a raised limit."""
+    dash = CostDashboard()
+    dash.record("cloud", "t1", "external", tokens_in=2_000_000)
+
+    assert dash.check_limit(5.0) == (True, 6.0, 5.0)
+    assert dash.check_limit(5.0) == (False, 6.0, 5.0)
+    assert dash.check_limit(10.0) == (False, 6.0, 10.0)
+
+    dash.record("cloud", "t1", "external", tokens_in=2_000_000)
+
+    assert dash.check_limit(10.0) == (True, 12.0, 10.0)
+    assert dash.check_limit(10.0) == (False, 12.0, 10.0)
+
+
+def test_check_limit_returns_current_total_and_threshold_before_crossing() -> None:
+    """Limit check exposes current total and threshold for warning formatting."""
+    dash = CostDashboard()
+    dash.record("cloud", "t1", "external", tokens_in=1_000_000)
+
+    crossed, total_usd, threshold_usd = dash.check_limit(5.0)
+
+    assert crossed is False
+    assert total_usd == 3.0
+    assert threshold_usd == 5.0
+
+
+def test_record_with_cached_input_tokens() -> None:
+    """Cached prompt tokens are tracked separately and priced at cache-read rate."""
+    dash = CostDashboard()
+
+    dash.record(
+        "cloud",
+        "t1",
+        "external",
+        tokens_in=1_000,
+        cached_input_tokens=9_000,
+        tokens_out=500,
+    )
+
+    assert dash.total_uncached_input_tokens == 1_000
+    assert dash.total_cached_input_tokens == 9_000
+    assert dash.total_input_tokens == 10_000
+    assert dash.total_output_tokens == 500
+    assert dash.total_tokens == 10_500
+    assert dash.cache_hit_ratio == 0.9
+    assert dash.input_cost == pytest.approx(0.0057)
+    assert dash.output_cost == pytest.approx(0.0015)
+    assert dash.total_cost == pytest.approx(0.0072)
+
+
+def test_estimated_cache_savings_calculation() -> None:
+    """Cache savings report the delta from full-price prompt tokens."""
+    dash = CostDashboard()
+
+    dash.record(
+        "cloud",
+        "t1",
+        "external",
+        tokens_in=1_000,
+        cached_input_tokens=9_000,
+    )
+
+    assert dash.estimated_cache_savings_usd == pytest.approx(0.0243)
+
+
+def test_cache_hit_ratio_zero_when_no_input() -> None:
+    """Cache hit ratio is stable when no input tokens were recorded."""
+    dash = CostDashboard()
+
+    dash.record("cloud", "t1", "external", tokens_out=500)
+
+    assert dash.cache_hit_ratio == 0.0

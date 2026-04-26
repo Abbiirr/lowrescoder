@@ -16,6 +16,7 @@ class TokenUsage:
 
     prompt_tokens: int = 0
     completion_tokens: int = 0
+    cached_input_tokens: int = 0
 
     @property
     def total_tokens(self) -> int:
@@ -30,36 +31,54 @@ class TokenTracker:
     _by_provider: dict[str, TokenUsage] = field(default_factory=dict)
     _call_count: int = 0
 
-    _cost_dashboard: Any = field(default=None, repr=False)
+    cost_dashboard: Any = field(default=None, repr=False)
+    cost_limit_usd: float | None = field(default=None, repr=False)
     _agent_id: str = field(default="default", repr=False)
     _task_id: str = field(default="", repr=False)
+    _last_cost_limit_warning: tuple[float, float] | None = field(
+        default=None,
+        init=False,
+        repr=False,
+    )
 
     def record(
         self,
         prompt_tokens: int,
         completion_tokens: int,
         provider: str = "default",
+        cached_input_tokens: int = 0,
     ) -> None:
         """Record token usage from an API call."""
+        cached_input_tokens = min(max(0, int(cached_input_tokens)), max(0, int(prompt_tokens)))
         self._totals.prompt_tokens += prompt_tokens
         self._totals.completion_tokens += completion_tokens
+        self._totals.cached_input_tokens += cached_input_tokens
         self._call_count += 1
 
         if provider not in self._by_provider:
             self._by_provider[provider] = TokenUsage()
         self._by_provider[provider].prompt_tokens += prompt_tokens
         self._by_provider[provider].completion_tokens += completion_tokens
+        self._by_provider[provider].cached_input_tokens += cached_input_tokens
 
         # Forward to CostDashboard if wired
-        if self._cost_dashboard is not None:
+        if self.cost_dashboard is not None:
             layer = self._provider_to_layer(provider)
-            self._cost_dashboard.record(
+            uncached_prompt_tokens = max(0, prompt_tokens - cached_input_tokens)
+            self.cost_dashboard.record(
                 agent_id=self._agent_id,
                 task_id=self._task_id or "session",
                 layer=layer,
-                tokens_in=prompt_tokens,
+                tokens_in=uncached_prompt_tokens,
+                cached_input_tokens=cached_input_tokens,
                 tokens_out=completion_tokens,
+                provider_model=provider,
             )
+            crossed, total_usd, threshold_usd = self.cost_dashboard.check_limit(
+                self.cost_limit_usd
+            )
+            if crossed:
+                self._last_cost_limit_warning = (total_usd, threshold_usd)
 
     @staticmethod
     def _provider_to_layer(provider: str) -> str:
@@ -90,6 +109,12 @@ class TokenTracker:
         """List of providers with recorded usage."""
         return list(self._by_provider.keys())
 
+    def pop_cost_limit_warning(self) -> tuple[float, float] | None:
+        """Return and clear the latest cost limit warning, if any."""
+        warning = self._last_cost_limit_warning
+        self._last_cost_limit_warning = None
+        return warning
+
     def summary(self) -> str:
         """Human-readable summary of token usage."""
         parts = [
@@ -110,3 +135,4 @@ class TokenTracker:
         self._totals = TokenUsage()
         self._by_provider.clear()
         self._call_count = 0
+        self._last_cost_limit_warning = None

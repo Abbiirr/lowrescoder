@@ -102,7 +102,8 @@ Frontend -> backend requests currently include:
 - `checkpoint.list`
 - `checkpoint.restore`
 - `plan.export`
-- `plan.sync`
+- `plan.sync` (syncs markdown plan checkboxes to task status while skipping
+  stale backward lifecycle transitions)
 - `steer`
 - `session.fork`
 - `shutdown`
@@ -112,10 +113,17 @@ Backend -> frontend notifications currently drive:
 - status/footer state via `on_status`
 - retry/degraded-upstream visibility via `on_warning`
 - streamed output via `on_token`
-- thinking output via `on_thinking`
+- thinking output via `on_thinking`; `/thinking on|off` gates provider
+  reasoning requests, and provider `<think>` tags are parsed with a streaming
+  state machine so split tag chunks do not leak into visible output
 - turn completion via `on_done`
-- tool activity via `on_tool_call`
-- task/subagent side-panel data via `on_task_state`
+- tool activity via `on_tool_call`; interruptible tools report `cancelled`
+  when a user cancel interrupts them, while non-interruptible in-flight tools
+  are allowed to persist completion before cancellation propagates
+- task/subagent side-panel data via `on_task_state`; `update_task` supports
+  the visible `pending -> in_progress -> completed` lifecycle, records status
+  history, and rejects backward status transitions through the generic update
+  path
 - cost/token counters via `on_cost_update`
 - visible failures via `on_error`
 - request liveness via `on_chat_ack`
@@ -215,14 +223,32 @@ The backend currently owns:
 - persistent message and tool-call storage
 - model/provider/config state
 - approval policy and tool approval decisions
+- hard-block safety policy for dangerous shell commands plus dangerous write
+  paths/content before write handlers execute
 - ask-user request generation
 - task and subagent orchestration
 - memory store and checkpoint store
+- checkpoint save/restore preserves bounded recent message history plus
+  assistant tool-call rows when a checkpoint is captured with a session store
+- deterministic persistence of consolidated session learnings into durable
+  project memory when `SessionConsolidator.run()` is supplied a `MemoryStore`
+- per-loop tool-result cache management, including agent-visible
+  `list_tool_results` and `clear_tool_result` primitives for pruning stale
+  large tool outputs from context
+- adaptive tool-result truncation that preserves high-signal code/error/list
+  structure and honors each tool's declared output budget
 - plan mode state and plan artifact export/sync
-- chat routing across Layer 1, Layer 2, Layer 3, and Layer 4
+- chat routing across Layer 1, Layer 2, opt-in optional-extra Layer 3,
+  and Layer 4
+- Layer 3 is an opt-in local constrained-generation path: the router can select
+  it when `layer3.enabled`, the `layer3` optional extra, and a simple-edit
+  classification align, but core installs leave it dormant and fall back to
+  Layer 4
 - provider creation and actual model calls
 - tool registry creation and tool execution
 - project memory loading and prompt assembly
+- iteration-zero workspace bootstrap, including active working-set files and
+  bounded cached Layer 1 symbol previews when those files were already parsed
 - event recording, session logging, and training-data capture
 
 The backend is the system of record for durable session/task/subagent state. The frontend only renders projections of that state.
@@ -316,6 +342,8 @@ This contract currently defines:
 - startup status expectations
 - tool approval and ask-user request/response round-trips
 - task/subagent projection shape
+- agent-owned cache-management tools for large tool outputs (`list_tool_results`
+  and `clear_tool_result`) are backend/runtime behavior, not frontend-local state
 
 The contract does not yet fully define:
 

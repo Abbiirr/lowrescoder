@@ -127,10 +127,22 @@ CORE_TOOL_NAMES = frozenset(
         "web_fetch",
         # Transactional multi-file patch (deep-research-report Phase B Item 1)
         "apply_patch",
+        # Tool-result cache management. These must be core-visible because
+        # the model needs them exactly when context pressure is already high.
+        "list_tool_results",
+        "clear_tool_result",
         # Planning tools must be visible on the default schema path so
         # the AUTO-mode planning nudge can actually succeed.
         "todo_write",
         "todo_read",
+    }
+)
+
+CACHE_MANAGEMENT_TOOL_NAMES = frozenset(
+    {
+        "list_tool_results",
+        "clear_tool_result",
+        "clear_tool_results",
     }
 )
 
@@ -755,30 +767,15 @@ def _safe_shell_env() -> dict[str, str]:
     return env
 
 
-def _handle_run_command(command: str, timeout: int = 30) -> str:
-    """Run a shell command via OS sandbox when available.
-
-    Uses sandbox.run_sandboxed() for process isolation (bwrap on Linux,
-    Seatbelt on macOS). Falls back to restricted env if no sandbox —
-    unless ``shell.fail_if_unavailable`` is set in AutoCodeConfig, in
-    which case the command refuses to run with a non-zero exit code.
-    Shell safety: GIT_EDITOR blocked, 30s default timeout.
-
-    Hardening (deep-research-report gap analysis):
-    Commands containing ``bash -lc``/``sh -c``/``eval``/``$(...)``/backticks
-    are treated as **risk escalation** — still executed (per the existing
-    approval gate) but prefixed with a ``[shell escalation]`` marker in the
-    output so the caller can audit compound commands that hide multiple
-    actions inside one string.
-    """
+def _prepare_run_command(
+    command: str,
+    timeout: int,
+) -> tuple[Any | None, list[str], str | None]:
     from autocode.agent.git_tools import detect_shell_escalation
-    from autocode.agent.sandbox import SandboxConfig, SandboxPolicy, run_sandboxed
+    from autocode.agent.sandbox import SandboxConfig, SandboxPolicy
 
     escalation = detect_shell_escalation(command)
 
-    # Consult the project config for the fail-closed flag and
-    # pattern-based permission rules. Load lazily so tests that mock
-    # the tool handler path don't pay the config import cost.
     fail_closed = False
     try:
         from autocode.config import load_config
@@ -807,7 +804,7 @@ def _handle_run_command(command: str, timeout: int = 30) -> str:
             if rules:
                 decision = evaluate("Bash", command, rules)
                 if decision.effect == "deny":
-                    return (
+                    return None, escalation, (
                         f"[permission denied] Command refused: {decision.reason}\n"
                         f"Command: {command}"
                     )
@@ -821,8 +818,10 @@ def _handle_run_command(command: str, timeout: int = 30) -> str:
         allow_network=True,  # commands may need network
         fail_if_unavailable=fail_closed,
     )
-    sandbox_result = run_sandboxed(command, config)
+    return config, escalation, None
 
+
+def _format_run_command_result(sandbox_result: Any, escalation: list[str]) -> str:
     output = sandbox_result.stdout
     if sandbox_result.returncode != 0:
         output += f"\n[exit code {sandbox_result.returncode}]"
@@ -832,6 +831,45 @@ def _handle_run_command(command: str, timeout: int = 30) -> str:
     if escalation:
         result = f"[shell escalation: {', '.join(escalation)}]\n{result}"
     return result
+
+
+def _handle_run_command(command: str, timeout: int = 30) -> str:
+    """Run a shell command via OS sandbox when available.
+
+    Uses sandbox.run_sandboxed() for process isolation (bwrap on Linux,
+    Seatbelt on macOS). Falls back to restricted env if no sandbox —
+    unless ``shell.fail_if_unavailable`` is set in AutoCodeConfig, in
+    which case the command refuses to run with a non-zero exit code.
+    Shell safety: GIT_EDITOR blocked, 30s default timeout.
+
+    Hardening (deep-research-report gap analysis):
+    Commands containing ``bash -lc``/``sh -c``/``eval``/``$(...)``/backticks
+    are treated as **risk escalation** — still executed (per the existing
+    approval gate) but prefixed with a ``[shell escalation]`` marker in the
+    output so the caller can audit compound commands that hide multiple
+    actions inside one string.
+    """
+    from autocode.agent.sandbox import run_sandboxed
+
+    config, escalation, denied = _prepare_run_command(command, timeout)
+    if denied:
+        return denied
+    assert config is not None
+    return _format_run_command_result(run_sandboxed(command, config), escalation)
+
+
+async def _handle_run_command_async(command: str, timeout: int = 30) -> str:
+    """Run a shell command via the async sandbox path so cancellation can kill it."""
+    from autocode.agent.sandbox import run_sandboxed_async
+
+    config, escalation, denied = _prepare_run_command(command, timeout)
+    if denied:
+        return denied
+    assert config is not None
+    return _format_run_command_result(
+        await run_sandboxed_async(command, config),
+        escalation,
+    )
 
 
 def _handle_ask_user_placeholder(**kwargs: Any) -> str:
@@ -879,6 +917,41 @@ def _handle_clear_tool_results(
         return f"Cleared {n} entries older than {older_than_seconds}s. {cache.summary()}"
     else:
         return f"Unknown mode '{mode}'. Valid: summary, all, by_tool, by_ids, older_than."
+
+
+def _handle_list_tool_results(cache: ToolResultCache) -> str:
+    """List current live tool-result cache entries."""
+    return cache.summary()
+
+
+def _handle_clear_tool_result(
+    cache: ToolResultCache,
+    id: str | None = None,
+    ids: list[str] | None = None,
+    tool: str | None = None,
+    older_than_seconds: float | None = None,
+    all: bool = False,
+) -> str:
+    """Clear tool-result cache entries by id, tool name, age, or all entries."""
+    clear_ids = list(ids or [])
+    if id:
+        clear_ids.append(id)
+
+    if all:
+        cleared = cache.clear(all=True)
+    elif clear_ids:
+        cleared = cache.clear(ids=clear_ids)
+    elif tool:
+        cleared = cache.clear(tool=tool)
+    elif older_than_seconds is not None:
+        cleared = cache.clear(older_than_seconds=older_than_seconds)
+    else:
+        return (
+            "Error: clear_tool_result requires one selector: id, ids, tool, "
+            "older_than_seconds, or all=true."
+        )
+
+    return f"Cleared {cleared} tool-result entries. {cache.summary()}"
 
 
 def _handle_tool_search(query: str, tool_registry: ToolRegistry) -> str:
@@ -1081,7 +1154,7 @@ def create_default_registry(
     Args:
         project_root: Project root directory.
         tool_result_cache: Optional ToolResultCache instance. When provided,
-            registers the ``clear_tool_results`` meta-tool so the agent can
+            registers cache management tools so the agent can list and
             selectively clear cached tool results to manage context.
     """
     registry = ToolRegistry()
@@ -1234,9 +1307,10 @@ def create_default_registry(
                 },
                 "required": ["command"],
             },
-            handler=_handle_run_command,
+            handler=_handle_run_command_async,
             requires_approval=True,
             executes_shell=True,
+            interruptible=True,
         )
     )
 
@@ -1683,10 +1757,67 @@ def create_default_registry(
         )
     )
 
-    # --- Meta tool: clear_tool_results (Phase B integration loose end 1) ---
+    # --- Meta tools: tool-result cache management -------------------------
 
     if tool_result_cache is not None:
         _cache = tool_result_cache  # capture for closure
+
+        registry.register(
+            ToolDefinition(
+                name="list_tool_results",
+                description=(
+                    "List live cached tool-call results with IDs, tool names, "
+                    "sizes, and argument previews. Use before clear_tool_result "
+                    "when stale read/search outputs are consuming context."
+                ),
+                parameters={"type": "object", "properties": {}, "required": []},
+                handler=lambda **_kwargs: _handle_list_tool_results(cache=_cache),
+                requires_approval=False,
+            )
+        )
+
+        registry.register(
+            ToolDefinition(
+                name="clear_tool_result",
+                description=(
+                    "Clear cached tool-call results by id, ids, tool name, age, "
+                    "or all=true. Use list_tool_results first when choosing "
+                    "specific IDs. This only prunes cached tool output; it does "
+                    "not modify files or durable memory."
+                ),
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": "string",
+                            "description": "Single cache entry ID to clear, e.g. tr0001",
+                        },
+                        "ids": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Cache entry IDs to clear",
+                        },
+                        "tool": {
+                            "type": "string",
+                            "description": "Clear all live entries for this tool name",
+                        },
+                        "older_than_seconds": {
+                            "type": "number",
+                            "description": "Clear entries older than this many seconds",
+                        },
+                        "all": {
+                            "type": "boolean",
+                            "description": "Clear every live cache entry",
+                        },
+                    },
+                    "required": [],
+                },
+                handler=lambda **kwargs: _handle_clear_tool_result(
+                    cache=_cache, **kwargs
+                ),
+                requires_approval=False,
+            )
+        )
 
         registry.register(
             ToolDefinition(

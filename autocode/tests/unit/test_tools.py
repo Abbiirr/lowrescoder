@@ -327,6 +327,9 @@ class TestDeferredToolLoading:
             "web_fetch",
             # Transactional multi-file patch (deep-research-report Phase B)
             "apply_patch",
+            # Tool-result cache management
+            "list_tool_results",
+            "clear_tool_result",
             # Planning tools must be visible on the default schema path
             "todo_write",
             "todo_read",

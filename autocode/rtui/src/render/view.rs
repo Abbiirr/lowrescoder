@@ -179,7 +179,7 @@ fn render_content(f: &mut Frame, state: &AppState, area: Rect) {
 
 fn render_base_content(f: &mut Frame, state: &AppState, area: Rect) {
     if let Some(surface) = &state.detail_surface {
-        render_detail_surface(f, surface, area);
+        render_detail_surface(f, state, surface, area);
         return;
     }
 
@@ -1045,87 +1045,130 @@ fn render_picker(f: &mut Frame, picker: &crate::state::model::PickerState, area:
     f.render_widget(paragraph, overlay);
 }
 
-fn render_detail_surface(f: &mut Frame, surface: &DetailSurface, area: Rect) {
-    if matches!(surface, DetailSurface::Review) {
-        render_review_surface(f, area);
-        return;
+fn render_detail_surface(f: &mut Frame, state: &AppState, surface: &DetailSurface, area: Rect) {
+    match surface {
+        DetailSurface::Multi => render_multi_surface(f, state, area),
+        DetailSurface::Tasks => render_tasks_surface(f, state, area),
+        DetailSurface::Plan => render_plan_surface(f, state, area),
+        DetailSurface::Review => render_review_surface(f, state, area),
+        DetailSurface::CommandCenter => render_command_center_surface(f, state, area),
+        DetailSurface::Restore => render_restore_surface(f, state, area),
+        DetailSurface::Diff => render_diff_surface(f, state, area),
+        DetailSurface::Grep => render_grep_surface(f, state, area),
+        DetailSurface::Escalation => render_escalation_surface(f, state, area),
     }
-    if matches!(surface, DetailSurface::Diff) {
-        render_diff_surface(f, area);
-        return;
-    }
-    if matches!(surface, DetailSurface::Grep) {
-        render_grep_surface(f, area);
-        return;
-    }
-    if matches!(surface, DetailSurface::Escalation) {
-        render_escalation_surface(f, area);
-        return;
-    }
-    if matches!(surface, DetailSurface::CommandCenter) {
-        render_command_center_surface(f, area);
-        return;
+}
+
+fn render_multi_surface(f: &mut Frame, state: &AppState, area: Rect) {
+    let active_tasks = state
+        .tasks
+        .iter()
+        .filter(|task| matches!(task.status.as_str(), "active" | "in_progress" | "running"))
+        .count();
+    let blocked_tasks = state
+        .tasks
+        .iter()
+        .filter(|task| matches!(task.status.as_str(), "blocked" | "waiting" | "pending"))
+        .count();
+    let active_tool_count = state.active_tools.len() + usize::from(state.current_tool.is_some());
+
+    let mut lines = vec![
+        Line::from(Span::styled(
+            "Concurrent work",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(format!(
+            "{} task{} · {} active · {} waiting · {} tool{} · {} followup{} · {} subagent{}",
+            state.tasks.len(),
+            if state.tasks.len() == 1 { "" } else { "s" },
+            active_tasks,
+            blocked_tasks,
+            active_tool_count,
+            if active_tool_count == 1 { "" } else { "s" },
+            state.followup_queue.len(),
+            if state.followup_queue.len() == 1 {
+                ""
+            } else {
+                "s"
+            },
+            state.subagents.len(),
+            if state.subagents.len() == 1 { "" } else { "s" },
+        )),
+        Line::from(""),
+    ];
+
+    if state.tasks.is_empty()
+        && state.active_tools.is_empty()
+        && state.current_tool.is_none()
+        && state.followup_queue.is_empty()
+        && state.subagents.is_empty()
+    {
+        lines.push(Line::from(
+            "No concurrent backend work is active for this session.",
+        ));
+        lines.push(Line::from(
+            "Tasks, tool calls, followups, and subagents appear here as they arrive.",
+        ));
+    } else {
+        if !state.tasks.is_empty() {
+            lines.push(Line::from("TASKS"));
+            for task in state.tasks.iter().take(5) {
+                lines.push(Line::from(format!(
+                    "{} {}",
+                    plan_status_marker(&task.status),
+                    task.title
+                )));
+                lines.push(Line::from(format!("  {} · {}", task.id, task.status)));
+            }
+        }
+
+        if state.current_tool.is_some() || !state.active_tools.is_empty() {
+            lines.push(Line::from(""));
+            lines.push(Line::from("TOOLS"));
+            if let Some(tool) = &state.current_tool {
+                lines.push(Line::from(format!("{} · {}", tool.name, tool.status)));
+            }
+            for tool in state.active_tools.iter().take(5) {
+                lines.push(Line::from(format!("{} · {}", tool.name, tool.status)));
+                if let Some(args) = &tool.args {
+                    lines.push(Line::from(format!("  args: {}", truncate_chars(args, 72))));
+                }
+                if let Some(result) = &tool.result {
+                    lines.push(Line::from(format!(
+                        "  result: {}",
+                        truncate_chars(result, 72)
+                    )));
+                }
+            }
+        }
+
+        if !state.followup_queue.is_empty() {
+            lines.push(Line::from(""));
+            lines.push(Line::from("FOLLOWUPS"));
+            for followup in state.followup_queue.iter().take(5) {
+                lines.push(Line::from(format!("• {}", followup)));
+            }
+        }
+
+        if !state.subagents.is_empty() {
+            lines.push(Line::from(""));
+            lines.push(Line::from("SUBAGENTS"));
+            for subagent in state.subagents.iter().take(5) {
+                lines.push(Line::from(format!(
+                    "{} · {} · {}",
+                    subagent.id, subagent.role, subagent.status
+                )));
+            }
+        }
     }
 
-    let lines: Vec<Line> = match surface {
-        DetailSurface::Multi => vec![
-            Line::from("● 2 jobs running"),
-            Line::from("Edit ( src/utils/parser.ts )"),
-            Line::from("Note: discovered a potential circular import recursion issue. Adding a visited-set guard."),
-            Line::from("Edit ( src/utils/resolver.ts )"),
-            Line::from("Run ( bun test --watch ./tests/parser.test.ts )"),
-            Line::from("√ 14 passing"),
-            Line::from("● resolving deeply nested imports… (5s)"),
-            Line::from(""),
-            Line::from("[prioritized] update the ImportNode type definitions after the parser guard lands"),
-            Line::from("[blocked: tests] run the full suite once watch mode stabilizes"),
-            Line::from("[next] inspect docs/parser.md for import behavior notes"),
-        ],
-        DetailSurface::Plan => vec![
-            Line::from(Span::styled(
-                "Planning",
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
-            )),
-            Line::from("Seven steps queued. Step 4 is active; step 5 is blocked on the watch-mode shard finishing."),
-            Line::from("Remaining steps will run after review."),
-            Line::from(""),
-            Line::from("√ Inspect parser flow & call sites"),
-            Line::from("√ Extend ASTNode with optional imports"),
-            Line::from("√ Patch extractImports guard"),
-            Line::from("● Run targeted parser tests"),
-            Line::from("◐ Run full matrix suite"),
-            Line::from("○ Update docs/parser.md"),
-            Line::from("○ Write changelog entry after review"),
-            Line::from("○ Review & approve"),
-            Line::from(""),
-            Line::from("VALIDATION"),
-            Line::from("targeted tests passed · full suite not run"),
-            Line::from("plan stays editable · Tab to open step 4 detail"),
-        ],
-        DetailSurface::Review => unreachable!("review handled by render_review_surface"),
-        DetailSurface::CommandCenter => unreachable!("command center handled by render_command_center_surface"),
-        DetailSurface::Restore => vec![
-            Line::from("↻ 5 checkpoints · feat/parser-fix"),
-            Line::from(""),
-            Line::from("● step 3 · extractImports guard"),
-            Line::from("14:08 · 2 files · parser.ts + types.ts · 42 tests passed after"),
-            Line::from("↵ restore"),
-            Line::from("○ step 2 · ImportNode.visited added"),
-            Line::from("14:05 · 1 file · src/types.ts"),
-            Line::from("○ step 1 · inspect parser flow"),
-            Line::from("14:02 · read-only · no writes"),
-            Line::from("○ session start · parser import patch"),
-            Line::from("○ manual checkpoint · before resolver refactor"),
-            Line::from(""),
-            Line::from("↑↓ move · ↵ restore · D diff from here · Esc cancel"),
-            Line::from("safe · local only · reversible"),
-        ],
-        DetailSurface::Diff => unreachable!("diff handled by render_diff_surface"),
-        DetailSurface::Grep => unreachable!("grep handled by render_grep_surface"),
-        DetailSurface::Escalation => {
-            unreachable!("escalation handled by render_escalation_surface")
-        }
-    };
+    lines.extend([
+        Line::from(""),
+        Line::from("VALIDATION"),
+        Line::from("backend concurrency projection live · no static mockup jobs"),
+    ]);
 
     let paragraph = Paragraph::new(lines)
         .style(Style::default().bg(APP_BG).fg(MUTED))
@@ -1133,34 +1176,291 @@ fn render_detail_surface(f: &mut Frame, surface: &DetailSurface, area: Rect) {
     f.render_widget(paragraph, area);
 }
 
-fn render_review_surface(f: &mut Frame, area: Rect) {
-    let (left, right) = split_detail_columns(area, 24);
-
-    let left_lines = vec![
-        Line::from("All edits staged. Waiting for review."),
-        Line::from(""),
-        Line::from("src/utils/parser.ts (lines 38–54)"),
-        Line::from("+2 −1 · 1 hunk"),
-        Line::from("38 function extractImports(nodes: ImportNode[] | undefined) {"),
-        Line::from("39 if (!nodes) return []"),
-        Line::from("40 const seen = new Set ()"),
-        Line::from("45 + const r = resolve(n)"),
-        Line::from("46 + if (r) out.push(r)"),
-        Line::from(""),
-        Line::from("tests/parser.test.ts · +4 assertions · details"),
-    ];
-    let right_lines = vec![
+fn render_tasks_surface(f: &mut Frame, state: &AppState, area: Rect) {
+    let completed = state
+        .tasks
+        .iter()
+        .filter(|task| matches!(task.status.as_str(), "completed" | "done"))
+        .count();
+    let active = state
+        .tasks
+        .iter()
+        .filter(|task| matches!(task.status.as_str(), "in_progress" | "running" | "active"))
+        .count();
+    let blocked = state
+        .tasks
+        .iter()
+        .filter(|task| matches!(task.status.as_str(), "blocked" | "waiting"))
+        .count();
+    let mut lines = vec![
         Line::from(Span::styled(
-            "PLAN",
+            "Tasks",
             Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         )),
-        Line::from("√ Inspect parser flow"),
-        Line::from("√ Update AST types"),
-        Line::from("√ Patch imports"),
-        Line::from("√ Targeted tests"),
-        Line::from("● Review diff"),
+        Line::from(format!(
+            "{} task{} · {} complete · {} active · {} blocked · {} subagent{}",
+            state.tasks.len(),
+            if state.tasks.len() == 1 { "" } else { "s" },
+            completed,
+            active,
+            blocked,
+            state.subagents.len(),
+            if state.subagents.len() == 1 { "" } else { "s" }
+        )),
+        Line::from(""),
+    ];
+
+    if state.tasks.is_empty() {
+        lines.push(Line::from("No backend tasks reported for this session."));
+        lines.push(Line::from(
+            "Task rows appear here after on_task_state events.",
+        ));
+    } else {
+        for task in state.tasks.iter().take(10) {
+            lines.push(Line::from(format!(
+                "{} {}",
+                plan_status_marker(&task.status),
+                task.title
+            )));
+            lines.push(Line::from(format!("  {} · {}", task.id, task.status)));
+        }
+        if state.tasks.len() > 10 {
+            lines.push(Line::from(format!(
+                "… {} more task{}",
+                state.tasks.len() - 10,
+                if state.tasks.len() - 10 == 1 { "" } else { "s" }
+            )));
+        }
+    }
+
+    if !state.subagents.is_empty() {
+        lines.push(Line::from(""));
+        lines.push(Line::from("SUBAGENTS"));
+        for subagent in state.subagents.iter().take(5) {
+            lines.push(Line::from(format!(
+                "{} · {} · {}",
+                subagent.id, subagent.role, subagent.status
+            )));
+        }
+    }
+
+    lines.extend([
+        Line::from(""),
+        Line::from("VALIDATION"),
+        Line::from("backend task projection live · updates via on_task_state"),
+        Line::from("Esc returns to transcript · task panel stays lightweight"),
+    ]);
+
+    let paragraph = Paragraph::new(lines)
+        .style(Style::default().bg(APP_BG).fg(MUTED))
+        .wrap(Wrap { trim: false });
+    f.render_widget(paragraph, area);
+}
+
+fn render_plan_surface(f: &mut Frame, state: &AppState, area: Rect) {
+    let completed = state
+        .tasks
+        .iter()
+        .filter(|task| matches!(task.status.as_str(), "completed" | "done"))
+        .count();
+    let active = state
+        .tasks
+        .iter()
+        .filter(|task| matches!(task.status.as_str(), "in_progress" | "running" | "active"))
+        .count();
+    let pending = state.tasks.len().saturating_sub(completed + active);
+    let mode_label = if state.plan_mode {
+        "planning mode"
+    } else {
+        "normal mode"
+    };
+    let mut lines = vec![
+        Line::from(Span::styled(
+            "Planning",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(format!(
+            "{} step{} · {} complete · {} active · {} pending · {}",
+            state.tasks.len(),
+            if state.tasks.len() == 1 { "" } else { "s" },
+            completed,
+            active,
+            pending,
+            mode_label
+        )),
+        Line::from(""),
+    ];
+
+    if state.tasks.is_empty() {
+        lines.push(Line::from(
+            "No task plan is available for this session yet.",
+        ));
+        lines.push(Line::from(
+            "Use task tools or planning mode to create live plan steps.",
+        ));
+    } else {
+        for task in state.tasks.iter().take(8) {
+            lines.push(Line::from(format!(
+                "{} {}",
+                plan_status_marker(&task.status),
+                task.title
+            )));
+            lines.push(Line::from(format!("  {} · {}", task.id, task.status)));
+        }
+        if state.tasks.len() > 8 {
+            lines.push(Line::from(format!(
+                "… {} more step{}",
+                state.tasks.len() - 8,
+                if state.tasks.len() - 8 == 1 { "" } else { "s" }
+            )));
+        }
+    }
+
+    lines.extend([
+        Line::from(""),
+        Line::from("VALIDATION"),
+        Line::from("backend task projection live · /plan toggles planning mode"),
+        Line::from("plan stays editable · Tab to open step detail"),
+    ]);
+
+    let paragraph = Paragraph::new(lines)
+        .style(Style::default().bg(APP_BG).fg(MUTED))
+        .wrap(Wrap { trim: false });
+    f.render_widget(paragraph, area);
+}
+
+fn plan_status_marker(status: &str) -> &'static str {
+    match status {
+        "completed" | "done" => "√",
+        "in_progress" | "running" | "active" => "●",
+        "blocked" | "waiting" => "◐",
+        _ => "○",
+    }
+}
+
+fn render_restore_surface(f: &mut Frame, state: &AppState, area: Rect) {
+    let checkpoint_count = state.checkpoints.len();
+    let session_label = state
+        .checkpoints
+        .first()
+        .map(|checkpoint| checkpoint.session_id.as_str())
+        .or(state.status.session_id.as_deref())
+        .unwrap_or("current session");
+    let mut lines = vec![
+        Line::from(format!(
+            "↻ {} checkpoint{} · {}",
+            checkpoint_count,
+            if checkpoint_count == 1 { "" } else { "s" },
+            session_label
+        )),
+        Line::from(""),
+    ];
+
+    if state.checkpoints.is_empty() {
+        lines.push(Line::from("No checkpoints available for this session."));
+        lines.push(Line::from("Create a checkpoint before restoring."));
+    } else {
+        for (idx, checkpoint) in state.checkpoints.iter().take(5).enumerate() {
+            let marker = if idx == 0 { "●" } else { "○" };
+            lines.push(Line::from(format!(
+                "{} {} · {}",
+                marker, checkpoint.label, checkpoint.id
+            )));
+            lines.push(Line::from(format!(
+                "{} · session {}",
+                checkpoint.created_at, checkpoint.session_id
+            )));
+            let active_files = format_checkpoint_files(&checkpoint.active_files);
+            if !active_files.is_empty() {
+                lines.push(Line::from(format!("files: {}", active_files)));
+            }
+            if idx == 0 {
+                lines.push(Line::from("↵ restore"));
+            }
+        }
+    }
+
+    lines.extend([
+        Line::from(""),
+        Line::from("↑↓ move · ↵ restore · D diff from here · Esc cancel"),
+        Line::from("safe · local only · reversible"),
+    ]);
+
+    let paragraph = Paragraph::new(lines)
+        .style(Style::default().bg(APP_BG).fg(MUTED))
+        .wrap(Wrap { trim: false });
+    f.render_widget(paragraph, area);
+}
+
+fn format_checkpoint_files(active_files: &str) -> String {
+    serde_json::from_str::<Vec<String>>(active_files)
+        .map(|files| files.join(", "))
+        .unwrap_or_else(|_| active_files.trim().to_string())
+}
+
+fn render_review_surface(f: &mut Frame, state: &AppState, area: Rect) {
+    let (left, right) = split_detail_columns(area, 24);
+
+    let mut left_lines = vec![
+        Line::from(Span::styled(
+            "Review evidence",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(format!(
+            "{} finding{} · {} changed file{}",
+            state.review_findings.len(),
+            if state.review_findings.len() == 1 {
+                ""
+            } else {
+                "s"
+            },
+            state.diff_files.len(),
+            if state.diff_files.len() == 1 { "" } else { "s" }
+        )),
+        Line::from(""),
+    ];
+
+    if state.review_findings.is_empty() {
+        left_lines.push(Line::from("No review evidence available for this session."));
+        left_lines.push(Line::from(
+            "Run an edit, patch, or git_diff tool to populate this surface.",
+        ));
+    } else {
+        for finding in state.review_findings.iter().take(6) {
+            let target = finding
+                .line
+                .map(|line| format!("{}:{}", finding.path, line))
+                .unwrap_or_else(|| finding.path.clone());
+            left_lines.push(Line::from(format!("{} · {}", finding.severity, target)));
+            left_lines.push(Line::from(finding.message.clone()));
+            left_lines.push(Line::from(""));
+        }
+        left_lines.push(Line::from("backend review projection live"));
+    }
+
+    let mut right_lines = vec![Line::from(Span::styled(
+        "CHANGES",
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD),
+    ))];
+    if state.diff_files.is_empty() {
+        right_lines.push(Line::from("0 files"));
+    } else {
+        for file in state.diff_files.iter().take(5) {
+            right_lines.push(Line::from(format!(
+                "{} +{} -{}",
+                file.path, file.added, file.removed
+            )));
+        }
+    }
+    right_lines.extend([
         Line::from(""),
         Line::from(Span::styled(
             "VALIDATION",
@@ -1168,25 +1468,17 @@ fn render_review_surface(f: &mut Frame, area: Rect) {
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         )),
-        Line::from("targeted tests"),
-        Line::from("passed"),
-        Line::from("full suite not run"),
+        Line::from("backend review projection live"),
         Line::from(""),
         Line::from(Span::styled(
-            "REVIEW NEEDED",
+            "DECISION",
             Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         )),
-        Line::from("files 2"),
-        Line::from("blast parser+tests"),
-        Line::from("network off"),
-        Line::from("reversible yes"),
-        Line::from("protected no"),
-        Line::from("severity high"),
         Line::from("[a]pprove"),
         Line::from("[r]eject"),
-    ];
+    ]);
 
     let left_paragraph = Paragraph::new(left_lines)
         .style(Style::default().bg(APP_BG).fg(MUTED))
@@ -1199,54 +1491,72 @@ fn render_review_surface(f: &mut Frame, area: Rect) {
     f.render_widget(right_paragraph, right);
 }
 
-fn render_diff_surface(f: &mut Frame, area: Rect) {
+fn render_diff_surface(f: &mut Frame, state: &AppState, area: Rect) {
     let (left, right) = split_detail_columns(area, 24);
 
-    let left_lines = vec![
-        Line::from("files changed · 3"),
-        Line::from("src/utils/parser.ts +2 −1"),
-        Line::from("src/utils/resolver.ts +6 −2"),
-        Line::from("src/types.ts +1 −0"),
+    let source = state
+        .diff_source
+        .as_deref()
+        .unwrap_or("no diff tool completed");
+    let mut left_lines = vec![
+        Line::from(Span::styled(
+            "Diff evidence",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(format!(
+            "{} file{} · {}",
+            state.diff_files.len(),
+            if state.diff_files.len() == 1 { "" } else { "s" },
+            source
+        )),
         Line::from(""),
-        Line::from("src/utils/resolver.ts (lines 108–128)"),
-        Line::from("+6 −2 · 1 hunk"),
-        Line::from("114 + if (!n || seen.has(n)) return null"),
-        Line::from("116 + const kind = n.kind ?? 'module'"),
-        Line::from("117 + if (kind === 'dyn') return null"),
-        Line::from("118 + const target = lookup(n.name)"),
     ];
+    if state.diff_files.is_empty() {
+        left_lines.push(Line::from("No diff evidence available for this session."));
+        left_lines.push(Line::from(
+            "Run git_diff, edit_file, write_file, or apply_patch to populate this surface.",
+        ));
+    } else {
+        for file in state.diff_files.iter().take(5) {
+            left_lines.push(Line::from(format!(
+                "{} +{} -{}",
+                file.path, file.added, file.removed
+            )));
+            for hunk in file.hunks.iter().take(4) {
+                left_lines.push(Line::from(hunk.clone()));
+            }
+            left_lines.push(Line::from(""));
+        }
+        left_lines.push(Line::from("backend diff projection live"));
+    }
+
     let right_lines = vec![
         Line::from(Span::styled(
-            "RAW COMMAND",
+            "SCOPE",
             Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         )),
-        Line::from("Edit(src/utils/"),
-        Line::from("resolver.ts)"),
-        Line::from("plan step 5"),
+        Line::from(source.to_string()),
         Line::from(""),
         Line::from(Span::styled(
-            "APPROVAL PATTERN",
+            "APPROVAL",
             Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         )),
-        Line::from("● This hunk"),
-        Line::from("○ This file"),
-        Line::from("○ Whole patch"),
+        Line::from("a approve"),
+        Line::from("r reject"),
         Line::from(""),
         Line::from(Span::styled(
-            "RISK",
+            "STATUS",
             Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         )),
-        Line::from("parser only"),
-        Line::from("network off"),
-        Line::from("reversible yes"),
-        Line::from("[a]pprove"),
-        Line::from("[r]eject"),
+        Line::from("backend diff projection live"),
     ];
 
     let left_paragraph = Paragraph::new(left_lines)
@@ -1260,24 +1570,62 @@ fn render_diff_surface(f: &mut Frame, area: Rect) {
     f.render_widget(right_paragraph, right);
 }
 
-fn render_grep_surface(f: &mut Frame, area: Rect) {
+fn render_grep_surface(f: &mut Frame, state: &AppState, area: Rect) {
     let (left, right) = split_detail_columns(area, 26);
 
-    let left_lines = vec![
-        Line::from("Search \"extractImports|ASTNode\\.kind\" src · 14 hits across 5 files"),
+    let query = state.grep_query.as_deref().unwrap_or("no search executed");
+    let mut left_lines = vec![
+        Line::from(Span::styled(
+            "Search results",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(format!(
+            "{} hit{} · {}",
+            state.grep_results.len(),
+            if state.grep_results.len() == 1 {
+                ""
+            } else {
+                "s"
+            },
+            query
+        )),
         Line::from(""),
-        Line::from("src/utils/parser.ts · 4 hits"),
-        Line::from("12 import { extractImports , ASTNode } from '../types'"),
-        Line::from("71 const nodes = ast.imports ? extractImports (ast.imports) : []"),
-        Line::from(""),
-        Line::from("src/utils/resolver.ts · 5 hits"),
-        Line::from("116 const kind = n.kind ?? 'module'"),
-        Line::from("117 if ( kind === 'dyn') return null"),
-        Line::from(""),
-        Line::from("src/types.ts · 3 hits"),
-        Line::from("19 export function extractImports(nodes?: ImportNode[])"),
-        Line::from("27 return nodes.filter(Boolean)"),
     ];
+
+    if state.grep_results.is_empty() {
+        left_lines.push(Line::from("No search results available for this session."));
+        left_lines.push(Line::from(
+            "Run search_text, grep_content, or search_code to populate this surface.",
+        ));
+    } else {
+        left_lines.push(Line::from("backend search projection live"));
+        left_lines.push(Line::from(""));
+        for hit in state.grep_results.iter().take(10) {
+            left_lines.push(Line::from(format!("{}:{}", hit.path, hit.line)));
+            left_lines.push(Line::from(hit.snippet.clone()));
+            left_lines.push(Line::from(format!("attach @{}", hit.path)));
+            left_lines.push(Line::from(""));
+        }
+        if state.grep_results.len() > 10 {
+            left_lines.push(Line::from(format!(
+                "… {} more hit{}",
+                state.grep_results.len() - 10,
+                if state.grep_results.len() - 10 == 1 {
+                    ""
+                } else {
+                    "s"
+                }
+            )));
+        }
+    }
+
+    let first_attachment = state
+        .grep_results
+        .first()
+        .map(|hit| format!("@{}", hit.path))
+        .unwrap_or_else(|| "@attach search hit".into());
     let right_lines = vec![
         Line::from(Span::styled(
             "ATTACH",
@@ -1285,9 +1633,9 @@ fn render_grep_surface(f: &mut Frame, area: Rect) {
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         )),
-        Line::from("@src/types.ts"),
-        Line::from("#extractImports"),
-        Line::from("3 attached"),
+        Line::from(first_attachment),
+        Line::from("#selected-search-hit"),
+        Line::from(format!("{} attached", state.grep_results.len().min(3))),
         Line::from(""),
         Line::from(Span::styled(
             "QUERY",
@@ -1295,9 +1643,9 @@ fn render_grep_surface(f: &mut Frame, area: Rect) {
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         )),
-        Line::from("scope src"),
-        Line::from("regex on"),
-        Line::from("case smart"),
+        Line::from(query.to_string()),
+        Line::from("backend search projection live"),
+        Line::from("case source-owned"),
         Line::from(""),
         Line::from(Span::styled(
             "ACTIONS",
@@ -1322,23 +1670,36 @@ fn render_grep_surface(f: &mut Frame, area: Rect) {
     f.render_widget(right_paragraph, right);
 }
 
-fn render_escalation_surface(f: &mut Frame, area: Rect) {
+fn render_escalation_surface(f: &mut Frame, state: &AppState, area: Rect) {
     let (left, right) = split_detail_columns(area, 26);
 
-    let left_lines = vec![
-        Line::from("⚑ Permission escalation · protected path touched"),
-        Line::from("Auto-accept was on, but this edit would modify .github/workflows/ci.yml"),
-        Line::from(
-            "which is in .autocode/protect . Mode bumped to [review-needed] for this hunk only.",
-        ),
+    let mut left_lines = vec![
+        Line::from(Span::styled(
+            "Permission escalation",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("approval-gated action · backend approval projection live"),
         Line::from(""),
-        Line::from("path .github/workflows/ci.yml matched rule .autocode/protect → \".github/**\""),
-        Line::from("edit origin auto-planning · propagating bun version bump"),
-        Line::from("blast radius CI for all branches · reversible yes · local only until push"),
-        Line::from(""),
-        Line::from("pending hunk: update bun cache key and install version to 1.2.0"),
-        Line::from("paired diff available before approval"),
     ];
+    if let Some(approval) = &state.approval {
+        left_lines.extend([
+            Line::from(format!("tool {}", approval.tool)),
+            Line::from(format!("request #{}", approval.rpc_id.get())),
+            Line::from("args"),
+            Line::from(approval.args.clone()),
+            Line::from(""),
+            Line::from("backend approval projection live"),
+        ]);
+    } else {
+        left_lines.extend([
+            Line::from("No escalation is pending for this session."),
+            Line::from("A backend tool approval request will populate this surface."),
+            Line::from("backend approval projection live"),
+        ]);
+    }
+
     let right_lines = vec![
         Line::from(Span::styled(
             "DECISION",
@@ -1349,19 +1710,17 @@ fn render_escalation_surface(f: &mut Frame, area: Rect) {
         Line::from("● Approve this edit only"),
         Line::from("○ Approve for this session"),
         Line::from("○ Open diff in focus mode"),
-        Line::from("○ Remove rule"),
         Line::from("○ Reject"),
         Line::from(""),
         Line::from(Span::styled(
-            "RISK",
+            "POLICY",
             Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         )),
-        Line::from("ci global"),
-        Line::from("network off"),
-        Line::from("reversible yes"),
-        Line::from("protected yes"),
+        Line::from("approval required"),
+        Line::from("local decision"),
+        Line::from("backend approval projection live"),
         Line::from("[a]pprove"),
         Line::from("[r]eject"),
     ];
@@ -1377,33 +1736,65 @@ fn render_escalation_surface(f: &mut Frame, area: Rect) {
     f.render_widget(right_paragraph, right);
 }
 
-fn render_command_center_surface(f: &mut Frame, area: Rect) {
+fn render_command_center_surface(f: &mut Frame, state: &AppState, area: Rect) {
     let (left, right) = split_detail_columns(area, 26);
 
-    let left_lines = vec![
-        Line::from("Delegate →( doc-writer subagent )"),
-        Line::from("Delegate →( lint-scout subagent )"),
-        Line::from("Delegate →( test-runner subagent )"),
-        Line::from("Planning"),
-        Line::from("Main thread will handle import extraction while subagents clear lint/docs."),
-        Line::from("Waiting on test-runner for matrix test completion."),
-        Line::from("Search ( \"extractImports\" src )"),
-        Line::from("Read ( src/utils/parser.ts )"),
-        Line::from("Edit ( src/types.ts )"),
-        Line::from("Run ( bun run typecheck )"),
-        Line::from(""),
-        Line::from("queue pressure moderate · 2 followups waiting"),
-    ];
-    let right_lines = vec![
-        Line::from(Span::styled(
-            "SUBAGENTS",
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD),
+    let running_count = state
+        .subagents
+        .iter()
+        .filter(|subagent| {
+            matches!(
+                subagent.status.as_str(),
+                "active" | "in_progress" | "pending" | "running" | "streaming"
+            )
+        })
+        .count();
+    let completed_count = state
+        .subagents
+        .iter()
+        .filter(|subagent| matches!(subagent.status.as_str(), "completed" | "done" | "success"))
+        .count();
+
+    let mut left_lines = vec![
+        Line::from(format!("{} subagents", state.subagents.len())),
+        Line::from(format!(
+            "queue pressure {} · {} followups waiting",
+            queue_pressure_label(state.subagents.len(), state.followup_queue.len()),
+            state.followup_queue.len()
         )),
-        Line::from("doc-writer done"),
-        Line::from("lint-scout active"),
-        Line::from("test-runner waiting"),
+        Line::from(format!(
+            "active {} · completed {}",
+            running_count, completed_count
+        )),
+        Line::from(""),
+    ];
+    if state.subagents.is_empty() {
+        left_lines.push(Line::from(
+            "No live subagents. Delegate from the main thread to populate this surface.",
+        ));
+    } else {
+        for subagent in &state.subagents {
+            left_lines.push(Line::from(format!(
+                "Delegate →( {} {} )",
+                subagent.role, subagent.id
+            )));
+        }
+    }
+
+    let mut right_lines = vec![Line::from(Span::styled(
+        "SUBAGENTS",
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD),
+    ))];
+    if state.subagents.is_empty() {
+        right_lines.push(Line::from("none"));
+    } else {
+        for subagent in &state.subagents {
+            right_lines.push(Line::from(format!("{} {}", subagent.role, subagent.status)));
+        }
+    }
+    right_lines.extend([
         Line::from(""),
         Line::from(Span::styled(
             "RISK",
@@ -1423,8 +1814,8 @@ fn render_command_center_surface(f: &mut Frame, area: Rect) {
                 .add_modifier(Modifier::BOLD),
         )),
         Line::from("matrix tests ● running"),
-        Line::from("2 followups"),
-    ];
+        Line::from(format!("{} followups", state.followup_queue.len())),
+    ]);
 
     let left_paragraph = Paragraph::new(left_lines)
         .style(Style::default().bg(APP_BG).fg(MUTED))
@@ -1435,6 +1826,14 @@ fn render_command_center_surface(f: &mut Frame, area: Rect) {
         .style(Style::default().bg(APP_BG).fg(MUTED))
         .wrap(Wrap { trim: false });
     f.render_widget(right_paragraph, right);
+}
+
+fn queue_pressure_label(subagent_count: usize, followup_count: usize) -> &'static str {
+    match subagent_count + followup_count {
+        0 | 1 => "low",
+        2 | 3 => "moderate",
+        _ => "high",
+    }
 }
 
 fn render_composer(f: &mut Frame, state: &AppState, area: Rect) {
@@ -1594,6 +1993,7 @@ fn overlay_block(title: &'static str) -> Block<'static> {
 fn detail_surface_helper(surface: &DetailSurface) -> &'static str {
     match surface {
         DetailSurface::Multi => "Queue pressure is visible; keep the composer focused on the next highest-value action.",
+        DetailSurface::Tasks => "Task projection is live; inspect backend-owned tasks and subagents before deciding the next action.",
         DetailSurface::Plan => "Plan persisted and stays editable while validation is still running.",
         DetailSurface::Review => "Evidence is staged for approval; accept or reject before resuming auto mode.",
         DetailSurface::CommandCenter => "Subagents are visible here; use the main thread to coordinate queue pressure and validation.",
@@ -1612,6 +2012,7 @@ fn stage_badge(state: &AppState) -> String {
     if let Some(surface) = &state.detail_surface {
         return match surface {
             DetailSurface::Multi => "● multi".to_string(),
+            DetailSurface::Tasks => "● tasks".to_string(),
             DetailSurface::Plan => "● planning".to_string(),
             DetailSurface::Review => "● review".to_string(),
             DetailSurface::CommandCenter => "● command".to_string(),
@@ -1624,6 +2025,13 @@ fn stage_badge(state: &AppState) -> String {
 
     if state.error_banner.is_some() || state.stage == Stage::Shutdown {
         return "● halted".to_string();
+    }
+
+    if state.has_pending_chat_request() {
+        return format!(
+            "{} working",
+            FRAMES[state.spinner_frame as usize % FRAMES.len()]
+        );
     }
 
     match state.stage {
@@ -1649,7 +2057,7 @@ fn stage_badge_color(state: &AppState) -> Color {
         Color::Yellow
     } else if state.error_banner.is_some() || state.stage == Stage::Shutdown {
         Color::Red
-    } else if state.stage == Stage::Streaming {
+    } else if state.stage == Stage::Streaming || state.has_pending_chat_request() {
         Color::Yellow
     } else {
         Color::Green
@@ -1661,6 +2069,7 @@ fn detail_surface_footer(surface: &DetailSurface) -> &'static str {
         DetailSurface::Multi => {
             "Ctrl+Enter send · Esc back · Ctrl+R history · Ctrl+Shift+P palette · Tab focus · / @ #"
         }
+        DetailSurface::Tasks => "Esc back · Ctrl+R history · Ctrl+Shift+P palette · / commands",
         DetailSurface::Plan => {
             "Ctrl+Enter send · Esc back · Ctrl+R history · Ctrl+Shift+P palette · Tab focus · / @ #"
         }
@@ -1685,12 +2094,15 @@ fn detail_surface_footer(surface: &DetailSurface) -> &'static str {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Instant;
+
     use ratatui::{backend::TestBackend, layout::Rect, Terminal};
 
     use super::render;
     use crate::state::model::{
-        AppState, AskUserSource, DetailSurface, InboundId, PaletteEntry, PaletteMode, PaletteState,
-        PickerKind, PickerState, Stage,
+        AppState, ApprovalRequest, AskUserSource, DetailSurface, DiffFileSummary, InboundId,
+        PaletteEntry, PaletteMode, PaletteState, PendingRequest, PickerKind, PickerState,
+        ReviewFinding, Stage, ToolCallInfo,
     };
     use crate::ui::textbuf::TextBuf;
 
@@ -2149,16 +2561,11 @@ mod tests {
         let lines = render_lines(&state, 120, 30);
         let split_line = lines
             .iter()
-            .find(|line| {
-                line.contains("All edits staged. Waiting for review.") && line.contains("PLAN")
-            })
+            .find(|line| line.contains("Review evidence") && line.contains("CHANGES"))
             .expect("missing split review line");
 
         assert!(
-            split_line.find("PLAN").unwrap()
-                > split_line
-                    .find("All edits staged. Waiting for review.")
-                    .unwrap(),
+            split_line.find("CHANGES").unwrap() > split_line.find("Review evidence").unwrap(),
             "expected right-hand review sidebar: {split_line:?}"
         );
     }
@@ -2171,13 +2578,68 @@ mod tests {
         let lines = render_lines(&state, 120, 30);
         let split_line = lines
             .iter()
-            .find(|line| line.contains("files changed") && line.contains("RAW COMMAND"))
+            .find(|line| line.contains("Diff evidence") && line.contains("SCOPE"))
             .expect("missing split diff line");
 
         assert!(
-            split_line.find("RAW COMMAND").unwrap() > split_line.find("files changed").unwrap(),
+            split_line.find("SCOPE").unwrap() > split_line.find("Diff evidence").unwrap(),
             "expected right-hand diff sidebar: {split_line:?}"
         );
+    }
+
+    #[test]
+    fn review_surface_renders_live_review_findings() {
+        let mut state = AppState::new((160, 50), false);
+        state.detail_surface = Some(DetailSurface::Review);
+        state.review_findings = vec![ReviewFinding {
+            severity: "high".into(),
+            path: "src/autocode/backend/chat.py".into(),
+            line: Some(103),
+            message: "Tool callback now projects reviewable evidence".into(),
+        }];
+        state.diff_files = vec![DiffFileSummary {
+            path: "src/autocode/backend/chat.py".into(),
+            added: 6,
+            removed: 2,
+            hunks: vec!["@@ -103,6 +103,8 @@".into(), "+ emit review state".into()],
+        }];
+
+        let rendered = render_to_string(&state, 160, 50);
+
+        assert!(rendered.contains("Review evidence"));
+        assert!(rendered.contains("high"));
+        assert!(rendered.contains("src/autocode/backend/chat.py:103"));
+        assert!(rendered.contains("Tool callback now projects reviewable evidence"));
+        assert!(rendered.contains("backend review projection live"));
+        assert!(!rendered.contains("src/utils/parser.ts"));
+        assert!(!rendered.contains("All edits staged. Waiting for review."));
+    }
+
+    #[test]
+    fn diff_surface_renders_live_diff_files() {
+        let mut state = AppState::new((160, 50), false);
+        state.detail_surface = Some(DetailSurface::Diff);
+        state.diff_source = Some("git_diff".into());
+        state.diff_files = vec![DiffFileSummary {
+            path: "src/autocode/layer1/parser.py".into(),
+            added: 2,
+            removed: 1,
+            hunks: vec![
+                "@@ -41,6 +41,7 @@".into(),
+                "-return []".into(),
+                "+return parsed_symbols".into(),
+            ],
+        }];
+
+        let rendered = render_to_string(&state, 160, 50);
+
+        assert!(rendered.contains("Diff evidence"));
+        assert!(rendered.contains("src/autocode/layer1/parser.py +2 -1"));
+        assert!(rendered.contains("@@ -41,6 +41,7 @@"));
+        assert!(rendered.contains("+return parsed_symbols"));
+        assert!(rendered.contains("backend diff projection live"));
+        assert!(!rendered.contains("src/utils/resolver.ts"));
+        assert!(!rendered.contains("APPROVAL PATTERN"));
     }
 
     #[test]
@@ -2216,20 +2678,118 @@ mod tests {
     }
 
     #[test]
+    fn escalation_surface_renders_live_approval_request() {
+        let mut state = AppState::new((160, 50), false);
+        state.detail_surface = Some(DetailSurface::Escalation);
+        state.approval = Some(ApprovalRequest {
+            rpc_id: InboundId::new(77),
+            tool: "write_file".into(),
+            args: r#"{"path":".env","reason":"protected secret path"}"#.into(),
+        });
+
+        let rendered = render_to_string(&state, 160, 50);
+
+        assert!(rendered.contains("Permission escalation"));
+        assert!(rendered.contains("write_file"));
+        assert!(rendered.contains(".env"));
+        assert!(rendered.contains("protected secret path"));
+        assert!(rendered.contains("backend approval projection live"));
+        assert!(rendered.contains("Approve this edit only"));
+        assert!(!rendered.contains(".github/workflows/ci.yml"));
+        assert!(!rendered.contains("bun cache key"));
+    }
+
+    #[test]
     fn command_center_surface_uses_horizontal_split_layout() {
         let mut state = AppState::new((120, 30), false);
         state.detail_surface = Some(DetailSurface::CommandCenter);
+        state.subagents = vec![crate::rpc::protocol::SubagentEntry {
+            id: "agent-a".into(),
+            role: "explorer".into(),
+            status: "running".into(),
+        }];
 
         let lines = render_lines(&state, 120, 30);
         let split_line = lines
             .iter()
-            .find(|line| line.contains("Delegate") && line.contains("SUBAGENTS"))
+            .find(|line| line.contains("1 subagents") && line.contains("SUBAGENTS"))
             .expect("missing split command-center line");
 
         assert!(
-            split_line.find("SUBAGENTS").unwrap() > split_line.find("Delegate").unwrap(),
+            split_line.find("SUBAGENTS").unwrap() > split_line.find("1 subagents").unwrap(),
             "expected right-hand command-center sidebar: {split_line:?}"
         );
+    }
+
+    #[test]
+    fn command_center_surface_renders_live_subagent_state() {
+        let mut state = AppState::new((160, 50), false);
+        state.detail_surface = Some(DetailSurface::CommandCenter);
+        state.subagents = vec![
+            crate::rpc::protocol::SubagentEntry {
+                id: "agent-a".into(),
+                role: "explorer".into(),
+                status: "running".into(),
+            },
+            crate::rpc::protocol::SubagentEntry {
+                id: "agent-b".into(),
+                role: "reviewer".into(),
+                status: "completed".into(),
+            },
+        ];
+
+        let rendered = render_to_string(&state, 160, 50);
+
+        assert!(rendered.contains("explorer running"));
+        assert!(rendered.contains("reviewer completed"));
+        assert!(rendered.contains("2 subagents"));
+        assert!(!rendered.contains("doc-writer done"));
+        assert!(!rendered.contains("test-runner waiting"));
+    }
+
+    #[test]
+    fn multi_surface_renders_live_concurrent_work_state() {
+        let mut state = AppState::new((160, 50), false);
+        state.detail_surface = Some(DetailSurface::Multi);
+        state.tasks = vec![
+            crate::rpc::protocol::TaskEntry {
+                id: "task-build".into(),
+                title: "Build release artifact".into(),
+                status: "in_progress".into(),
+            },
+            crate::rpc::protocol::TaskEntry {
+                id: "task-docs".into(),
+                title: "Update verification notes".into(),
+                status: "pending".into(),
+            },
+        ];
+        state.active_tools = vec![ToolCallInfo {
+            name: "cargo test".into(),
+            status: "running".into(),
+            args: Some("autocode/rtui".into()),
+            result: None,
+        }];
+        state
+            .followup_queue
+            .push_back("rerun smoke after renderer update".into());
+        state.subagents = vec![crate::rpc::protocol::SubagentEntry {
+            id: "agent-review".into(),
+            role: "reviewer".into(),
+            status: "waiting".into(),
+        }];
+
+        let rendered = render_to_string(&state, 160, 50);
+
+        assert!(rendered.contains("Concurrent work"));
+        assert!(rendered.contains("Build release artifact"));
+        assert!(rendered.contains("Update verification notes"));
+        assert!(rendered.contains("cargo test"));
+        assert!(rendered.contains("rerun smoke after renderer update"));
+        assert!(rendered.contains("agent-review · reviewer · waiting"));
+        assert!(rendered.contains("backend concurrency projection live"));
+        assert!(!rendered.contains("src/utils/parser.ts"));
+        assert!(!rendered.contains("src/utils/resolver.ts"));
+        assert!(!rendered.contains("bun test --watch"));
     }
 
     #[test]
@@ -2430,6 +2990,28 @@ mod tests {
     }
 
     #[test]
+    fn pending_chat_status_renders_working_marker_even_if_stage_is_idle() {
+        let mut state = AppState::new((120, 30), false);
+        state.stage = crate::state::model::Stage::Idle;
+        state.status.model = "tools".into();
+        state.status.provider = "openrouter".into();
+        state.status.mode = "suggest".into();
+        state.pending_requests.insert(
+            42,
+            PendingRequest {
+                method: "chat".into(),
+                sent_at: Instant::now(),
+            },
+        );
+
+        let lines = render_lines(&state, 120, 30);
+        let status_line = line_containing(&lines, "working");
+
+        assert!(status_line.contains("working"));
+        assert!(!status_line.contains("ready"));
+    }
+
+    #[test]
     fn crowded_streaming_status_keeps_working_marker_visible() {
         let mut state = AppState::new((120, 30), false);
         state.stage = crate::state::model::Stage::Streaming;
@@ -2548,9 +3130,79 @@ mod tests {
         let rendered = render_to_string(&state, 160, 50);
 
         assert!(rendered.contains("Planning"));
-        assert!(rendered.contains("Seven steps queued"));
-        assert!(rendered.contains("Run targeted parser tests"));
+        assert!(rendered.contains("0 steps"));
+        assert!(rendered.contains("No task plan is available"));
         assert!(rendered.contains("VALIDATION"));
+        assert!(!rendered.contains("extractImports guard"));
+    }
+
+    #[test]
+    fn plan_surface_renders_live_task_plan_state() {
+        let mut state = AppState::new((160, 50), false);
+        state.detail_surface = Some(DetailSurface::Plan);
+        state.plan_mode = true;
+        state.tasks = vec![
+            crate::rpc::protocol::TaskEntry {
+                id: "task-done".into(),
+                title: "Inspect live plan source".into(),
+                status: "completed".into(),
+            },
+            crate::rpc::protocol::TaskEntry {
+                id: "task-active".into(),
+                title: "Bind nested plan rows".into(),
+                status: "in_progress".into(),
+            },
+            crate::rpc::protocol::TaskEntry {
+                id: "task-pending".into(),
+                title: "Run full validation".into(),
+                status: "pending".into(),
+            },
+        ];
+
+        let rendered = render_to_string(&state, 160, 50);
+
+        assert!(rendered.contains("Planning"));
+        assert!(rendered.contains("planning mode"));
+        assert!(rendered.contains("√ Inspect live plan source"));
+        assert!(rendered.contains("● Bind nested plan rows"));
+        assert!(rendered.contains("○ Run full validation"));
+        assert!(rendered.contains("3 steps"));
+        assert!(!rendered.contains("Seven steps queued"));
+        assert!(!rendered.contains("extractImports guard"));
+    }
+
+    #[test]
+    fn tasks_surface_renders_live_task_projection() {
+        let mut state = AppState::new((160, 50), false);
+        state.detail_surface = Some(DetailSurface::Tasks);
+        state.tasks = vec![
+            crate::rpc::protocol::TaskEntry {
+                id: "task-active".into(),
+                title: "Run canary lane".into(),
+                status: "running".into(),
+            },
+            crate::rpc::protocol::TaskEntry {
+                id: "task-waiting".into(),
+                title: "Wait for reviewer".into(),
+                status: "blocked".into(),
+            },
+        ];
+        state.subagents = vec![crate::rpc::protocol::SubagentEntry {
+            id: "agent-review".into(),
+            role: "reviewer".into(),
+            status: "waiting".into(),
+        }];
+
+        let rendered = render_to_string(&state, 160, 50);
+
+        assert!(rendered.contains("Tasks"));
+        assert!(rendered.contains("2 tasks"));
+        assert!(rendered.contains("● Run canary lane"));
+        assert!(rendered.contains("task-active · running"));
+        assert!(rendered.contains("◐ Wait for reviewer"));
+        assert!(rendered.contains("agent-review · reviewer · waiting"));
+        assert!(rendered.contains("backend task projection live"));
+        assert!(!rendered.contains("extractImports guard"));
     }
 
     #[test]
@@ -2560,10 +3212,36 @@ mod tests {
 
         let rendered = render_to_string(&state, 160, 50);
 
-        assert!(rendered.contains("5 checkpoints"));
-        assert!(rendered.contains("extractImports guard"));
+        assert!(rendered.contains("0 checkpoints"));
+        assert!(rendered.contains("No checkpoints available"));
         assert!(rendered.contains("diff from here"));
         assert!(rendered.contains("local only"));
+        assert!(!rendered.contains("extractImports guard"));
+    }
+
+    #[test]
+    fn restore_surface_renders_live_checkpoint_state() {
+        let mut state = AppState::new((160, 50), false);
+        state.detail_surface = Some(DetailSurface::Restore);
+        state.checkpoints = vec![crate::rpc::protocol::CheckpointEntry {
+            id: "cp-live-123".into(),
+            session_id: "session-live-9".into(),
+            label: "before risky edit".into(),
+            tasks_snapshot: "{}".into(),
+            messages_snapshot: "{}".into(),
+            context_summary: "guarded restore context".into(),
+            active_files: "[\"src/live.rs\"]".into(),
+            created_at: "2026-04-26T10:20:30Z".into(),
+        }];
+
+        let rendered = render_to_string(&state, 160, 50);
+
+        assert!(rendered.contains("cp-live-123"));
+        assert!(rendered.contains("session-live-9"));
+        assert!(rendered.contains("before risky edit"));
+        assert!(rendered.contains("2026-04-26"));
+        assert!(!rendered.contains("extractImports guard"));
+        assert!(!rendered.contains("feat/parser-fix"));
     }
 
     #[test]
@@ -2571,16 +3249,16 @@ mod tests {
         let mut review = AppState::new((160, 50), false);
         review.detail_surface = Some(DetailSurface::Review);
         let review_rendered = render_to_string(&review, 160, 50);
-        assert!(review_rendered.contains("REVIEW NEEDED"));
-        assert!(review_rendered.contains("src/utils/parser.ts"));
+        assert!(review_rendered.contains("Review evidence"));
+        assert!(review_rendered.contains("No review evidence available"));
         assert!(review_rendered.contains("[a]pprove"));
 
         let mut diff = AppState::new((160, 50), false);
         diff.detail_surface = Some(DetailSurface::Diff);
         let diff_rendered = render_to_string(&diff, 160, 50);
-        assert!(diff_rendered.contains("files changed"));
-        assert!(diff_rendered.contains("APPROVAL PATTERN"));
-        assert!(diff_rendered.contains("src/utils/resolver.ts"));
+        assert!(diff_rendered.contains("Diff evidence"));
+        assert!(diff_rendered.contains("No diff evidence available"));
+        assert!(diff_rendered.contains("APPROVAL"));
     }
 
     #[test]
@@ -2588,24 +3266,27 @@ mod tests {
         let mut grep = AppState::new((160, 50), false);
         grep.detail_surface = Some(DetailSurface::Grep);
         let grep_rendered = render_to_string(&grep, 160, 50);
-        assert!(grep_rendered.contains("Search"));
-        assert!(grep_rendered.contains("14 hits across 5 files"));
+        assert!(grep_rendered.contains("Search results"));
+        assert!(grep_rendered.contains("No search results available"));
         assert!(grep_rendered.contains("ATTACH"));
-        assert!(grep_rendered.contains("@src/types.ts"));
+        assert!(grep_rendered.contains("@attach search hit"));
+        assert!(!grep_rendered.contains("14 hits across 5 files"));
 
         let mut escalation = AppState::new((160, 50), false);
         escalation.detail_surface = Some(DetailSurface::Escalation);
         let escalation_rendered = render_to_string(&escalation, 160, 50);
         assert!(escalation_rendered.contains("Permission escalation"));
-        assert!(escalation_rendered.contains(".github/workflows/ci.yml"));
+        assert!(escalation_rendered.contains("No escalation is pending"));
         assert!(escalation_rendered.contains("Approve this edit only"));
+        assert!(escalation_rendered.contains("backend approval projection live"));
 
         let mut multi = AppState::new((160, 50), false);
         multi.detail_surface = Some(DetailSurface::Multi);
         let multi_rendered = render_to_string(&multi, 160, 50);
-        assert!(multi_rendered.contains("2 jobs running"));
-        assert!(multi_rendered.contains("[prioritized]"));
-        assert!(multi_rendered.contains("[blocked: tests]"));
+        assert!(multi_rendered.contains("Concurrent work"));
+        assert!(multi_rendered.contains("No concurrent backend work"));
+        assert!(multi_rendered.contains("backend concurrency projection live"));
+        assert!(!multi_rendered.contains("src/utils/parser.ts"));
 
         let mut cc = AppState::new((160, 50), false);
         cc.detail_surface = Some(DetailSurface::CommandCenter);
@@ -2613,5 +3294,36 @@ mod tests {
         assert!(cc_rendered.contains("Delegate"));
         assert!(cc_rendered.contains("SUBAGENTS"));
         assert!(cc_rendered.contains("matrix tests"));
+    }
+
+    #[test]
+    fn grep_surface_renders_live_search_results() {
+        let mut state = AppState::new((160, 50), false);
+        state.detail_surface = Some(DetailSurface::Grep);
+        state.grep_query = Some("search_text: todo".into());
+        state.grep_results = vec![
+            crate::state::model::GrepHit {
+                path: "src/autocode/agent/tools.py".into(),
+                line: 1271,
+                snippet: "\"pattern\": {\"type\": \"string\"}".into(),
+            },
+            crate::state::model::GrepHit {
+                path: "src/autocode/layer1/parser.py".into(),
+                line: 42,
+                snippet: "def parse_symbols(source: str)".into(),
+            },
+        ];
+
+        let rendered = render_to_string(&state, 160, 50);
+
+        assert!(rendered.contains("Search results"));
+        assert!(rendered.contains("2 hits"));
+        assert!(rendered.contains("search_text: todo"));
+        assert!(rendered.contains("src/autocode/agent/tools.py:1271"));
+        assert!(rendered.contains("\"pattern\": {\"type\": \"string\"}"));
+        assert!(rendered.contains("@src/autocode/agent/tools.py"));
+        assert!(rendered.contains("backend search projection live"));
+        assert!(!rendered.contains("14 hits across 5 files"));
+        assert!(!rendered.contains("extractImports"));
     }
 }

@@ -791,6 +791,26 @@ class TestHandleThinking:
         assert app.show_thinking is True
         assert "on" in app._messages[-1]
 
+    @pytest.mark.asyncio()
+    async def test_thinking_accepts_explicit_on_off(self, tmp_path: Path) -> None:
+        """_handle_thinking supports deterministic /thinking on|off."""
+        from autocode.app.commands import _handle_thinking
+
+        app = _make_mock_app(tmp_path)
+        app.show_thinking = True
+
+        await _handle_thinking(app, "off")
+        assert app.show_thinking is False
+        assert "off" in app._messages[-1]
+        await _handle_thinking(app, "off")
+        assert app.show_thinking is False
+
+        await _handle_thinking(app, "on")
+        assert app.show_thinking is True
+        assert "on" in app._messages[-1]
+        await _handle_thinking(app, "on")
+        assert app.show_thinking is True
+
 
 class TestHandleClear:
     @pytest.mark.asyncio()
@@ -815,6 +835,170 @@ class TestHandleFreeze:
         del app.query_one
         await _handle_freeze(app, "")
         assert "not needed" in app._messages[-1].lower()
+
+
+class TestHandleCost:
+    @pytest.mark.asyncio()
+    async def test_handle_cost_default_mode_displays_real_numbers(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Default /cost uses CostDashboard totals, not message character estimates."""
+        from autocode.agent.cost_dashboard import CostDashboard
+        from autocode.app.commands import _handle_cost
+
+        app = _make_mock_app(tmp_path)
+        app.config.llm.provider = "openrouter"
+        app.config.llm.model = "coding"
+        dashboard = CostDashboard()
+        dashboard.record(
+            "primary",
+            "session",
+            "external",
+            tokens_in=1_722,
+            cached_input_tokens=8_512,
+            tokens_out=5_389,
+            provider_model="openrouter / coding",
+        )
+        app._cost_dashboard = dashboard
+        for idx in range(4):
+            app.session_store.add_message(app.session_id, "user", f"turn {idx}")
+
+        await _handle_cost(app, "")
+
+        output = app._messages[-1]
+        assert "Session: $0.02 · 15,623 tokens · 4 turns" in output
+        assert "Input:  10,234 (8,512 cached, 83% hit) · $0.0077" in output
+        assert "Output: 5,389 · $0.0162" in output
+        assert "Provider: openrouter / coding" in output
+
+    @pytest.mark.asyncio()
+    async def test_handle_cost_default_mode_skips_input_output_when_zero(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Fresh sessions show a compact zero-state without empty input/output rows."""
+        from autocode.agent.cost_dashboard import CostDashboard
+        from autocode.app.commands import _handle_cost
+
+        app = _make_mock_app(tmp_path)
+        app._cost_dashboard = CostDashboard()
+
+        await _handle_cost(app, "")
+
+        output = app._messages[-1]
+        assert "Session: $0.00 · 0 tokens · 0 turns" in output
+        assert "Input:" not in output
+        assert "Output:" not in output
+
+    @pytest.mark.asyncio()
+    async def test_handle_cost_default_mode_drops_cached_segment_when_zero(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Non-cache providers do not show a misleading cached-token segment."""
+        from autocode.agent.cost_dashboard import CostDashboard
+        from autocode.app.commands import _handle_cost
+
+        app = _make_mock_app(tmp_path)
+        app.config.llm.provider = "ollama"
+        app.config.llm.model = "qwen-7b"
+        dashboard = CostDashboard()
+        dashboard.record(
+            "primary",
+            "session",
+            "l4",
+            tokens_in=3_000,
+            tokens_out=1_200,
+            provider_model="ollama / qwen-7b",
+        )
+        app._cost_dashboard = dashboard
+        app.session_store.add_message(app.session_id, "user", "turn")
+        app.session_store.add_message(app.session_id, "user", "turn")
+
+        await _handle_cost(app, "")
+
+        output = app._messages[-1]
+        assert "Input:  3,000 · $0.0000" in output
+        assert "cached" not in output
+        assert "Provider: ollama / qwen-7b" in output
+
+    @pytest.mark.asyncio()
+    async def test_handle_cost_detail_mode_renders_per_model_breakdown(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """/cost --detail renders per-provider/model totals and cache savings."""
+        from autocode.agent.cost_dashboard import CostDashboard
+        from autocode.app.commands import _handle_cost
+
+        app = _make_mock_app(tmp_path)
+        dashboard = CostDashboard()
+        dashboard.record(
+            "primary",
+            "session",
+            "external",
+            tokens_in=1_722,
+            cached_input_tokens=8_512,
+            tokens_out=5_389,
+            provider_model="openrouter / coding",
+        )
+        dashboard.record(
+            "primary",
+            "session",
+            "external",
+            tokens_in=500,
+            tokens_out=923,
+            provider_model="openrouter / swebench",
+        )
+        app._cost_dashboard = dashboard
+
+        await _handle_cost(app, "--detail")
+
+        output = app._messages[-1]
+        assert "Per-model:" in output
+        assert "openrouter / coding:" in output
+        assert "openrouter / swebench:" in output
+        assert "Cache: 8,512 cached / 10,734 input (79% hit) - saved ~$0.02" in output
+
+    @pytest.mark.asyncio()
+    async def test_handle_cost_renders_threshold_when_set(self, tmp_path: Path) -> None:
+        """Cost limit display is shown only when configured."""
+        from autocode.agent.cost_dashboard import CostDashboard
+        from autocode.app.commands import _handle_cost
+
+        app = _make_mock_app(tmp_path)
+        app.config.agent.cost_limit_usd = 0.5
+        dashboard = CostDashboard()
+        dashboard.record(
+            "primary",
+            "session",
+            "external",
+            tokens_in=1_722,
+            cached_input_tokens=8_512,
+            tokens_out=5_389,
+        )
+        app._cost_dashboard = dashboard
+
+        await _handle_cost(app, "")
+
+        assert "Limit:   $0.50 (5% used)" in app._messages[-1]
+
+    @pytest.mark.asyncio()
+    async def test_handle_cost_unknown_arg_returns_friendly_error(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Unknown /cost arguments explain the supported forms."""
+        from autocode.app.commands import _handle_cost
+
+        app = _make_mock_app(tmp_path)
+
+        await _handle_cost(app, "--verbose")
+
+        assert app._messages[-1] == (
+            "Unknown /cost option: '--verbose'. Use /cost or /cost --detail."
+        )
 
 
 class _LoopTestApp:

@@ -120,7 +120,15 @@ def sync_from_markdown(
             continue
 
         if task.status != new_status:
-            task_store.update_task(task_id, status=new_status)
+            try:
+                task_store.update_task(task_id, status=new_status)
+            except ValueError as exc:
+                logger.debug(
+                    "sync_from_markdown: ignoring invalid transition for #%s: %s",
+                    task_id,
+                    exc,
+                )
+                continue
             updated.append(task_id)
             logger.debug("sync_from_markdown: #%s -> %s", task_id, new_status)
 

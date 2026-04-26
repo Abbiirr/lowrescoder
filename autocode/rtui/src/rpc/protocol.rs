@@ -53,6 +53,42 @@ pub struct ToolCallParams {
     pub result: Option<String>,
     #[serde(default)]
     pub args: Option<String>,
+    #[serde(default)]
+    pub result_payload: Option<ToolResultPayload>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ToolResultPayload {
+    Search {
+        query: String,
+        #[serde(default)]
+        hits: Vec<ToolSearchHit>,
+    },
+    Diff {
+        source: String,
+        #[serde(default)]
+        files: Vec<ToolDiffFile>,
+    },
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+pub struct ToolSearchHit {
+    pub path: String,
+    pub line: u32,
+    pub snippet: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+pub struct ToolDiffFile {
+    pub path: String,
+    pub added: u32,
+    pub removed: u32,
+    #[serde(default)]
+    pub hunks: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -260,6 +296,29 @@ pub struct PlanSetResult {
 }
 
 #[allow(dead_code)]
+#[derive(Debug, Deserialize, Clone)]
+pub struct CheckpointEntry {
+    pub id: String,
+    pub session_id: String,
+    pub label: String,
+    #[serde(default)]
+    pub tasks_snapshot: String,
+    #[serde(default)]
+    pub messages_snapshot: String,
+    #[serde(default)]
+    pub context_summary: String,
+    #[serde(default)]
+    pub active_files: String,
+    pub created_at: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct CheckpointListResult {
+    pub checkpoints: Vec<CheckpointEntry>,
+}
+
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct CompactCommandResult {
     #[serde(default)]
@@ -380,11 +439,21 @@ mod tests {
 
     #[test]
     fn tool_call_params_roundtrip() {
-        let json = r#"{"name":"bash","status":"completed","result":"ok","args":"ls"}"#;
+        let json = r#"{"name":"search_text","status":"completed","result":"legacy","args":"{\"pattern\":\"foo\"}","result_payload":{"kind":"search","query":"foo","hits":[{"path":"src/main.py","line":7,"snippet":"foo()"}]}}"#;
         let params = serde_json::from_str::<ToolCallParams>(json).unwrap();
-        assert_eq!(params.name, "bash");
+        assert_eq!(params.name, "search_text");
         assert_eq!(params.status, "completed");
-        assert_eq!(params.result, Some("ok".into()));
+        assert_eq!(params.result, Some("legacy".into()));
+        let payload = params.result_payload.unwrap();
+        match payload {
+            ToolResultPayload::Search { query, hits } => {
+                assert_eq!(query, "foo");
+                assert_eq!(hits[0].path, "src/main.py");
+                assert_eq!(hits[0].line, 7);
+                assert_eq!(hits[0].snippet, "foo()");
+            }
+            _ => panic!("expected search payload"),
+        }
     }
 
     #[test]

@@ -41,4 +41,4 @@
 
 - Task bank composition determines whether the 75% pass rate gate is meaningful
 - Task bank MUST be locked before implementation so it cannot be unconsciously tuned
-- See Section 15.23 in `docs/plan/phase5-agent-teams.md` for full policy
+- See Section 15.23 in `docs/plan/archive/phase5-agent-teams.md` for full policy

@@ -690,7 +690,16 @@ async def _handle_copy(app: AppContext, args: str) -> None:
 
 
 async def _handle_thinking(app: AppContext, args: str) -> None:
-    app.show_thinking = not app.show_thinking
+    normalized = args.strip().lower()
+    if normalized in {"on", "true", "yes", "1"}:
+        app.show_thinking = True
+    elif normalized in {"off", "false", "no", "0"}:
+        app.show_thinking = False
+    elif normalized:
+        app.add_system_message("Usage: /thinking [on|off]")
+        return
+    else:
+        app.show_thinking = not app.show_thinking
     state = "on" if app.show_thinking else "off"
     app.add_system_message(f"Thinking: **{state}**")
 
@@ -974,7 +983,11 @@ async def _handle_checkpoint(app: AppContext, args: str) -> None:
             label = args.strip()[4:].strip() or "checkpoint"
             task_store = TaskStore(conn, app.session_id)
             cp_store = CheckpointStore(conn, app.session_id)
-            cp_id = cp_store.save_checkpoint(task_store, label)
+            cp_id = cp_store.save_checkpoint(
+                task_store,
+                label,
+                session_store=app.session_store,
+            )
             app.add_system_message(f"Checkpoint saved: `{cp_id}` ({label})")
         elif arg.startswith("restore"):
             cp_id = args.strip()[7:].strip()
@@ -1380,23 +1393,91 @@ async def _handle_diff(app: AppContext, args: str) -> None:
         app.add_system_message(f"Error running diff: {e}")
 
 
+def _get_cost_dashboard(app: AppContext) -> Any:
+    """Return the live CostDashboard, tolerating partially wired test contexts."""
+    from autocode.agent.cost_dashboard import CostDashboard
+
+    dashboard = getattr(app, "_cost_dashboard", None)
+    if isinstance(dashboard, CostDashboard):
+        return dashboard
+
+    stats = getattr(app, "_session_stats", None)
+    tracker = getattr(stats, "token_tracker", None) if stats is not None else None
+    dashboard = getattr(tracker, "cost_dashboard", None) if tracker is not None else None
+    if isinstance(dashboard, CostDashboard):
+        return dashboard
+
+    return CostDashboard()
+
+
+def _cost_turn_count(app: AppContext) -> int:
+    messages = app.session_store.get_messages(app.session_id)
+    return sum(1 for message in messages if message.role == "user")
+
+
+def _format_cost_lines(app: AppContext, *, detail: bool) -> list[str]:
+    dashboard = _get_cost_dashboard(app)
+    turns = _cost_turn_count(app)
+    lines = [
+        f"Session: ${dashboard.total_cost:.2f} · "
+        f"{dashboard.total_tokens:,} tokens · {turns:,} turns"
+    ]
+
+    if dashboard.total_input_tokens or dashboard.total_output_tokens:
+        lines.append("")
+        cached = dashboard.total_cached_input_tokens
+        cache_segment = ""
+        if cached:
+            cache_segment = (
+                f" ({cached:,} cached, {dashboard.cache_hit_ratio:.0%} hit)"
+            )
+        lines.append(
+            f"Input:  {dashboard.total_input_tokens:,}{cache_segment} · "
+            f"${dashboard.input_cost:.4f}"
+        )
+        lines.append(f"Output: {dashboard.total_output_tokens:,} · ${dashboard.output_cost:.4f}")
+
+    if detail:
+        by_model = dashboard.by_provider_model()
+        if by_model:
+            lines.append("")
+            lines.append("Per-model:")
+            for provider_model, data in sorted(by_model.items()):
+                lines.append(
+                    f"  {provider_model}: {int(data['tokens']):,} tokens · "
+                    f"${data['cost']:.2f}"
+                )
+        if dashboard.total_cached_input_tokens:
+            lines.append("")
+            lines.append(
+                "Cache: "
+                f"{dashboard.total_cached_input_tokens:,} cached / "
+                f"{dashboard.total_input_tokens:,} input "
+                f"({dashboard.cache_hit_ratio:.0%} hit) - "
+                f"saved ~${dashboard.estimated_cache_savings_usd:.2f}"
+            )
+
+    lines.append("")
+    lines.append(f"Provider: {app.config.llm.provider} / {app.config.llm.model}")
+
+    limit = getattr(app.config.agent, "cost_limit_usd", None)
+    if limit is not None and limit > 0:
+        percent_used = round((dashboard.total_cost / limit) * 100) if dashboard.total_cost else 0
+        lines.append(f"Limit:   ${limit:.2f} ({percent_used}% used)")
+
+    return lines
+
+
 async def _handle_cost(app: AppContext, args: str) -> None:
     """Show token usage and estimated cost for the current session."""
-    messages = app.session_store.get_messages(app.session_id)
-    total_chars = sum(len(m.content) for m in messages)
-    est_tokens = total_chars // 4
-    user_msgs = sum(1 for m in messages if m.role == "user")
-    assistant_msgs = sum(1 for m in messages if m.role == "assistant")
-    tool_msgs = sum(1 for m in messages if m.role == "tool")
+    option = args.strip()
+    if option and option != "--detail":
+        app.add_system_message(
+            f"Unknown /cost option: '{option}'. Use /cost or /cost --detail."
+        )
+        return
 
-    lines = [
-        "**Session Usage:**",
-        f"- Messages: {len(messages)}"
-        f" ({user_msgs} user, {assistant_msgs} assistant, {tool_msgs} tool)",
-        f"- Estimated tokens: ~{est_tokens:,}",
-        f"- Provider: {app.config.llm.provider} / {app.config.llm.model}",
-    ]
-    app.add_system_message("\n".join(lines))
+    app.add_system_message("\n".join(_format_cost_lines(app, detail=option == "--detail")))
 
 
 async def _handle_export(app: AppContext, args: str) -> None:

@@ -31,6 +31,21 @@ class ConsolidationResult:
     learnings_kept: int
     learnings_pruned: int
     categories: dict[str, int] = field(default_factory=dict)
+    memories_saved: int = 0
+    memory_ids: list[str] = field(default_factory=list)
+
+
+# Session consolidation categories describe how a learning was discovered.
+# MemoryStore categories describe how the durable prompt context should use it.
+# Keep the mapping explicit here so persistence remains deterministic and
+# MemoryStore continues to own storage/dedup semantics.
+_MEMORY_CATEGORY_MAP = {
+    "file_pattern": "project_fact",
+    "error_fix": "error_resolution",
+    "tool_usage": "tool_pattern",
+    "project_structure": "project_fact",
+    "gotcha": "project_fact",
+}
 
 
 class SessionConsolidator:
@@ -151,6 +166,27 @@ class SessionConsolidator:
         sorted_learnings = sorted(learnings, key=lambda learning: -learning.confidence)
         # Keep only up to max_learnings
         return sorted_learnings[: self._max_learnings]
+
+    def persist(
+        self,
+        learnings: list[SessionLearning],
+        *,
+        memory_store: Any,
+        session_id: str,
+    ) -> list[str]:
+        """Persist durable learnings into MemoryStore and return saved IDs."""
+        saved_ids: list[str] = []
+        for learning in learnings:
+            if not should_promote_to_durable(learning):
+                continue
+            memory_category = _MEMORY_CATEGORY_MAP.get(learning.category)
+            if memory_category is None:
+                continue
+            content = learning.summary
+            if learning.evidence:
+                content = f"{content}\nEvidence: {learning.evidence}"
+            saved_ids.append(memory_store.save(memory_category, content, session_id))
+        return saved_ids
 
     def build_carry_forward_summary(
         self,
@@ -324,6 +360,9 @@ class SessionConsolidator:
         self,
         session_messages: list[dict[str, Any]],
         existing: list[SessionLearning] | None = None,
+        *,
+        memory_store: Any | None = None,
+        session_id: str = "",
     ) -> ConsolidationResult:
         """Run the full consolidation pipeline."""
         self._existing_learnings = existing or []
@@ -337,11 +376,21 @@ class SessionConsolidator:
         for learning in pruned:
             categories[learning.category] = categories.get(learning.category, 0) + 1
 
+        memory_ids: list[str] = []
+        if memory_store is not None and session_id:
+            memory_ids = self.persist(
+                pruned,
+                memory_store=memory_store,
+                session_id=session_id,
+            )
+
         return ConsolidationResult(
             learnings_gathered=len(gathered),
             learnings_kept=len(pruned),
             learnings_pruned=len(consolidated) - len(pruned),
             categories=categories,
+            memories_saved=len(memory_ids),
+            memory_ids=memory_ids,
         )
 
 

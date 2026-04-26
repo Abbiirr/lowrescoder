@@ -49,7 +49,10 @@ def _make_update_handler(task_store: TaskStore):
         fields = {k: v for k, v in kwargs.items() if k in ("status", "title", "description") and v}
         if not fields:
             return "Error: no valid fields to update."
-        task_store.update_task(task_id, **fields)
+        try:
+            task_store.update_task(task_id, **fields)
+        except ValueError as e:
+            return f"Error updating task '{task_id}': {e}"
         log_event(
             logger, logging.INFO, "task_updated",
             task_id=task_id, fields=fields, session_id=task_store.session_id,
@@ -122,6 +125,7 @@ def register_task_tools(registry: ToolRegistry, task_store: TaskStore) -> None:
                 "task_id": {"type": "string", "description": "ID of the task to update"},
                 "status": {
                     "type": "string",
+                    "enum": ["pending", "in_progress", "completed"],
                     "description": "New status (pending, in_progress, completed)",
                 },
                 "title": {"type": "string", "description": "New title (optional)"},

@@ -18,9 +18,28 @@ from autocode.session.models import CheckpointRow
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_MESSAGE_LIMIT = 20
+EMPTY_MESSAGE_SNAPSHOT = {"captured": False, "summary": "", "messages": []}
+
 
 def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _decode_message_snapshot(raw: str) -> dict[str, Any]:
+    """Decode a checkpoint message snapshot, tolerating older checkpoint rows."""
+    try:
+        snapshot = json.loads(raw or "{}")
+    except json.JSONDecodeError:
+        return dict(EMPTY_MESSAGE_SNAPSHOT)
+    if not isinstance(snapshot, dict):
+        return dict(EMPTY_MESSAGE_SNAPSHOT)
+    snapshot.setdefault("captured", False)
+    snapshot.setdefault("summary", "")
+    snapshot.setdefault("messages", [])
+    if not isinstance(snapshot["messages"], list):
+        snapshot["messages"] = []
+    return snapshot
 
 
 class CheckpointStore:
@@ -39,23 +58,61 @@ class CheckpointStore:
         label: str,
         context_summary: str = "",
         active_files: list[str] | None = None,
+        session_store: Any | None = None,
+        message_limit: int = DEFAULT_MESSAGE_LIMIT,
     ) -> str:
         """Serialize task state as JSON snapshot, returns checkpoint ID."""
         checkpoint_id = uuid.uuid4().hex[:12]
         now = _now_iso()
         tasks_snapshot = json.dumps(task_store.snapshot())
+        messages_snapshot = json.dumps(
+            self._build_message_snapshot(session_store, context_summary, message_limit)
+        )
         files_json = json.dumps(active_files or [])
 
         self._conn.execute(
             "INSERT INTO checkpoints "
-            "(id, session_id, label, tasks_snapshot, context_summary, active_files, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (checkpoint_id, self._session_id, label, tasks_snapshot, context_summary,
-             files_json, now),
+            "(id, session_id, label, tasks_snapshot, messages_snapshot, "
+            "context_summary, active_files, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                checkpoint_id,
+                self._session_id,
+                label,
+                tasks_snapshot,
+                messages_snapshot,
+                context_summary,
+                files_json,
+                now,
+            ),
         )
         self._conn.commit()
         logger.info("Checkpoint saved: %s (%s)", checkpoint_id, label)
         return checkpoint_id
+
+    def _build_message_snapshot(
+        self,
+        session_store: Any | None,
+        context_summary: str,
+        message_limit: int,
+    ) -> dict[str, Any]:
+        """Build the bounded message-history snapshot for this checkpoint."""
+        if session_store is None:
+            return {
+                "captured": False,
+                "summary": context_summary,
+                "messages": [],
+            }
+        if not hasattr(session_store, "snapshot_messages"):
+            raise TypeError("session_store must provide snapshot_messages()")
+        return {
+            "captured": True,
+            "summary": context_summary,
+            "messages": session_store.snapshot_messages(
+                self._session_id,
+                limit=message_limit,
+            ),
+        }
 
     def list_checkpoints(self) -> list[CheckpointRow]:
         """List checkpoints for this session, newest first."""
@@ -122,6 +179,15 @@ class CheckpointStore:
             task_store.restore_from_snapshot(
                 json.loads(cp.tasks_snapshot), autocommit=False,
             )
+            message_snapshot = _decode_message_snapshot(cp.messages_snapshot)
+            if message_snapshot.get("captured"):
+                if not hasattr(session_store, "restore_messages_snapshot"):
+                    raise TypeError("session_store must provide restore_messages_snapshot()")
+                session_store.restore_messages_snapshot(
+                    cp.session_id,
+                    message_snapshot["messages"],
+                    autocommit=False,
+                )
             session_store.add_message(
                 cp.session_id, "system",
                 f"[Restored checkpoint: {cp.label}]\n{cp.context_summary}",

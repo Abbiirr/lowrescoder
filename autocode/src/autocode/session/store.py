@@ -183,6 +183,114 @@ class SessionStore:
 
         return conversation
 
+    def snapshot_messages(
+        self,
+        session_id: str,
+        limit: int = 20,
+    ) -> list[dict[str, object]]:
+        """Return a bounded message snapshot with tool-call rows attached."""
+        safe_limit = max(limit, 0)
+        cursor = self._conn.execute(
+            "SELECT * FROM messages WHERE session_id = ? ORDER BY created_at ASC, id ASC",
+            (session_id,),
+        )
+        rows = cursor.fetchall()
+        selected = rows[-safe_limit:] if safe_limit else []
+        if not selected:
+            return []
+
+        message_ids = [int(row["id"]) for row in selected]
+        placeholders = ",".join("?" for _ in message_ids)
+        cursor = self._conn.execute(
+            (
+                "SELECT * FROM tool_calls WHERE session_id = ? "
+                f"AND message_id IN ({placeholders}) "
+                "ORDER BY created_at ASC, id ASC"
+            ),
+            (session_id, *message_ids),
+        )
+
+        tool_calls_by_message: dict[int, list[dict[str, object]]] = {}
+        for row in cursor.fetchall():
+            tool_calls_by_message.setdefault(int(row["message_id"]), []).append({
+                "tool_call_id": row["tool_call_id"],
+                "tool_name": row["tool_name"],
+                "arguments": row["arguments"],
+                "result": row["result"],
+                "status": row["status"],
+                "duration_ms": row["duration_ms"],
+                "created_at": row["created_at"],
+            })
+
+        messages: list[dict[str, object]] = []
+        for row in selected:
+            entry: dict[str, object] = {
+                "role": row["role"],
+                "content": row["content"],
+                "token_count": row["token_count"],
+                "created_at": row["created_at"],
+            }
+            tool_calls = tool_calls_by_message.get(int(row["id"]))
+            if tool_calls:
+                entry["tool_calls"] = tool_calls
+            messages.append(entry)
+        return messages
+
+    def restore_messages_snapshot(
+        self,
+        session_id: str,
+        messages: list[dict[str, object]],
+        *,
+        autocommit: bool = True,
+    ) -> None:
+        """Replace a session's messages/tool calls from a checkpoint snapshot."""
+        self._conn.execute("DELETE FROM tool_calls WHERE session_id = ?", (session_id,))
+        self._conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+
+        for message in messages:
+            cursor = self._conn.execute(
+                "INSERT INTO messages "
+                "(session_id, role, content, token_count, created_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (
+                    session_id,
+                    str(message.get("role", "user")),
+                    str(message.get("content", "")),
+                    int(message.get("token_count") or 0),
+                    str(message.get("created_at") or _now_iso()),
+                ),
+            )
+            message_id = cursor.lastrowid or 0
+            tool_calls = message.get("tool_calls", [])
+            if not isinstance(tool_calls, list):
+                continue
+            for tool_call in tool_calls:
+                if not isinstance(tool_call, dict):
+                    continue
+                arguments = tool_call.get("arguments", "{}")
+                if not isinstance(arguments, str):
+                    arguments = json.dumps(arguments)
+                self._conn.execute(
+                    "INSERT INTO tool_calls "
+                    "(session_id, message_id, tool_call_id, tool_name, arguments, "
+                    "result, status, duration_ms, created_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        session_id,
+                        message_id,
+                        str(tool_call.get("tool_call_id", "")),
+                        str(tool_call.get("tool_name", "")),
+                        arguments,
+                        tool_call.get("result"),
+                        str(tool_call.get("status", "pending")),
+                        tool_call.get("duration_ms"),
+                        str(tool_call.get("created_at") or _now_iso()),
+                    ),
+                )
+
+        if autocommit:
+            self._conn.commit()
+
     # --- Tool calls ---
 
     def add_tool_call(

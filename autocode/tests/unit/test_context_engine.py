@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -46,6 +46,21 @@ class TestTokenCounting:
         assert engine.count_tokens("") == 1  # min 1
         assert engine.count_tokens("a" * 100) == 25
 
+    def test_count_tokens_uses_provider_when_available(self, session_store):
+        provider = Mock()
+        provider.count_tokens.return_value = 7
+        engine = ContextEngine(provider=provider, session_store=session_store)
+
+        assert engine.count_tokens("a" * 100) == 7
+        provider.count_tokens.assert_called_once_with("a" * 100)
+
+    def test_count_tokens_falls_back_when_provider_counter_fails(self, session_store):
+        provider = Mock()
+        provider.count_tokens.side_effect = RuntimeError("tokenizer unavailable")
+        engine = ContextEngine(provider=provider, session_store=session_store)
+
+        assert engine.count_tokens("a" * 100) == 25
+
     def test_count_tokens_minimum(self, engine):
         assert engine.count_tokens("a") == 1
         assert engine.count_tokens("ab") == 1
@@ -65,6 +80,33 @@ class TestTruncation:
         # Should have head + marker + tail
         assert result.startswith("x" * 100)  # starts with x's
         assert result.endswith("x" * 100)  # ends with x's
+
+    def test_truncate_code_result_preserves_signatures_and_errors(self, engine):
+        """Code-like output should keep high-signal signatures and error markers."""
+        long_text = "\n".join([
+            "setup noise " + ("x" * 40) for _ in range(80)
+        ])
+        long_text += "\ndef important_function(value):\n    return parse(value)\n"
+        long_text += "\n".join([f"middle noise {i} " + ("y" * 40) for i in range(80)])
+        long_text += "\nTraceback (most recent call last):\nValueError: bad input\n"
+        long_text += "\n".join([f"tail noise {i}" for i in range(80)])
+
+        result = engine.truncate_tool_result(long_text, max_tokens=120)
+
+        assert "def important_function" in result
+        assert "Traceback" in result
+        assert "ValueError: bad input" in result
+        assert "omitted" in result
+
+    def test_truncate_list_result_preserves_first_and_last_items(self, engine):
+        """Line-list output should keep edges and report omitted lines."""
+        long_text = "\n".join(f"item-{i:03d}" for i in range(200))
+
+        result = engine.truncate_tool_result(long_text, max_tokens=80)
+
+        assert "item-000" in result
+        assert "item-199" in result
+        assert "lines omitted" in result
 
 
 class TestBuildMessages:

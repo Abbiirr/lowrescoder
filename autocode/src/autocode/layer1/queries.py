@@ -11,7 +11,7 @@ from itertools import islice
 from pathlib import Path
 
 from autocode.core.types import Response, Symbol
-from autocode.layer1.parser import TreeSitterParser
+from autocode.layer1.parser import TreeSitterParser, get_shared_parser
 from autocode.layer1.symbols import SymbolExtractor
 
 # Patterns to extract target file and symbol from queries
@@ -56,7 +56,7 @@ class DeterministicQueryHandler:
         parser: TreeSitterParser | None = None,
         project_root: str | Path | None = None,
     ) -> None:
-        self._parser = parser or TreeSitterParser()
+        self._parser = parser or get_shared_parser()
         self._extractor = SymbolExtractor()
         self._project_root = Path(project_root) if project_root else Path.cwd()
 

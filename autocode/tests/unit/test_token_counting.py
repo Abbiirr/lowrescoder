@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from autocode.agent.cost_dashboard import CostDashboard
 from autocode.agent.token_tracker import TokenTracker, TokenUsage
 
 
@@ -85,3 +86,35 @@ def test_token_summary_multi_provider() -> None:
     summary = tracker.summary()
     assert "ollama:" in summary
     assert "openrouter:" in summary
+
+
+def test_token_tracker_records_cost_limit_warning_from_dashboard() -> None:
+    """TokenTracker exposes a one-shot cost limit warning after forwarding cost."""
+    dashboard = CostDashboard()
+    tracker = TokenTracker(cost_dashboard=dashboard, cost_limit_usd=0.001)
+
+    tracker.record(prompt_tokens=500, completion_tokens=0, provider="openrouter")
+
+    assert tracker.pop_cost_limit_warning() == (0.0015, 0.001)
+    assert tracker.pop_cost_limit_warning() is None
+    assert dashboard.total_cost == 0.0015
+
+
+def test_record_forwards_cached_tokens_to_dashboard() -> None:
+    """TokenTracker forwards cached prompt tokens without double-counting prompt totals."""
+    dashboard = CostDashboard()
+    tracker = TokenTracker(cost_dashboard=dashboard)
+
+    tracker.record(
+        prompt_tokens=10_000,
+        completion_tokens=500,
+        cached_input_tokens=8_000,
+        provider="OpenRouterProvider",
+    )
+
+    assert tracker.total.prompt_tokens == 10_000
+    assert tracker.total.cached_input_tokens == 8_000
+    assert tracker.total.total_tokens == 10_500
+    assert dashboard.total_uncached_input_tokens == 2_000
+    assert dashboard.total_cached_input_tokens == 8_000
+    assert dashboard.total_output_tokens == 500

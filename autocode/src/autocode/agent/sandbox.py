@@ -12,9 +12,12 @@ Based on patterns from Codex (Seatbelt + bubblewrap) and Goose (permission syste
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import os
 import platform
 import shutil
+import signal
 import subprocess
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -218,6 +221,92 @@ def run_sandboxed(
     return _run_restricted(command, cfg)
 
 
+async def run_sandboxed_async(
+    command: str,
+    config: SandboxConfig | None = None,
+) -> SandboxResult:
+    """Execute a sandboxed command with cooperative asyncio cancellation."""
+    cfg = config or SandboxConfig()
+
+    if cfg.policy == SandboxPolicy.NONE:
+        return await _run_unsandboxed_async(command, cfg)
+
+    support = detect_sandbox_support()
+    system = platform.system().lower()
+
+    if system == "linux" and support["bwrap"]:
+        return await _run_bwrap_async(command, cfg)
+
+    if system == "darwin" and support["seatbelt"]:
+        return await _run_seatbelt_async(command, cfg)
+
+    if cfg.fail_if_unavailable:
+        available = [k for k, v in support.items() if v and k != "none"]
+        return SandboxResult(
+            stdout="",
+            stderr=(
+                "sandbox.fail_if_unavailable is enabled but no OS sandbox "
+                f"is available on this host (system={system}, "
+                f"detected={available or 'none'}). Refusing to run "
+                "the command in unsandboxed mode. Install bwrap (Linux) "
+                "or sandbox-exec (macOS), or set fail_if_unavailable=False "
+                "to allow restricted-env fallback."
+            ),
+            returncode=126,
+            sandbox_type="none",
+            enforced=False,
+        )
+
+    return await _run_restricted_async(command, cfg)
+
+
+async def _communicate_async(
+    process: asyncio.subprocess.Process,
+    timeout_s: int,
+) -> tuple[str, str, int]:
+    try:
+        stdout, stderr = await asyncio.wait_for(
+            process.communicate(),
+            timeout=timeout_s,
+        )
+    except TimeoutError:
+        _terminate_process_group(process)
+        await _wait_for_process_exit(process)
+        return "", f"Timeout after {timeout_s}s", 124
+    except asyncio.CancelledError:
+        _terminate_process_group(process)
+        await _wait_for_process_exit(process)
+        raise
+
+    return (
+        stdout.decode("utf-8", errors="replace"),
+        stderr.decode("utf-8", errors="replace"),
+        int(process.returncode or 0),
+    )
+
+
+def _terminate_process_group(process: asyncio.subprocess.Process) -> None:
+    if process.returncode is not None:
+        return
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    except Exception:
+        process.terminate()
+
+
+async def _wait_for_process_exit(process: asyncio.subprocess.Process) -> None:
+    with contextlib.suppress(ProcessLookupError):
+        try:
+            await asyncio.wait_for(process.wait(), timeout=2)
+            return
+        except TimeoutError:
+            os.killpg(process.pid, signal.SIGKILL)
+    with contextlib.suppress(Exception):
+        await process.wait()
+
+
 def _safe_sandbox_env() -> dict[str, str]:
     """Sanitized environment for all sandbox paths.
 
@@ -289,6 +378,37 @@ def _run_bwrap(command: str, config: SandboxConfig) -> SandboxResult:
         )
 
 
+async def _run_bwrap_async(command: str, config: SandboxConfig) -> SandboxResult:
+    """Execute via bubblewrap on Linux with cancellation support."""
+    args = _build_bwrap_args(command, config)
+    try:
+        process = await asyncio.create_subprocess_exec(
+            *args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=_safe_sandbox_env(),
+            start_new_session=True,
+        )
+        stdout, stderr, returncode = await _communicate_async(process, config.timeout_s)
+        if returncode != 0 and _should_fallback_from_bwrap(stderr):
+            return await _run_restricted_async(command, config)
+        return SandboxResult(
+            stdout=stdout,
+            stderr=stderr,
+            returncode=returncode,
+            sandbox_type="bwrap",
+            enforced=True,
+        )
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:
+        return SandboxResult(
+            stderr=str(e), returncode=1,
+            sandbox_type="bwrap_failed",
+            enforced=False,
+        )
+
+
 def _run_seatbelt(command: str, config: SandboxConfig) -> SandboxResult:
     """Execute via sandbox-exec on macOS."""
     profile = _build_seatbelt_profile(config)
@@ -313,6 +433,35 @@ def _run_seatbelt(command: str, config: SandboxConfig) -> SandboxResult:
             sandbox_type="seatbelt",
             enforced=True,
         )
+    except Exception as e:
+        return SandboxResult(
+            stderr=str(e), returncode=1,
+            sandbox_type="seatbelt_failed",
+            enforced=False,
+        )
+
+
+async def _run_seatbelt_async(command: str, config: SandboxConfig) -> SandboxResult:
+    """Execute via sandbox-exec on macOS with cancellation support."""
+    profile = _build_seatbelt_profile(config)
+    try:
+        process = await asyncio.create_subprocess_exec(
+            "sandbox-exec", "-p", profile, "sh", "-c", command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=_safe_sandbox_env(),
+            start_new_session=True,
+        )
+        stdout, stderr, returncode = await _communicate_async(process, config.timeout_s)
+        return SandboxResult(
+            stdout=stdout,
+            stderr=stderr,
+            returncode=returncode,
+            sandbox_type="seatbelt",
+            enforced=True,
+        )
+    except asyncio.CancelledError:
+        raise
     except Exception as e:
         return SandboxResult(
             stderr=str(e), returncode=1,
@@ -349,6 +498,27 @@ def _run_restricted(command: str, config: SandboxConfig) -> SandboxResult:
         )
 
 
+async def _run_restricted_async(command: str, config: SandboxConfig) -> SandboxResult:
+    """Fallback async restricted-env execution."""
+    env = _safe_sandbox_env()
+    process = await asyncio.create_subprocess_shell(
+        command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        cwd=config.project_root or None,
+        env=env,
+        start_new_session=True,
+    )
+    stdout, stderr, returncode = await _communicate_async(process, config.timeout_s)
+    return SandboxResult(
+        stdout=stdout,
+        stderr=stderr,
+        returncode=returncode,
+        sandbox_type="restricted_env",
+        enforced=False,
+    )
+
+
 def _run_unsandboxed(command: str, config: SandboxConfig) -> SandboxResult:
     """Run without any sandbox (policy=NONE)."""
     try:
@@ -370,3 +540,22 @@ def _run_unsandboxed(command: str, config: SandboxConfig) -> SandboxResult:
             stderr=f"Timeout after {config.timeout_s}s",
             returncode=124,
         )
+
+
+async def _run_unsandboxed_async(command: str, config: SandboxConfig) -> SandboxResult:
+    """Run without any sandbox with cancellation support."""
+    process = await asyncio.create_subprocess_shell(
+        command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        cwd=config.project_root or None,
+        start_new_session=True,
+    )
+    stdout, stderr, returncode = await _communicate_async(process, config.timeout_s)
+    return SandboxResult(
+        stdout=stdout,
+        stderr=stderr,
+        returncode=returncode,
+        sandbox_type="none",
+        enforced=False,
+    )

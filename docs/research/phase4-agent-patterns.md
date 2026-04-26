@@ -2,7 +2,7 @@
 
 > **Created:** 2026-02-14
 > **Purpose:** Compiled research for Phase 4 decisions (Entry 314 CE)
-> **Cross-reference:** `docs/plan/phase4-agent-orchestration.md` v3.2
+> **Cross-reference:** `docs/plan/archive/phase4-agent-orchestration.md` v3.2
 
 ---
 

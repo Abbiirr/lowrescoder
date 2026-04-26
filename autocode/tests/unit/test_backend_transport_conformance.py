@@ -20,6 +20,8 @@ from autocode.backend.server import BackendServer
 from autocode.backend.stdio_host import StdioJsonRpcHost
 from autocode.backend.tcp_host import TcpJsonRpcHost
 from autocode.config import AutoCodeConfig
+from autocode.session.checkpoint_store import CheckpointStore
+from autocode.session.task_store import TaskStore
 
 
 def _make_server(tmp_path: Path) -> BackendServer:
@@ -278,13 +280,13 @@ async def test_transport_conformance_chat_warning_error_order(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("host_kind", ["stdio", "tcp"])
-async def test_transport_conformance_chat_streams_thinking_tokens_and_task_state(
+async def test_transport_conformance_chat_streams_thinking_tokens_and_update_task_state(
     tmp_path: Path,
     host_kind: str,
 ) -> None:
     server = _make_server(tmp_path)
     server._task_store = MagicMock()
-    server._task_store.list_tasks.return_value = [_task_entry("t1", "Task 1")]
+    server._task_store.list_tasks.return_value = [_task_entry("t1", "Task 1", status="in_progress")]
     server._subagent_manager = MagicMock()
     server._subagent_manager.list_all.return_value = [
         {"id": "s1", "role": "research", "status": "running"}
@@ -297,7 +299,7 @@ async def test_transport_conformance_chat_streams_thinking_tokens_and_task_state
         async def run(self, _message: str, **kwargs: object) -> None:
             kwargs["on_thinking_chunk"]("thinking")
             kwargs["on_chunk"]("hello")
-            kwargs["on_tool_call"]("create_task", "completed", "created")
+            kwargs["on_tool_call"]("update_task", "completed", "updated")
 
     server._ensure_agent_loop = lambda: StreamingLoop(server.session_id)  # type: ignore[method-assign]
     if host_kind == "stdio":
@@ -328,7 +330,7 @@ async def test_transport_conformance_chat_streams_thinking_tokens_and_task_state
 
     task_state = next(message for message in messages if message.get("method") == "on_task_state")
     assert task_state["params"] == {
-        "tasks": [{"id": "t1", "title": "Task 1", "status": "open"}],
+        "tasks": [{"id": "t1", "title": "Task 1", "status": "in_progress"}],
         "subagents": [{"id": "s1", "role": "research", "status": "running"}],
     }
 
@@ -375,3 +377,54 @@ async def test_transport_conformance_task_subagent_and_memory_surfaces(
     assert memory_response["result"] == {
         "memories": [{"id": "m1", "content": "Remember this", "score": 1.0}]
     }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("host_kind", ["stdio", "tcp"])
+async def test_transport_conformance_checkpoint_restore_rehydrates_messages(
+    tmp_path: Path,
+    host_kind: str,
+) -> None:
+    server = _make_server(tmp_path)
+    conn = server.session_store.get_connection()
+    server._task_store = TaskStore(conn, server.session_id)
+    server._checkpoint_store = CheckpointStore(conn, server.session_id)
+
+    server.session_store.add_message(server.session_id, "user", "save me")
+    cp_id = server._checkpoint_store.save_checkpoint(
+        server._task_store,
+        "transport checkpoint",
+        context_summary="transport restore summary",
+        session_store=server.session_store,
+    )
+    server.session_store.add_message(server.session_id, "user", "after checkpoint")
+
+    requests = [
+        {
+            "jsonrpc": "2.0",
+            "id": 51,
+            "method": "checkpoint.restore",
+            "params": {"checkpoint_id": cp_id},
+        },
+        {"jsonrpc": "2.0", "id": 52, "method": "shutdown", "params": {}},
+    ]
+
+    if host_kind == "stdio":
+        messages = await _run_stdio_contract(server, requests)
+    else:
+        messages = await _run_tcp_contract(server, requests)
+
+    restore_response = next(message for message in messages if message.get("id") == 51)
+    assert restore_response["result"] == {
+        "ok": True,
+        "label": "transport checkpoint",
+        "active_files": [],
+    }
+
+    contents = [
+        message.content
+        for message in server.session_store.get_messages(server.session_id)
+    ]
+    assert "save me" in contents
+    assert "after checkpoint" not in contents
+    assert any("transport restore summary" in content for content in contents)

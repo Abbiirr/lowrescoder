@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 
 import pytest
 
 from autocode.session.checkpoint_store import CheckpointStore
 from autocode.session.models import ensure_tables
+from autocode.session.store import SessionStore
 from autocode.session.task_store import TaskStore
 
 
@@ -171,3 +173,113 @@ class TestCheckpointStore:
         assert result is not None
         assert result.id == cp_id
         assert result.label == "prefixed"
+
+    def test_restore_rehydrates_messages_and_tool_calls(self, tmp_path) -> None:
+        """Restoring a checkpoint restores conversation history and tool calls."""
+        session_store = SessionStore(tmp_path / "sessions.db")
+        session_id = session_store.create_session(
+            title="Checkpoint chat",
+            model="test-model",
+            provider="test-provider",
+            project_dir=".",
+        )
+        conn = session_store.get_connection()
+        task_store = TaskStore(conn, session_id)
+        cp_store = CheckpointStore(conn, session_id)
+
+        session_store.add_message(session_id, "user", "Inspect src/app.py")
+        assistant_id = session_store.add_message(
+            session_id, "assistant", "I will inspect it"
+        )
+        tool_call_row_id = session_store.add_tool_call(
+            session_id,
+            assistant_id,
+            "call-read",
+            "read_file",
+            {"path": "src/app.py"},
+            status="completed",
+        )
+        session_store.update_tool_call(
+            tool_call_row_id,
+            "file contents",
+            status="completed",
+            duration_ms=12,
+        )
+        session_store.add_message(session_id, "tool", "file contents")
+
+        cp_id = cp_store.save_checkpoint(
+            task_store,
+            "before edit",
+            context_summary="Read src/app.py before editing.",
+            session_store=session_store,
+        )
+
+        session_store.add_message(session_id, "user", "post-checkpoint message")
+        cp_store.restore_checkpoint(cp_id, task_store, session_store)
+
+        contents = [msg.content for msg in session_store.get_messages(session_id)]
+        assert "Inspect src/app.py" in contents
+        assert "I will inspect it" in contents
+        assert "file contents" in contents
+        assert "post-checkpoint message" not in contents
+        assert any("[Restored checkpoint: before edit]" in msg for msg in contents)
+
+        restored = session_store.get_messages_with_tool_calls(session_id)
+        assistant_messages = [
+            msg for msg in restored
+            if msg["role"] == "assistant" and msg["content"] == "I will inspect it"
+        ]
+        assert assistant_messages
+        assert assistant_messages[0]["tool_calls"] == [{
+            "id": "call-read",
+            "type": "function",
+            "function": {
+                "name": "read_file",
+                "arguments": {"path": "src/app.py"},
+            },
+        }]
+
+        row = conn.execute(
+            "SELECT tool_name, result, status, duration_ms "
+            "FROM tool_calls WHERE session_id = ?",
+            (session_id,),
+        ).fetchone()
+        assert dict(row) == {
+            "tool_name": "read_file",
+            "result": "file contents",
+            "status": "completed",
+            "duration_ms": 12,
+        }
+
+    def test_save_checkpoint_stores_bounded_message_snapshot(self, tmp_path) -> None:
+        """Checkpoint message snapshots keep a summary and bounded recent messages."""
+        session_store = SessionStore(tmp_path / "sessions.db")
+        session_id = session_store.create_session(
+            title="Checkpoint chat",
+            model="test-model",
+            provider="test-provider",
+            project_dir=".",
+        )
+        task_store = TaskStore(session_store.get_connection(), session_id)
+        cp_store = CheckpointStore(session_store.get_connection(), session_id)
+
+        for index in range(7):
+            session_store.add_message(session_id, "user", f"message {index}")
+
+        cp_id = cp_store.save_checkpoint(
+            task_store,
+            "compact",
+            context_summary="Earlier discussion summarized here.",
+            session_store=session_store,
+            message_limit=3,
+        )
+
+        checkpoint = cp_store.get_checkpoint(cp_id)
+        assert checkpoint is not None
+        snapshot = json.loads(checkpoint.messages_snapshot)
+        assert snapshot["summary"] == "Earlier discussion summarized here."
+        assert [msg["content"] for msg in snapshot["messages"]] == [
+            "message 4",
+            "message 5",
+            "message 6",
+        ]

@@ -13,6 +13,7 @@ from typing import Any
 from autocode.agent.approval import ApprovalManager
 from autocode.agent.completion import SessionStats
 from autocode.agent.context import ContextEngine
+from autocode.agent.cost_dashboard import CostDashboard
 from autocode.agent.loop import AgentLoop
 from autocode.agent.middleware import create_default_middleware
 from autocode.agent.profiler import Profiler
@@ -94,6 +95,9 @@ def create_agent_loop(
     context_length: int = 8192,
     compaction_threshold: float = 0.75,
     layer2_config: Layer2Config | None = None,
+    tool_result_cache: Any | None = None,
+    tool_result_cache_min_bytes: int = 1024,
+    cost_limit_usd: float | None = None,
 ) -> tuple[AgentLoop, SessionStats]:
     """Create a fully-wired AgentLoop with all Phase 7 runtime modules.
 
@@ -117,7 +121,11 @@ def create_agent_loop(
     )
 
     # Token tracking
-    token_tracker = TokenTracker()
+    cost_dashboard = CostDashboard()
+    token_tracker = TokenTracker(
+        cost_dashboard=cost_dashboard,
+        cost_limit_usd=cost_limit_usd,
+    )
     session_stats = SessionStats()
     session_stats.token_tracker = token_tracker
     profiler = Profiler()
@@ -149,6 +157,8 @@ def create_agent_loop(
         delegation_policy=delegation_policy,
         tool_shim=tool_shim,
         layer2_config=layer2_config,
+        tool_result_cache=tool_result_cache,
+        tool_result_cache_min_bytes=tool_result_cache_min_bytes,
     )
 
     return loop, session_stats
@@ -170,6 +180,9 @@ def create_orchestrator(
     context_length: int = 8192,
     compaction_threshold: float = 0.75,
     layer2_config: Layer2Config | None = None,
+    tool_result_cache: Any | None = None,
+    tool_result_cache_min_bytes: int = 1024,
+    cost_limit_usd: float | None = None,
 ) -> tuple[Any, SessionStats]:
     """Create a fully-wired Orchestrator wrapping an AgentLoop.
 
@@ -197,12 +210,16 @@ def create_orchestrator(
         context_length=context_length,
         compaction_threshold=compaction_threshold,
         layer2_config=layer2_config,
+        tool_result_cache=tool_result_cache,
+        tool_result_cache_min_bytes=tool_result_cache_min_bytes,
+        cost_limit_usd=cost_limit_usd,
     )
 
     # Event infrastructure
     conn = session_store.get_connection()
     event_sink = SqliteEventSink(conn)
     message_store = MessageStore(conn, session_id, event_sink=event_sink)
+    cost_dashboard = getattr(session_stats.token_tracker, "cost_dashboard", None)
 
     orchestrator = Orchestrator(
         agent_loop=loop,
@@ -212,6 +229,7 @@ def create_orchestrator(
         subagent_manager=subagent_manager,
         delegation_policy=delegation_policy,
         session_id=session_id,
+        cost_dashboard=cost_dashboard,
     )
 
     return orchestrator, session_stats

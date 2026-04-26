@@ -97,6 +97,14 @@ Carry-forward items from Claude Entry `1400` after approving Phases 1-4 and tigh
 - [ ] Update canonical docs to match the finished architecture.
 - [ ] Store final verification artifacts.
 
+## Opt-in Capabilities
+
+- [ ] Layer 3 local constrained generation is an opt-in optional-extra path.
+  Before broadening it as a supported runtime tier, package the GGUF/dependency
+  story, update `docs/architecture.md`, add live route/provider integration
+  tests, run routed-task validation, and revise the opt-in notice in
+  `autocode/src/autocode/layer3/provider.py`.
+
 ## Audit Fixes Before Phase 3
 
 - [x] Fix the config-sensitive CLI launch tests in `autocode/tests/unit/test_cli.py`.

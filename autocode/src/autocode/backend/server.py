@@ -84,6 +84,10 @@ class _ServerAppContext:
         return self._server.command_router
 
     @property
+    def _session_stats(self) -> Any | None:
+        return self._server._session_stats
+
+    @property
     def approval_mode(self) -> str:
         if self._server._approval_manager:
             return self._server._approval_manager.mode.value
@@ -195,6 +199,7 @@ class BackendServer:
         # Agent (lazy init)
         self._provider: Any = None
         self._tool_registry: ToolRegistry | None = None
+        self._tool_result_cache: Any | None = None
         self._approval_manager: ApprovalManager | None = None
         self._agent_loop: AgentLoop | None = None
         self._agent_task: asyncio.Task[None] | None = None
@@ -213,7 +218,7 @@ class BackendServer:
         self._plan_mode_enabled: bool = False
 
         # Thinking visibility
-        self._show_thinking: bool = False
+        self._show_thinking: bool = bool(getattr(self.config.llm, "reasoning_enabled", True))
 
         # Session-level auto-approve tracking
         self._session_approved_tools: set[str] = set()
@@ -317,16 +322,22 @@ class BackendServer:
         """
         tokens_in = 0
         tokens_out = 0
+        cost = "$0.0000"
         if self._session_stats:
-            tokens = self._session_stats.token_tracker.total
+            tracker = self._session_stats.token_tracker
+            tokens = tracker.total
             tokens_in = tokens.prompt_tokens
             tokens_out = tokens.completion_tokens
+            dashboard = getattr(tracker, "cost_dashboard", None)
+            total_cost = getattr(dashboard, "total_cost", None)
+            if isinstance(total_cost, (float, int)):
+                cost = f"${total_cost:.4f}"
         self._total_tokens_in += tokens_in
         self._total_tokens_out += tokens_out
         self.emit_notification(
             "on_cost_update",
             {
-                "cost": "0.0000",
+                "cost": cost,
                 "tokens_in": self._total_tokens_in,
                 "tokens_out": self._total_tokens_out,
             },
@@ -383,7 +394,10 @@ class BackendServer:
             self._provider = create_provider(self.config)
             from autocode.agent.tool_result_cache import ToolResultCache
 
-            self._tool_result_cache = ToolResultCache()
+            cache_enabled = bool(
+                getattr(self.config.agent, "tool_result_cache_enabled", True)
+            )
+            self._tool_result_cache = ToolResultCache() if cache_enabled else None
             self._tool_registry = create_default_registry(
                 project_root=str(self.project_root),
                 tool_result_cache=self._tool_result_cache,
@@ -493,6 +507,8 @@ class BackendServer:
                 context_length=self.config.llm.context_length,
                 compaction_threshold=self.config.agent.compaction_threshold,
                 layer2_config=self.config.layer2,
+                tool_result_cache=self._tool_result_cache,
+                cost_limit_usd=self.config.agent.cost_limit_usd,
             )
 
             # Apply persisted agent mode
@@ -550,9 +566,23 @@ class BackendServer:
                     await self._agent_task
             self._agent_task = None
 
-        # Learn from session before teardown
+        # Learn from session before teardown. Deterministic consolidation runs
+        # first so useful file/tool patterns persist even when LLM extraction
+        # returns no memories or is unavailable.
         if self._memory_store and self.session_store and self.session_id:
             try:
+                from autocode.session.consolidation import SessionConsolidator
+
+                session_messages = self.session_store.get_messages_with_tool_calls(
+                    self.session_id,
+                )
+                SessionConsolidator(
+                    max_learnings=self.config.agent.memory_max_entries,
+                ).run(
+                    session_messages,
+                    memory_store=self._memory_store,
+                    session_id=self.session_id,
+                )
                 await self._memory_store.learn_from_session(
                     self.session_id,
                     self.session_store,

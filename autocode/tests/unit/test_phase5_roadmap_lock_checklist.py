@@ -15,12 +15,12 @@ def _repo_root() -> Path:
 
 
 def test_phase5_roadmap_lock_checklist_exists() -> None:
-    path = _repo_root() / "docs/plan/phase5-roadmap-lock-checklist.md"
+    path = _repo_root() / "docs/plan/archive/phase5-roadmap-lock-checklist.md"
     assert path.exists(), "Roadmap lock checklist must exist."
 
 
 def test_phase5_roadmap_lock_checklist_has_required_sections() -> None:
-    path = _repo_root() / "docs/plan/phase5-roadmap-lock-checklist.md"
+    path = _repo_root() / "docs/plan/archive/phase5-roadmap-lock-checklist.md"
     content = path.read_text(encoding="utf-8")
 
     required_markers = [

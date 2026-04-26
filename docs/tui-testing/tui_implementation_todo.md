@@ -42,10 +42,11 @@ Exit gate:
 
 ## Phase B — HR-5(a) `/cc` Real-Data Binding
 
-- [ ] Bind `render_command_center_surface` to `state.subagents`
-- [ ] Add a unit test proving the surface reads live subagent state
-- [ ] Capture before/after evidence in the verification artifact
-- [ ] Re-run the required TUI verification loop
+- [x] Bind `render_command_center_surface` to `state.subagents`
+- [x] Add a unit test proving the surface reads live subagent state
+- [x] Capture before/after evidence in the verification artifact
+- [x] Re-run the required TUI verification loop
+  - Verification artifact: `autocode/docs/qa/test-results/20260426-101346-hr5-phase-b-cc-real-data-binding-tui-verification.md`
 
 Blocked on:
 
@@ -53,18 +54,28 @@ Blocked on:
 
 ## Phase C — Remaining HR-5(a) Detail-Surface Bindings
 
-- [ ] `/restore` / checkpoints
-- [ ] `/plan`
-- [ ] `/tasks` detail
-- [ ] `/grep`
-- [ ] `/review`
-- [ ] `/diff`
-- [ ] `/escalation`
-- [ ] remaining dedicated detail-surface mockup-copy cleanup
+- [x] `/restore` / checkpoints
+  - Verification artifact: `autocode/docs/qa/test-results/20260426-105326-hr5-phase-c-restore-real-data-binding-tui-verification.md`
+- [x] `/plan`
+  - Verification artifact: `autocode/docs/qa/test-results/20260426-115229-hr5-phase-c-plan-real-data-binding-tui-verification.md`
+- [x] `/tasks` detail
+  - Verification artifact: `autocode/docs/qa/test-results/20260426-120349-hr5-phase-c-tasks-real-data-binding-tui-verification.md`
+- [x] `/grep`
+  - Verification artifact: `autocode/docs/qa/test-results/20260426-123817-hr5-phase-c-grep-real-data-binding-tui-verification.md`
+- [x] `/review` + `/diff`
+  - Verification artifact: `autocode/docs/qa/test-results/20260426-130611-hr5-phase-c-review-diff-real-data-binding-tui-verification.md`
+- [x] `/escalation`
+  - Verification artifact: `autocode/docs/qa/test-results/20260426-140749-hr5-phase-c-escalation-real-data-binding-tui-verification.md`
+- [x] remaining dedicated detail-surface mockup-copy cleanup
+  - Verification artifact: `autocode/docs/qa/test-results/20260426-143024-hr5-phase-c-multi-mockup-copy-cleanup-tui-verification.md`
+- [x] post-Phase-C typed `tool.result_payload` consolidation before Phase D
+  - Verification artifact: `autocode/docs/qa/test-results/20260426-163752-hr5-typed-tool-result-payload-consolidation.md`
+  - Replace frontend string-parser shims such as `parse_search_hits` and `parse_diff_files` with structured backend payloads.
 
 ## Phase D — HR-5(b) Runtime Correctness Follow-Ons
 
-- [ ] Spinner activity-correlation
+- [x] Spinner activity-correlation
+  - Verification artifact: `autocode/docs/qa/test-results/20260426-170658-hr5-phase-d-spinner-activity-correlation.md`
 - [ ] Thinking/output buffer split
 - [ ] Per-slash PTY smoke coverage
 - [ ] 194-verb spinner badge wiring
@@ -72,8 +83,11 @@ Blocked on:
 ## Phase E — Release Gate
 
 - [x] Phase A exit gate passed
-- [ ] At least `4/10` HR-5(a) bindings shipped
+- [x] At least `4/10` HR-5(a) bindings shipped
+  - Current count: `9 shipped surfaces` (`/cc`, `/multi`, `/restore` display binding, `/plan`, `/tasks`, `/grep`, `/review`, `/diff`, `/escalation`)
 - [ ] Phase D follow-ons closed
+  - Remaining: thinking/output buffer split, per-slash PTY smoke coverage,
+    194-verb spinner badge wiring.
 - [ ] Visual-only polish re-enabled only after the gate above is met
 
 ## Hard-Requirements Override — 2026-04-22

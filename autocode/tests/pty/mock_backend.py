@@ -269,14 +269,11 @@ def _handle_chat(req_id: int | None, message: str) -> None:
         )
         tokens = []
     elif "__WARNING__" in message:
-        # Phase 2 Scenario 3: emit a WARNING to stderr mid-chat. The
-        # TUI should render it as a dim scrollback line, NOT as a red
-        # `Error:` banner.
-        print(
-            "WARNING: deliberate mid-session warning from mock backend",
-            file=sys.stderr,
-            flush=True,
-        )
+        # Phase 2 Scenario 3: emit the deliberate warning through the
+        # same notification shape the TUI renders for backend warnings.
+        warning = "⚠ [backend] WARNING: deliberate mid-session warning from mock backend"
+        send(rpc_schema.METHOD_ON_WARNING, {"message": warning})
+        print(warning, file=sys.stderr, flush=True)
         time.sleep(0.1)
         tokens = ["Warning", " emitted", "."]
     elif (

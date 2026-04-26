@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from autocode.agent.task_tools import register_task_tools
-from autocode.agent.tools import ToolRegistry
+from autocode.agent.tools import ToolRegistry, create_default_registry
 from autocode.session.store import SessionStore
 from autocode.session.task_store import TaskStore
 
@@ -52,6 +52,25 @@ class TestTaskTools:
         task = task_store.get_task(task_id)
         assert task.status == "in_progress"
 
+    def test_update_task_tool_rejects_backward_transition(self, registry, task_store):
+        task_id = task_store.create_task("Fix bug")
+        task_store.update_task(task_id, status="completed")
+        tool = registry.get("update_task")
+
+        result = tool.handler(task_id=task_id, status="in_progress")
+
+        assert "Error" in result
+        assert "cannot move backward" in result
+        task = task_store.get_task(task_id)
+        assert task.status == "completed"
+
+    def test_update_task_status_schema_lists_lifecycle_values(self, registry):
+        tool = registry.get("update_task")
+
+        status_schema = tool.parameters["properties"]["status"]
+
+        assert status_schema["enum"] == ["pending", "in_progress", "completed"]
+
     def test_add_task_dependency_tool(self, registry, task_store):
         first = task_store.create_task("Implement")
         second = task_store.create_task("Tests")
@@ -86,6 +105,12 @@ class TestTaskTools:
         assert "update_task" in names
         assert "list_tasks" in names
         assert "add_task_dependency" in names
+
+    def test_default_interruptibility_metadata(self):
+        registry = create_default_registry()
+
+        assert registry.get("run_command").interruptible is True
+        assert registry.get("write_file").interruptible is False
 
 
 class TestTaskToolLogging:

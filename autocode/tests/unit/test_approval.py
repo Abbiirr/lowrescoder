@@ -126,6 +126,82 @@ class TestApprovalManager:
         assert blocked is True
         assert "dangerous" in reason.lower() or "blocked" in reason.lower()
 
+    @pytest.mark.parametrize("tool_name", ["write_file", "edit_file"])
+    def test_write_tools_block_dangerous_paths(self, tool_name: str) -> None:
+        """Write-like tools must hard-block dangerous absolute targets."""
+        mgr = ApprovalManager(ApprovalMode.AUTO)
+
+        blocked, reason = mgr.is_blocked(tool_name, {"path": "/etc/passwd"})
+
+        assert blocked is True
+        assert "path" in reason.lower()
+        assert "/etc" in reason
+
+    def test_apply_patch_blocks_dangerous_operation_paths(self) -> None:
+        """apply_patch must inspect each operation path before mutation."""
+        mgr = ApprovalManager(ApprovalMode.AUTO)
+
+        blocked, reason = mgr.is_blocked(
+            "apply_patch",
+            {
+                "operations": [
+                    {
+                        "path": "src/safe.py",
+                        "old_string": "old",
+                        "new_string": "new",
+                    },
+                    {
+                        "path": "/boot/loader.conf",
+                        "old_string": "old",
+                        "new_string": "new",
+                    },
+                ]
+            },
+        )
+
+        assert blocked is True
+        assert "path" in reason.lower()
+        assert "/boot" in reason
+
+    @pytest.mark.parametrize(
+        ("tool_name", "arguments"),
+        [
+            ("write_file", {"path": "script.sh", "content": "#!/bin/sh\nrm -rf /"}),
+            (
+                "edit_file",
+                {
+                    "path": "script.sh",
+                    "old_string": "echo safe",
+                    "new_string": "sudo rm -rf /tmp/project",
+                },
+            ),
+            (
+                "apply_patch",
+                {
+                    "operations": [
+                        {
+                            "path": "script.sh",
+                            "old_string": "echo safe",
+                            "new_string": "dd if=/dev/zero of=/dev/sda",
+                        }
+                    ]
+                },
+            ),
+        ],
+    )
+    def test_write_tools_block_dangerous_content(
+        self,
+        tool_name: str,
+        arguments: dict[str, object],
+    ) -> None:
+        """Dangerous script content should be blocked before write execution."""
+        mgr = ApprovalManager(ApprovalMode.AUTO)
+
+        blocked, reason = mgr.is_blocked(tool_name, arguments)
+
+        assert blocked is True
+        assert "content" in reason.lower()
+
 
 class TestAsyncApprovalCallback:
     """Tests that async approval callbacks work in the agent loop."""

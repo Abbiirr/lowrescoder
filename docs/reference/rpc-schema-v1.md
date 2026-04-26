@@ -16,7 +16,17 @@ Stage 0A source of truth for the Rust TUI <-> Python backend JSON-RPC contract.
 - `on_token`: `text`
 - `on_thinking`: `text`
 - `on_done`: `tokens_in`, `tokens_out`, optional `cancelled`, optional `layer_used`
-- `on_tool_call`: `name`, `status`, optional `args`, optional `result`
+- `on_tool_call`: `name`, `status`, optional `args`, optional `result`,
+  optional `result_payload`
+  - `result` remains the human-readable transcript string.
+  - `result_payload` is structured UI data emitted on completed/successful
+    search/diff/edit tools.
+  - Search payload:
+    `{"kind":"search","query":"...","hits":[{"path":"...","line":1,"snippet":"..."}]}`
+    for `search_text`, `grep_content`, `search_code`, and `semantic_search`.
+  - Diff payload:
+    `{"kind":"diff","source":"...","files":[{"path":"...","added":1,"removed":0,"hunks":["..."]}]}`
+    for `git_diff`, `write_file`, `edit_file`, `apply_patch`, and `multi_edit`.
 - `on_task_state`: `tasks[]`, `subagents[]`
 - `on_cost_update`: `cost`, `tokens_in`, `tokens_out`
 
@@ -75,6 +85,24 @@ runtime behaviors are also part of schema v1.
   `on_error`, but it may be emitted during long retries or degraded upstream
   states so the frontend does not look silently hung.
 
+### Thinking mode
+
+- `/thinking` toggles the backend session's model-reasoning gate for future
+  chat turns, not just frontend rendering. `/thinking on` and `/thinking off`
+  are deterministic forms; bare `/thinking` still toggles.
+- When thinking mode is on, `AgentLoop.run()` may still reduce provider
+  reasoning per iteration via middleware. When thinking mode is off,
+  middleware cannot re-enable provider reasoning for that turn.
+- OpenRouter requests sent to `openrouter.ai` include
+  `reasoning.enabled=true|false`. OpenAI-compatible gateways that do not expose
+  OpenRouter's reasoning extension omit the provider-specific field and emit a
+  single `on_warning` if the backend cannot enforce a disabled-thinking request.
+- Ollama tool-chat requests include `think=true|false` when the installed SDK
+  accepts that request parameter. Older SDKs fall back without the parameter
+  and emit at most one `on_warning` per provider instance.
+- `on_thinking` remains the streaming notification for reasoning text when a
+  provider produces it.
+
 ### Session reset semantics
 
 - A successful `session.new` or `session.resume` response represents a
@@ -101,6 +129,12 @@ runtime behaviors are also part of schema v1.
   state from backend to frontend.
 - The frontend may render or temporarily cache that projection, but it
   must treat the backend payload as the source of truth.
+
+### Checkpoint restore
+
+- `checkpoint.restore` restores the checkpoint's task snapshot and, when the
+  checkpoint was saved with a session-store snapshot, replaces durable message
+  history and assistant tool-call rows before adding the restore marker.
 
 ## Historical note
 

@@ -69,6 +69,23 @@ class TestPlanArtifact:
         assert t1.status == "completed"
         assert t2.status == "in_progress"
 
+    def test_sync_skips_backward_status_transition(
+        self, task_store: TaskStore, tmp_path,
+    ) -> None:
+        """sync_from_markdown() preserves lifecycle ordering."""
+        tid = task_store.create_task("Task A")
+        task_store.update_task(tid, status="completed")
+        plan_file = tmp_path / "plan.md"
+        plan_file.write_text(
+            f"# Plan\n- [ ] #{tid}: Task A\n",
+            encoding="utf-8",
+        )
+
+        updated = sync_from_markdown("sess-1", task_store, plan_file)
+
+        assert updated == []
+        assert task_store.get_task(tid).status == "completed"
+
     def test_sync_ignores_unknown_ids(self, task_store: TaskStore, tmp_path) -> None:
         """sync_from_markdown() ignores IDs not in TaskStore."""
         plan_file = tmp_path / "plan.md"

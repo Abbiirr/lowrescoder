@@ -1,8 +1,8 @@
 # Plan
 
-Last updated: 2026-04-14
+Last updated: 2026-04-26
 Owner: Codex
-Purpose: detailed implementation plan for the active post-Phase-8 frontier. `EXECUTION_CHECKLIST.md` is the live status board; this file is the detailed execution map and ordered backlog. For every open checklist item, find the matching section here before implementing.
+Purpose: detailed implementation plan for the active backend-tightening/docs-refresh tranche plus historical roadmap sections. `EXECUTION_CHECKLIST.md` is the live status board; this file is the detailed execution map and ordered backlog. For every open checklist item, find the matching section or source-plan pointer here before implementing.
 
 ## How To Use This File
 
@@ -20,18 +20,89 @@ Purpose: detailed implementation plan for the active post-Phase-8 frontier. `EXE
 
 Follow this order unless the user explicitly redirects:
 
-1. **Section 1g: TUI Testing Strategy (ACTIVE SLICE as of 2026-04-17 late-session)**
-2. Section 1f: Unified TUI Consolidation — residual milestones C/D/E/F (deferred, see `DEFERRED_PENDING_TODO.md` §3)
-3. Section 1: Large Codebase Comprehension
-4. Section 2: Native External-Harness Orchestration
-5. Section 3: Terminal-Bench / Harness Engineering
-6. Section 5: Documentation Discipline
-7. Section 4: Research Corpus Maintenance
-8. Section 0: Harness Architecture Refinement From Proposal v2 as a landed foundation / policy reference
+1. **Stabilize-and-Release Program — ACTIVE.** Canonical plan: `docs/plan/stabilize-and-release-plan.md`. Three checkpoints: (1) stabilize for commit (1.A typed-payload consolidation done; 1.B comms cleanup batched, 1.C docs sync, 1.D regression gate, 1.E user commit), (2) Phase D + `/restore` interaction + backend robustness (2.A spinner activity-correlation done; 2.B-2.F + 2.G regression gate + 2.H commit pending), (3) Phase E release gate. **User directive 2026-04-26: complete Checkpoint 1 (comms cleanup → docs sync → regression gate) before resuming Phase D.** HR-5 program canonical: `docs/tui-testing/tui_implementation_plan.md` and `docs/tui-testing/tui_implementation_todo.md`.
+2. **Backend Feature Improvement Tranche — local regression complete.** Use `docs/plan/backend-feature-improvement-plan.md` and `docs/plan/backend-feature-improvement-todo.md` as the closeout record. Docs-refresh A-G and the local deterministic regression gate are complete; live gateway canary remains before any broad benchmark sweep or product-path release claim.
+3. HR-5 Phase C-D follow-through surfaces and spinner/thinking parity.
+4. Section 1: Large Codebase Comprehension.
+5. Section 2: Native External-Harness Orchestration.
+6. Section 3: Terminal-Bench / Harness Engineering.
+7. Section 5: Documentation Discipline.
+8. Section 4: Research Corpus Maintenance.
+9. Section 0: Harness Architecture Refinement From Proposal v2 as a landed foundation / policy reference.
+
+## Section Status Audit
+
+| Section | Current status | How to use it now |
+|---|---|---|
+| 0. Harness Architecture Refinement | Landed policy/reference | Use as design guardrails only; not the active work queue. |
+| 1. Large Codebase Comprehension | Backlog | Resume after higher-priority backend/TUI stabilization work. |
+| 1f. Stable TUI Program | Historical/deferred | Milestones C-F were absorbed or superseded by Rust TUI + HR-5 work; do not treat as current Go work. |
+| 1g. TUI Testing Strategy | HR-5 reference | Phase A benchmark latency, Phase B `/cc`, Phase C `/multi`, `/restore`, `/plan`, `/tasks`, `/grep`, `/review` + `/diff`, `/escalation`, typed payload consolidation, and Phase D spinner activity-correlation are closed; Phase D thinking/output split is next. |
+| 2. Native External-Harness Orchestration | Backlog | Keep as post-stabilization harness roadmap. |
+| 3. Terminal-Bench / Harness Engineering | Backlog | Re-measure before broadening; not current. |
+| 4. Research Corpus Maintenance | Ongoing hygiene | Update when new research docs land. |
+| 5. Documentation Discipline | Backend docs-refresh complete | `S-DOCSREFRESH-A` through `S-DOCSREFRESH-G` are complete; the local deterministic tranche regression gate is green. |
+| 6. MVP Acceptance & Targets | Reference | Keep synced with current metrics and acceptance gates. |
+| 1h. Rust TUI Migration Program | Complete/historical | Engineering migration M1-M11 is done; use as provenance, not active implementation. |
 
 Current practical rule:
 
-- **treat Section 1g (TUI Testing Strategy) as the current active slice until user approves move-on**
+- user-directed backend-tightening temporarily runs before more frontend binding;
+  use `docs/plan/backend-tightening-refinement-plan.md` for the tranche goal
+  and `docs/plan/backend-feature-improvement-plan.md` for the slice queue
+- latest completed backend slices: Stage 3 `S-CLEAR-RESULTS` (agent-visible
+  `list_tool_results` / `clear_tool_result`, loop-populated cache, backend/TUI
+  factory wiring), `S-SEARCHRES` (already-implemented search-result context
+  assembly verified), and `S-MEMPERSIST` (consolidated learnings persist through
+  `MemoryStore.save()` and backend teardown); `S-PRIORITY` is also complete by
+  existing implementation with explicit regression coverage, `S-MEMROBUST` is
+  complete with robust JSON-array extraction, `S-TRUNCATE` is complete with
+  adaptive tool-result truncation plus per-tool output budgets, and
+  `S-L1L2PREVIEW` is complete with cached active-working-set symbol previews,
+  Stage 4 `S-BLOCKED` is complete with write-tool hard-block coverage,
+  `S-CKPTMSG` is complete with checkpoint message/tool-call roundtrip,
+  `S-COST` Tier B is complete with cache-aware cost accounting,
+  warn+continue threshold support, `/cost`, and `/cost --detail`, and
+  `S-EPISODESUM` is builder-complete with deterministic non-LLM episode
+  retention summaries plus the summary-recursion cap. `S-L3DOC` is
+  builder-complete with Layer 3 documented as an opt-in optional-extra local
+  constrained-generation path that is dormant in core installs.
+  `S-DOCSREFRESH-A.1`, `S-DOCSREFRESH-A.2`, `S-DOCSREFRESH-A.3`, and
+  `S-DOCSREFRESH-A.4`
+  are complete in `docs/requirements_and_features.md`; Section 2 is current,
+  the superseded Go Bubble Tea decision is historical, the technology stack
+  reflects Rust/Ratatui plus active Jedi-backed LSP-style tools, and legacy
+  Phase 5 Universal Orchestrator is clearly separated from completed modular
+  Phase 5 swapability proof. Cross-reference audit is clean. `S-DOCSREFRESH-B`
+  is complete in `docs/architecture.md`; it now reflects bare `autocode`,
+  Rust TUI primary launch, fallback UI modes, spawn-managed stdio, attach/TCP,
+  extracted backend host adapters, and the current JSON-RPC surface.
+  `S-DOCSREFRESH-C` is complete in `PLAN.md`; it now has current active
+  ordering, a section-status audit table, backend-tranche pointers, and
+  historical markings for superseded TUI sections. `S-DOCSREFRESH-D` is
+  complete in `EXECUTION_CHECKLIST.md`; it now presents the active backend
+  docs-refresh queue before the closed stabilization record. `S-DOCSREFRESH-E`
+  is complete in `current_directives.md`; it now has a dedicated backend
+  tranche section with canonical plan/todo links, completed A-D/E status,
+  remaining F-G queue, and HR-5 return rule. `S-DOCSREFRESH-F` is complete in
+  `autocode/TESTING.md`; it now uses current root-level commands and paths,
+  documents backend live PTY smoke requirements, and links existing PTY
+  harnesses. `S-DOCSREFRESH-G` is complete; superseded plan docs were moved to
+  `docs/plan/archive/` and live references now point at the archive paths. The
+  local deterministic backend tranche regression gate is green in
+  `autocode/docs/qa/test-results/20260426-095259-backend-tranche-regression-gate.md`.
+- HR-5 Phase B `/cc` real-data binding is complete in `autocode/docs/qa/test-results/20260426-101346-hr5-phase-b-cc-real-data-binding-tui-verification.md`
+- HR-5 Phase C `/restore` / checkpoints real-data binding is complete in `autocode/docs/qa/test-results/20260426-105326-hr5-phase-c-restore-real-data-binding-tui-verification.md`
+- HR-5 Phase C `/plan` real-data binding is complete in `autocode/docs/qa/test-results/20260426-115229-hr5-phase-c-plan-real-data-binding-tui-verification.md`
+- HR-5 Phase C `/tasks` detail real-data binding is complete in `autocode/docs/qa/test-results/20260426-120349-hr5-phase-c-tasks-real-data-binding-tui-verification.md`
+- HR-5 Phase C `/grep` real-data binding is complete in `autocode/docs/qa/test-results/20260426-123817-hr5-phase-c-grep-real-data-binding-tui-verification.md`
+- HR-5 Phase C `/review` + `/diff` real-data binding is complete in `autocode/docs/qa/test-results/20260426-130611-hr5-phase-c-review-diff-real-data-binding-tui-verification.md`
+- HR-5 Phase C `/escalation` real-data binding is complete in `autocode/docs/qa/test-results/20260426-140749-hr5-phase-c-escalation-real-data-binding-tui-verification.md`
+- HR-5 Phase C `/multi` mockup-copy cleanup is complete in `autocode/docs/qa/test-results/20260426-143024-hr5-phase-c-multi-mockup-copy-cleanup-tui-verification.md`
+- typed `tool.result_payload` consolidation is complete in `autocode/docs/qa/test-results/20260426-163752-hr5-typed-tool-result-payload-consolidation.md`
+- Phase D runtime-correctness follow-ons are now the next product slice
+- Phase E HR-5(a) binding count is `9 shipped surfaces`: `/cc`, `/multi`, `/restore` display binding, `/plan`, `/tasks`, `/grep`, `/review`, `/diff`, and `/escalation`
+- run a fresh live gateway canary before any full benchmark sweep or product-path release claim
 - keep deferred items visible in `DEFERRED_PENDING_TODO.md`; do NOT dismiss anything
 - treat Section 0 as landed foundation unless a new gap is discovered
 - treat Section 1f (Unified TUI) residuals as paused, not cancelled
@@ -48,11 +119,11 @@ Status:
 
 ### Goal
 
-Use `harness-improvement-proposal-v2-2026-04-08.md` as a selective improvement source, not as a second parallel architecture.
+Use `docs/research/harness-improvement-proposal-v2-2026-04-08.md` as a selective improvement source, not as a second parallel architecture.
 
 ### Source Inputs
 
-- `harness-improvement-proposal-v2-2026-04-08.md`
+- `docs/research/harness-improvement-proposal-v2-2026-04-08.md`
 - `docs/research/harness-improvement-proposal-v2-adoption-plan.md`
 - `docs/research/autocode-internal-first-orchestration.md`
 - `docs/research/large-codebase-comprehension-and-external-harness-orchestration.md`
@@ -264,13 +335,15 @@ Make the retrieval dependency/runtime contract explicit rather than half-optiona
 
 ## 1f. Stable TUI Program
 
-**Last updated: 2026-04-17**
+**Last updated: 2026-04-26**
+
+> **Status:** Historical/deferred. This section preserves the pre-Rust stable-v1 TUI plan and original Go/Python fallback assumptions. Do not treat it as the active frontend plan. Current execution flows through HR-5 real-data bindings in `docs/tui-testing/tui_implementation_plan.md`; Phase C `/escalation`, `/multi` cleanup, typed payload consolidation, and Phase D spinner activity-correlation are complete, and Phase D thinking/output split is next.
 
 ### Goal
 
 Lock a research-backed stable-v1 TUI program for AutoCode.
 
-This section is no longer a short “closeout slice.” It is the source-of-truth execution plan for shipping a stable, migration-friendly coding-agent TUI that:
+This section preserves the historical execution plan for shipping a stable, migration-friendly coding-agent TUI that:
 
 - is predictable and boring in the best way under real terminal use
 - preserves the migration-critical contracts users already expect from Claude Code / Pi style workflows
@@ -290,13 +363,11 @@ If a future implementation decision conflicts with those sources, update the res
 
 ### Locked Decisions
 
-These decisions are now fixed unless the user explicitly redirects:
+These decisions were fixed for the pre-Rust plan. Current frontend decisions live in the ordered backlog and HR-5 docs.
 
-1. **Go BubbleTea is the default interactive frontend.**
-   `autocode chat` continues to route to `autocode/build/autocode-tui` when available.
+1. **SUPERSEDED:** Go BubbleTea was the default interactive frontend for this historical plan. Current user-facing interactive launch is bare `autocode` backed by the Rust TUI.
 
-2. **Python inline remains an explicit fallback, not the default.**
-   `--inline` stays supported until the migration surface is fully covered and explicitly retired.
+2. **SUPERSEDED:** Python inline fallback assumptions in this section are historical. Use `docs/architecture.md` and HR-5 docs for current frontend/fallback behavior.
 
 3. **Stable v1 is about compatibility and predictability, not feature maximalism.**
    The target is a strong Levels 1-4 product:
@@ -745,9 +816,9 @@ While this program is active, do not derail into:
 - orchestration-first features that multiply state complexity
 - parity-only features with no stability, compatibility, or verification value
 
-### Next Starting Point
+### Historical Starting Point
 
-The next implementation work for Section 1f starts at **Milestone A**:
+If this historical Section 1f is ever revived, restart from **Milestone A** only after reconciling it with Rust TUI/HR-5 reality:
 
 1. lock the runtime stability matrix
 2. enumerate missing runtime acceptance cases
@@ -763,9 +834,9 @@ After Milestone A, move in order:
 
 ---
 
-## 1g. TUI Testing Strategy (Active Slice)
+## 1g. TUI Testing Strategy (HR-5 Reference; Active Real-Data Binding)
 
-**Last updated:** 2026-04-23 (14-scene parity program active; HR-5 Phase A benchmark-latency close-out is recorded and `/cc` real-data binding is now the active next slice).
+**Last updated:** 2026-04-26 (14-scene parity program remains the HR-5 reference. Phase A benchmark-latency close-out, Phase B `/cc`, Phase C `/multi`, `/restore` / checkpoints, Phase C `/plan`, Phase C `/tasks`, Phase C `/grep`, Phase C `/review` + `/diff`, Phase C `/escalation`, typed payload consolidation, and Phase D spinner activity-correlation are recorded; Phase D thinking/output buffer split is next.)
 **Status:** Architecture APPROVED by Codex Entry 1141 + doc-polish
 delta APPROVED by Codex Entry 1144. Phase 1 Track 1 substrate
 implemented under `autocode/tests/tui-comparison/` with positive +
@@ -796,9 +867,28 @@ completed `B13-PROXY` through `--autocode-runner tui` without the
 stretched stale-request workaround, recorded in
 `docs/qa/test-results/20260423-040320-B13-PROXY-autocode.json` and
 `docs/qa/test-results/20260423-100635-tui-benchmark-latency-verification.md`.
-`/cc` real-data binding is now the active Phase B slice. The latest
-runtime slice is
-`autocode/docs/qa/test-results/20260422-114723-tui-runtime-gateway-pass.md`.
+Phase B `/cc` real-data binding is complete via
+`autocode/docs/qa/test-results/20260426-101346-hr5-phase-b-cc-real-data-binding-tui-verification.md`.
+Phase C `/restore` / checkpoints real-data binding is complete via
+`autocode/docs/qa/test-results/20260426-105326-hr5-phase-c-restore-real-data-binding-tui-verification.md`.
+Phase C `/plan` real-data binding is complete via
+`autocode/docs/qa/test-results/20260426-115229-hr5-phase-c-plan-real-data-binding-tui-verification.md`.
+Phase C `/tasks` detail real-data binding is complete via
+`autocode/docs/qa/test-results/20260426-120349-hr5-phase-c-tasks-real-data-binding-tui-verification.md`.
+Phase C `/grep` real-data binding is complete via
+`autocode/docs/qa/test-results/20260426-123817-hr5-phase-c-grep-real-data-binding-tui-verification.md`.
+Phase C `/review` + `/diff` real-data binding is complete via
+`autocode/docs/qa/test-results/20260426-130611-hr5-phase-c-review-diff-real-data-binding-tui-verification.md`.
+Phase C `/escalation` real-data binding is complete via
+`autocode/docs/qa/test-results/20260426-140749-hr5-phase-c-escalation-real-data-binding-tui-verification.md`.
+Phase C `/multi` mockup-copy cleanup is complete via
+`autocode/docs/qa/test-results/20260426-143024-hr5-phase-c-multi-mockup-copy-cleanup-tui-verification.md`.
+Typed `tool.result_payload` consolidation is complete via
+`autocode/docs/qa/test-results/20260426-163752-hr5-typed-tool-result-payload-consolidation.md`.
+Phase D spinner activity-correlation is complete via
+`autocode/docs/qa/test-results/20260426-170658-hr5-phase-d-spinner-activity-correlation.md`.
+The next active slice is Phase D thinking/output buffer split. The
+latest runtime slice is `autocode/docs/qa/test-results/20260422-114723-tui-runtime-gateway-pass.md`.
 
 ### Post-Codex-1138 Three-Track Architecture (AUTHORITATIVE)
 
@@ -1730,7 +1820,7 @@ All 12 must pass for MVP release.
 
 | # | Criterion | Pass Condition |
 |---|---|---|
-| 1 | CLI operational | `autocode chat`, `ask`, `edit`, `config`, `--help` all work |
+| 1 | CLI operational | `autocode`, `ask`, `edit`, `config`, `--help` all work |
 | 2 | Local LLM integration | LLM Gateway streams responses with <2 s to first token |
 | 3 | Edit success rate | >40% pass@1 on 50-task Aider benchmark subset |
 | 4 | Edit with retry | >75% success after up to 3 retries |
@@ -1760,9 +1850,9 @@ Executable in §1f.3 "Permissions, Sandbox, And Hook Enforcement". Concrete base
 
 ---
 
-## 1h. Rust TUI Migration Program (ACTIVE)
+## 1h. Rust TUI Migration Program (COMPLETE / HISTORICAL)
 
-> **Status (2026-04-19):** **ACTIVE** — all 12 decisions in §1h.1 locked by user (Entry 1220). Active implementation slice: **Rust-M1**. Go TUI frozen (maintenance-only). Source research: `deep-research-report (1).md` at repo root (treat as draft; §1h.2 corrections authoritative).
+> **Status (2026-04-19):** **COMPLETE** — Rust-M1 through Rust-M11 landed, Go TUI and Python inline fallback were deleted, and the Rust TUI is the sole supported interactive frontend. This section is preserved as migration provenance. Source research: `deep-research-report.md` at repo root (treat as draft; §1h.2 corrections authoritative).
 >
 > **Scope in one sentence:** Replace the Go BubbleTea frontend (`autocode/cmd/autocode-tui/`, 13,102 LOC across ~30 files) with a Rust inline TUI binary that speaks the **existing** JSON-RPC protocol (`protocol.go`) over PTY to the **unchanged** Python backend at `autocode/src/autocode/backend/server.py`.
 
@@ -1829,7 +1919,7 @@ No code is written until every item below is answered in writing by the user. Th
 
 ### 1h.2 Research Report Integration And Accuracy Audit
 
-**Source of truth:** `deep-research-report (1).md` at repo root (357 lines; executive summary + 14 numbered sections).
+**Source of truth:** `deep-research-report.md` at repo root (executive summary + 14 numbered sections).
 
 **Verified claims (repo-ground-truth confirmed):**
 - ✅ Go TUI source tree matches report §1 Table 1 (plus additional files the report omits: `backend_unix.go`, `backend_windows.go`, `detect.go`, `completion.go`, `markdown.go`, `spinnerverbs.go`, `styles.go`, `taskpanel.go`, `milestone_a_test.go`, `palette_test.go`).
@@ -1942,7 +2032,7 @@ Current Go TUI: 30 files, 13,102 LOC (measured 2026-04-18). Port map:
 | `on_token` | `{text: string}` | `protocol.go:43-46` |
 | `on_thinking` | `{text: string}` | `protocol.go:48-51` |
 | `on_done` | `{tokens_in: int, tokens_out: int, cancelled?: bool, layer_used?: int}` | `protocol.go:53-59` |
-| `on_tool_call` | `{name, status, result?, args?}` | `protocol.go:61-67` |
+| `on_tool_call` | `{name, status, result?, args?, result_payload?}` | `autocode/rtui/src/rpc/protocol.rs` |
 | `on_error` | `{message: string}` | `protocol.go:69-72` |
 | `on_status` | `{model, provider, mode, session_id?}` | `protocol.go:74-80` |
 | `on_tasks` | `{tasks: [...], subagents: [...]}` | `protocol.go:82-86` |

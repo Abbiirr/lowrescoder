@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Any
 
 from autocode.agent.tools import ToolDefinition
 from autocode.config import ShellConfig
@@ -17,6 +18,65 @@ class ApprovalMode(Enum):
 
 # Commands that are always blocked regardless of mode
 BLOCKED_PATTERNS = ["rm -rf /", "rm -rf ~", "mkfs", "dd if=", ":(){", "fork bomb"]
+WRITE_TOOL_NAMES = {"write_file", "edit_file"}
+DANGEROUS_WRITE_PATH_PREFIXES = (
+    "/bin",
+    "/boot",
+    "/dev",
+    "/etc",
+    "/proc",
+    "/root",
+    "/sbin",
+    "/sys",
+    "/usr/bin",
+    "/usr/sbin",
+)
+DANGEROUS_WRITE_PATH_FRAGMENTS = (
+    "/.ssh/",
+    "/.gnupg/",
+)
+DANGEROUS_WRITE_CONTENT_PATTERNS = (
+    "rm -rf",
+    "mkfs",
+    "dd if=",
+    ":(){",
+    "fork bomb",
+    "chmod -r 777 /",
+    "chown -r",
+)
+
+
+def _path_is_dangerous(path: object) -> str | None:
+    """Return the dangerous path marker when a write target is forbidden."""
+    candidate = str(path or "").strip().replace("\\", "/")
+    if not candidate:
+        return None
+    lowered = candidate.lower()
+    for prefix in DANGEROUS_WRITE_PATH_PREFIXES:
+        if lowered == prefix or lowered.startswith(f"{prefix}/"):
+            return prefix
+    if lowered.startswith("~/.ssh") or lowered.startswith("~/.gnupg"):
+        return lowered.split("/", 2)[0] if "/" in lowered else lowered
+    for fragment in DANGEROUS_WRITE_PATH_FRAGMENTS:
+        if fragment in lowered:
+            return fragment
+    return None
+
+
+def _content_is_dangerous(content: object) -> str | None:
+    """Return the dangerous content marker when write content is forbidden."""
+    candidate = str(content or "").lower()
+    for pattern in DANGEROUS_WRITE_CONTENT_PATTERNS:
+        if pattern in candidate:
+            return pattern
+    return None
+
+
+def _iter_apply_patch_operations(arguments: dict[str, object]) -> list[dict[str, Any]]:
+    operations = arguments.get("operations", [])
+    if not isinstance(operations, list):
+        return []
+    return [op for op in operations if isinstance(op, dict)]
 
 
 class ApprovalManager:
@@ -59,6 +119,29 @@ class ApprovalManager:
                 if blocked in command:
                     return True, f"Blocked: command matches blocked pattern '{blocked}'"
 
+        if tool_name in WRITE_TOOL_NAMES:
+            dangerous_path = _path_is_dangerous(arguments.get("path", ""))
+            if dangerous_path is not None:
+                return True, f"Blocked: dangerous write path '{dangerous_path}'"
+
+            content_key = "content" if tool_name == "write_file" else "new_string"
+            dangerous_content = _content_is_dangerous(arguments.get(content_key, ""))
+            if dangerous_content is not None:
+                return True, (
+                    f"Blocked: dangerous write content pattern '{dangerous_content}'"
+                )
+
+        if tool_name == "apply_patch":
+            for operation in _iter_apply_patch_operations(arguments):
+                dangerous_path = _path_is_dangerous(operation.get("path", ""))
+                if dangerous_path is not None:
+                    return True, f"Blocked: dangerous write path '{dangerous_path}'"
+                dangerous_content = _content_is_dangerous(operation.get("new_string", ""))
+                if dangerous_content is not None:
+                    return True, (
+                        f"Blocked: dangerous write content pattern '{dangerous_content}'"
+                    )
+
         return False, ""
 
     def is_shell_disabled(self) -> bool:
@@ -71,7 +154,7 @@ class ApprovalManager:
 
     # Tools that mutate the filesystem or execute shell commands
     _MUTATING_TOOLS: frozenset[str] = frozenset({
-        "write_file", "edit_file", "run_command",
+        "write_file", "edit_file", "apply_patch", "run_command",
     })
 
     def is_write_blocked(self, tool_name: str) -> bool:

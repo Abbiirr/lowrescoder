@@ -57,3 +57,6 @@ docs/qa/vhs/candidates/
 toolsharbor-cli/
 
 benchmarks/*/node_modules/
+
+docs/qa/tui-frame-sequences/
+docs/qa/tui-reference-comparison/

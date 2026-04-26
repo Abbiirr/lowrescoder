@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::time::{Duration, Instant};
 
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
@@ -8,7 +8,8 @@ mod tests {
 
     use crate::rpc::protocol::RPCMessage;
     use crate::state::model::{
-        AppState, AskUserRequest, AskUserSource, DetailSurface, InboundId, PaletteMode, Stage,
+        AppState, AskUserRequest, AskUserSource, DetailSurface, InboundId, PaletteMode,
+        PendingRequest, Stage,
     };
     use crate::state::reducer::{reduce, stale_request_timeout, Effect, Event};
     use crate::ui::textbuf::TextBuf;
@@ -651,6 +652,32 @@ mod tests {
     }
 
     #[test]
+    fn on_tool_request_preserves_escalation_payload() {
+        let state = new_state();
+        let msg = RPCMessage {
+            jsonrpc: "2.0".to_string(),
+            id: Some(77),
+            method: Some("on_tool_request".to_string()),
+            params: Some(serde_json::json!({
+                "tool": "write_file",
+                "args": "{\"path\":\".env\",\"reason\":\"protected secret path\"}"
+            })),
+            result: None,
+            error: None,
+        };
+
+        let (state, effects) = reduce(state, Event::RpcInboundRequest(msg));
+
+        let approval = state.approval.as_ref().expect("missing approval");
+        assert_eq!(approval.rpc_id.get(), 77);
+        assert_eq!(approval.tool, "write_file");
+        assert!(approval.args.contains(".env"));
+        assert!(approval.args.contains("protected secret path"));
+        assert_eq!(state.stage, Stage::Approval);
+        assert!(has_effect(&effects, &Effect::Render));
+    }
+
+    #[test]
     fn second_modal_request_is_queued_until_first_is_resolved() {
         let state = new_state();
         let (state, _) = reduce(
@@ -737,6 +764,23 @@ mod tests {
         let (state, _) = reduce(state, Event::RpcNotification(on_done_msg()));
         assert!(state.followup_queue.is_empty());
         assert_eq!(state.next_request_id, 2);
+    }
+
+    #[test]
+    fn followup_queue_auto_send_on_done_enters_streaming_state() {
+        let mut state = new_state();
+        state
+            .followup_queue
+            .push_back("follow-up message".to_string());
+
+        let (state, effects) = reduce(state, Event::RpcNotification(on_done_msg()));
+
+        assert_eq!(state.stage, Stage::Streaming);
+        assert!(state
+            .pending_requests
+            .values()
+            .any(|pending| pending.method == "chat"));
+        assert!(find_sent_rpc(&effects, "chat").is_some());
     }
 
     #[test]
@@ -1086,6 +1130,7 @@ mod tests {
             ("/escalation", DetailSurface::Escalation),
             ("/cc", DetailSurface::CommandCenter),
             ("/multi", DetailSurface::Multi),
+            ("/tasks", DetailSurface::Tasks),
         ];
 
         for (cmd, expected) in cases {
@@ -1108,6 +1153,71 @@ mod tests {
             );
             assert!(has_effect(&effects, &Effect::Render), "command {cmd}");
         }
+    }
+
+    #[test]
+    fn restore_command_requests_checkpoint_list() {
+        let mut state = new_state();
+        state.composer_text.set_text("/restore");
+
+        let (state, effects) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+        );
+
+        let msg = find_sent_rpc(&effects, "checkpoint.list").expect("checkpoint.list");
+        let request_id = msg.id.expect("request id");
+        assert_eq!(msg.params.as_ref(), Some(&serde_json::json!({})));
+        assert_eq!(
+            state
+                .pending_requests
+                .get(&request_id)
+                .map(|request| request.method.as_str()),
+            Some("checkpoint.list")
+        );
+        assert_eq!(state.detail_surface, Some(DetailSurface::Restore));
+        assert!(has_effect(&effects, &Effect::Render));
+    }
+
+    #[test]
+    fn checkpoint_list_response_populates_restore_surface_state() {
+        let mut state = new_state();
+        state.pending_requests.insert(
+            77,
+            PendingRequest {
+                method: "checkpoint.list".into(),
+                sent_at: Instant::now(),
+            },
+        );
+
+        let (state, effects) = reduce(
+            state,
+            Event::RpcResponse(RPCMessage {
+                jsonrpc: "2.0".into(),
+                id: Some(77),
+                method: None,
+                params: None,
+                result: Some(serde_json::json!({
+                    "checkpoints": [{
+                        "id": "cp-live-123",
+                        "session_id": "session-live-9",
+                        "label": "before risky edit",
+                        "tasks_snapshot": "{}",
+                        "messages_snapshot": "{}",
+                        "context_summary": "guarded restore context",
+                        "active_files": "[\"src/live.rs\"]",
+                        "created_at": "2026-04-26T10:20:30Z"
+                    }]
+                })),
+                error: None,
+            }),
+        );
+
+        assert_eq!(state.checkpoints.len(), 1);
+        assert_eq!(state.checkpoints[0].id, "cp-live-123");
+        assert_eq!(state.checkpoints[0].session_id, "session-live-9");
+        assert_eq!(state.checkpoints[0].label, "before risky edit");
+        assert!(has_effect(&effects, &Effect::Render));
     }
 
     #[test]
@@ -1434,6 +1544,7 @@ mod tests {
             Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
         );
         assert_eq!(state.detail_surface, Some(DetailSurface::Restore));
+        assert!(find_sent_rpc(&effects, "checkpoint.list").is_some());
         assert!(has_effect(&effects, &Effect::Render));
     }
 
@@ -1477,6 +1588,182 @@ mod tests {
             state.current_tool.as_ref().map(|tool| tool.name.as_str()),
             Some("write_file")
         );
+    }
+
+    #[test]
+    fn completed_search_tool_populates_grep_results() {
+        let state = new_state();
+        let (state, _) = reduce(
+            state,
+            Event::RpcNotification(RPCMessage {
+                jsonrpc: "2.0".into(),
+                id: None,
+                method: Some("on_tool_call".into()),
+                params: Some(serde_json::json!({
+                    "name": "search_text",
+                    "status": "completed",
+                    "result": "legacy text retained for transcript compatibility",
+                    "result_payload": {
+                        "kind": "search",
+                        "query": "search_text",
+                        "hits": [
+                            {
+                                "path": "src/autocode/agent/tools.py",
+                                "line": 1271,
+                                "snippet": "\"pattern\": {\"type\": \"string\"}"
+                            },
+                            {
+                                "path": "src/autocode/layer1/parser.py",
+                                "line": 42,
+                                "snippet": "def parse_symbols(source: str)"
+                            }
+                        ]
+                    }
+                })),
+                result: None,
+                error: None,
+            }),
+        );
+
+        assert_eq!(state.grep_query.as_deref(), Some("search_text"));
+        assert_eq!(state.grep_results.len(), 2);
+        assert_eq!(state.grep_results[0].path, "src/autocode/agent/tools.py");
+        assert_eq!(state.grep_results[0].line, 1271);
+        assert_eq!(
+            state.grep_results[0].snippet,
+            "\"pattern\": {\"type\": \"string\"}"
+        );
+    }
+
+    #[test]
+    fn completed_search_tool_uses_typed_result_payload() {
+        let state = new_state();
+        let (state, _) = reduce(
+            state,
+            Event::RpcNotification(RPCMessage {
+                jsonrpc: "2.0".into(),
+                id: None,
+                method: Some("on_tool_call".into()),
+                params: Some(serde_json::json!({
+                    "name": "search_text",
+                    "status": "completed",
+                    "result": "legacy string should not be parsed",
+                    "result_payload": {
+                        "kind": "search",
+                        "query": "payload query",
+                        "hits": [
+                            {
+                                "path": "src/autocode/backend/chat.py",
+                                "line": 103,
+                                "snippet": "result_payload emitted here"
+                            }
+                        ]
+                    }
+                })),
+                result: None,
+                error: None,
+            }),
+        );
+
+        assert_eq!(state.grep_query.as_deref(), Some("payload query"));
+        assert_eq!(state.grep_results.len(), 1);
+        assert_eq!(state.grep_results[0].path, "src/autocode/backend/chat.py");
+        assert_eq!(state.grep_results[0].line, 103);
+        assert_eq!(state.grep_results[0].snippet, "result_payload emitted here");
+    }
+
+    #[test]
+    fn completed_git_diff_populates_diff_and_review_state() {
+        let state = new_state();
+        let (state, _) = reduce(
+            state,
+            Event::RpcNotification(RPCMessage {
+                jsonrpc: "2.0".into(),
+                id: None,
+                method: Some("on_tool_call".into()),
+                params: Some(serde_json::json!({
+                    "name": "git_diff",
+                    "status": "completed",
+                    "result": "legacy text retained for transcript compatibility",
+                    "result_payload": {
+                        "kind": "diff",
+                        "source": "git_diff",
+                        "files": [
+                            {
+                                "path": "src/autocode/layer1/parser.py",
+                                "added": 2,
+                                "removed": 1,
+                                "hunks": [
+                                    "@@ -41,6 +41,7 @@",
+                                    "+return parsed_symbols",
+                                    "+emit_live_diff = True"
+                                ]
+                            }
+                        ]
+                    }
+                })),
+                result: None,
+                error: None,
+            }),
+        );
+
+        assert_eq!(state.diff_source.as_deref(), Some("git_diff"));
+        assert_eq!(state.diff_files.len(), 1);
+        assert_eq!(state.diff_files[0].path, "src/autocode/layer1/parser.py");
+        assert_eq!(state.diff_files[0].added, 2);
+        assert_eq!(state.diff_files[0].removed, 1);
+        assert!(state.diff_files[0]
+            .hunks
+            .iter()
+            .any(|line| line.contains("return parsed_symbols")));
+        assert_eq!(state.review_findings.len(), 1);
+        assert_eq!(state.review_findings[0].severity, "review");
+        assert_eq!(
+            state.review_findings[0].message,
+            "Review diff for src/autocode/layer1/parser.py (+2 -1)"
+        );
+    }
+
+    #[test]
+    fn completed_diff_tool_uses_typed_result_payload() {
+        let state = new_state();
+        let (state, _) = reduce(
+            state,
+            Event::RpcNotification(RPCMessage {
+                jsonrpc: "2.0".into(),
+                id: None,
+                method: Some("on_tool_call".into()),
+                params: Some(serde_json::json!({
+                    "name": "git_diff",
+                    "status": "completed",
+                    "result": "legacy string should not be parsed",
+                    "result_payload": {
+                        "kind": "diff",
+                        "source": "payload diff",
+                        "files": [
+                            {
+                                "path": "src/autocode/layer1/parser.py",
+                                "added": 2,
+                                "removed": 1,
+                                "hunks": [
+                                    "@@ -41,6 +41,7 @@",
+                                    "+return parsed_symbols"
+                                ]
+                            }
+                        ]
+                    }
+                })),
+                result: None,
+                error: None,
+            }),
+        );
+
+        assert_eq!(state.diff_source.as_deref(), Some("payload diff"));
+        assert_eq!(state.diff_files.len(), 1);
+        assert_eq!(state.diff_files[0].path, "src/autocode/layer1/parser.py");
+        assert_eq!(state.diff_files[0].added, 2);
+        assert_eq!(state.diff_files[0].removed, 1);
+        assert_eq!(state.review_findings.len(), 1);
     }
 
     #[test]

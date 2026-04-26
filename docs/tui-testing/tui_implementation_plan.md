@@ -409,29 +409,93 @@ Prerequisite:
 Current state:
 
 - prerequisite satisfied
-- active next slice
+- complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-101346-hr5-phase-b-cc-real-data-binding-tui-verification.md`
 
 Scope:
 
 - bind `render_command_center_surface` to live `state.subagents`
 
+Result:
+
+- `/cc` command-center surface derives subagent rows, queue pressure, and
+  followup count from `AppState` rather than static scene fixture names.
+- The regression test `command_center_surface_renders_live_subagent_state`
+  proves live subagent state is visible and stale fixture names are absent.
+
 ### Phase C — HR-5(a) sequential detail-surface bindings
+
+Current state:
+
+- `/restore` / checkpoints is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-105326-hr5-phase-c-restore-real-data-binding-tui-verification.md`.
+- `/restore` now dispatches `checkpoint.list`, stores live checkpoint rows in
+  `AppState.checkpoints`, and renders checkpoint id, session id, label,
+  timestamp, active files, and empty-state copy from backend state instead of
+  the old parser-fix fixture copy.
+- `/restore` display binding counts as the HR-5(a) binding for Phase E. Row
+  navigation and `checkpoint.restore` execution from the TUI remain an explicit
+  follow-up outside this display-binding slice.
+- `/plan` is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-115229-hr5-phase-c-plan-real-data-binding-tui-verification.md`.
+- `/plan` now renders live `on_task_state` task rows, status markers, step
+  counts, and planning/normal mode from `AppState` instead of static parser-fix
+  fixture copy.
+- `/tasks` detail is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-120349-hr5-phase-c-tasks-real-data-binding-tui-verification.md`.
+- `/tasks` now has a first-class `DetailSurface::Tasks` slash detail surface,
+  opened by `/tasks`, rendering live backend `on_task_state` task rows and
+  subagent rows from `AppState` instead of relying only on the compact side
+  panel.
+- `/grep` is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-123817-hr5-phase-c-grep-real-data-binding-tui-verification.md`.
+- `/grep` now renders live search rows from completed backend search tool
+  results (`search_text`, `grep_content`, `search_code`, `semantic_search`)
+  captured in `AppState.grep_results`, with file, line, snippet, query, and
+  attach target state instead of static parser-fix fixture copy.
+- `/review` + `/diff` is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-130611-hr5-phase-c-review-diff-real-data-binding-tui-verification.md`.
+- `/review` now renders live review findings derived from completed backend
+  edit/diff tool output, and `/diff` now renders live file summaries and hunk
+  lines from completed diff-producing tool output instead of static parser-fix
+  fixture copy.
+- `/escalation` is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-140749-hr5-phase-c-escalation-real-data-binding-tui-verification.md`.
+- `/escalation` now renders live backend approval request state from
+  `AppState.approval`, including tool name, request id, and approval args,
+  with an honest empty state when no backend escalation is pending.
+- Remaining dedicated detail-surface mockup-copy cleanup is complete on
+  2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-143024-hr5-phase-c-multi-mockup-copy-cleanup-tui-verification.md`.
+- `/multi` now renders live concurrent work state from `AppState` tasks,
+  active/current tools, follow-up queue, and subagents instead of static
+  parser/resolver/bun fixture copy.
+- Typed `tool.result_payload` consolidation is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-163752-hr5-typed-tool-result-payload-consolidation.md`.
+- Backend `on_tool_call` now keeps the transcript `result` string and adds
+  structured `result_payload` data for search/diff/edit-producing tools.
+- Rust reducers now consume typed payloads for `/grep`, `/review`, and `/diff`
+  state instead of frontend string-parser shims.
+- Phase D spinner activity-correlation is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-170658-hr5-phase-d-spinner-activity-correlation.md`.
+- The next slice is Phase D thinking/output buffer split.
 
 Order:
 
-1. `/restore` / checkpoints
-2. `/plan`
-3. `/tasks` detail
-4. `/grep`
-5. `/review` + `/diff`
-6. `/escalation`
-7. remaining mockup-copy cleanup in dedicated detail surfaces
+1. `/restore` / checkpoints — COMPLETE
+2. `/plan` — COMPLETE
+3. `/tasks` detail — COMPLETE
+4. `/grep` — COMPLETE
+5. `/review` + `/diff` — COMPLETE
+6. `/escalation` — COMPLETE
+7. remaining mockup-copy cleanup in dedicated detail surfaces — COMPLETE
+8. typed `tool.result_payload` consolidation — COMPLETE, post-Phase-C / pre-Phase-D
 
 ### Phase D — HR-5(b) runtime-correctness follow-ons
 
 Scope:
 
-1. spinner activity-correlation
+1. spinner activity-correlation — COMPLETE
 2. thinking/output buffer split
 3. per-slash PTY smoke coverage
 4. 194-verb spinner badge wiring
@@ -443,6 +507,12 @@ Trigger:
 - Phase A exit gate passed
 - at least `4/10` HR-5(a) bindings shipped
 - Phase D runtime-correctness follow-ons closed
+
+Current HR-5(a) binding count: `9 shipped surfaces`. The earlier `10` denominator
+is a planning placeholder for the deferred `/restore` interaction follow-up or
+future bound surface, not a blocker for Phase D. The count portion of the Phase E
+gate is satisfied; Phase D runtime-correctness follow-ons still block the full
+release gate.
 
 ## Verification Loop For Every Slice
 
@@ -465,8 +535,18 @@ For system-feature slices, also store:
 User design gate was approved on 2026-04-21 and the Stage 2 / 3 surface work
 is complete, but HR-5 now forbids another visual-only slice.
 
-The next technical slice is Phase B under HR-5(a): `/cc` real-data binding.
-Phase A is closed on the canary lane and no longer blocks the program order.
-Human-driven benchmark use through the live TUI is unblocked, and the
-benchmark-owned Rust TUI path now has a green real-gateway canary. Larger
-sweeps should still begin with a fresh canary on the current gateway.
+Phase B under HR-5(a), `/cc` real-data binding, is complete. Phase C item 1,
+`/restore` / checkpoints real-data display binding, is complete. Phase C item
+2, `/plan` real-data binding, is complete. Phase C item 3, `/tasks` detail
+real-data binding, is complete. Phase C item 4, `/grep` real-data binding, is
+complete. Phase C item 5, `/review` + `/diff` real-data binding, is complete.
+Phase C item 6, `/escalation` real-data binding, is complete. The next
+technical slice is Phase D thinking/output buffer split. Phase D spinner
+activity-correlation is complete, typed `tool.result_payload` consolidation is
+complete, and remaining dedicated detail-surface mockup-copy cleanup is complete
+via the `/multi` live concurrent-work projection.
+Phase A is closed on the canary lane and no longer blocks
+the program order. Human-driven benchmark use through the live TUI is
+unblocked, and the benchmark-owned Rust TUI path now has a green real-gateway
+canary. Larger sweeps should still begin with a fresh canary on the current
+gateway.

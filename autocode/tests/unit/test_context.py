@@ -64,6 +64,17 @@ class TestContextAssembler:
         # Budget is 100 tokens * 4 chars = 400 chars max
         assert len(result) <= 100 * 4 + 100  # Allow some overhead for section headers
 
+    def test_section_respects_budget(self):
+        """An oversized section should be truncated to its own allocation."""
+        asm = ContextAssembler(context_budget=5000)
+        long_rules = "RULE_START " + ("x" * 5000) + " RULE_END"
+
+        result = asm.assemble(query="test", rules=long_rules)
+
+        assert "RULE_START" in result
+        assert "RULE_END" not in result
+        assert "...(truncated)" in result
+
     def test_priority_order(self):
         """Rules should appear before repomap which appears before search."""
         asm = ContextAssembler()

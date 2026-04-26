@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from autocode.config import AutoCodeConfig
 from autocode.core.logging import log_event
 from autocode.gateway_auth import get_gateway_api_key
+from autocode.layer4.thinking_parser import StreamingThinkTagParser
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,68 @@ class LLMResponse:
     finish_reason: str = "stop"
     usage: dict[str, int] = field(default_factory=dict)
     reasoning: str | None = None  # Thinking/reasoning tokens (if model supports it)
+
+
+def _usage_get(obj: Any, key: str, default: Any = None) -> Any:
+    """Read usage fields from either SDK objects or plain dictionaries."""
+    if obj is None:
+        return default
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+
+def _extract_cached_input_tokens(usage: Any) -> int:
+    details = (
+        _usage_get(usage, "prompt_tokens_details")
+        or _usage_get(usage, "input_tokens_details")
+        or {}
+    )
+    cached = (
+        _usage_get(details, "cached_tokens")
+        or _usage_get(details, "cached_input_tokens")
+        or _usage_get(details, "cache_read_input_tokens")
+        or 0
+    )
+    try:
+        return max(0, int(cached))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _extract_openai_usage(usage: Any) -> dict[str, int]:
+    """Normalize OpenAI-compatible usage metadata."""
+    if usage is None:
+        return {}
+    prompt_tokens = int(
+        _usage_get(usage, "prompt_tokens")
+        or _usage_get(usage, "input_tokens")
+        or 0
+    )
+    completion_tokens = int(
+        _usage_get(usage, "completion_tokens")
+        or _usage_get(usage, "output_tokens")
+        or 0
+    )
+    cached_input_tokens = min(_extract_cached_input_tokens(usage), prompt_tokens)
+    return {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "cached_input_tokens": cached_input_tokens,
+    }
+
+
+def _extract_ollama_usage(result: Any) -> dict[str, int]:
+    """Normalize Ollama usage metadata when the SDK exposes token counts."""
+    prompt_tokens = int(_usage_get(result, "prompt_eval_count") or 0)
+    completion_tokens = int(_usage_get(result, "eval_count") or 0)
+    if prompt_tokens == 0 and completion_tokens == 0:
+        return {}
+    return {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "cached_input_tokens": 0,
+    }
 
 
 # Tool schema type for OpenAI-compatible APIs
@@ -108,6 +171,47 @@ def _parse_think_tags(text: str) -> tuple[str, str]:
     content = "".join(content_parts).strip()
     reasoning = "".join(reasoning_parts).strip()
     return content, reasoning
+
+
+def _emit_parsed_thinking_text(
+    parser: StreamingThinkTagParser,
+    text: str,
+    *,
+    content_parts: list[str],
+    reasoning_parts: list[str],
+    on_chunk: Any | None,
+    on_thinking_chunk: Any | None,
+) -> None:
+    """Feed text through the streaming thinking parser and emit callbacks."""
+    content, reasoning = parser.feed(text)
+    if content:
+        content_parts.append(content)
+        if on_chunk:
+            on_chunk(content)
+    if reasoning:
+        reasoning_parts.append(reasoning)
+        if on_thinking_chunk:
+            on_thinking_chunk(reasoning)
+
+
+def _finish_parsed_thinking_text(
+    parser: StreamingThinkTagParser,
+    *,
+    content_parts: list[str],
+    reasoning_parts: list[str],
+    on_chunk: Any | None,
+    on_thinking_chunk: Any | None,
+) -> None:
+    """Flush parser tails at the end of a provider stream."""
+    content, reasoning = parser.finish()
+    if content:
+        content_parts.append(content)
+        if on_chunk:
+            on_chunk(content)
+    if reasoning:
+        reasoning_parts.append(reasoning)
+        if on_thinking_chunk:
+            on_thinking_chunk(reasoning)
 
 
 def _find_balanced_json(text: str, start: int) -> str | None:
@@ -504,6 +608,7 @@ class OllamaProvider:
         self.temperature = config.llm.temperature
         self.max_tokens = config.llm.max_tokens
         self.context_length = config.llm.context_length
+        self._think_param_warning_sent = False
         # Use standard request timeout for all modes.
         # Per-task wall-time budget in the benchmark runner is the real guard.
         self.request_timeout = self.REQUEST_TIMEOUT
@@ -555,6 +660,54 @@ class OllamaProvider:
                 )
                 await asyncio.sleep(delay)
         raise last_exc  # type: ignore[misc]
+
+    def _warn_think_param_unavailable(self, on_retry_notice: Any | None) -> None:
+        if self._think_param_warning_sent or on_retry_notice is None:
+            return
+        self._think_param_warning_sent = True
+        on_retry_notice(
+            "WARNING: Ollama SDK cannot enforce thinking toggle; "
+            "continuing without the think request parameter."
+        )
+
+    async def _chat_with_optional_think(
+        self,
+        client: Any,
+        *,
+        think: bool,
+        on_retry_notice: Any | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Call Ollama chat with think=... when the installed SDK supports it."""
+        try:
+            return await client.chat(**kwargs, think=think)
+        except TypeError as exc:
+            if "think" not in str(exc):
+                raise
+            self._warn_think_param_unavailable(on_retry_notice)
+            return await client.chat(**kwargs)
+
+    @staticmethod
+    def _parse_ollama_tool_calls(message: Any) -> list[ToolCall]:
+        tool_calls: list[ToolCall] = []
+        if hasattr(message, "tool_calls") and message.tool_calls:
+            for tc in message.tool_calls:
+                args: Any = tc.function.arguments if hasattr(tc.function, "arguments") else {}
+                if isinstance(args, str):
+                    try:
+                        import json
+
+                        args = json.loads(args)
+                    except json.JSONDecodeError:
+                        args = {}
+                if not isinstance(args, dict):
+                    args = dict(args) if hasattr(args, "items") else {}
+                tool_calls.append(ToolCall(
+                    id=getattr(tc, "id", f"tc_{id(tc)}"),
+                    name=tc.function.name,
+                    arguments=args,
+                ))
+        return tool_calls
 
     async def generate(
         self,
@@ -627,9 +780,7 @@ class OllamaProvider:
         on_retry_notice: Any | None = None,
         reasoning_enabled: bool = True,
     ) -> LLMResponse:
-        """Generate with tool calling via Ollama (non-streaming to avoid partial JSON)."""
-        import json
-
+        """Generate with tool calling via Ollama with streaming thinking support."""
         import ollama
 
         client = ollama.AsyncClient(host=self.api_base)
@@ -649,22 +800,30 @@ class OllamaProvider:
         # Retry with tools on transient errors (e.g., XML parse errors
         # from malformed model output), then fall back to text-only.
         # Connection errors get exponential backoff via _with_conn_backoff.
-        result = None
+        response: LLMResponse | None = None
         max_tool_retries = 2
         for _retry in range(max_tool_retries):
             try:
                 result = await asyncio.wait_for(
                     self._with_conn_backoff(
-                        lambda: client.chat(
+                        lambda: self._chat_with_optional_think(
+                            client,
+                            think=reasoning_enabled,
+                            on_retry_notice=on_retry_notice,
                             model=self.model,
                             messages=cleaned_messages,
                             tools=tools,
-                            stream=False,
+                            stream=True,
                             options=options,
                         ),
                         label="generate_with_tools",
                     ),
                     timeout=self.request_timeout,
+                )
+                response = await self._consume_ollama_tool_response(
+                    result,
+                    on_chunk=on_chunk,
+                    on_thinking_chunk=on_thinking_chunk,
                 )
                 break  # Success
             except TimeoutError:
@@ -685,7 +844,10 @@ class OllamaProvider:
                 try:
                     result = await asyncio.wait_for(
                         self._with_conn_backoff(
-                            lambda: client.chat(
+                            lambda: self._chat_with_optional_think(
+                                client,
+                                think=reasoning_enabled,
+                                on_retry_notice=on_retry_notice,
                                 model=self.model,
                                 messages=cleaned_messages,
                                 stream=False,
@@ -695,64 +857,117 @@ class OllamaProvider:
                         ),
                         timeout=self.request_timeout,
                     )
+                    response = self._consume_ollama_non_stream_response(
+                        result,
+                        on_chunk=on_chunk,
+                        on_thinking_chunk=on_thinking_chunk,
+                    )
                 except Exception:
                     raise e  # Re-raise original tool error
 
         _duration_ms = int((time.monotonic() - _start) * 1000)
-        raw_content = result.message.content or ""
-        tool_calls: list[ToolCall] = []
-
-        if hasattr(result.message, "tool_calls") and result.message.tool_calls:
-            for tc in result.message.tool_calls:
-                args: Any = tc.function.arguments if hasattr(tc.function, "arguments") else {}
-                if isinstance(args, str):
-                    try:
-                        args = json.loads(args)
-                    except json.JSONDecodeError:
-                        args = {}
-                if not isinstance(args, dict):
-                    args = dict(args) if hasattr(args, "items") else {}
-                tool_calls.append(ToolCall(
-                    id=getattr(tc, "id", f"tc_{id(tc)}"),
-                    name=tc.function.name,
-                    arguments=args,
-                ))
-
-        # Parse <think> tags (DeepSeek R1 style models on Ollama)
-        content, reasoning = _parse_think_tags(raw_content)
+        if response is None:
+            msg = "Ollama response stream ended without a result"
+            raise RuntimeError(msg)
 
         # Fallback: extract tool calls from text if model didn't use structured API
         # Some models (qwen2.5-coder, etc.) output tool calls as JSON blocks in text
-        if not tool_calls and content:
-            text_tool_calls = _extract_tool_calls_from_text(content, tools)
+        if not response.tool_calls and response.content:
+            text_tool_calls = _extract_tool_calls_from_text(response.content, tools)
             if text_tool_calls:
-                tool_calls = text_tool_calls
+                response.tool_calls = text_tool_calls
                 # Remove the JSON blocks from content since they're now tool calls
-                content = ""
+                response.content = ""
                 log_event(
                     logger, logging.INFO, "llm_text_tool_fallback",
                     provider="ollama", model=self.model,
-                    extracted_count=len(tool_calls),
+                    extracted_count=len(response.tool_calls),
                 )
 
         log_event(
             logger, logging.DEBUG, "llm_response",
             provider="ollama", model=self.model,
             duration_ms=_duration_ms,
-            content_length=len(content),
-            tool_calls_count=len(tool_calls),
+            content_length=len(response.content or ""),
+            tool_calls_count=len(response.tool_calls),
         )
 
+        response.finish_reason = "tool_calls" if response.tool_calls else response.finish_reason
+        return response
+
+    async def _consume_ollama_tool_response(
+        self,
+        result: Any,
+        *,
+        on_chunk: Any | None,
+        on_thinking_chunk: Any | None,
+    ) -> LLMResponse:
+        """Consume streaming Ollama tool response or a non-stream SDK fallback."""
+        if not hasattr(result, "__aiter__"):
+            return self._consume_ollama_non_stream_response(
+                result,
+                on_chunk=on_chunk,
+                on_thinking_chunk=on_thinking_chunk,
+            )
+
+        parser = StreamingThinkTagParser()
+        content_parts: list[str] = []
+        reasoning_parts: list[str] = []
+        tool_calls: list[ToolCall] = []
+        usage: dict[str, int] = {}
+
+        async for chunk in result:
+            chunk_usage = _extract_ollama_usage(chunk)
+            if chunk_usage:
+                usage = chunk_usage
+            message = chunk.message
+            tool_calls.extend(self._parse_ollama_tool_calls(message))
+            text = message.content or ""
+            if text:
+                _emit_parsed_thinking_text(
+                    parser,
+                    text,
+                    content_parts=content_parts,
+                    reasoning_parts=reasoning_parts,
+                    on_chunk=on_chunk,
+                    on_thinking_chunk=on_thinking_chunk,
+                )
+
+        _finish_parsed_thinking_text(
+            parser,
+            content_parts=content_parts,
+            reasoning_parts=reasoning_parts,
+            on_chunk=on_chunk,
+            on_thinking_chunk=on_thinking_chunk,
+        )
+        return LLMResponse(
+            content="".join(content_parts) or None,
+            tool_calls=tool_calls,
+            finish_reason="tool_calls" if tool_calls else "stop",
+            reasoning="".join(reasoning_parts) or None,
+            usage=usage,
+        )
+
+    def _consume_ollama_non_stream_response(
+        self,
+        result: Any,
+        *,
+        on_chunk: Any | None,
+        on_thinking_chunk: Any | None,
+    ) -> LLMResponse:
+        """Parse a complete Ollama response when streaming is unavailable."""
+        content, reasoning = _parse_think_tags(result.message.content or "")
         if on_chunk and content:
             on_chunk(content)
         if on_thinking_chunk and reasoning:
             on_thinking_chunk(reasoning)
-
+        tool_calls = self._parse_ollama_tool_calls(result.message)
         return LLMResponse(
             content=content or None,
             tool_calls=tool_calls,
             finish_reason="tool_calls" if tool_calls else "stop",
             reasoning=reasoning or None,
+            usage=_extract_ollama_usage(result),
         )
 
     def count_tokens(self, text: str) -> int:
@@ -774,6 +989,7 @@ class OpenRouterProvider:
         self.api_base = config.llm.api_base
         self.temperature = config.llm.temperature
         self.max_tokens = config.llm.max_tokens
+        self._reasoning_toggle_warning_sent = False
         if "openrouter.ai" in self.api_base:
             self.api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
         else:
@@ -882,6 +1098,15 @@ class OpenRouterProvider:
         msg = "unreachable"
         raise RuntimeError(msg)
 
+    def _warn_reasoning_toggle_unavailable(self, on_retry_notice: Any | None) -> None:
+        if self._reasoning_toggle_warning_sent or on_retry_notice is None:
+            return
+        self._reasoning_toggle_warning_sent = True
+        on_retry_notice(
+            "WARNING: configured gateway cannot enforce thinking toggle; "
+            "continuing without provider reasoning flag."
+        )
+
     @staticmethod
     def _sanitize_tool_call_ids(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Sanitize tool_call_ids to be alphanumeric only.
@@ -930,8 +1155,10 @@ class OpenRouterProvider:
 
         extra_body: dict[str, Any] = {}
         # Only send reasoning extension for actual OpenRouter, not LLM Gateway
-        if reasoning_enabled and "openrouter.ai" in self.api_base:
-            extra_body["reasoning"] = {"enabled": True}
+        if "openrouter.ai" in self.api_base:
+            extra_body["reasoning"] = {"enabled": bool(reasoning_enabled)}
+        elif not reasoning_enabled:
+            self._warn_reasoning_toggle_unavailable(on_retry_notice)
 
         log_event(
             logger, logging.DEBUG, "llm_request",
@@ -1044,7 +1271,8 @@ class OpenRouterProvider:
         reasoning_parts: list[str] = []
         tool_call_data: dict[int, dict[str, Any]] = {}
         finish_reason = "stop"
-        in_think_tag = False
+        thinking_parser = StreamingThinkTagParser()
+        usage: dict[str, int] = {}
 
         response_stream = await client.chat.completions.create(
             model=self.model,
@@ -1053,10 +1281,14 @@ class OpenRouterProvider:
             max_tokens=self.max_tokens,
             tools=tools,  # type: ignore[arg-type]
             stream=True,
+            stream_options={"include_usage": True},
             extra_body=extra_body or None,
         )
 
         async for chunk in response_stream:  # type: ignore[union-attr]
+            chunk_usage = _extract_openai_usage(getattr(chunk, "usage", None))
+            if chunk_usage:
+                usage = chunk_usage
             if not chunk.choices:
                 continue
             choice = chunk.choices[0]
@@ -1072,42 +1304,14 @@ class OpenRouterProvider:
                     on_thinking_chunk(reasoning_text)
 
             if delta and delta.content:
-                text = delta.content
-
-                if "<think>" in text:
-                    in_think_tag = True
-                    before, _, after = text.partition("<think>")
-                    if before:
-                        content_parts.append(before)
-                        if on_chunk:
-                            on_chunk(before)
-                    if after:
-                        reasoning_parts.append(after)
-                        if on_thinking_chunk:
-                            on_thinking_chunk(after)
-                    continue
-
-                if "</think>" in text:
-                    in_think_tag = False
-                    before, _, after = text.partition("</think>")
-                    if before:
-                        reasoning_parts.append(before)
-                        if on_thinking_chunk:
-                            on_thinking_chunk(before)
-                    if after:
-                        content_parts.append(after)
-                        if on_chunk:
-                            on_chunk(after)
-                    continue
-
-                if in_think_tag:
-                    reasoning_parts.append(text)
-                    if on_thinking_chunk:
-                        on_thinking_chunk(text)
-                else:
-                    content_parts.append(text)
-                    if on_chunk:
-                        on_chunk(text)
+                _emit_parsed_thinking_text(
+                    thinking_parser,
+                    delta.content,
+                    content_parts=content_parts,
+                    reasoning_parts=reasoning_parts,
+                    on_chunk=on_chunk,
+                    on_thinking_chunk=on_thinking_chunk,
+                )
 
             if delta and delta.tool_calls:
                 for tc_delta in delta.tool_calls:
@@ -1128,6 +1332,14 @@ class OpenRouterProvider:
                                 tc_delta.function.arguments
                             )
 
+        _finish_parsed_thinking_text(
+            thinking_parser,
+            content_parts=content_parts,
+            reasoning_parts=reasoning_parts,
+            on_chunk=on_chunk,
+            on_thinking_chunk=on_thinking_chunk,
+        )
+
         content = "".join(content_parts) or None
         reasoning = "".join(reasoning_parts) or None
         tool_calls = self._parse_tool_calls(tool_call_data)
@@ -1137,6 +1349,7 @@ class OpenRouterProvider:
             tool_calls=tool_calls,
             finish_reason="tool_calls" if tool_calls else finish_reason,
             reasoning=reasoning,
+            usage=usage,
         )
 
     async def _tools_non_streaming(
@@ -1186,6 +1399,7 @@ class OpenRouterProvider:
             tool_calls=tool_calls,
             finish_reason="tool_calls" if tool_calls else finish_reason,
             reasoning=reasoning,
+            usage=_extract_openai_usage(getattr(result, "usage", None)),
         )
 
     @staticmethod

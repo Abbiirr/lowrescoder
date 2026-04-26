@@ -23,6 +23,21 @@ def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def _extract_first_json_array(text: str) -> list[Any] | None:
+    """Return the first valid JSON array embedded in text."""
+    decoder = json.JSONDecoder()
+    for idx, char in enumerate(text):
+        if char != "[":
+            continue
+        try:
+            value, _end = decoder.raw_decode(text[idx:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, list):
+            return value
+    return None
+
+
 class MemoryStore:
     """CRUD operations for learned memories in SQLite.
 
@@ -192,14 +207,12 @@ class MemoryStore:
             else:
                 response = await provider.generate_with_tools(llm_messages, [])
 
-            # Parse JSON from response
+            # Parse JSON from response. Models often wrap JSON in prose or
+            # fences; scan for the first valid array instead of trusting the
+            # first '[' / last ']' pair.
             text = response.content or ""
-            # Try to extract JSON array
-            start = text.find("[")
-            end = text.rfind("]") + 1
-            if start >= 0 and end > start:
-                items = json.loads(text[start:end])
-            else:
+            items = _extract_first_json_array(text)
+            if items is None:
                 return []
 
             saved_ids: list[str] = []

@@ -1,7 +1,6 @@
 """Tests for EpisodeStore — SQLite episode/event CRUD with retention."""
 
-from __future__ import annotations
-
+import inspect
 import json
 import sqlite3
 
@@ -28,6 +27,50 @@ def blob_store(tmp_path):
 @pytest.fixture()
 def episode_store(db_conn, blob_store):
     return EpisodeStore(db_conn, "session-1", blob_store, max_episodes=200)
+
+
+def _insert_episode_with_events(
+    conn: sqlite3.Connection,
+    session_id: str,
+    seq: int,
+    event_types: list[str],
+) -> str:
+    episode_id = f"ep-{seq}"
+    conn.execute(
+        "INSERT INTO episodes (id, session_id, sequence_num, started_at, outcome, metrics) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (
+            episode_id,
+            session_id,
+            seq,
+            f"2026-04-25T00:00:{seq:02d}+00:00",
+            "summary" if event_types == ["summary"] else "text_response",
+            "{}",
+        ),
+    )
+    for idx, event_type in enumerate(event_types):
+        conn.execute(
+            "INSERT INTO episode_events (episode_id, event_type, timestamp, data) "
+            "VALUES (?, ?, ?, ?)",
+            (
+                episode_id,
+                event_type,
+                f"2026-04-25T00:00:{seq:02d}.{idx:06d}+00:00",
+                json.dumps({"seq": seq, "idx": idx}),
+            ),
+        )
+    conn.commit()
+    return episode_id
+
+
+def _summary_events(conn: sqlite3.Connection) -> list[dict]:
+    cursor = conn.execute(
+        "SELECT ee.*, e.sequence_num FROM episode_events ee "
+        "JOIN episodes e ON e.id = ee.episode_id "
+        "WHERE ee.event_type = 'summary' ORDER BY e.sequence_num ASC, ee.id ASC",
+    )
+    cols = [d[0] for d in cursor.description]
+    return [dict(zip(cols, row)) for row in cursor.fetchall()]
 
 
 class TestEpisodeStore:
@@ -98,7 +141,7 @@ class TestEpisodeStore:
         assert ids == sorted(ids), "Events should be in ascending ID order"
 
     def test_retention_enforcement(self, db_conn, blob_store):
-        """Oldest episodes are pruned when exceeding max_episodes_per_session."""
+        """Oldest episodes are summarized when exceeding max_episodes_per_session."""
         store = EpisodeStore(db_conn, "session-1", blob_store, max_episodes=3)
 
         eids = []
@@ -108,9 +151,101 @@ class TestEpisodeStore:
 
         eps = store.list_episodes()
         assert len(eps) == 3
-        # The oldest (sequence_num=0) should have been pruned
+        # The two oldest are folded into one summary to make room for the new turn.
         remaining_ids = {e["id"] for e in eps}
         assert eids[0] not in remaining_ids
-        assert eids[1] in remaining_ids
+        assert eids[1] not in remaining_ids
         assert eids[2] in remaining_ids
         assert eids[3] in remaining_ids
+
+        summary_rows = _summary_events(db_conn)
+        assert len(summary_rows) == 1
+        payload = json.loads(summary_rows[0]["data"])
+        assert payload["event_counts"] == {"user_message": 2}
+
+
+class TestSummarization:
+    def test_enforce_retention_summarizes_oldest_tranche(self, db_conn, blob_store):
+        """Retention folds the oldest tranche into a deterministic summary event."""
+        store = EpisodeStore(db_conn, "session-1", blob_store, max_episodes=5)
+        event_cycle = ["tool_call", "tool_result", "model_response"]
+        for seq in range(15):
+            _insert_episode_with_events(
+                db_conn,
+                "session-1",
+                seq,
+                [event_cycle[seq % len(event_cycle)]],
+            )
+
+        store._enforce_retention()
+
+        summary_rows = _summary_events(db_conn)
+        assert len(summary_rows) == 1
+        payload = json.loads(summary_rows[0]["data"])
+        assert payload == {
+            "event_counts": {
+                "tool_call": 4,
+                "tool_result": 4,
+                "model_response": 4,
+            },
+            "ts_range": [
+                "2026-04-25T00:00:00.000000+00:00",
+                "2026-04-25T00:00:11.000000+00:00",
+            ],
+            "n_collapsed": 12,
+        }
+        assert [ep["sequence_num"] for ep in store.list_episodes()] == [0, 12, 13, 14]
+
+    def test_summary_event_schema(self, db_conn, blob_store):
+        """Summary payload only contains the public deterministic schema."""
+        store = EpisodeStore(db_conn, "session-1", blob_store, max_episodes=3)
+        for seq, event_type in enumerate(["tool_call", "error", "completion"]):
+            _insert_episode_with_events(db_conn, "session-1", seq, [event_type])
+
+        store._enforce_retention()
+
+        summary_rows = _summary_events(db_conn)
+        assert len(summary_rows) == 1
+        payload = json.loads(summary_rows[0]["data"])
+        assert set(payload) == {"event_counts", "ts_range", "n_collapsed"}
+        assert isinstance(payload["event_counts"], dict)
+        assert len(payload["ts_range"]) == 2
+        assert payload["n_collapsed"] == 2
+
+    def test_recursion_cap_drops_oldest_summary(self, db_conn, blob_store):
+        """When summaries dominate remaining history, drop the oldest summary."""
+        store = EpisodeStore(db_conn, "session-1", blob_store, max_episodes=5)
+        _insert_episode_with_events(db_conn, "session-1", 0, ["tool_call"])
+        oldest_summary = _insert_episode_with_events(db_conn, "session-1", 1, ["summary"])
+        _insert_episode_with_events(db_conn, "session-1", 2, ["summary"])
+        _insert_episode_with_events(db_conn, "session-1", 3, ["summary"])
+        _insert_episode_with_events(db_conn, "session-1", 4, ["tool_result"])
+
+        store._enforce_retention()
+
+        remaining_ids = {ep["id"] for ep in store.list_episodes()}
+        assert "ep-0" in remaining_ids
+        assert oldest_summary not in remaining_ids
+        assert len(_summary_events(db_conn)) == 2
+
+    def test_retention_synchronous(self):
+        """Retention stays inline-safe for the agent loop call path."""
+        assert inspect.iscoroutinefunction(EpisodeStore._enforce_retention) is False
+
+    def test_zero_events_noop(self, db_conn, blob_store):
+        """Empty stores are not mutated or errored by retention."""
+        store = EpisodeStore(db_conn, "session-1", blob_store, max_episodes=3)
+        store._enforce_retention()
+        assert store.list_episodes() == []
+
+    def test_retention_below_bound_noop(self, db_conn, blob_store):
+        """Below-bound stores remain unchanged."""
+        store = EpisodeStore(db_conn, "session-1", blob_store, max_episodes=5)
+        inserted = [
+            _insert_episode_with_events(db_conn, "session-1", seq, ["tool_call"])
+            for seq in range(2)
+        ]
+
+        store._enforce_retention()
+
+        assert [ep["id"] for ep in store.list_episodes()] == inserted

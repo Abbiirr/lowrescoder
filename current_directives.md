@@ -1,12 +1,44 @@
 # Current Directives
 
-> Last updated: 2026-04-23
+> Last updated: 2026-04-26
 
 ## Active Phase
 
 **Stabilization Sprint — COMPLETE.** Stage 0A closed on 2026-04-20 with schema/docs/harness synchronization recorded in `autocode/docs/qa/test-results/20260420-171416-stage0a-verification.md`; Stage 0B is intentionally skipped because `command.list`, `model.list`, `provider.list`, and `session.list` unblock Stage 2 directly. Stage 1 closed on 2026-04-21 after the UTF-8/history, editor/inline, RPC/process, and runtime-hygiene slices recorded in the Stage 1 artifacts below. Stage 2 closed on 2026-04-21 after the visible command/picker slice and the slash-autocomplete/compact-feedback slice recorded below. Stage 3A closed on 2026-04-21 after the modal/transcript slice recorded below. Stage 3B closed on 2026-04-21 after the inspection/queue slice recorded below. Stage 4 closed on 2026-04-21 after the canonical-name-only shim-removal pass and full stabilization rerun recorded in `autocode/docs/qa/test-results/20260421-104354-stabilization-verification.md`. The product gate is now closed for the stabilization program. Execution of the sprint was carried by Codex under Entry 1266. Linux-first scope remains locked; macOS out of scope; Windows post-v1.
 
-## ACTIVE SLICE: TUI Runtime Correctness + Parity Follow-through (HR-5 active)
+## ACTIVE OVERRIDE: Backend Feature Improvement Tranche
+
+**Canonical plan:** `docs/plan/backend-feature-improvement-plan.md`
+**Checklist:** `docs/plan/backend-feature-improvement-todo.md`
+**Method reference:** `docs/plan/backend-tightening-refinement-plan.md`
+
+**Current queue:** `S-DOCSREFRESH-G`, the local deterministic backend tranche regression gate, HR-5 Phase B `/cc`, HR-5 Phase C item 1 `/restore`, HR-5 Phase C item 2 `/plan`, HR-5 Phase C item 3 `/tasks`, HR-5 Phase C item 4 `/grep`, HR-5 Phase C item 5 `/review` + `/diff`, HR-5 Phase C item 6 `/escalation`, remaining `/multi` mockup-copy cleanup, typed `tool.result_payload` consolidation, and Phase D spinner activity-correlation are complete. Next is Phase D thinking/output buffer split.
+
+**Completed in this docs-refresh pass:** `S-DOCSREFRESH-A` (`docs/requirements_and_features.md`), `S-DOCSREFRESH-B` (`docs/architecture.md`), `S-DOCSREFRESH-C` (`PLAN.md`), `S-DOCSREFRESH-D` (`EXECUTION_CHECKLIST.md`), `S-DOCSREFRESH-E` (`current_directives.md`), `S-DOCSREFRESH-F` (`autocode/TESTING.md`), and `S-DOCSREFRESH-G` (`docs/plan/archive/` cleanup).
+
+**Return rule:** continue HR-5 real-data bindings. Do not start another visual-only TUI slice first. Run a fresh live gateway canary before any full benchmark sweep or product-path release claim.
+
+**Latest docs-refresh artifacts:**
+- `autocode/docs/qa/test-results/20260426-083440-s-docsrefresh-a4-verification.md`
+- `autocode/docs/qa/test-results/20260426-084544-s-docsrefresh-b-verification.md`
+- `autocode/docs/qa/test-results/20260426-085127-s-docsrefresh-c-verification.md`
+- `autocode/docs/qa/test-results/20260426-085516-s-docsrefresh-d-verification.md`
+- `autocode/docs/qa/test-results/20260426-085932-s-docsrefresh-e-verification.md`
+- `autocode/docs/qa/test-results/20260426-093101-s-docsrefresh-f-verification.md`
+- `autocode/docs/qa/test-results/20260426-094558-s-docsrefresh-g-verification.md`
+- `autocode/docs/qa/test-results/20260426-095259-backend-tranche-regression-gate.md`
+- `autocode/docs/qa/test-results/20260426-101346-hr5-phase-b-cc-real-data-binding-tui-verification.md`
+- `autocode/docs/qa/test-results/20260426-105326-hr5-phase-c-restore-real-data-binding-tui-verification.md`
+- `autocode/docs/qa/test-results/20260426-115229-hr5-phase-c-plan-real-data-binding-tui-verification.md`
+- `autocode/docs/qa/test-results/20260426-120349-hr5-phase-c-tasks-real-data-binding-tui-verification.md`
+- `autocode/docs/qa/test-results/20260426-123817-hr5-phase-c-grep-real-data-binding-tui-verification.md`
+- `autocode/docs/qa/test-results/20260426-130611-hr5-phase-c-review-diff-real-data-binding-tui-verification.md`
+- `autocode/docs/qa/test-results/20260426-140749-hr5-phase-c-escalation-real-data-binding-tui-verification.md`
+- `autocode/docs/qa/test-results/20260426-143024-hr5-phase-c-multi-mockup-copy-cleanup-tui-verification.md`
+- `autocode/docs/qa/test-results/20260426-163752-hr5-typed-tool-result-payload-consolidation.md`
+- `autocode/docs/qa/test-results/20260426-170658-hr5-phase-d-spinner-activity-correlation.md`
+
+## HR-5 TUI Runtime Correctness + Parity Follow-through (Paused During Backend Override)
 
 **Canonical plan:** `docs/tui-testing/tui_implementation_plan.md`
 **Checklist:** `docs/tui-testing/tui_implementation_todo.md`
@@ -34,16 +66,28 @@
 
 **Honesty note:** the dedicated detail surfaces are real and directly triggerable, but several still render static scene text rather than real bound session data. Human-driven TUI benchmarking is unblocked, the benchmark-owned Rust TUI PTY runner now has a green real-gateway canary, and the specific Phase A latency blocker is no longer the active frontier. Larger sweeps should still start with a fresh canary on the current gateway before the long run begins.
 
-**Active task:** do not start another visual-only slice. Under HR-5, Phase A is closed on the canary lane and the active next slice is now Phase B under HR-5(a): `/cc` real-data binding. Keep the broader implementation order in `docs/tui-testing/tui_implementation_plan.md` and `docs/tui-testing/tui_implementation_todo.md`, with the Phase A close-out captured in the dedicated plan/checklist pair above.
+**Active task:** do not start another visual-only slice. Under HR-5, Phase A is closed on the canary lane, Phase B `/cc` is complete via `autocode/docs/qa/test-results/20260426-101346-hr5-phase-b-cc-real-data-binding-tui-verification.md`, Phase C `/restore` is complete via `autocode/docs/qa/test-results/20260426-105326-hr5-phase-c-restore-real-data-binding-tui-verification.md`, Phase C `/plan` is complete via `autocode/docs/qa/test-results/20260426-115229-hr5-phase-c-plan-real-data-binding-tui-verification.md`, Phase C `/tasks` is complete via `autocode/docs/qa/test-results/20260426-120349-hr5-phase-c-tasks-real-data-binding-tui-verification.md`, Phase C `/grep` is complete via `autocode/docs/qa/test-results/20260426-123817-hr5-phase-c-grep-real-data-binding-tui-verification.md`, Phase C `/review` + `/diff` is complete via `autocode/docs/qa/test-results/20260426-130611-hr5-phase-c-review-diff-real-data-binding-tui-verification.md`, Phase C `/escalation` is complete via `autocode/docs/qa/test-results/20260426-140749-hr5-phase-c-escalation-real-data-binding-tui-verification.md`, remaining `/multi` mockup-copy cleanup is complete via `autocode/docs/qa/test-results/20260426-143024-hr5-phase-c-multi-mockup-copy-cleanup-tui-verification.md`, typed `tool.result_payload` consolidation is complete via `autocode/docs/qa/test-results/20260426-163752-hr5-typed-tool-result-payload-consolidation.md`, and Phase D spinner activity-correlation is complete via `autocode/docs/qa/test-results/20260426-170658-hr5-phase-d-spinner-activity-correlation.md`. The active next slice is Phase D thinking/output buffer split. Keep the broader implementation order in `docs/tui-testing/tui_implementation_plan.md` and `docs/tui-testing/tui_implementation_todo.md`, with the Phase A close-out captured in the dedicated plan/checklist pair above.
 
-**User-directed temporary override (2026-04-24):** before more frontend binding work, run a backend-tightening tranche to check commit-readiness on the current tree and tighten backend/runtime behavior around chat streaming, subagents, context, memory, task/todo, loop, and transport correctness. Canonical plan: `docs/plan/backend-tightening-refinement-plan.md`. Once that tranche is stable enough, return to HR-5 Phase B `/cc` real-data binding.
+**User-directed temporary override (2026-04-24):** before more frontend binding work, run a backend-tightening tranche to check commit-readiness on the current tree and tighten backend/runtime behavior around chat streaming, subagents, context, memory, task/todo, loop, and transport correctness. Canonical plan: `docs/plan/backend-tightening-refinement-plan.md`. Backend tranche and docs-refresh progress are summarized in the active override above. The tranche is now stable enough; HR-5 Phase B `/cc`, Phase C `/restore`, `/plan`, `/tasks`, `/grep`, `/review` + `/diff`, `/escalation`, and `/multi` cleanup have completed, so continue with the typed payload consolidation follow-up before Phase D.
+
+**Backend-tranche status update (2026-04-26):** `S-DOCSREFRESH-A.4` is complete from builder side: `docs/requirements_and_features.md` cross-references were audited, stale benchmark paths and deleted Go TUI file references were corrected, active Go-era UX wording was replaced with Rust/current wording, and inline repo references resolve. Verification is recorded in `autocode/docs/qa/test-results/20260426-083440-s-docsrefresh-a4-verification.md`. Subsequent docs-refresh progress is summarized in the active override above.
+
+**Backend-tranche status update (2026-04-26):** `S-DOCSREFRESH-B` is complete from builder side: `docs/architecture.md` now reflects bare `autocode`, Rust TUI primary launch, Textual/Rich fallback modes, spawn-managed stdio, attach/TCP, extracted backend host adapters, and the current JSON-RPC surface. Verification is recorded in `autocode/docs/qa/test-results/20260426-084544-s-docsrefresh-b-verification.md`. Subsequent docs-refresh progress is summarized in the active override above.
+
+**Backend-tranche status update (2026-04-26):** `S-DOCSREFRESH-C` is complete from builder side: `PLAN.md` now has current active ordering, a section-status audit table, backend-tranche pointers, and historical markings for superseded TUI sections. Verification is recorded in `autocode/docs/qa/test-results/20260426-085127-s-docsrefresh-c-verification.md`. Subsequent docs-refresh progress is summarized in the active override above.
+
+**Backend-tranche status update (2026-04-26):** `S-DOCSREFRESH-D` is complete from builder side: `EXECUTION_CHECKLIST.md` now presents the active backend docs-refresh queue before the closed stabilization record, points to `S-DOCSREFRESH-E`, and removes stale migration source/test-count wording from the live checklist. Verification is recorded in `autocode/docs/qa/test-results/20260426-085516-s-docsrefresh-d-verification.md`. Subsequent docs-refresh progress is summarized in the active override above.
+
+**Backend-tranche status update (2026-04-26):** `S-DOCSREFRESH-F` is complete from builder side: `autocode/TESTING.md` now uses current root-level commands and paths, documents backend live PTY smoke requirements for runtime-visible backend slices, and links existing PTY harnesses. Verification is recorded in `autocode/docs/qa/test-results/20260426-093101-s-docsrefresh-f-verification.md`. Subsequent docs-refresh progress is summarized in the active override above.
+
+**Backend-tranche status update (2026-04-26):** `S-DOCSREFRESH-G` is complete from builder side: approved superseded `docs/plan/*.md` files moved to `docs/plan/archive/`, live references were retargeted, and roadmap-lock tests now read archive paths. Verification is recorded in `autocode/docs/qa/test-results/20260426-094558-s-docsrefresh-g-verification.md`. The local deterministic backend tranche regression gate is also complete: Python unit, benchmark harness tests, Rust TUI cargo test/clippy/release build, local PTY smokes, and `git diff --check` passed. Verification is recorded in `autocode/docs/qa/test-results/20260426-095259-backend-tranche-regression-gate.md`. HR-5 Phase B `/cc`, Phase C `/restore`, `/plan`, `/tasks`, `/grep`, `/review` + `/diff`, `/escalation`, and `/multi` cleanup are now complete; keep the live gateway canary as the remaining full product-path gate before broad benchmark sweeps.
 
 **Active phase order (locked 2026-04-23):**
 - Phase A — HR-5(c): COMPLETE on 2026-04-23 via `docs/qa/test-results/20260423-100635-tui-benchmark-latency-verification.md`
-- Phase B — HR-5(a): `/cc` real-data binding (active)
-- Phase C — HR-5(a): `/restore` / checkpoints, `/plan`, `/tasks`, `/grep`, `/review`, `/diff`, `/escalation`, and remaining detail-surface bindings
-- Phase D — HR-5(b): spinner activity-correlation, thinking/output split, per-slash PTY smoke, 194-verb spinner badge
-- Phase E — release gate after at least `4/10` HR-5(a) bindings ship
+- Phase B — HR-5(a): `/cc` real-data binding (complete on 2026-04-26)
+- Phase C — HR-5(a): `/restore` / checkpoints (complete on 2026-04-26), `/plan` (complete on 2026-04-26), `/tasks` (complete on 2026-04-26), `/grep` (complete on 2026-04-26), `/review` + `/diff` (complete on 2026-04-26), `/escalation` (complete on 2026-04-26), `/multi` mockup-copy cleanup (complete on 2026-04-26), and typed payload consolidation (complete on 2026-04-26)
+- Phase D — HR-5(b): spinner activity-correlation (complete on 2026-04-26), thinking/output split, per-slash PTY smoke, 194-verb spinner badge
+- Phase E — release gate after at least `4/10` HR-5(a) bindings ship; current HR-5(a) count is `9 shipped surfaces` (`/cc`, `/multi`, `/restore` display binding, `/plan`, `/tasks`, `/grep`, `/review`, `/diff`, `/escalation`)
 
 ## Parallel Architecture Track (User-Directed 2026-04-23)
 
@@ -200,7 +244,7 @@ Total: **1777+ tests, 0 failures in the latest stored full-suite artifact, 4 ski
 - Full pytest: `autocode/docs/qa/test-results/20260402-150707-full-suite-after-fixes.md`
 - Install smoke: `autocode/docs/qa/test-results/20260403-173036-install-smoke.md`
 - Loop smoke: `autocode/docs/qa/test-results/20260403-173500-loop-smoke.md`
-- Phase 7 plan: `docs/plan/phase7-ship-ready.md`
+- Phase 7 plan: `docs/plan/archive/phase7-ship-ready.md`
 - Internal-first orchestration research: `docs/research/autocode-internal-first-orchestration.md`
 - Proposal-v2 adoption memo: `docs/research/harness-improvement-proposal-v2-adoption-plan.md`
 - Detailed frontier implementation plan: `PLAN.md`
@@ -213,7 +257,7 @@ Total: **1777+ tests, 0 failures in the latest stored full-suite artifact, 4 ski
 | Benchmark adapters | `benchmarks/adapters/` |
 | TUI benchmark prep | `benchmarks/prepare_tui_benchmark_run.py` |
 | TUI benchmark runbook | `docs/benchmark-tui-runbook.md` |
-| Phase 7 plan | `docs/plan/phase7-ship-ready.md` |
+| Phase 7 plan | `docs/plan/archive/phase7-ship-ready.md` |
 | Execution checklist | `EXECUTION_CHECKLIST.md` |
 | Detailed execution plan | `PLAN.md` |
 | Sprint index | `docs/plan/sprints/_index.md` |

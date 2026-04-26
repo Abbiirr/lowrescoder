@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 
+from autocode.agent.memory import MemoryStore
 from autocode.session.consolidation import (
     ConsolidationResult,
     SessionConsolidator,
     SessionLearning,
 )
+from autocode.session.models import ensure_tables
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -27,6 +30,13 @@ def _make_assistant_msg(content: str, tool_calls: list | None = None) -> dict:
 
 def _make_tool_call(name: str, arguments: dict) -> dict:
     return {"function": {"name": name, "arguments": json.dumps(arguments)}}
+
+
+def _make_memory_store() -> MemoryStore:
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    ensure_tables(conn)
+    return MemoryStore(conn, "test-project", max_entries=10, max_context_tokens=100)
 
 
 # ---------------------------------------------------------------------------
@@ -235,6 +245,68 @@ class TestRunFullPipeline:
         assert result.learnings_kept >= 1  # at least existing one kept
         assert result.learnings_pruned >= 0
         assert isinstance(result.categories, dict)
+
+    def test_run_persists_gathered_learnings_to_memory_store(self) -> None:
+        """run() should persist durable gathered learnings when a MemoryStore is supplied."""
+        messages = [
+            _make_user_msg("Fix the backend cache bug"),
+            _make_assistant_msg("Found the error", tool_calls=[
+                _make_tool_call("read_file", {"path": "src/cache.py"}),
+                _make_tool_call("edit_file", {"path": "src/cache.py"}),
+                _make_tool_call("read_file", {"path": "tests/test_cache.py"}),
+            ]),
+        ]
+        memory_store = _make_memory_store()
+        consolidator = SessionConsolidator(max_learnings=50)
+
+        result = consolidator.run(
+            messages,
+            memory_store=memory_store,
+            session_id="sess-1",
+        )
+
+        memories = memory_store.get_memories()
+        assert result.memories_saved == len(memories)
+        assert result.memory_ids
+        assert {memory["category"] for memory in memories} >= {"project_fact", "tool_pattern"}
+        assert any("src/cache.py" in memory["content"] for memory in memories)
+
+    def test_run_memory_persistence_uses_store_dedup(self) -> None:
+        """Persisting the same learning twice should reuse MemoryStore dedup."""
+        messages = [
+            _make_assistant_msg("Editing files", tool_calls=[
+                _make_tool_call("edit_file", {"path": "src/cache.py"}),
+            ]),
+        ]
+        memory_store = _make_memory_store()
+        consolidator = SessionConsolidator(max_learnings=50)
+
+        first = consolidator.run(messages, memory_store=memory_store, session_id="sess-1")
+        count_after_first = len(memory_store.get_memories())
+        second = consolidator.run(messages, memory_store=memory_store, session_id="sess-2")
+
+        assert first.memory_ids == second.memory_ids
+        assert len(memory_store.get_memories()) == count_after_first
+
+    def test_run_skips_non_durable_low_confidence_learnings(self) -> None:
+        """Low-confidence learnings should not be promoted into durable memory."""
+        memory_store = _make_memory_store()
+        consolidator = SessionConsolidator(max_learnings=50)
+        low_confidence = SessionLearning(
+            category="error_fix",
+            summary="Speculative error pattern",
+            evidence="maybe",
+            confidence=0.2,
+        )
+
+        saved_ids = consolidator.persist(
+            [low_confidence],
+            memory_store=memory_store,
+            session_id="sess-1",
+        )
+
+        assert saved_ids == []
+        assert memory_store.get_memories() == []
 
 
 class TestCarryForwardSummary:

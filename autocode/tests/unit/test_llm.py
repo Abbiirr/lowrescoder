@@ -2,8 +2,18 @@
 
 from __future__ import annotations
 
+import sys
+from types import SimpleNamespace
+from typing import Any
+
+import pytest
+
+from autocode.config import AutoCodeConfig
 from autocode.layer4.llm import (
     ConversationHistory,
+    LLMResponse,
+    OllamaProvider,
+    OpenRouterProvider,
     _extract_tool_calls_from_text,
     _format_openrouter_error,
     _is_connection_error,
@@ -273,3 +283,291 @@ class TestOpenRouterRetryClassification:
             model="definitely-not-real",
             api_base="http://localhost:4000/v1",
         ) == "Model alias 'definitely-not-real' is not available on the configured gateway."
+
+
+class TestProviderReasoningFlags:
+    """Provider request flags for user-controlled thinking mode."""
+
+    @pytest.mark.asyncio()
+    async def test_openrouter_reasoning_flag_bidirectional(self) -> None:
+        config = AutoCodeConfig()
+        config.llm.provider = "openrouter"
+        config.llm.api_base = "https://openrouter.ai/api/v1"
+        provider = OpenRouterProvider(config)
+        provider.MAX_RETRIES = 1
+        captured: list[dict[str, Any]] = []
+
+        async def fake_streaming(
+            client: Any,
+            messages: list[dict[str, Any]],
+            tools: list[dict[str, Any]],
+            extra_body: dict[str, Any],
+            on_chunk: Any,
+            on_thinking_chunk: Any,
+        ) -> LLMResponse:
+            captured.append(extra_body)
+            return LLMResponse(content="ok")
+
+        provider._make_client = lambda: object()  # type: ignore[method-assign]
+        provider._tools_streaming = fake_streaming  # type: ignore[method-assign]
+
+        await provider.generate_with_tools([], [], reasoning_enabled=True)
+        await provider.generate_with_tools([], [], reasoning_enabled=False)
+
+        assert captured == [
+            {"reasoning": {"enabled": True}},
+            {"reasoning": {"enabled": False}},
+        ]
+
+    @pytest.mark.asyncio()
+    async def test_openrouter_gateway_reasoning_toggle_warns_once(self) -> None:
+        config = AutoCodeConfig()
+        config.llm.provider = "openrouter"
+        config.llm.api_base = "http://localhost:4000/v1"
+        provider = OpenRouterProvider(config)
+        provider.MAX_RETRIES = 1
+        warnings: list[str] = []
+        captured: list[dict[str, Any]] = []
+
+        async def fake_streaming(
+            client: Any,
+            messages: list[dict[str, Any]],
+            tools: list[dict[str, Any]],
+            extra_body: dict[str, Any],
+            on_chunk: Any,
+            on_thinking_chunk: Any,
+        ) -> LLMResponse:
+            captured.append(extra_body)
+            return LLMResponse(content="ok")
+
+        provider._make_client = lambda: object()  # type: ignore[method-assign]
+        provider._tools_streaming = fake_streaming  # type: ignore[method-assign]
+
+        await provider.generate_with_tools(
+            [],
+            [],
+            reasoning_enabled=False,
+            on_retry_notice=warnings.append,
+        )
+        await provider.generate_with_tools(
+            [],
+            [],
+            reasoning_enabled=False,
+            on_retry_notice=warnings.append,
+        )
+
+        assert captured == [{}, {}]
+        assert len(warnings) == 1
+        assert "cannot enforce thinking toggle" in warnings[0]
+
+    @pytest.mark.asyncio()
+    async def test_ollama_think_param_bidirectional(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls: list[dict[str, Any]] = []
+
+        class FakeAsyncClient:
+            def __init__(self, host: str) -> None:
+                self.host = host
+
+            async def chat(self, **kwargs: Any) -> Any:
+                calls.append(kwargs)
+                return SimpleNamespace(message=SimpleNamespace(content="ok"))
+
+        monkeypatch.setitem(
+            sys.modules,
+            "ollama",
+            SimpleNamespace(AsyncClient=FakeAsyncClient),
+        )
+
+        config = AutoCodeConfig()
+        config.llm.provider = "ollama"
+        provider = OllamaProvider(config)
+
+        async def no_backoff(coro_fn: Any, *, label: str = "ollama_call") -> Any:
+            return await coro_fn()
+
+        provider._with_conn_backoff = no_backoff  # type: ignore[method-assign]
+
+        await provider.generate_with_tools([], [], reasoning_enabled=True)
+        await provider.generate_with_tools([], [], reasoning_enabled=False)
+
+        assert calls[0]["think"] is True
+        assert calls[1]["think"] is False
+
+
+class TestProviderUsageCapture:
+    """Provider usage extraction for cost accounting."""
+
+    @pytest.mark.asyncio()
+    async def test_openrouter_captures_cached_tokens_from_response(self) -> None:
+        config = AutoCodeConfig()
+        config.llm.provider = "openrouter"
+        provider = OpenRouterProvider(config)
+
+        usage = SimpleNamespace(
+            prompt_tokens=10_000,
+            completion_tokens=500,
+            prompt_tokens_details=SimpleNamespace(cached_tokens=8_000),
+        )
+        result = SimpleNamespace(
+            usage=usage,
+            choices=[
+                SimpleNamespace(
+                    finish_reason="stop",
+                    message=SimpleNamespace(
+                        content="ok",
+                        reasoning=None,
+                        tool_calls=None,
+                    ),
+                )
+            ],
+        )
+
+        async def fake_create(**kwargs: Any) -> Any:
+            return result
+
+        client = SimpleNamespace(
+            chat=SimpleNamespace(
+                completions=SimpleNamespace(create=fake_create),
+            ),
+        )
+
+        response = await provider._tools_non_streaming(client, [], [], {})
+
+        assert response.usage == {
+            "prompt_tokens": 10_000,
+            "completion_tokens": 500,
+            "cached_input_tokens": 8_000,
+        }
+
+    def test_ollama_passes_zero_cached_tokens(self) -> None:
+        config = AutoCodeConfig()
+        config.llm.provider = "ollama"
+        provider = OllamaProvider(config)
+        result = SimpleNamespace(
+            prompt_eval_count=1_000,
+            eval_count=250,
+            message=SimpleNamespace(content="ok", tool_calls=None),
+        )
+
+        response = provider._consume_ollama_non_stream_response(
+            result,
+            on_chunk=None,
+            on_thinking_chunk=None,
+        )
+
+        assert response.usage == {
+            "prompt_tokens": 1_000,
+            "completion_tokens": 250,
+            "cached_input_tokens": 0,
+        }
+
+
+class TestProviderStreamingThinkTags:
+    """Provider integration with the shared streaming think-tag parser."""
+
+    @pytest.mark.asyncio()
+    async def test_openrouter_tag_fallback_handles_split_tags(self) -> None:
+        config = AutoCodeConfig()
+        config.llm.provider = "openrouter"
+        provider = OpenRouterProvider(config)
+        tokens: list[str] = []
+        thinking: list[str] = []
+
+        class FakeDelta:
+            def __init__(self, content: str) -> None:
+                self.content = content
+                self.tool_calls = None
+                self.reasoning = None
+
+        class FakeChoice:
+            def __init__(self, content: str, finish_reason: str | None = None) -> None:
+                self.delta = FakeDelta(content)
+                self.finish_reason = finish_reason
+
+        class FakeChunk:
+            def __init__(self, content: str, finish_reason: str | None = None) -> None:
+                self.choices = [FakeChoice(content, finish_reason)]
+
+        async def fake_stream() -> Any:
+            for chunk in (
+                FakeChunk("visible <thi"),
+                FakeChunk("nk>hidden</thi"),
+                FakeChunk("nk> final", "stop"),
+            ):
+                yield chunk
+
+        async def fake_create(**kwargs: Any) -> Any:
+            return fake_stream()
+
+        client = SimpleNamespace(
+            chat=SimpleNamespace(
+                completions=SimpleNamespace(create=fake_create),
+            ),
+        )
+
+        response = await provider._tools_streaming(
+            client,
+            [],
+            [],
+            {},
+            tokens.append,
+            thinking.append,
+        )
+
+        assert tokens == ["visible ", " final"]
+        assert thinking == ["hidden"]
+        assert response.content == "visible  final"
+        assert response.reasoning == "hidden"
+
+    @pytest.mark.asyncio()
+    async def test_ollama_streams_thinking_chunks_before_final_content(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: list[dict[str, Any]] = []
+        tokens: list[str] = []
+        thinking: list[str] = []
+
+        class FakeAsyncClient:
+            def __init__(self, host: str) -> None:
+                self.host = host
+
+            async def chat(self, **kwargs: Any) -> Any:
+                calls.append(kwargs)
+                if kwargs["stream"]:
+                    async def stream() -> Any:
+                        for content in ("<think>first", " second</think>", " answer"):
+                            yield SimpleNamespace(message=SimpleNamespace(content=content))
+
+                    return stream()
+                return SimpleNamespace(
+                    message=SimpleNamespace(content="<think>first second</think> answer"),
+                )
+
+        monkeypatch.setitem(
+            sys.modules,
+            "ollama",
+            SimpleNamespace(AsyncClient=FakeAsyncClient),
+        )
+
+        config = AutoCodeConfig()
+        config.llm.provider = "ollama"
+        provider = OllamaProvider(config)
+
+        async def no_backoff(coro_fn: Any, *, label: str = "ollama_call") -> Any:
+            return await coro_fn()
+
+        provider._with_conn_backoff = no_backoff  # type: ignore[method-assign]
+
+        response = await provider.generate_with_tools(
+            [],
+            [],
+            on_chunk=tokens.append,
+            on_thinking_chunk=thinking.append,
+        )
+
+        assert calls[0]["stream"] is True
+        assert thinking == ["first", " second"]
+        assert tokens == [" answer"]
+        assert response.content == " answer"
+        assert response.reasoning == "first second"
