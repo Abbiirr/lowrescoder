@@ -36,7 +36,7 @@ The Go Bubble Tea TUI and the Python prompt-toolkit inline frontend were previou
 **Binary:** `autocode/rtui/target/release/autocode-tui` (~2.4 MB stripped)
 **Stack:** `crossterm` 0.28 + `ratatui` 0.29 + `tokio` 1.x + `portable-pty` 0.8 + `serde_json` + `anyhow` + `tracing`
 
-The Rust frontend handles terminal interaction using ratatui widgets over crossterm. It runs in **inline mode by default** to preserve native terminal scrollback; `autocode --mode altscreen` or `autocode chat --rust-altscreen` opts into the alternate-screen Rust TUI. `autocode --attach HOST:PORT` connects the same frontend to an already-running TCP backend.
+The Rust frontend handles terminal interaction using ratatui widgets over crossterm. It runs in **inline mode by default** to preserve native terminal scrollback; `autocode --mode altscreen` opts into the alternate-screen Rust TUI. `autocode --attach HOST:PORT` connects the same frontend to an already-running TCP backend. (The earlier `autocode chat --rust-altscreen` flag is no longer canonical; prefer `autocode --mode altscreen`.)
 
 **Reference docs:** [`docs/reference/rust-tui-architecture.md`](reference/rust-tui-architecture.md) and [`docs/reference/rust-tui-rpc-contract.md`](reference/rust-tui-rpc-contract.md).
 

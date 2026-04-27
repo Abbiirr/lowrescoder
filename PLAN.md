@@ -20,15 +20,16 @@ Purpose: detailed implementation plan for the active backend-tightening/docs-ref
 
 Follow this order unless the user explicitly redirects:
 
-1. **Stabilize-and-Release Program — ACTIVE.** Canonical plan: `docs/plan/stabilize-and-release-plan.md`. Three checkpoints: (1) stabilize for commit (1.A typed-payload consolidation done; 1.B comms cleanup batched, 1.C docs sync done, 1.D regression gate green, 1.E user commit), (2) Phase D + `/restore` interaction + backend robustness (2.A spinner activity-correlation done; 2.E `/restore` interaction done; 2.F.1 MCP CLI wire-up done; 2.B thinking/output buffer split done; 2.F.3 cost rate accuracy done; 2.F.4+2.F.5 deprecation/lint fixes done; 2.C per-slash PTY coverage done; 2.D spinner verb badge done; 2.F.2 MCP integration polish done; 2.F.6 per-tool output-budget PTY done; 2.F.7 tranche exit-gate sweeps done; 2.G regression gate done; 2.H user commit remains user-owned), (3) Phase E release gate active by user direction, with 3.A gate verification, 3.B visual-polish unblock, 3.C release-grade regression, and 3.D closeout done; remaining item is user-owned 3.E commit/tag decision. HR-5 program canonical: `docs/tui-testing/tui_implementation_plan.md` and `docs/tui-testing/tui_implementation_todo.md`.
-2. **Backend Feature Improvement Tranche — local regression complete.** Use `docs/plan/backend-feature-improvement-plan.md` and `docs/plan/backend-feature-improvement-todo.md` as the closeout record. Docs-refresh A-G and the local deterministic regression gate are complete; live gateway canary remains before any broad benchmark sweep or product-path release claim.
-3. HR-5 Phase C-D follow-through surfaces and spinner/thinking parity.
-4. Section 1: Large Codebase Comprehension.
-5. Section 2: Native External-Harness Orchestration.
-6. Section 3: Terminal-Bench / Harness Engineering.
-7. Section 5: Documentation Discipline.
-8. Section 4: Research Corpus Maintenance.
-9. Section 0: Harness Architecture Refinement From Proposal v2 as a landed foundation / policy reference.
+1. **Backend Robustness Tranche 4 — ACTIVE PLAN, KICKOFF AWAITING USER GO-AHEAD.** Canonical plan: `docs/plan/backend-robustness-tranche-4-plan.md`. Sub-plan: `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md`. Master atomic checklist: `docs/plan/backend-robustness-tranche-4-checklist.md`. Four checkpoints, 15 high-level slices (G1-G15), 23 execution sub-slices, 4 gates: **C4** foundation/safety (G1 per-tool checkpoints + G2 tree-sitter repo-map + G7' git-aware staging), **C5** multi-language LSP + auto-verify (G3.0 framework + 8 languages Java/JS/TS/C/Kotlin/Python/Go/Rust + G4 verify), **C6** headless + cost-aware routing (G5 `--json` mode + G6 Layer 4.5 router), **C7** polish (G8-G15). All non-tree-mutating git ops only per `AGENTS.md`. **First slice when user authorises kickoff: C4.G1 per-tool-call atomic checkpoint with diff-rollback** per checklist §4.G1.
+2. **Stabilize-and-Release Program — CLOSED.** Canonical plan: `docs/plan/stabilize-and-release-plan.md`. Three checkpoints all closed; user 3.E commit landed in `1700d66 Closes backend v2` on 2026-04-27. Optional release tag remains user discretion. Final regression artifact: `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md` (Python `1999`, Rust TUI `210`, benchmark `199`, real-gateway PTY canary green). Tranche-3 comms archive cut: `docs/communication/old/2026-04-27-stabilize-and-release-tranche-3-1548-1586.md`. HR-5 program canonical: `docs/tui-testing/tui_implementation_plan.md` and `docs/tui-testing/tui_implementation_todo.md`.
+3. **Backend Feature Improvement Tranche — local regression complete.** Use `docs/plan/backend-feature-improvement-plan.md` and `docs/plan/backend-feature-improvement-todo.md` as the closeout record. Docs-refresh A-G and the local deterministic regression gate are complete; live gateway canary remains before any broad benchmark sweep or product-path release claim.
+4. HR-5 Phase C-D follow-through surfaces and spinner/thinking parity.
+5. Section 1: Large Codebase Comprehension.
+6. Section 2: Native External-Harness Orchestration.
+7. Section 3: Terminal-Bench / Harness Engineering.
+8. Section 5: Documentation Discipline.
+9. Section 4: Research Corpus Maintenance.
+10. Section 0: Harness Architecture Refinement From Proposal v2 as a landed foundation / policy reference.
 
 ## Section Status Audit
 
@@ -37,7 +38,7 @@ Follow this order unless the user explicitly redirects:
 | 0. Harness Architecture Refinement | Landed policy/reference | Use as design guardrails only; not the active work queue. |
 | 1. Large Codebase Comprehension | Backlog | Resume after higher-priority backend/TUI stabilization work. |
 | 1f. Stable TUI Program | Historical/deferred | Milestones C-F were absorbed or superseded by Rust TUI + HR-5 work; do not treat as current Go work. |
-| 1g. TUI Testing Strategy | HR-5 reference | Phase A benchmark latency, Phase B `/cc`, Phase C `/multi`, `/restore`, `/plan`, `/tasks`, `/grep`, `/review` + `/diff`, `/escalation`, typed payload consolidation, Phase D spinner activity-correlation, `/restore` interaction, 2.F.1 MCP CLI wire-up, 2.B thinking/output split, 2.F.3 cost rate accuracy, 2.F.4+2.F.5, 2.C per-slash PTY coverage, 2.D spinner verb badge, 2.F.2 MCP integration polish, 2.F.6 per-tool output-budget PTY, 2.F.7 tranche exit-gate sweeps, 2.G regression gate, 3.A/3.B Phase E gate verification/visual-polish unblock, 3.C release-grade regression, and 3.D closeout are closed; remaining item is user-owned 3.E commit/tag decision. |
+| 1g. TUI Testing Strategy | HR-5 reference | Phase A benchmark latency, Phase B `/cc`, Phase C `/multi`, `/restore`, `/plan`, `/tasks`, `/grep`, `/review` + `/diff`, `/escalation`, typed payload consolidation, Phase D spinner activity-correlation, `/restore` interaction, 2.F.1 MCP CLI wire-up, 2.B thinking/output split, 2.F.3 cost rate accuracy, 2.F.4+2.F.5, 2.C per-slash PTY coverage, 2.D spinner verb badge, 2.F.2 MCP integration polish, 2.F.6 per-tool output-budget PTY, 2.F.7 tranche exit-gate sweeps, 2.G regression gate, 3.A/3.B Phase E gate verification/visual-polish unblock, 3.C release-grade regression, 3.D closeout, and 3.E user commit `1700d66 Closes backend v2` are all done. Optional release tag at user discretion. |
 | 2. Native External-Harness Orchestration | Backlog | Keep as post-stabilization harness roadmap. |
 | 3. Terminal-Bench / Harness Engineering | Backlog | Re-measure before broadening; not current. |
 | 4. Research Corpus Maintenance | Ongoing hygiene | Update when new research docs land. |
@@ -100,8 +101,8 @@ Current practical rule:
 - HR-5 Phase C `/escalation` real-data binding is complete in `autocode/docs/qa/test-results/20260426-140749-hr5-phase-c-escalation-real-data-binding-tui-verification.md`
 - HR-5 Phase C `/multi` mockup-copy cleanup is complete in `autocode/docs/qa/test-results/20260426-143024-hr5-phase-c-multi-mockup-copy-cleanup-tui-verification.md`
 - typed `tool.result_payload` consolidation is complete in `autocode/docs/qa/test-results/20260426-163752-hr5-typed-tool-result-payload-consolidation.md`
-- Checkpoint 2 is closed from builder/reviewer side: 2.G regression gate closed in `autocode/docs/qa/test-results/20260426-145234-checkpoint2-regression-gate.md`; 2.H user commit remains user-owned
-- Checkpoint 3 is active by user direction: 3.A/3.B closed in `autocode/docs/qa/test-results/20260427-113808-phase-e-gate-verification.md`; 3.C closed in `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`; 3.D closeout posted in `AGENTS_CONVERSATION.MD` Entry 1584; remaining item is user-owned 3.E commit/tag decision
+- Checkpoint 2 fully closed: 2.G regression gate in `autocode/docs/qa/test-results/20260426-145234-checkpoint2-regression-gate.md`; 2.H user commit landed in `1700d66 Closes backend v2` 2026-04-27 (combined Checkpoint 2 + Checkpoint 3 commit)
+- Checkpoint 3 fully closed: 3.A/3.B in `autocode/docs/qa/test-results/20260427-113808-phase-e-gate-verification.md`; 3.C in `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`; 3.D closeout in `AGENTS_CONVERSATION.MD` Entry 1584; 3.E commit `1700d66 Closes backend v2` 2026-04-27; optional release tag at user discretion
 - Phase E HR-5(a) binding count is `9 shipped surfaces`: `/cc`, `/multi`, `/restore` display binding, `/plan`, `/tasks`, `/grep`, `/review`, `/diff`, and `/escalation`; the 10th planned slot, `/restore` interaction, is now complete
 - run a fresh live gateway canary before any full benchmark sweep or product-path release claim
 - keep deferred items visible in `DEFERRED_PENDING_TODO.md`; do NOT dismiss anything
@@ -338,7 +339,7 @@ Make the retrieval dependency/runtime contract explicit rather than half-optiona
 
 **Last updated: 2026-04-27**
 
-> **Status:** Historical/deferred. This section preserves the pre-Rust stable-v1 TUI plan and original Go/Python fallback assumptions. Do not treat it as the active frontend plan. Current execution flows through `docs/plan/stabilize-and-release-plan.md` and HR-5 real-data bindings in `docs/tui-testing/tui_implementation_plan.md`; Phase C `/escalation`, `/multi` cleanup, typed payload consolidation, Phase D spinner activity-correlation, `/restore` interaction, 2.F.1 MCP CLI wire-up, 2.B thinking/output split, 2.F.3 cost rate accuracy, 2.F.4+2.F.5, 2.C per-slash PTY coverage, 2.D spinner verb badge, 2.F.2 MCP integration polish, 2.F.6 per-tool output-budget PTY, 2.F.7 tranche exit-gate sweeps, 2.G regression gate, 3.A/3.B Phase E gate verification/visual-polish unblock, 3.C release-grade regression, and 3.D closeout are complete. Remaining item is user-owned 3.E commit/tag decision.
+> **Status:** Historical/deferred. This section preserves the pre-Rust stable-v1 TUI plan and original Go/Python fallback assumptions. Do not treat it as the active frontend plan. Current execution flows through `docs/plan/backend-robustness-tranche-4-plan.md` (active program) and historical `docs/plan/stabilize-and-release-plan.md` (closed predecessor). Predecessor Tranche 3 is fully closed; user 3.E commit `1700d66 Closes backend v2` landed 2026-04-27.
 
 ### Goal
 
@@ -355,7 +356,7 @@ This section preserves the historical execution plan for shipping a stable, migr
 
 This plan is locked from these inputs, in priority order:
 
-1. `deep-research-report.md`
+1. `docs/archive/deep-research-report.md`
 2. repo-local implementation and QA evidence under `autocode/docs/qa/test-results/`
 3. repo-local comparative audits under `research-components/`
 4. `docs/tui-testing/tui-testing-strategy.md` and `docs/tests/pty-testing.md`
@@ -386,7 +387,7 @@ These decisions were fixed for the pre-Rust plan. Current frontend decisions liv
 
 ### Research Synthesis
 
-The stable-v1 plan is derived from `deep-research-report.md`, plus the repo-local research components already audited.
+The stable-v1 plan is derived from `docs/archive/deep-research-report.md`, plus the repo-local research components already audited.
 
 Research conclusions that now drive implementation order:
 
@@ -405,13 +406,15 @@ Research conclusions that now drive implementation order:
 
 ### Current State Snapshot
 
-Already landed and verified on the current tree:
+> **Status: Historical (pre-Rust-TUI snapshot).** This block describes the Go Bubble Tea era; the Go TUI was deleted at the Rust M11 cutover (2026-04-19). Active canonical UI is the Rust TUI launched via bare `autocode`; see `docs/architecture.md` and `docs/features/features_behavior.md` for current state. Kept here for design provenance only.
 
-- Go TUI is the default interactive path.
-- `--inline` exists as explicit fallback.
-- BubbleTea v2 / Mode 2026 migration is done.
-- Steering queue, follow-up queue, session fork RPC, multiline input, editor launch, frecency history, task dashboard, `/plan`, and status-bar additions are landed.
-- Backend parity for `steer`, `session.fork`, and per-turn `on_cost_update` is landed.
+Historical (Go Bubble Tea era — superseded):
+
+- Go TUI was the default interactive path (now superseded by Rust TUI via bare `autocode`).
+- `--inline` existed as explicit fallback in the Go era.
+- BubbleTea v2 / Mode 2026 migration was done before deletion.
+- Steering queue, follow-up queue, session fork RPC, multiline input, editor launch, frecency history, task dashboard, `/plan`, and status-bar additions landed in the Go era and were re-implemented in the Rust TUI.
+- Backend parity for `steer`, `session.fork`, and per-turn `on_cost_update` is landed (carried over to Rust era).
 - PTY regression gates are currently green via:
   - `autocode/docs/qa/test-results/20260415-080003-tui-backend-parity-pty-smoke-deterministic-v3-20260415.md`
   - `autocode/docs/qa/test-results/20260415-150741-pty-phase1-fixes.md`
@@ -837,7 +840,7 @@ After Milestone A, move in order:
 
 ## 1g. TUI Testing Strategy (HR-5 Reference; Active Real-Data Binding)
 
-**Last updated:** 2026-04-27 (14-scene parity program remains the HR-5 reference. Phase A benchmark-latency close-out, Phase B `/cc`, Phase C `/multi`, `/restore` / checkpoints, Phase C `/plan`, Phase C `/tasks`, Phase C `/grep`, Phase C `/review` + `/diff`, Phase C `/escalation`, typed payload consolidation, Phase D spinner activity-correlation, `/restore` interaction, 2.F.1 MCP CLI wire-up, 2.B thinking/output buffer split, 2.F.3 cost rate accuracy, 2.F.4+2.F.5, 2.C per-slash PTY coverage, 2.D spinner verb badge, 2.F.2 MCP integration polish, 2.F.6 per-tool output-budget PTY, 2.F.7 tranche exit-gate sweeps, 2.G regression gate, 3.A/3.B Phase E gate verification/visual-polish unblock, 3.C release-grade regression, and 3.D closeout are recorded; remaining item is user-owned 3.E commit/tag decision.)
+**Last updated:** 2026-04-27 (14-scene parity program remains the HR-5 reference. Phase A benchmark-latency close-out, Phase B `/cc`, Phase C `/multi`, `/restore` / checkpoints, Phase C `/plan`, Phase C `/tasks`, Phase C `/grep`, Phase C `/review` + `/diff`, Phase C `/escalation`, typed payload consolidation, Phase D spinner activity-correlation, `/restore` interaction, 2.F.1 MCP CLI wire-up, 2.B thinking/output buffer split, 2.F.3 cost rate accuracy, 2.F.4+2.F.5, 2.C per-slash PTY coverage, 2.D spinner verb badge, 2.F.2 MCP integration polish, 2.F.6 per-tool output-budget PTY, 2.F.7 tranche exit-gate sweeps, 2.G regression gate, 3.A/3.B Phase E gate verification/visual-polish unblock, 3.C release-grade regression, 3.D closeout, and 3.E user commit `1700d66 Closes backend v2` are all done. Optional release tag at user discretion.)
 **Status:** Architecture APPROVED by Codex Entry 1141 + doc-polish
 delta APPROVED by Codex Entry 1144. Phase 1 Track 1 substrate
 implemented under `autocode/tests/tui-comparison/` with positive +
@@ -902,8 +905,9 @@ Phase D spinner activity-correlation is complete via
 `autocode/docs/qa/test-results/20260427-113808-phase-e-gate-verification.md`.
 3.C release-grade regression is complete via
 `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`.
-3.D closeout is posted in `AGENTS_CONVERSATION.MD` Entry 1584. Remaining
-item is user-owned 3.E commit/tag decision.
+3.D closeout is posted in `AGENTS_CONVERSATION.MD` Entry 1584. 3.E user
+commit landed in `1700d66 Closes backend v2` (2026-04-27); optional release
+tag remains user discretion.
 
 ### Post-Codex-1138 Three-Track Architecture (AUTHORITATIVE)
 
@@ -1867,7 +1871,7 @@ Executable in §1f.3 "Permissions, Sandbox, And Hook Enforcement". Concrete base
 
 ## 1h. Rust TUI Migration Program (COMPLETE / HISTORICAL)
 
-> **Status (2026-04-19):** **COMPLETE** — Rust-M1 through Rust-M11 landed, Go TUI and Python inline fallback were deleted, and the Rust TUI is the sole supported interactive frontend. This section is preserved as migration provenance. Source research: `deep-research-report.md` at repo root (treat as draft; §1h.2 corrections authoritative).
+> **Status (2026-04-19):** **COMPLETE** — Rust-M1 through Rust-M11 landed, Go TUI and Python inline fallback were deleted, and the Rust TUI is the sole supported interactive frontend. This section is preserved as migration provenance. Source research: `docs/archive/deep-research-report.md` (archived draft; §1h.2 corrections authoritative).
 >
 > **Scope in one sentence:** Replace the Go BubbleTea frontend (`autocode/cmd/autocode-tui/`, 13,102 LOC across ~30 files) with a Rust inline TUI binary that speaks the **existing** JSON-RPC protocol (`protocol.go`) over PTY to the **unchanged** Python backend at `autocode/src/autocode/backend/server.py`.
 
@@ -1934,7 +1938,7 @@ No code is written until every item below is answered in writing by the user. Th
 
 ### 1h.2 Research Report Integration And Accuracy Audit
 
-**Source of truth:** `deep-research-report.md` at repo root (executive summary + 14 numbered sections).
+**Source of truth:** `docs/archive/deep-research-report.md` (executive summary + 14 numbered sections, archived draft).
 
 **Verified claims (repo-ground-truth confirmed):**
 - ✅ Go TUI source tree matches report §1 Table 1 (plus additional files the report omits: `backend_unix.go`, `backend_windows.go`, `detect.go`, `completion.go`, `markdown.go`, `spinnerverbs.go`, `styles.go`, `taskpanel.go`, `milestone_a_test.go`, `palette_test.go`).

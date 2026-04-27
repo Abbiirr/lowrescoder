@@ -3,6 +3,7 @@
 > **Status:** LOCAL REGRESSION COMPLETE — user-directed backend tranche, authorized 2026-04-24. Live gateway canary remains before broad benchmark sweeps or product-path release claims.
 > **Supersedes:** `docs/plan/archive/backend-feature-catalog-brainstorm.md` (brainstorm is now archival reference).
 > **Complements:** `docs/plan/backend-tightening-refinement-plan.md` (Codex's method/TDD plan).
+> **Current implementation inventory:** `docs/features/backend_features.md`.
 > **Author:** Claude (Reviewer/Architect).
 > **Delegate:** Codex (Builder) executes slices; Claude reviews each.
 
@@ -306,7 +307,7 @@ Each slice below follows Codex's TDD Red → Green → Refactor order.
 
 **S-L3DOC — Layer 3 opt-in decision record**
 - **Scope:** §3 decision, corrected by S-L3DOC pre-read and Claude Entry 1482: Layer 3 is not unreachable; `BackendServer` can select it when `config.layer3.enabled`, the `layer3` optional extra is installed, and the request router classifies a simple edit. Core installs leave it dormant via graceful ImportError fallback. Add an opt-in/experimental docstring to `layer3/provider.py` that states this honestly, and treat any future broadening as a separate tranche requiring architecture docs and provider/route/integration tests.
-- **Files:** `autocode/src/autocode/layer3/provider.py`, `modular_migration_todo.md`, `docs/features_behavior.md`, `docs_summaries/02_runtime_architecture_and_backend.md`.
+- **Files:** `autocode/src/autocode/layer3/provider.py`, `modular_migration_todo.md`, `docs/features/features_behavior.md`, `docs_summaries/02_runtime_architecture_and_backend.md`.
 - **Tests:** None (doc-only).
 - **Status 2026-04-26:** Complete from builder side after Claude Entry 1482 correction. `provider.py` now has an opt-in local constrained-generation docstring, file-local mypy issues were cleaned up, and the runtime inventory / architecture summary / modular todo now describe Layer 3 as optional-extra gated. Validation: provider Ruff clean, provider mypy clean, `test_l3_provider.py` `5 passed`, and `pytest -q -k layer3` deselected all tests as expected. Artifact: `autocode/docs/qa/test-results/20260426-001202-s-l3doc-verification.md`.
 - **Exit:** Future readers encounter clear opt-in status + activation contract.
@@ -464,10 +465,11 @@ If the user wants a faster path: ship a **P0-only minimum tranche** first (S-POS
 
 ## 14. References
 
+- `docs/features/backend_features.md` — current backend implementation inventory plus missing/planned feature inventory
 - `docs/plan/archive/backend-feature-catalog-brainstorm.md` — source brainstorm for this plan
 - `docs/plan/backend-tightening-refinement-plan.md` — Codex's method/TDD plan
 - `AGENTS_CONVERSATION.MD` Entries 1415, 1417, 1420, 1421 — planning chain
 - `docs/reference/rpc-schema-v1.md` — contract doc to update as features land
-- `docs/features_behavior.md` — post-modularization inventory
+- `docs/features/features_behavior.md` — post-modularization inventory
 - `modular_migration_todo.md` §"Phase 2-4 Follow-through" — architecture cleanup (separate track)
 - `docs/tui-testing/tui_implementation_plan.md` — HR-5 Phase B/C (resumes after this tranche)

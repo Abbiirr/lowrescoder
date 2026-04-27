@@ -1,6 +1,6 @@
 # Manual QA Checklist — Phase 2D-E UI Bug Fixes
 
-> Run `uv run autocode chat` in Windows Terminal (or your platform's terminal).
+> Run `autocode` (or `uv run autocode` from a non-installed source tree) in Windows Terminal or your platform's terminal. `autocode chat --tui` / `autocode chat --legacy` are FALLBACK paths only.
 > Ollama must be running with a model available.
 
 ## Prerequisites

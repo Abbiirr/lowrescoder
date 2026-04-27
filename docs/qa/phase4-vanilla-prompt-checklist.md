@@ -5,13 +5,13 @@
 
 ## Priority Order (Required)
 
-1. **Functionality first (primary gate):** run this checklist in inline mode first (`uv run autocode chat`).
+1. **Functionality first (primary gate):** run this checklist in inline mode first (`autocode --mode inline`, or `uv run autocode --mode inline` from a non-installed source tree).
 2. **TUI second (secondary gate):** only run full TUI verification after this checklist passes.
 3. If inline passes but TUI fails, treat it as a TUI/parity defect (not core functionality failure).
 
 ## Ground Rules
 
-1. Start with inline mode (`uv run autocode chat`), then repeat selected cases in TUI if needed.
+1. Start with inline mode (`autocode --mode inline`), then repeat selected cases in altscreen or fallback paths if needed. `autocode chat --tui` / `autocode chat --legacy` are FALLBACK only.
 2. Use one model/provider for the full run.
 3. Do not reference internal classes, methods, or test helpers.
 4. For each case, copy the prompt exactly and check only visible behavior.

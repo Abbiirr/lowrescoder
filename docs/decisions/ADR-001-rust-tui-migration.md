@@ -27,6 +27,6 @@ Migrate the Go BubbleTea TUI (`autocode/cmd/autocode-tui/`) to a Rust TUI using 
 
 ## References
 
-- `rust_migration_plan.md` — detailed implementation plan
-- `rust_migration_todo.md` — milestone checklist
+- `docs/archive/rust_migration_plan.md` — detailed implementation plan
+- `docs/archive/rust_migration_todo.md` — milestone checklist
 - `PLAN.md §1h` — canonical authority

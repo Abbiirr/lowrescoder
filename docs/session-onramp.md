@@ -1,6 +1,6 @@
 # Session Onramp
 
-Last updated: 2026-04-20
+Last updated: 2026-04-27
 
 Fastest way to rebuild working context in a new session.
 
@@ -12,12 +12,11 @@ Fastest way to rebuild working context in a new session.
 4. `AGENTS_CONVERSATION.MD` — active tail only (not archives)
 5. `EXECUTION_CHECKLIST.md` — live open work with exit gates
 6. `PLAN.md` — detailed implementation map
-7. `rust_tui_migration_status.md` — Rust TUI migration close-out checklist
 
 ## 2) Current State
 
-- Phase 5–8: complete
-- Stabilization Sprint Stage 0A is active: protocol freeze + schema fixtures + harness hygiene
+- Stabilize-and-Release Checkpoints 1-3 are closed from builder/reviewer side; user-owned commit/tag decision remains.
+- Modular migration phases 0-5 are complete, with follow-through still tracked in `modular_migration_todo.md`.
 - Rust TUI (`autocode/rtui/target/release/autocode-tui`) is the sole interactive frontend; Go TUI and Python inline are deleted
 - `autocode` (bare) launches the Rust TUI via `cli.py`
 - `docs/reference/rpc-schema-v1.md` is the canonical backend/TUI contract
@@ -52,7 +51,7 @@ All four resolve the binary via `$AUTOCODE_TUI_BIN` → `autocode/rtui/target/re
 
 **Benchmarks:** `benchmarks/benchmark_runner.py`, `benchmarks/adapters/`, `benchmarks/benchmarks/STATUS.md`
 
-**Source-of-truth docs:** `current_directives.md`, `EXECUTION_CHECKLIST.md`, `PLAN.md`, `docs/reference/rpc-schema-v1.md`, `rust_tui_migration_status.md`
+**Source-of-truth docs:** `current_directives.md`, `EXECUTION_CHECKLIST.md`, `PLAN.md`, `docs/reference/rpc-schema-v1.md`, `docs/features/features_behavior.md`
 
 ## 6) Commands
 
@@ -112,6 +111,6 @@ bash benchmarks/run_b7_b30_sweep.sh   # all 23 lanes
 ## 10) Fresh-Session Checklist
 
 1. Read `current_directives.md` + active tail of `AGENTS_CONVERSATION.MD`
-2. Check `rust_tui_migration_status.md` for open close-out items
+2. Check `EXECUTION_CHECKLIST.md` for open work and exit gates
 3. `git status` in superproject
 4. Use stored artifacts before rerunning expensive work

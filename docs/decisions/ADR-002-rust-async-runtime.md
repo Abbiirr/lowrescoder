@@ -49,4 +49,4 @@ Alternative (`tokio-util::LinesCodec`) would silently discard bytes when line ex
 
 ## References
 
-- `rust_migration_plan.md §4.3` — PTY I/O threading rules
+- `docs/archive/rust_migration_plan.md §4.3` — PTY I/O threading rules

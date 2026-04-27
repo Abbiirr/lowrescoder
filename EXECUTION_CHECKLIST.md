@@ -1,7 +1,7 @@
 # Execution Checklist
 
-Last updated: 2026-04-27 (Checkpoint 3 active by user direction. Checkpoint 2 is closed from builder/reviewer side and remains pending user commit only; agents must not commit. Phase E gate verification and visual-only polish unblock are complete via `autocode/docs/qa/test-results/20260427-113808-phase-e-gate-verification.md`; 3.C release-grade regression is green via `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`; 3.D closeout is posted in `AGENTS_CONVERSATION.MD` Entry 1584. Remaining work is user-owned 3.E commit/tag decision.)
-Owner: Codex (Stabilize-and-Release Program, Entry 1548)
+Last updated: 2026-04-27 evening (**Stabilize-and-Release Tranche 3 fully CLOSED** — user 3.E commit landed in `1700d66 Closes backend v2`; optional release tag at user discretion. **Backend Robustness Tranche 4 plans are READY**: `docs/plan/backend-robustness-tranche-4-plan.md` + `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md` + `docs/plan/backend-robustness-tranche-4-checklist.md`; first slice on user kickoff is C4.G1 per-tool-call atomic checkpoint. Tranche-3 comms archive cut: `docs/communication/old/2026-04-27-stabilize-and-release-tranche-3-1548-1586.md`. Agents must not commit, push, tag, or run any tree-mutating git command.)
+Owner: Codex (Tranche 4 builder, on user kickoff) / Claude (Tranche 4 reviewer-architect)
 Purpose: live status checklist for source-of-truth work, active next-frontier research-to-implementation items, and any benchmark/harness follow-up. Re-check this file every 10 minutes during active work.
 
 Detailed implementation map:
@@ -12,14 +12,20 @@ Detailed implementation map:
 - `docs/plan/hr5-phase-a-benchmark-latency-plan.md` — closed Phase A execution record for HR-5(c)
 - `docs/plan/hr5-phase-a-benchmark-latency-checklist.md` — closed Phase A checklist and exit-gate record
 - **`docs/plan/stabilization-and-parity-plan.md`** — APPROVED 2026-04-20; primary source of truth for the sprint
-- `PLAN.md` — long-form roadmap; current active order follows Checkpoint 3 from `docs/plan/stabilize-and-release-plan.md`
+- `PLAN.md` — long-form roadmap; current active order follows Backend Robustness Tranche 4 from `docs/plan/backend-robustness-tranche-4-plan.md` (Stabilize-and-Release Tranche 3 is the closed predecessor)
 - `bugs/codex-tui-issue-inventory.md` — 60 items + §S1–§S12 adversarial sweeps
 - `docs/tui-testing/tui_testing_checklist.md` — enforced per-change checklist; §6.5 sweeps + §7 regression table gate the ship
 - `DEFERRED_PENDING_TODO.md` — store of everything NOT in the current active slice
 
 ## Current Active Queue
 
-Checkpoint 1 substantially closed. Checkpoint 2 work queue in `AGENTS_CONVERSATION.MD` Entry 1548 is closed from builder/reviewer side and pending user commit only. Checkpoint 3 started by user direction on 2026-04-27; pickup order below follows `docs/plan/stabilize-and-release-plan.md`.
+**Active program: Backend Robustness Tranche 4** (`docs/plan/backend-robustness-tranche-4-plan.md`). Plans READY; awaiting explicit user kickoff for first slice C4.G1.
+
+**Predecessor Stabilize-and-Release Tranche 3** is fully closed (Codex Entry 1584 closeout, Claude Entry 1585 reviewer APPROVE, Codex Entry 1586 ack, user 3.E commit `1700d66 Closes backend v2` 2026-04-27). Optional release tag remains user discretion.
+
+**Tranche 4 first-slice pickup (when user authorises):** C4.G1 per-tool-call atomic checkpoint with diff-rollback. See `docs/plan/backend-robustness-tranche-4-checklist.md` §4.G1 for atomic task list.
+
+Below is the historical Tranche 3 record kept for reference. Checkpoint 2 work queue in `AGENTS_CONVERSATION.MD` Entry 1548 was closed from builder/reviewer side. Checkpoint 3 was started by user direction on 2026-04-27 and closed via user commit `1700d66 Closes backend v2`. Optional release tag remains user discretion.
 
 **Checkpoint 1 — substantially closed:**
 1. **1.A typed `tool.result_payload` consolidation — DONE.** Artifact: `autocode/docs/qa/test-results/20260426-163752-hr5-typed-tool-result-payload-consolidation.md`.
@@ -27,7 +33,7 @@ Checkpoint 1 substantially closed. Checkpoint 2 work queue in `AGENTS_CONVERSATI
 3. **1.B comms cleanup batched — DONE.** Archives at `docs/communication/old/2026-04-26-codex-active-entries-1478-1547.md` + `docs/communication/old/2026-04-26-final-cleanup-residual-1476-1545.md`.
 4. **1.D Checkpoint 1 regression gate — GREEN.** Artifact: `autocode/docs/qa/test-results/20260426-172910-checkpoint1-regression-gate.md` (Python unit `1977 passed`, Rust TUI `197 passed`, benchmark `199 passed`, PTY smokes green).
 5. **1.C final docs sync — DONE.** Artifact: `autocode/docs/qa/test-results/20260426-175205-checkpoint1-c-docs-sync.md`.
-6. **1.E user commit — pending user.**
+6. **1.E user commit — DONE in `990a52c Stabilizes backend tranche and ships HR-5 Phase B+C bindings` (2026-04-26).**
 
 **Checkpoint 2 — open queue (Entry 1548 in comms):**
 1. **2.E `/restore` interaction layer — DONE.** Artifact: `autocode/docs/qa/test-results/20260426-180015-hr5-phase-c-restore-interaction-tui-verification.md`.
@@ -41,14 +47,14 @@ Checkpoint 1 substantially closed. Checkpoint 2 work queue in `AGENTS_CONVERSATI
 9. **2.F.6 per-tool output budget PTY verification — DONE.** Artifact: `autocode/docs/qa/test-results/20260426-201726-2f6-tool-output-budget-pty-verification.md`.
 10. 2.F.7 tranche exit-gate sweeps — DONE. Artifact: `autocode/docs/qa/test-results/20260426-143510-2f7-tranche-exit-gate-sweeps.md`.
 11. 2.G Checkpoint 2 regression gate — DONE. Artifact: `autocode/docs/qa/test-results/20260426-145234-checkpoint2-regression-gate.md`.
-12. 2.H user commit — pending user; agents must not commit.
+12. **2.H user commit — DONE in `1700d66 Closes backend v2` (2026-04-27)** (combined Checkpoint 2 + Checkpoint 3 commit).
 
 **Checkpoint 3 — Phase E release gate (active by user direction):**
 1. 3.A Phase E gate verification — DONE. Artifact: `autocode/docs/qa/test-results/20260427-113808-phase-e-gate-verification.md`.
 2. 3.B Visual-only polish unblock — DONE. Visual-only polish is unblocked for a post-release polish pass, but release readiness still waits on 3.C.
 3. 3.C Final release-grade regression sweep — DONE. Artifact: `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`. Optional B7-B29 remains user-gated and was not run.
 4. 3.D Tranche-spanning closeout entry — DONE. Comms: `AGENTS_CONVERSATION.MD` Entry 1584.
-5. 3.E User commits + tags release if user chooses — pending user.
+5. **3.E User commit — DONE in `1700d66 Closes backend v2` (2026-04-27).** Optional release tag remains user discretion.
 
 ## Historical Stabilization Execution Record
 
@@ -66,7 +72,7 @@ Execution order below is the closed stabilization sprint record, not the active 
 5. **Stabilization Stage 3B COMPLETE** — inspection panels + queue visibility (plan §7.2). Artifact: `autocode/docs/qa/test-results/20260421-103256-stage3b-inspection-queue-verification.md`. Closed §11, §34, §37, §39.
 6. **Stabilization Stage 4 COMPLETE** — canonical-name-only shim removal + final stabilization gate (plan §8). Artifact: `autocode/docs/qa/test-results/20260421-104354-stabilization-verification.md`.
 7. **§1h Rust TUI Migration (engineering gate — COMPLETE 2026-04-19)** — M1–M11 done. Historical reference only; stabilization supersedes as the active slice.
-8. Section 1g TUI Testing Strategy — committed (`a9cc315`); canonical guide at `docs/tui-testing/tui-testing-strategy.md`; Slice 2 themed renderer deferred (user-gated). **TUI runtime + parity program active under HR-5:** Stage 0 harness-signal fix is COMPLETE via `autocode/docs/qa/test-results/20260421-160214-tui-stage0-predicate-verification.md`. Stage 1 reachable-scene promotion is COMPLETE via `autocode/docs/qa/test-results/20260421-172147-tui-stage1-reference-promotion.md` as the historical promotion slice. Stages 2 and 3 are now COMPLETE via `autocode/docs/qa/test-results/20260421-195645-tui-stage2-stage3-implementation.md`: dedicated live surfaces and deterministic triggers now exist for `multi`, `plan`, `review`, `cc`, `restore`, `diff`, `grep`, and `escalation`, and all 14 scenes are `direct` in `autocode/docs/qa/test-results/20260422-114357-tui-14-scene-capture-matrix.md`. The latest runtime-correctness slice is verified in `autocode/docs/qa/test-results/20260422-114723-tui-runtime-gateway-pass.md`, with the authoritative screenshot baseline in `autocode/docs/qa/test-results/20260422-114357-tui-reference-gap.md`. The benchmark-owned Rust TUI PTY runner is now implemented, instrumented, and canary-verified on the real gateway via `docs/qa/test-results/20260423-040320-B13-PROXY-autocode.json` and `docs/qa/test-results/20260423-100635-tui-benchmark-latency-verification.md`. Phase B `/cc`, all Phase C real-data bindings, `/multi` cleanup, typed payload consolidation, Phase D spinner activity-correlation, 1.C docs sync, 2.E `/restore` interaction, 2.F.1 MCP CLI wire-up, 2.B thinking/output buffer split, 2.F.3 cost rate accuracy, 2.F.4+2.F.5, 2.C per-slash PTY coverage, 2.D spinner verb badge, 2.F.2 MCP integration polish, 2.F.6 per-tool output-budget PTY, 2.F.7 tranche exit-gate sweeps, 2.G Checkpoint 2 regression gate, 3.A/3.B Phase E gate verification/visual-polish unblock, 3.C release-grade regression, and 3.D closeout are COMPLETE through `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md` plus `AGENTS_CONVERSATION.MD` Entry 1584. The remaining item is user-owned 3.E commit/tag decision.
+8. Section 1g TUI Testing Strategy — committed (`a9cc315`); canonical guide at `docs/tui-testing/tui-testing-strategy.md`; Slice 2 themed renderer deferred (user-gated). **TUI runtime + parity program active under HR-5:** Stage 0 harness-signal fix is COMPLETE via `autocode/docs/qa/test-results/20260421-160214-tui-stage0-predicate-verification.md`. Stage 1 reachable-scene promotion is COMPLETE via `autocode/docs/qa/test-results/20260421-172147-tui-stage1-reference-promotion.md` as the historical promotion slice. Stages 2 and 3 are now COMPLETE via `autocode/docs/qa/test-results/20260421-195645-tui-stage2-stage3-implementation.md`: dedicated live surfaces and deterministic triggers now exist for `multi`, `plan`, `review`, `cc`, `restore`, `diff`, `grep`, and `escalation`, and all 14 scenes are `direct` in `autocode/docs/qa/test-results/20260422-114357-tui-14-scene-capture-matrix.md`. The latest runtime-correctness slice is verified in `autocode/docs/qa/test-results/20260422-114723-tui-runtime-gateway-pass.md`, with the authoritative screenshot baseline in `autocode/docs/qa/test-results/20260422-114357-tui-reference-gap.md`. The benchmark-owned Rust TUI PTY runner is now implemented, instrumented, and canary-verified on the real gateway via `docs/qa/test-results/20260423-040320-B13-PROXY-autocode.json` and `docs/qa/test-results/20260423-100635-tui-benchmark-latency-verification.md`. Phase B `/cc`, all Phase C real-data bindings, `/multi` cleanup, typed payload consolidation, Phase D spinner activity-correlation, 1.C docs sync, 2.E `/restore` interaction, 2.F.1 MCP CLI wire-up, 2.B thinking/output buffer split, 2.F.3 cost rate accuracy, 2.F.4+2.F.5, 2.C per-slash PTY coverage, 2.D spinner verb badge, 2.F.2 MCP integration polish, 2.F.6 per-tool output-budget PTY, 2.F.7 tranche exit-gate sweeps, 2.G Checkpoint 2 regression gate, 3.A/3.B Phase E gate verification/visual-polish unblock, 3.C release-grade regression, 3.D closeout, and 3.E user commit `1700d66 Closes backend v2` are all COMPLETE through `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md` plus `AGENTS_CONVERSATION.MD` Entry 1584. Optional release tag remains user discretion.
    - **User-directed temporary override (2026-04-24):** backend-first tranche completed local deterministic regression; HR-5 real-data binding has resumed.
 9. Section 1f Milestone C/D/E/F — **FROZEN** on Go; gates absorbed into Rust-M5 through Rust-M10.
 10. Section 1 large-repo validation / retrieval contract (next backlog item after stabilization).
@@ -108,7 +114,7 @@ Execution order below is the closed stabilization sprint record, not the active 
 ## Rust TUI Migration (COMPLETE)
 
 > Status (2026-04-19): M1-M11 complete. Go TUI and Python inline fallback deleted. Rust binary (`autocode/rtui/target/release/autocode-tui`) is the sole interactive frontend. Current Rust TUI unit baseline is tracked separately from this historical migration record. Binary size 2.4MB. All performance targets met.
-> Source research: `deep-research-report.md` at repo root (treat as draft).
+> Source research: `docs/archive/deep-research-report.md` (archived draft).
 
 **All decisions locked:**
 

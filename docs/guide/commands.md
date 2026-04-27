@@ -2,13 +2,27 @@
 
 ## Core Commands
 
-### `autocode chat`
+### `autocode` (canonical interactive launch)
 
-Start an interactive coding session.
+Start an interactive coding session in the Rust TUI.
 
 ```bash
-uv run autocode chat
+autocode
+# or, when running from a non-installed source tree:
+uv run autocode
 ```
+
+Optional mode flags:
+
+```bash
+autocode --mode inline         # inline mode (preserves terminal scrollback)
+autocode --mode altscreen      # alternate-screen mode
+autocode --attach HOST:PORT    # attach to a remote backend
+```
+
+### `autocode chat` (compatibility / fallback)
+
+`autocode chat` is back-compatible and also launches the Rust TUI. The fallback UIs are `autocode chat --tui` (Textual fullscreen) and `autocode chat --legacy` (Rich REPL, no agent loop). Prefer bare `autocode` in new documentation; reach for `autocode chat ...` only when documenting a fallback path.
 
 ### `autocode ask <question>`
 

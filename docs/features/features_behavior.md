@@ -2,9 +2,9 @@
 
 > Current-state inventory for modularization work.
 > Purpose: describe what the frontend owns, what the backend owns, how they talk, and what currently prevents easy UI/backend swapping.
-> Last updated: 2026-04-24
+> Last updated: 2026-04-27
 
-This file is intentionally about the runtime as it exists today, not the historical catalog in `docs/requirements_and_features.md`. Use this as the baseline for splitting AutoCode into independently runnable and testable modules.
+This file is intentionally about the runtime as it exists today, not the historical catalog in `docs/requirements_and_features.md`. Use this as the baseline for splitting AutoCode into independently runnable and testable modules. Backend feature detail is now split into `docs/features/backend_features.md`.
 
 ## 1. Runtime Decomposition
 
@@ -12,7 +12,7 @@ This file is intentionally about the runtime as it exists today, not the histori
 |---|---|---|---|---|
 | Launcher | Python CLI | `autocode` / `autocode chat` in `autocode/src/autocode/cli.py` | Yes | Yes |
 | Frontend | Rust TUI | `autocode/rtui/target/release/autocode-tui` | Yes, in either spawn-managed or `--attach HOST:PORT` mode | Yes |
-| Backend | Python JSON-RPC server | `autocode serve` in `autocode/src/autocode/cli.py` | Yes, over stdio or TCP JSON-RPC | Yes |
+| Backend | Python JSON-RPC application + host adapters | `autocode serve` in `autocode/src/autocode/cli.py` | Yes, over stdio or TCP JSON-RPC | Yes |
 | Shared contract | JSON-RPC v1 schema | `docs/reference/rpc-schema-v1.md`, `autocode/src/autocode/backend/schema.py`, `autocode/rtui/src/rpc/protocol.rs` | N/A | Yes |
 
 ## 2. Launcher Inventory
@@ -22,7 +22,7 @@ The launcher is not the product surface the user asked to modularize, but it is 
 Current behavior:
 
 - Bare `autocode` launches the Rust TUI by default.
-- `autocode chat --mode inline|altscreen` selects frontend presentation mode.
+- Bare `autocode --mode inline|altscreen` selects frontend presentation mode; `autocode chat --mode ...` remains a subcommand-specific route.
 - Bare `autocode --attach HOST:PORT` launches the Rust TUI in attach mode against an already-running backend host.
 - `autocode serve --transport stdio|tcp` launches the backend server as a JSON-RPC process.
 - `autocode ask` runs a one-shot LLM call without the TUI/backend split.
@@ -206,13 +206,16 @@ Primary files:
 - `autocode/src/autocode/backend/services.py`
 - `autocode/src/autocode/backend/dispatcher.py`
 - `autocode/src/autocode/backend/schema.py`
+- `autocode/src/autocode/backend/transport.py`
 - `autocode/src/autocode/backend/stdio_host.py`
 - `autocode/src/autocode/backend/tcp_host.py`
 - `autocode/src/autocode/agent/loop.py`
 - `autocode/src/autocode/app/commands.py`
 - `autocode/src/autocode/agent/tools.py`
+- `autocode/src/autocode/agent/cost_dashboard.py`
 - `autocode/src/autocode/agent/task_tools.py`
 - `autocode/src/autocode/agent/subagent_tools.py`
+- `autocode/src/autocode/layer4/thinking_parser.py`
 - `autocode/src/autocode/session/`
 
 ### 4.2 Backend-owned behavior
@@ -250,6 +253,11 @@ The backend currently owns:
 - iteration-zero workspace bootstrap, including active working-set files and
   bounded cached Layer 1 symbol previews when those files were already parsed
 - event recording, session logging, and training-data capture
+- per-session cost/token accounting, cache-aware usage, `/cost`, `/cost --detail`,
+  and warn-and-continue cost-limit threshold notification
+- backend-owned slash-command catalog discovery and command execution
+- transport-parametrized conformance over stdio and TCP for the core
+  frontend-facing application surface
 
 The backend is the system of record for durable session/task/subagent state. The frontend only renders projections of that state.
 
@@ -270,6 +278,8 @@ That service currently supports:
 - plan/memory/checkpoint listing and mutation
 - steering an active run
 - backend-triggered approval and ask-user flows
+- thinking-token streaming and provider thinking-toggle control
+- task/subagent, checkpoint, memory, config, cost, and plan projections
 
 ### 4.4 Backend-internal domains currently mixed together
 
@@ -280,7 +290,7 @@ The backend stack is currently still a broad application surface, even after tra
 - a session/task/subagent state manager
 - a slash-command runtime host
 
-Transport ownership itself is now split out into `stdio_host.py` and `tcp_host.py`.
+Transport ownership itself is now split out into `transport.py`, `stdio_host.py`, and `tcp_host.py`; JSON-RPC method routing is split into `dispatcher.py`, and much of the application behavior is factored into `services.py` and `chat.py`.
 
 That makes it powerful, but it also means the backend module boundary is not yet cleanly separated internally.
 
@@ -363,7 +373,7 @@ The Rust TUI now supports both spawn-managed and attach mode, but the default ba
 
 ### 6.2 Slash command semantics are shared, but still backend-led
 
-The old `autocode.tui.commands` leak is fixed: command semantics now live in `autocode.app.commands`. The remaining seam is that frontend UX still depends on the backend-owned command catalog and backend-owned provider/model/session list data.
+The old frontend-local command-semantics leak is fixed: command semantics now live in `autocode.app.commands`. The remaining seam is that frontend UX still depends on the backend-owned command catalog and backend-owned provider/model/session list data.
 
 ### 6.3 Transport is abstracted, but not broadly generalized
 
@@ -375,7 +385,7 @@ The same business behavior now works over local stdio JSON-RPC and TCP JSON-RPC,
 
 ### 6.4 Backend service boundaries are broad
 
-`BackendServer` currently owns transport, orchestration, session lifecycle, approvals, plan state, memory/checkpoint access, and command runtime. A future swap-friendly backend should likely expose a thinner service boundary.
+`BackendServer` still coordinates orchestration, session lifecycle, approvals, plan state, memory/checkpoint access, and command runtime. Transport and dispatch are no longer owned directly by the server, but a future swap-friendly backend should still expose a thinner application-service boundary.
 
 ### 6.5 Some frontend behaviors are driven by implementation detail instead of explicit contract
 
@@ -409,10 +419,10 @@ This means AutoCode is partially modular today:
 This is not the full execution plan. It is the minimum set of seams the inventory says should be isolated next.
 
 1. Extract a backend-agnostic application service layer from `BackendServer`.
-2. Move slash-command definitions and provider/model discovery out of `autocode.tui.commands` into a shared application module.
-3. Introduce a transport abstraction so the backend can run over stdio first, but not only stdio.
-4. Split the Rust frontend's backend process spawning from its RPC client responsibilities.
-5. Convert current behavior assumptions such as `on_chat_ack`, stale-timeout rules, and session-reset semantics into explicit conformance tests at the contract boundary.
+2. Make backend-owned slash-command definitions and picker data a stricter protocol contract instead of implementation behavior.
+3. Add capability/version negotiation on top of the existing stdio/TCP transport abstraction.
+4. Harden attach-mode semantics: reconnect, remote-host security, and multi-client behavior.
+5. Convert remaining behavior assumptions such as `on_chat_ack`, stale-timeout rules, and session-reset semantics into explicit conformance tests at the contract boundary.
 
 ## 9. Modularization Readiness Summary
 

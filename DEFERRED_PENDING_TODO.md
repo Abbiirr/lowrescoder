@@ -3,15 +3,23 @@
 > Single consolidated store for everything NOT being worked on right now but
 > MUST NOT be lost. Keep this file truthful.
 >
-> **Current active slice:** TUI Testing Strategy (plan in progress — see
-> `current_directives.md`, `EXECUTION_CHECKLIST.md` §"TUI Testing Strategy
-> (Active Slice)", and `PLAN.md` §1g).
+> **Current active program:** Backend Robustness Tranche 4 (plan files at
+> `docs/plan/backend-robustness-tranche-4-plan.md`,
+> `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md`,
+> `docs/plan/backend-robustness-tranche-4-checklist.md`).
+> Predecessor Stabilize-and-Release Tranche 3 is reviewer-side closed; user
+> 3.E commit + tag is pending; tranche-3 plan archive cut covered Entries
+> 1548-1586 in `docs/communication/old/2026-04-27-stabilize-and-release-tranche-3-1548-1586.md`.
 >
-> **When the active slice lands:** walk this file top-to-bottom, requeue by
-> priority, and empty items as they are finished or formally closed.
+> Sections 1-5 below are HISTORICAL (TUI Testing Strategy era, 2026-04-17).
+> They are preserved for reference; treat as superseded unless explicitly
+> referenced by a current slice. Sections 6-8 are CURRENT and authoritative
+> for items deferred from Tranche 4.
 
-Last updated: 2026-04-17 late-session (post Entry 1128 Codex verdicts + Entry 1129 archival)
-Owner: Claude (Coder)
+Last updated: 2026-04-27 (Tranche 4 plan files drafted; sections 6-8 added).
+Original sections 1-5 last updated: 2026-04-17 late-session.
+Owner: Claude (Reviewer/Architect) for sections 6-8; original Coder ownership
+preserved on legacy sections.
 Source of truth for item state: always confirm against the current tree
 (git status, AGENTS_CONVERSATION.MD, artifact paths) before acting.
 
@@ -152,7 +160,7 @@ autocode/tests/unit/test_verification_profiles.py
 autocode/tests/unit/test_vhs_differ.py
 autocode/tests/vhs/
 benchmarks/run_b7_b30_sweep.sh
-deep-research-report.md
+docs/archive/deep-research-report.md
 docs/plan/research-components-feature-checklist.md
 docs/reference/claude-settings.sample.json
 docs/reference/gateway-complaint-template.md
@@ -268,7 +276,57 @@ When TUI Testing Strategy closes, walk this file in priority order:
 9. Section 4 — pick up remaining EXECUTION_CHECKLIST open boxes
 10. Section 2 remaining (narrow-terminal, live-streaming artifact)
 
-## 6. Housekeeping
+## 6. Backend Robustness Tranche 4 — Items Explicitly Deferred (User Direction 2026-04-27)
+
+Per user direction after the post-Stabilize-and-Release gap analysis (Entry 1585 review of Codex Entry 1584 closeout), the following backend robustness candidates from the 2026 frontier-product survey are deferred. They are NOT in scope for the upcoming backend-robustness tranche. Tracked here so they are not lost.
+
+### 7.1 Cloud sandbox backends
+
+- **Source products:** Open SWE (Daytona/Modal/Runloop/LangSmith), Cursor 2.0 Background Agents, Replit Agent 3
+- **What it would add:** isolated VM/container per session for safe arbitrary-code execution; multi-tenant scaling; protection against destructive operations beyond what local OS sandboxing provides
+- **Why deferred:** out of scope for AutoCode's local-first delivery; would require external infrastructure (Modal, Daytona, etc.) and a hosted offering shape we are not pursuing now
+- **Revive trigger:** AutoCode ships a hosted offering, OR a stepping-stone single-machine sandbox (`nsjail`/`firejail`/`bubblewrap`) is wanted as a hardening pass on `FULL_ISOLATION`
+- **Already in place:** `agent/sandbox.py` `SandboxPolicy` (NONE/READ_ONLY/WRITABLE_PROJECT/FULL_ISOLATION); approval modes; per-tool block coverage from S-BLOCKED
+
+### 7.2 A2A (Agent-to-Agent) protocol support
+
+- **Source:** Linux Foundation A2A v0.3 (donated by Google Cloud 2025-06-23); used by CrewAI, Google ADK, gastown
+- **What it would add:** standardized AgentCard discovery; cross-org agent collaboration; multi-vendor agent orchestration via JSON-RPC over HTTPS + SSE
+- **Why deferred:** AutoCode is a local-first single-agent today; no current cross-org agent-network requirement. Multi-agent orchestration happens via internal subagents (`agent/subagent_tools.py` + `task_tools.py`), not network protocol
+- **Revive trigger:** AutoCode ships a multi-org coordination feature, integrates with vendor-managed agents (SAP, Salesforce, Microsoft Agent Framework), or wants to participate in an A2A-compliant marketplace
+- **Coverage of the adjacent need (MCP — agent-to-tool, vertical):** SHIPPED via 2.F.1 (`autocode mcp-serve`) + 2.F.2 (audit log + lifecycle + doctor + concurrent-client). MCP is the agent-to-tool standard; A2A is the agent-to-agent standard. Both are governed under Linux Foundation but they solve different problems
+
+### 7.3 GitHub-native asynchronous PR pipeline
+
+- **Source products:** Open SWE (issue → plan → PR), Roo Cloud (autonomous cloud-runner), Cursor Background Agents, Devin
+- **What it would add:** GitHub-issue / PR–triggered agent invocation; long-horizon autonomous loops; cloud-side execution decoupled from local IDE; in-thread status updates via GitHub comments
+- **Why deferred:** AutoCode is a local terminal agent; this shape is a different deployment model (cloud runner + GitHub App + webhook handlers + auth surface)
+- **Revive trigger:** AutoCode ships a hosted offering with a GitHub App integration; OR benchmark sweeps need autonomous-loop execution outside the user's local machine
+- **Partial alternative already in place:** local benchmark harness (`benchmarks/run_b7_b30_sweep.sh`) runs autonomous loops locally; CI hooks could be added incrementally without committing to GitHub-native PR pipeline
+
+---
+
+### 6.4 User-custom cost-routing configuration (G6 Tranche 4 — partial-deferred)
+
+- **Source products:** opencode (`/model` per-task), Continue Hub blocks, Goose multi-model recipes
+- **What it would add:** user-controllable slash command surface like `/route lint=haiku refactor=sonnet plan=opus`; per-project `.autocode/route.yaml` overrides; runtime "force this turn to use model X" mode
+- **What's in Tranche 4 G6 by default:** Layer 4.5 cost-aware multi-provider router with auto-selection based on task complexity + the per-model rate tables shipped in 2.F.3 (`agent/cost_dashboard.py`). Sensible defaults; no user-facing override surface
+- **Why deferred:** auto-routing needs to prove itself before exposing knobs; user-custom config adds CLI/slash-command surface area that's not load-bearing for the first release
+- **Revive trigger:** auto-routing is shipped and stable, AND a real user reports they want to override the default per-task model selection
+- **Related items already shipped:** per-model rate tables (2.F.3), `/cost --detail` (S-COST), `provider_model` deprecation warning (2.F.4)
+
+---
+
+## 7. Items Out of Scope for AutoCode's Shape (no revive trigger expected)
+
+Different agent shape entirely; not on roadmap unless product direction changes:
+- Voice-to-code (Aider): accessibility win, requires audio capture/transcription pipeline
+- Browser / Computer Use mode (Replit Agent 3 reflection loop, Codex desktop): different agent shape (UI-driving)
+- Real-time collaboration / agent sharing: requires multi-tenant backend + auth layer
+
+---
+
+## 8. Housekeeping
 
 - Every entry added to this file should name its source (Entry number,
   file path, or EXECUTION_CHECKLIST anchor) so future agents can verify.

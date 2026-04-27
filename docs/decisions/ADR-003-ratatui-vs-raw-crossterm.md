@@ -38,5 +38,5 @@ M4 will implement hand-rolled composer:
 
 ## References
 
-- `rust_migration_plan.md §5.2` — M1 spike candidates
-- `rust_migration_plan.md §8` — Composer feature checklist
+- `docs/archive/rust_migration_plan.md §5.2` — M1 spike candidates
+- `docs/archive/rust_migration_plan.md §8` — Composer feature checklist

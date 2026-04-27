@@ -88,9 +88,12 @@ Bare `autocode` launches the Rust TUI. Features:
 ### Explicit mode selection
 
 ```bash
-autocode chat                  # Rust TUI (default)
-autocode chat --tui            # Fullscreen Textual TUI (fallback)
-autocode chat --legacy         # Python Rich REPL (no agent loop)
+autocode                       # Rust TUI (canonical default — preferred)
+autocode --mode inline         # Rust TUI inline mode (preserves scrollback)
+autocode --mode altscreen      # Rust TUI alternate-screen mode
+autocode --attach HOST:PORT    # Attach Rust TUI to a remote backend
+autocode chat --tui            # Fullscreen Textual TUI (FALLBACK only)
+autocode chat --legacy         # Python Rich REPL (FALLBACK; no agent loop)
 ```
 
 ### Single question

@@ -3,6 +3,7 @@
 > **Plan:** `docs/plan/backend-feature-improvement-plan.md`
 > **Status:** EXIT GATES COMPLETE — user-directed backend tranche closeout record. Fresh live gateway canary remains required before broad benchmark sweeps.
 > **Executor:** Codex (Builder). Reviewer: Claude.
+> **Current inventory:** `docs/features/backend_features.md`.
 
 ## Stage 1 — Transport/Chat Conformance
 
@@ -57,6 +58,9 @@
 - Hard-abort cost limits — future slice
 - L3 Layer broadening — keep optional-extra path opt-in; revisit per S-L3DOC before adding routed request types
 - **Tool-call execution memoization** (original S-CACHE design) — invalidation risk for file-reading tools; revisit post-tranche with dedicated design. S-CLEAR-RESULTS (in-tranche) is the different, smaller feature
+- Capability/version negotiation, reconnect/reattach semantics, remote transport security, and wider transport surfaces — tracked as modular follow-through, not part of this completed tranche
+- Wider LSP parity beyond the current four LSP-backed tools — tracked in `docs/plan/research-components-feature-checklist.md`
+- `/sandbox <mode>` and command-scoped allow/deny controls — planned feature work, not part of the completed backend tranche
 
 ## Exit Gate (tranche complete)
 

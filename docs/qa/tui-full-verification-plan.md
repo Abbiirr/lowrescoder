@@ -1,4 +1,12 @@
-# Full TUI Verification Plan
+# Full TUI Verification Plan (HISTORICAL — Go TUI era)
+
+> **Status: HISTORICAL / SUPERSEDED.** This plan was written for the Go Bubble Tea TUI which was deleted at the Rust M11 cutover (2026-04-19). The current canonical TUI verification flow lives in `docs/tui-testing/tui-testing-strategy.md` (Track 1 runtime invariants, Track 4 design-target ratchet, self-vs-self PNG regression, live PTY smoke), plus `autocode/TESTING.md` for command-level coverage. Per-change checklist: `docs/tui-testing/tui_testing_checklist.md`.
+>
+> **Do not use this file to plan new TUI verification work.** It references deleted files (`cmd/autocode-tui/*.go`) and Go test commands (`go test`, `go vet`) that no longer exist. Preserved for design provenance only.
+
+---
+
+## Original (historical) scope
 
 > Scope: verify the Go TUI end-to-end, including behavior, wire protocol, ANSI output, and visuals.
 > Goal: catch regressions in all user-visible features, not just unit logic.

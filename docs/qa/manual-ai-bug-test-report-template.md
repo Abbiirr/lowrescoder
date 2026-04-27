@@ -19,9 +19,12 @@ Purpose: strict PASS/FAIL artifact template for every manual AI verification run
 - Tester:
 - Scope:
 - Frontend:
-  - `autocode chat`
-  - `autocode chat --tui`
-  - Go TUI binary/path
+  - `autocode` (canonical Rust TUI launch — preferred)
+  - `autocode --mode inline` / `autocode --mode altscreen`
+  - `autocode chat --tui` (Textual fullscreen FALLBACK)
+  - `autocode chat --legacy` (Rich REPL FALLBACK)
+  - Rust TUI binary path: `autocode/rtui/target/release/autocode-tui`
+  - (The Go Bubble Tea TUI was deleted at the Rust M11 cutover 2026-04-19; do not record evidence against a Go binary.)
 - Profile:
   - `default`
   - `claude_like`

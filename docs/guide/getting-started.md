@@ -54,11 +54,21 @@ uv run autocode doctor
 ## First Chat Session
 
 ```bash
-# Start an interactive session
-uv run autocode chat
+# Start an interactive session (Rust TUI, canonical launch)
+autocode
+# or from a non-installed source tree:
+uv run autocode
 
 # Or ask a one-shot question
-uv run autocode ask "What does the main function do?"
+autocode ask "What does the main function do?"
+```
+
+Optional alternate launch modes:
+
+```bash
+autocode --mode altscreen      # alternate-screen Rust TUI
+autocode chat --tui            # Textual fullscreen FALLBACK
+autocode chat --legacy         # Python Rich REPL FALLBACK (no agent loop)
 ```
 
 ## Configuration

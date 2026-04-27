@@ -37,7 +37,7 @@ This track runs in parallel with HR-5, not instead of it.
 
 This plan is based on:
 
-- `docs/features_behavior.md`
+- `docs/features/features_behavior.md`
 - `autocode/src/autocode/cli.py`
 - `autocode/src/autocode/backend/server.py`
 - `autocode/src/autocode/backend/schema.py`

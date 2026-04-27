@@ -1,13 +1,15 @@
 # AutoCode — Requirements & Feature Catalog
 
 > Comprehensive catalog of all features built, planned, current UX issues, and architecture decisions.
-> Last updated: 2026-04-26
+> Last updated: 2026-04-27
 
 ---
 
 ## 1. Project Overview
 
 **AutoCode** — Edge-native AI coding assistant CLI. Local-first, deterministic-first, consumer hardware (8GB VRAM). See `CLAUDE.md` for architecture (4-layer model), design principles, and technology stack.
+
+Current ownership and replaceability inventory lives in `docs/features/features_behavior.md`. Backend-specific implemented/missing/planned inventory lives in `docs/features/backend_features.md`.
 
 ---
 
@@ -231,9 +233,9 @@ Use `autocode chat --tui` only as a fallback path. New frontend behavior should 
 
 ### 2.12 Tests
 
-- **Python unit baseline:** `1961 passed` in the latest full unit sweep for this backend tranche.
-- **Rust TUI baseline:** `181` Rust tests passing across the Ratatui frontend test suite.
-- **Benchmark suite:** maintained separately under `benchmarks/`; do not combine file counts with unit-test totals.
+- **Python unit baseline:** `1999 passed` in the latest release-grade regression sweep.
+- **Rust TUI baseline:** `210` Rust tests passing in the main Ratatui frontend crate, plus auxiliary crate gates.
+- **Benchmark harness baseline:** `199 passed` in `benchmarks/tests` during the latest release-grade sweep.
 - **Go tests:** no longer applicable because the Go TUI was deleted at the Rust M11 cutover.
 - Python coverage includes CLI, backend server/transports, agent loop, tools, approval, sessions, context/search, task tools, subagents, cost, checkpoints, memory, logging, blob store, episode store, event recorder, and LLM scheduling.
 - Integration tests under `autocode/tests/integration/` self-skip when required services or credentials are unavailable.
@@ -497,7 +499,7 @@ See `docs/archive/plan/go-bubble-tea-migration.md` for the full migration plan.
 | Agentic task completion | >50% on custom test suite | E2E eval system built (3 scenarios: Calculator, BugFix, CLI) |
 | Memory usage (idle) | <2GB RAM (stretch: <500MB) | Not profiled |
 | Memory usage (inference) | <8GB VRAM | Not profiled |
-| Unit tests | 500+ passing | Python unit `1961 passed`; Rust TUI `181`; benchmark suite separate |
+| Unit tests | 500+ passing | Python unit `1999 passed`; Rust TUI `210`; benchmark harness `199` |
 
 ---
 

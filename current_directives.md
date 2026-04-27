@@ -4,7 +4,11 @@
 
 ## Active Phase
 
-**Stabilize-and-Release Program — Checkpoint 3 ACTIVE by user direction.** Canonical plan: `docs/plan/stabilize-and-release-plan.md`. Three checkpoints: (1) stabilize for commit — substantially closed; (2) Phase D + `/restore` interaction + backend robustness — closed from builder/reviewer side, pending user commit only; (3) Phase E release gate — started by user direction on 2026-04-27.
+**Backend Robustness Tranche 4 — PLANS READY, KICKOFF AWAITING USER.** Canonical plan: `docs/plan/backend-robustness-tranche-4-plan.md`. Sub-plan: `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md`. Master atomic checklist: `docs/plan/backend-robustness-tranche-4-checklist.md`. Four checkpoints (C4 foundation/safety, C5 multi-language LSP + auto-verify, C6 headless + cost-aware routing, C7 polish), 15 high-level slices (G1-G15), 23 execution sub-slices, 4 gates. First slice on user kickoff: **C4.G1 per-tool-call atomic checkpoint with diff-rollback** per checklist §4.G1. All non-tree-mutating git ops only per `AGENTS.md`. Per-slice docs+artifact-before-review rule (constraint #8) is in force.
+
+**Stabilize-and-Release Program — CLOSED.** Canonical plan: `docs/plan/stabilize-and-release-plan.md`. Three checkpoints fully closed including user 3.E commit `1700d66 Closes backend v2` (2026-04-27). Optional release tag remains user discretion. Final regression artifact: `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md` (Python `1999`, Rust TUI `210`, benchmark `199`, real-gateway PTY canary green). Tranche-3 comms archive cut: `docs/communication/old/2026-04-27-stabilize-and-release-tranche-3-1548-1586.md`. Agents must not commit, push, tag, or run any tree-mutating git command.
+
+## Predecessor program detail (Stabilize-and-Release Tranche 3)
 
 **Checkpoint 1 status (substantially closed 2026-04-26):**
 - 1.A typed `tool.result_payload` consolidation — DONE
@@ -12,11 +16,11 @@
 - 1.B comms cleanup — DONE (Entries 1476-1547 archived in two files under `docs/communication/old/`)
 - 1.D Checkpoint 1 regression gate — GREEN (Python `1977 passed`, Rust TUI `197 passed`, benchmark `199 passed`, PTY smokes green)
 - 1.C final docs sync — DONE (Codex Entry 1549; artifact `autocode/docs/qa/test-results/20260426-175205-checkpoint1-c-docs-sync.md`)
-- 1.E user commit — pending user
+- 1.E user commit — DONE in `990a52c Stabilizes backend tranche and ships HR-5 Phase B+C bindings` (2026-04-26)
 
-**Checkpoint 2 queue:** active task list at `AGENTS_CONVERSATION.MD` Entry 1548. Completed from builder/reviewer side: 2.E `/restore` interaction layer, 2.F.1 MCP CLI wire-up, 2.B thinking/output buffer split, 2.F.3 cost rate accuracy, 2.F.4+2.F.5 deprecation/lint fixes, 2.C per-slash PTY coverage, 2.D spinner badge, 2.F.2 MCP integration polish, 2.F.6 per-tool output-budget PTY, 2.F.7 tranche exit-gate sweeps, and 2.G regression gate. 2.H user commit remains user-owned; agents must not commit.
+**Checkpoint 2 queue:** active task list at `AGENTS_CONVERSATION.MD` Entry 1548 (now archived). Completed from builder/reviewer side: 2.E `/restore` interaction layer, 2.F.1 MCP CLI wire-up, 2.B thinking/output buffer split, 2.F.3 cost rate accuracy, 2.F.4+2.F.5 deprecation/lint fixes, 2.C per-slash PTY coverage, 2.D spinner badge, 2.F.2 MCP integration polish, 2.F.6 per-tool output-budget PTY, 2.F.7 tranche exit-gate sweeps, and 2.G regression gate. **2.H user commit — DONE in `1700d66 Closes backend v2` (2026-04-27)** (combined Checkpoint 2 + Checkpoint 3 commit). Agents must still not commit.
 
-**Checkpoint 3 queue:** 3.A Phase E gate verification and 3.B visual-only polish unblock are complete via `autocode/docs/qa/test-results/20260427-113808-phase-e-gate-verification.md`; 3.C final release-grade regression is complete via `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`; 3.D tranche-spanning closeout is posted in `AGENTS_CONVERSATION.MD` Entry 1584. Current pickup order: 3.E user commits and tags release if desired. Agents must not commit, tag, push, reset, or checkout.
+**Checkpoint 3 queue:** all closed. 3.A Phase E gate verification + 3.B visual-only polish unblock via `autocode/docs/qa/test-results/20260427-113808-phase-e-gate-verification.md`; 3.C final release-grade regression via `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`; 3.D tranche-spanning closeout in `AGENTS_CONVERSATION.MD` Entry 1584; 3.E user commit `1700d66 Closes backend v2` (2026-04-27). Optional release tag remains user discretion. Agents must not commit, tag, push, reset, or checkout.
 
 **Return rule:** continue HR-5 real-data bindings; do not start visual-only TUI slices first; run a fresh live gateway canary before any full benchmark sweep or product-path release claim.
 
@@ -84,7 +88,7 @@
 
 **Honesty note:** the dedicated detail surfaces are real and directly triggerable, but several still render static scene text rather than real bound session data. Human-driven TUI benchmarking is unblocked, the benchmark-owned Rust TUI PTY runner now has a green real-gateway canary, and the specific Phase A latency blocker is no longer the active frontier. Larger sweeps should still start with a fresh canary on the current gateway before the long run begins.
 
-**Active task:** Phase E gate prerequisites are satisfied, visual-only polish is unblocked for a post-release polish pass, 3.C final release-grade regression is green, and 3.D closeout is posted. Under HR-5, Phase A is closed on the canary lane, all Phase B/C/D bindings and follow-ons are complete, Checkpoint 2 regression is green via `autocode/docs/qa/test-results/20260426-145234-checkpoint2-regression-gate.md`, Phase E gate verification is recorded in `autocode/docs/qa/test-results/20260427-113808-phase-e-gate-verification.md`, and release-grade regression is recorded in `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`. Current pickup is user-owned 3.E commit/tag decision.
+**Active task:** Backend Robustness Tranche 4 plans are READY; user kickoff awaited for first slice C4.G1 per `docs/plan/backend-robustness-tranche-4-checklist.md` §4.G1. Predecessor program is fully closed: Phase E gate prerequisites satisfied, visual-only polish unblocked, 3.C release-grade regression green via `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`, 3.D closeout posted in `AGENTS_CONVERSATION.MD` Entry 1584, 3.E commit landed in `1700d66 Closes backend v2` (2026-04-27). Optional release tag remains user discretion.
 
 **User-directed temporary override (2026-04-24):** before more frontend binding work, run a backend-tightening tranche to check commit-readiness on the current tree and tighten backend/runtime behavior around chat streaming, subagents, context, memory, task/todo, loop, and transport correctness. Canonical plan: `docs/plan/backend-tightening-refinement-plan.md`. Backend tranche and docs-refresh progress are summarized in the active override above. The tranche is locally regression-green; typed payload consolidation, spinner activity-correlation, `/restore` interaction, MCP CLI wire-up, thinking/output buffer split, per-slash PTY coverage, and spinner verb badge wiring are complete, and Checkpoint 2 now continues with the remaining robustness/runtime follow-ons.
 
@@ -192,7 +196,7 @@ This track now runs alongside HR-5; it does not pause the HR-5 product queue unl
 
 - VHS baseline refreshed on 2026-04-21 after Track 4 chrome/recovery promotion; MVP Track 4 scenes now run as hard gates.
 - Slice 2 (themed parallel renderer) — deferred.
-- 3 pre-session cruft files (`DEFERRED_PENDING_TODO.md`, `deep-research-report.md`, `benchmarks/run_b7_b30_sweep.sh`) — disposition pending.
+- Remaining pre-session cruft files (`DEFERRED_PENDING_TODO.md`, `benchmarks/run_b7_b30_sweep.sh`) — disposition pending. The root `deep-research-report.md` draft has been moved to `docs/archive/deep-research-report.md`.
 
 ## Next-Sprint Candidate: Stabilization + Parity (PROPOSED 2026-04-20)
 

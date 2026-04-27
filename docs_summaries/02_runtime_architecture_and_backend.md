@@ -6,7 +6,7 @@ The current product runtime is a Rust frontend plus a Python backend joined by a
 
 - Rust frontend: [autocode/rtui/README.md](../autocode/rtui/README.md)
 - Python backend and protocol overview: [docs/architecture.md](../docs/architecture.md)
-- Current runtime decomposition and replaceability status: [docs/features_behavior.md](../docs/features_behavior.md)
+- Current runtime decomposition and replaceability status: [docs/features/features_behavior.md](../docs/features/features_behavior.md)
 - Wire contract: [docs/reference/rpc-schema-v1.md](../docs/reference/rpc-schema-v1.md)
 
 ## What is actually true today
@@ -19,7 +19,7 @@ The current product runtime is a Rust frontend plus a Python backend joined by a
 
 This “what is true today” view is captured best in:
 
-- [docs/features_behavior.md](../docs/features_behavior.md)
+- [docs/features/features_behavior.md](../docs/features/features_behavior.md)
 - [modular_migration_plan.md](../modular_migration_plan.md)
 - [modular_migration_todo.md](../modular_migration_todo.md)
 
@@ -38,7 +38,7 @@ It is the best single-file “system overview” doc, but it mixes current state
 
 ### Runtime inventory / replaceability view
 
-[docs/features_behavior.md](../docs/features_behavior.md) is the best “what owns what” doc.
+[docs/features/features_behavior.md](../docs/features/features_behavior.md) is the best “what owns what” doc.
 
 It tells you:
 
@@ -52,10 +52,7 @@ It tells you:
 
 [docs/requirements_and_features.md](../docs/requirements_and_features.md) is a built-vs-planned catalog.
 
-It is useful for historical feature coverage, but treat older frontend references carefully:
-
-- it still includes inline/Textual/Go-era framing in places
-- the current frontend reality is Rust-first and should be checked against `features_behavior.md` and `current_directives.md`
+It is useful for broad feature coverage. For current ownership and swapability details, prefer `docs/features/features_behavior.md` and `docs/features/backend_features.md`.
 
 ## Backend-specific current direction
 
@@ -102,7 +99,7 @@ That is consistent with the current backend-tightening plan and the latest agent
 ## Source references
 
 - [docs/architecture.md](../docs/architecture.md)
-- [docs/features_behavior.md](../docs/features_behavior.md)
+- [docs/features/features_behavior.md](../docs/features/features_behavior.md)
 - [docs/requirements_and_features.md](../docs/requirements_and_features.md)
 - [docs/reference/rpc-schema-v1.md](../docs/reference/rpc-schema-v1.md)
 - [autocode/rtui/README.md](../autocode/rtui/README.md)

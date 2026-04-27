@@ -37,9 +37,13 @@ For a quick human-driven transcript capture:
 
 ```bash
 script -q /tmp/autocode-pty.typescript
-uv run autocode chat
+autocode                # canonical Rust TUI launch
+# or from a non-installed source tree:
+# uv run autocode
 exit
 ```
+
+For the Textual fullscreen fallback path, substitute `autocode chat --tui`.
 
 Then copy or summarize the relevant transcript into `docs/qa/test-results/`.
 

@@ -1,6 +1,8 @@
 # Research-Components Feature Checklist
 
-Consolidated from three parallel source audits of `research-components/` + cross-check against `deep-research-report.md` and the existing AutoCode code. Each row is a portable pattern, its source anchor, its current AutoCode status, and a port-worth rating.
+Consolidated from three parallel source audits of `research-components/` + cross-check against `docs/archive/deep-research-report.md` and the existing AutoCode code. Each row is a portable pattern, its source anchor, its current AutoCode status, and a port-worth rating.
+
+> Status note 2026-04-27: backend rows were refreshed against the current Python backend and `docs/features/backend_features.md`. Older Go-TUI source anchors in UI-specific rows are historical unless the row explicitly says Rust/current.
 
 **Sources audited:**
 - `research-components/pi-mono/` (pi coding agent, TypeScript monorepo)
@@ -39,8 +41,8 @@ Rows marked `[DONE]` have already landed in this session's Stable TUI v1 slices.
 
 | # | Feature | Source anchor | AutoCode gap | Rating |
 |---|---|---|---|---|
-| T2-1 | **LSP tool surface: goToDefinition / findReferences / hover / documentSymbol / workspaceSymbol / implementations / call-hierarchy** | opencode `packages/opencode/src/tool/lsp.ts:23-97` | AutoCode has `layer2/lsp_tools.py` but only a partial Python binding. Port the 9-op surface and expose each as an agent tool. | HIGH |
-| T2-2 | **Codex-style resumable thread (`startThread` / `resumeThread(id)`)** | codex-cli `sdk/typescript/src/codex.ts:25-38` | `session/store.py` persists but has no `/resume <id>` symmetric API. Add `thread.resume` RPC. | HIGH |
+| T2-1 | **LSP tool surface: goToDefinition / findReferences / hover / documentSymbol / workspaceSymbol / implementations / call-hierarchy** | opencode `packages/opencode/src/tool/lsp.ts:23-97` | Partial backend surface exists: `lsp_goto_definition`, `lsp_find_references`, `lsp_get_type`, and `lsp_symbols` are registered as tools. Remaining gap is wider parity: hover, document/workspace symbol nuance, implementations, and call hierarchy. | HIGH |
+| T2-2 | **Codex-style resumable thread (`startThread` / `resumeThread(id)`)** | codex-cli `sdk/typescript/src/codex.ts:25-38` | Backend now supports session create/list/resume/fork over RPC and `/resume` through slash commands. Remaining gap is interop naming/schema if external clients require a literal `thread.resume` API. | DONE |
 | T2-3 | **Sandbox modes: `read-only` / `workspace-write` / `danger-full-access`** | codex `sdk/typescript/src/exec.ts:9-40`; claw-code `permissions.py` | `agent/sandbox.py` already has `SandboxPolicy` with NONE/READ_ONLY/WRITABLE_PROJECT/FULL_ISOLATION. Surface a `/sandbox <mode>` slash command so users can switch mid-session. | HIGH |
 | T2-4 | **Structured JSON output mode (`--json`, `--output-schema`)** | codex `exec.ts:73,111` | AutoCode's TUI is ANSI-only. Add a headless `autocode-tui --json` mode for programmatic clients. | HIGH |
 | T2-5 | **Agent persona switch (build vs plan) with Tab-toggle** | opencode README:101-109 | `agent/mode.py` exists (RESEARCH, PLANNING, BUILD, REVIEW) — all defined, but no Tab-bound switch in TUI. | MED |
@@ -54,7 +56,7 @@ Rows marked `[DONE]` have already landed in this session's Stable TUI v1 slices.
 | T3-2 | **Automatic compaction with `reserveTokens=16384`, `keepRecentTokens=20000`** | pi-mono `core/compaction/compaction.ts:110-120` | `agent/remote_compaction.py` exists but not threshold-gated. Add `contextTokens > contextWindow - reserveTokens` trigger. | MED |
 | T3-3 | **Branch-summary auto-injection when resuming an alternate path** | pi-mono compaction module | Depends on T3-1. | LOW |
 | T3-4 | **Repo-map token-aware ranking** | aider `aider/repomap.py:47-150` | `layer2/repomap.py` exists with token budgeting. Cross-check against aider's dependency-graph ranking and adopt if better. | MED |
-| T3-5 | **Compaction provenance preservation** (user/tool/file origin labels survive summary) | deep-research-report.md §Security; codex+claude analyses | **[DONE]** Slice 5 landed additive `Provenance` field + `classify_message_provenance`. | DONE |
+| T3-5 | **Compaction provenance preservation** (user/tool/file origin labels survive summary) | docs/archive/deep-research-report.md §Security; codex+claude analyses | **[DONE]** Slice 5 landed additive `Provenance` field + `classify_message_provenance`. | DONE |
 
 ## Tier 4 — Safety / approval UX
 
@@ -71,7 +73,7 @@ Rows marked `[DONE]` have already landed in this session's Stable TUI v1 slices.
 | # | Feature | Source anchor | AutoCode gap | Rating |
 |---|---|---|---|---|
 | T5-1 | **SKILL.md frontmatter discovery with progressive disclosure** | claude-code / pi-mono skills; docs/reference/skills-contract.md | **[DONE]** Slice 3 — `agent/skills.py` with project + user scope, progressive disclosure, live reload, 20 tests. | DONE |
-| T5-2 | **MCP server discovery + tool namespace isolation** | goose `crates/goose/src/acp/mod.rs` | No MCP support in AutoCode today. Would need Rust or Python MCP client. Post-v1. | MED |
+| T5-2 | **MCP server discovery + tool namespace isolation** | goose `crates/goose/src/acp/mod.rs` | MCP support is no longer absent: backend MCP CLI/server wiring and integration polish landed in the backend tranche. Remaining gap is broader Goose-style discovery plus strict namespace isolation across arbitrary external MCP tools. | MED |
 | T5-3 | **Extension hot-reload (TS modules intercept tool calls, register commands)** | pi-mono `core/extensions/loader.ts` | Pi's loader uses jiti + Node; not portable to Go TUI + Python backend directly. Design a simpler Python-extension contract in Python backend. | MED |
 | T5-4 | **`opencode.json` config layering (project overrides global, enterprise-managed path)** | opencode provider config | `config.py` has YAML/TOML but no layering story. Minor. | LOW |
 | T5-5 | **Recipe / workflow templates (goose-style)** | goose CUSTOM_DISTROS.md | Covered by AutoCode skills + Makefile pattern. | LOW |
@@ -81,8 +83,8 @@ Rows marked `[DONE]` have already landed in this session's Stable TUI v1 slices.
 
 | # | Feature | Source anchor | AutoCode gap | Rating |
 |---|---|---|---|---|
-| T6-1 | **JSONL RPC over stdin/stdout for external UI clients** | pi-mono `modes/rpc/rpc-types.ts:1-120`, `docs/rpc.md` | Python backend already uses JSON-RPC. Formalize events for external UI clients. | MED |
-| T6-2 | **`opencode serve` HTTP endpoint + `opencode attach` remote client** | opencode `packages/opencode/src/` | Out of scope per PLAN.md §1f "non-goals". | SKIP |
+| T6-1 | **JSONL RPC over stdin/stdout for external UI clients** | pi-mono `modes/rpc/rpc-types.ts:1-120`, `docs/rpc.md` | DONE for local UI clients: backend has schema-backed newline JSON-RPC over stdio and TCP plus transport conformance tests. Remaining external-client gap is version/capability negotiation and replay/export schema. | DONE |
+| T6-2 | **`opencode serve` HTTP endpoint + `opencode attach` remote client** | opencode `packages/opencode/src/` | Local `autocode serve --transport tcp` and Rust TUI attach mode now exist. Still SKIP for hardened remote HTTP/WebSocket architecture; security/reconnect/multi-client semantics are not planned in this checklist. | SKIP |
 | T6-3 | **Verification profiles (formatter/lint/typecheck/test) + hook-gated execution** | claw-code doctor; deep-research-report Milestone F | **[DONE]** Slice 6 — `agent/verification_profiles.py` with python/go/js/rust. Hook wiring hook-ready. | DONE |
 | T6-4 | **`claw doctor` diagnostics mirroring bootstrap + runtime stages** | claw-code `src/main.py:24,30` | `cli.py` has `doctor` subcommand; audit depth and mirror claw-code's checks (bootstrap-graph, tool-pool). | MED |
 | T6-5 | **Transcript/export JSONL shape with replay support** | claude-code history.ts, pi-mono session-manager | `artifact_collector.py` collects transcripts. Formalize export schema for interop. | MED |
@@ -103,11 +105,11 @@ Rows marked `[DONE]` have already landed in this session's Stable TUI v1 slices.
 |---|---|---|---|---|
 | T8-1 | **SWE-bench-style sandbox per task + auto-recreate** | open-swe README:52-62 | Harbor adapter exists for B30. Leave as-is for now. | LOW |
 | T8-2 | **Large-repo comprehension agent mode** | pi-mono, aider | `/research` mode exists (Section 1 of EXECUTION_CHECKLIST). | DONE |
-| T8-3 | **Operational metrics dashboard (skill trigger accuracy, hook success, retry counts, compaction failures)** | deep-research-report.md Milestone F | Only cost dashboard today. Add metrics ingestion per session. | MED |
+| T8-3 | **Operational metrics dashboard (skill trigger accuracy, hook success, retry counts, compaction failures)** | docs/archive/deep-research-report.md Milestone F | Only cost dashboard today. Add metrics ingestion per session. | MED |
 
 ---
 
-## Non-goals (per deep-research-report.md §"Explicit Non-Goals")
+## Non-goals (per docs/archive/deep-research-report.md §"Explicit Non-Goals")
 
 These are **not** queued regardless of port worth:
 - Remote-client architecture work (opencode serve/attach beyond headless JSONL)
@@ -124,7 +126,7 @@ Sort candidates by Tier 1/2 HIGH rows not already done:
 1. **T1-4 session title sanitization** (bug-match to user screenshot)
 2. **T1-5 composer echo isolation** (bug-match)
 3. **T1-6 slash-command alias + auto-run**
-4. **T2-1 LSP tool surface port** (9 ops)
+4. **T2-1 wider LSP parity** (current backend has four LSP-backed tools; remaining work is hover, richer symbols, implementations, and call hierarchy)
 5. **T2-3 `/sandbox <mode>` slash command**
 6. **T4-1 command-scoped allowlist**
 7. **T2-5 agent persona Tab-toggle**

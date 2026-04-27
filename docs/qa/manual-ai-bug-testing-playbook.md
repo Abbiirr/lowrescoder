@@ -32,8 +32,12 @@ These are end-to-end interaction bugs. They require manual prompts and human jud
 Before starting a manual sweep, record:
 
 - frontend:
-  - inline: `autocode chat`
-  - full-screen TUI: `autocode chat --tui` or Go TUI path if specifically testing it
+  - canonical: `autocode` (Rust TUI) — preferred for new tests
+  - inline mode: `autocode --mode inline`
+  - alternate-screen mode: `autocode --mode altscreen`
+  - Textual fullscreen fallback: `autocode chat --tui` (FALLBACK)
+  - Rich REPL fallback: `autocode chat --legacy` (FALLBACK; no agent loop)
+  - (The Go Bubble Tea TUI was deleted at the Rust M11 cutover 2026-04-19; do not test against a Go binary.)
 - profile:
   - default
   - `claude_like` when parity work is active
@@ -123,7 +127,9 @@ Recommended capture methods:
 
 ```bash
 script -q /tmp/autocode-manual-ai-test.typescript
-autocode chat --tui
+autocode                       # canonical Rust TUI launch
+# or, for fallback testing only:
+# autocode chat --tui          # Textual fullscreen FALLBACK
 exit
 ```
 

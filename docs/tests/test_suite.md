@@ -1,4 +1,14 @@
-# AutoCode Test Suite — Master Catalog
+# AutoCode Test Suite — Master Catalog (HISTORICAL)
+
+> **Status: HISTORICAL / SUPERSEDED.** This file is preserved for design provenance. The active canonical test guide is `autocode/TESTING.md` plus per-program QA docs in `docs/qa/`. Numbers and the Go test catalog below are from before the Rust M11 cutover (2026-04-19) and DO NOT reflect the current tree.
+>
+> **Current release-grade baseline (2026-04-27):** Python unit `1999 passed`, Rust TUI `210 passed` in main crate, benchmark harness `199 passed`. See `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md` and `autocode/TESTING.md`.
+>
+> **Do not use this file to plan new test work.** Prefer `autocode/TESTING.md`, `docs/tui-testing/tui-testing-strategy.md`, and `docs/plan/backend-robustness-tranche-4-checklist.md`.
+
+---
+
+## Original (historical) catalog header
 
 > Last verified: 2026-04-20 — Rust TUI: **59 cargo tests, 0 failures** (`cargo test`). Python unit suite: 1985 collectible (subset of 155 focused green).
 >

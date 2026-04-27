@@ -1,9 +1,15 @@
-# PTY TUI Bug Report
+# PTY TUI Bug Report (HISTORICAL — Go TUI era)
+
+> **Status: HISTORICAL / ARCHIVED.** This bug report was generated against the Go Bubble Tea TUI on 2026-04-19, the day before the Rust M11 cutover deleted the Go TUI codebase. Path references like `autocode/build/autocode-tui` (Go binary) and `autocode chat` (the Python prompt-toolkit inline REPL) are no longer valid. The bugs found here were either fixed on the way to the Rust TUI or are not applicable to the new frontend. **Do not use this file to plan current TUI work.** Current TUI bug inventory lives in `bugs/codex-tui-issue-inventory.md` and the per-change checklist at `docs/tui-testing/tui_testing_checklist.md`.
+
+---
+
+## Original report (historical)
 
 **Date:** 2026-04-19  
 **Tester:** PTY automated (pty_tui_bugfind.py)  
-**Go TUI binary:** `/home/bs01763/projects/ai/lowrescoder/autocode/build/autocode-tui`  
-**Python chat:** `/home/bs01763/.local/bin/autocode chat`  
+**Go TUI binary:** `/home/bs01763/projects/ai/lowrescoder/autocode/build/autocode-tui` *(deleted at M11)*  
+**Python chat:** `/home/bs01763/.local/bin/autocode chat` *(historical inline path; superseded by Rust TUI)*  
 
 ## Summary
 
