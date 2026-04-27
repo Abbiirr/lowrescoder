@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from typer.testing import CliRunner
@@ -240,3 +241,44 @@ class TestCLIServe:
 
         assert result.exit_code == 2
         assert "Invalid --transport" in result.output
+
+
+class TestCLIMCPServe:
+    def test_mcp_serve_help_exposes_stdio_options(self) -> None:
+        result = runner.invoke(app, ["mcp-serve", "--help"])
+
+        assert result.exit_code == 0
+        assert "--transport" in result.output
+        assert "stdio" in result.output
+        assert "--project-root" in result.output
+        assert "--audit-log-path" in result.output
+
+    def test_mcp_serve_stdio_runs_mcp_server(self, tmp_path: Path) -> None:
+        mock_server = MagicMock()
+        audit_path = tmp_path / "mcp_audit.jsonl"
+
+        with patch(
+            "autocode.external.mcp_server.MCPServer",
+            return_value=mock_server,
+        ) as server_cls:
+            result = runner.invoke(
+                app,
+                [
+                    "mcp-serve",
+                    "--transport",
+                    "stdio",
+                    "--project-root",
+                    str(tmp_path),
+                    "--audit-log-path",
+                    str(audit_path),
+                ],
+            )
+
+        assert result.exit_code == 0
+        server_cls.assert_called_once()
+        config = server_cls.call_args.args[0]
+        assert config.enabled is True
+        assert config.transport == "stdio"
+        assert config.project_root == tmp_path
+        assert config.audit_log_path == audit_path
+        mock_server.run.assert_called_once()

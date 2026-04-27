@@ -4,7 +4,9 @@ use portable_pty::ExitStatus;
 
 use crate::rpc::protocol::RPCMessage;
 use crate::rpc::schema;
-use crate::state::model::{AskUserSource, DetailSurface, InboundId, PaletteMode, Stage};
+use crate::state::model::{
+    AskUserSource, DetailSurface, InboundId, PaletteMode, RestoreConfirmation, Stage,
+};
 use crate::ui::textbuf::TextBuf;
 
 #[allow(dead_code)]
@@ -167,6 +169,8 @@ fn clear_transcript(state: &mut crate::state::model::AppState) {
     state.scrollback.clear();
     state.stream_buf.clear();
     state.stream_lines.clear();
+    state.thinking_buf.clear();
+    state.thinking_lines.clear();
     state.error_banner = None;
     state.current_tool = None;
     state.active_tools.clear();
@@ -175,6 +179,9 @@ fn clear_transcript(state: &mut crate::state::model::AppState) {
     state.diff_source = None;
     state.diff_files.clear();
     state.review_findings.clear();
+    state.checkpoints.clear();
+    state.restore_selected_idx = 0;
+    state.restore_confirmation = None;
     state.followup_queue.clear();
     state.detail_surface = None;
     state.recovery_action_idx = 0;
@@ -284,6 +291,9 @@ fn reset_for_session_switch(
     state.session_list = None;
     state.tasks.clear();
     state.subagents.clear();
+    state.checkpoints.clear();
+    state.restore_selected_idx = 0;
+    state.restore_confirmation = None;
     state.grep_query = None;
     state.grep_results.clear();
     state.diff_source = None;
@@ -310,6 +320,32 @@ fn flush_stream_lines(state: &mut crate::state::model::AppState) {
             state.scrollback.drain(..excess);
         }
         state.stream_buf.clear();
+    }
+}
+
+fn append_visible_stream(state: &mut crate::state::model::AppState, text: &str) {
+    state.stream_buf.push_str(text);
+    state.stream_lines = state.stream_buf.split('\n').map(String::from).collect();
+    if state.stream_lines.len() > 20 {
+        let overflow = state.stream_lines.len() - 20;
+        for line in state.stream_lines.drain(..overflow) {
+            state.scrollback.push_back(line);
+        }
+        if state.scrollback.len() > 10_000 {
+            let excess = state.scrollback.len() - 10_000;
+            state.scrollback.drain(..excess);
+        }
+        state.stream_buf = state.stream_lines.join("\n");
+    }
+}
+
+fn append_thinking_stream(state: &mut crate::state::model::AppState, text: &str) {
+    state.thinking_buf.push_str(text);
+    state.thinking_lines = state.thinking_buf.split('\n').map(String::from).collect();
+    if state.thinking_lines.len() > 20 {
+        let overflow = state.thinking_lines.len() - 20;
+        state.thinking_lines.drain(..overflow);
+        state.thinking_buf = state.thinking_lines.join("\n");
     }
 }
 
@@ -386,6 +422,101 @@ fn queue_or_activate_modal(
         }
     } else {
         state.modal_queue.push_back(modal);
+    }
+}
+
+fn selected_restore_checkpoint(
+    state: &crate::state::model::AppState,
+) -> Option<crate::rpc::protocol::CheckpointEntry> {
+    state.checkpoints.get(state.restore_selected_idx).cloned()
+}
+
+fn restore_confirmation_from_checkpoint(
+    checkpoint: &crate::rpc::protocol::CheckpointEntry,
+) -> RestoreConfirmation {
+    RestoreConfirmation {
+        checkpoint_id: checkpoint.id.clone(),
+        label: checkpoint.label.clone(),
+        created_at: checkpoint.created_at.clone(),
+        session_id: checkpoint.session_id.clone(),
+    }
+}
+
+fn send_checkpoint_restore(
+    mut state: crate::state::model::AppState,
+    checkpoint_id: String,
+) -> (crate::state::model::AppState, Vec<Effect>) {
+    let id = state.next_request_id;
+    state.next_request_id += 1;
+    let msg = crate::rpc::protocol::RPCMessage {
+        jsonrpc: "2.0".to_string(),
+        id: Some(id),
+        method: Some("checkpoint.restore".to_string()),
+        params: Some(serde_json::json!({ "checkpoint_id": checkpoint_id })),
+        result: None,
+        error: None,
+    };
+    state.pending_requests.insert(
+        id,
+        crate::state::model::PendingRequest {
+            method: "checkpoint.restore".to_string(),
+            sent_at: std::time::Instant::now(),
+        },
+    );
+    state.restore_confirmation = None;
+    (state, vec![Effect::SendRpc(msg), Effect::Render])
+}
+
+fn handle_restore_key(
+    mut state: crate::state::model::AppState,
+    key: &crossterm::event::KeyEvent,
+) -> (crate::state::model::AppState, Vec<Effect>) {
+    use crossterm::event::{KeyCode, KeyModifiers};
+
+    if let Some(confirmation) = state.restore_confirmation.clone() {
+        return match (key.modifiers, key.code) {
+            (KeyModifiers::NONE, KeyCode::Enter)
+            | (KeyModifiers::NONE, KeyCode::Char('y'))
+            | (KeyModifiers::NONE, KeyCode::Char('Y')) => {
+                send_checkpoint_restore(state, confirmation.checkpoint_id)
+            }
+            (KeyModifiers::NONE, KeyCode::Esc)
+            | (KeyModifiers::NONE, KeyCode::Char('n'))
+            | (KeyModifiers::NONE, KeyCode::Char('N')) => {
+                state.restore_confirmation = None;
+                (state, vec![Effect::Render])
+            }
+            _ => (state, vec![Effect::Render]),
+        };
+    }
+
+    match (key.modifiers, key.code) {
+        (KeyModifiers::NONE, KeyCode::Down) | (KeyModifiers::NONE, KeyCode::Char('j')) => {
+            if !state.checkpoints.is_empty() {
+                state.restore_selected_idx =
+                    (state.restore_selected_idx + 1).min(state.checkpoints.len() - 1);
+            }
+            (state, vec![Effect::Render])
+        }
+        (KeyModifiers::NONE, KeyCode::Up) | (KeyModifiers::NONE, KeyCode::Char('k')) => {
+            if state.restore_selected_idx > 0 {
+                state.restore_selected_idx -= 1;
+            }
+            (state, vec![Effect::Render])
+        }
+        (KeyModifiers::NONE, KeyCode::Enter) => {
+            if let Some(checkpoint) = selected_restore_checkpoint(&state) {
+                state.restore_confirmation =
+                    Some(restore_confirmation_from_checkpoint(&checkpoint));
+            }
+            (state, vec![Effect::Render])
+        }
+        (KeyModifiers::NONE, KeyCode::Esc) => {
+            state.detail_surface = None;
+            state.restore_confirmation = None;
+            (state, vec![Effect::Render])
+        }
+        _ => (state, vec![Effect::Render]),
     }
 }
 
@@ -533,8 +664,12 @@ fn handle_key(
             );
             (state, vec![Effect::SendRpc(msg), Effect::Render])
         }
+        _ if state.detail_surface == Some(DetailSurface::Restore) => {
+            handle_restore_key(state, &key)
+        }
         (KeyModifiers::NONE, KeyCode::Esc) if state.detail_surface.is_some() => {
             state.detail_surface = None;
+            state.restore_confirmation = None;
             (state, vec![Effect::Render])
         }
         (KeyModifiers::CONTROL, KeyCode::Char('l')) => {
@@ -998,6 +1133,8 @@ pub(crate) fn handle_slash_command(
         "/restore" => {
             state.scrollback.push_back("/restore".into());
             state.detail_surface = Some(DetailSurface::Restore);
+            state.restore_selected_idx = 0;
+            state.restore_confirmation = None;
             let id = state.next_request_id;
             state.next_request_id += 1;
             let msg = crate::rpc::protocol::RPCMessage {
@@ -1279,21 +1416,9 @@ fn handle_notification(
                     serde_json::from_value::<crate::rpc::protocol::TokenParams>(params.clone())
                 {
                     touch_oldest_pending_request_by_method(&mut state, "chat");
-                    state.stream_buf.push_str(&token.text);
-                    state.stream_lines = state.stream_buf.split('\n').map(String::from).collect();
+                    append_visible_stream(&mut state, &token.text);
                     if state.stage == crate::state::model::Stage::Idle {
                         state.stage = crate::state::model::Stage::Streaming;
-                    }
-                    if state.stream_lines.len() > 20 {
-                        let overflow = state.stream_lines.len() - 20;
-                        for line in state.stream_lines.drain(..overflow) {
-                            state.scrollback.push_back(line);
-                        }
-                        if state.scrollback.len() > 10_000 {
-                            let excess = state.scrollback.len() - 10_000;
-                            state.scrollback.drain(..excess);
-                        }
-                        state.stream_buf = state.stream_lines.join("\n");
                     }
                 }
             }
@@ -1305,21 +1430,9 @@ fn handle_notification(
                     serde_json::from_value::<crate::rpc::protocol::ThinkingParams>(params.clone())
                 {
                     touch_oldest_pending_request_by_method(&mut state, "chat");
-                    state.stream_buf.push_str(&thinking.text);
-                    state.stream_lines = state.stream_buf.split('\n').map(String::from).collect();
+                    append_thinking_stream(&mut state, &thinking.text);
                     if state.stage == crate::state::model::Stage::Idle {
                         state.stage = crate::state::model::Stage::Streaming;
-                    }
-                    if state.stream_lines.len() > 20 {
-                        let overflow = state.stream_lines.len() - 20;
-                        for line in state.stream_lines.drain(..overflow) {
-                            state.scrollback.push_back(line);
-                        }
-                        if state.scrollback.len() > 10_000 {
-                            let excess = state.scrollback.len() - 10_000;
-                            state.scrollback.drain(..excess);
-                        }
-                        state.stream_buf = state.stream_lines.join("\n");
                     }
                 }
             }
@@ -1337,6 +1450,8 @@ fn handle_notification(
             remove_oldest_pending_request_by_method(&mut state, "chat");
             flush_stream_lines(&mut state);
             state.stream_lines.clear();
+            state.thinking_buf.clear();
+            state.thinking_lines.clear();
             state.stage = crate::state::model::Stage::Idle;
 
             let mut effects = vec![Effect::Render];
@@ -1655,7 +1770,50 @@ fn handle_response(
                     >(result.clone())
                     {
                         state.checkpoints = list_result.checkpoints;
+                        if state.checkpoints.is_empty() {
+                            state.restore_selected_idx = 0;
+                        } else {
+                            state.restore_selected_idx =
+                                state.restore_selected_idx.min(state.checkpoints.len() - 1);
+                        }
+                        state.restore_confirmation = None;
                         state.detail_surface = Some(DetailSurface::Restore);
+                    }
+                }
+            }
+            "checkpoint.restore" => {
+                if let Some(result) = &msg.result {
+                    if let Some(error) = result.get("error").and_then(|value| value.as_str()) {
+                        state.error_banner = Some(error.to_string());
+                    } else if let Ok(restore_result) = serde_json::from_value::<
+                        crate::rpc::protocol::CheckpointRestoreResult,
+                    >(result.clone())
+                    {
+                        let checkpoint_id = if restore_result.checkpoint_id.is_empty() {
+                            "unknown".to_string()
+                        } else {
+                            restore_result.checkpoint_id
+                        };
+                        let label = if restore_result.label.is_empty() {
+                            "checkpoint".to_string()
+                        } else {
+                            restore_result.label
+                        };
+                        let files = if restore_result.active_files.is_empty() {
+                            "no active files".to_string()
+                        } else {
+                            format!("files: {}", restore_result.active_files.join(", "))
+                        };
+                        state.scrollback.push_back(format!(
+                            "Restored checkpoint {} · {} · {} messages · {} tool calls · {}",
+                            checkpoint_id,
+                            label,
+                            restore_result.restored_messages,
+                            restore_result.restored_tool_calls,
+                            files
+                        ));
+                        state.detail_surface = None;
+                        state.restore_confirmation = None;
                     }
                 }
             }

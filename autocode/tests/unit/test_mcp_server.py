@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import io
+import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -126,3 +129,102 @@ def test_narrowed_allowed_paths_constrains_search(tmp_path: Path) -> None:
     result2 = server.handle_tool_call("find_definition", {"symbol": "forbidden_func"})
     matches2 = result2.get("result", [])
     assert len(matches2) == 0 or not any("forbidden" in str(m) for m in matches2)
+
+
+def test_run_stdio_exits_cleanly_on_eof(tmp_path: Path) -> None:
+    """stdio transport returns cleanly when the client closes stdin."""
+    config = MCPServerConfig(project_root=tmp_path, transport="stdio")
+    server = MCPServer(config)
+    output = io.StringIO()
+
+    server.run(input_stream=io.StringIO(""), output_stream=output)
+
+    assert output.getvalue() == ""
+
+
+def test_run_stdio_handles_tools_list_json_rpc(tmp_path: Path) -> None:
+    """stdio transport exposes tools/list as a JSON-RPC response."""
+    config = MCPServerConfig(project_root=tmp_path, transport="stdio")
+    server = MCPServer(config)
+    request = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
+    output = io.StringIO()
+
+    server.run(input_stream=io.StringIO(json.dumps(request) + "\n"), output_stream=output)
+
+    response = json.loads(output.getvalue())
+    assert response["jsonrpc"] == "2.0"
+    assert response["id"] == 1
+    tool_names = {tool["name"] for tool in response["result"]["tools"]}
+    assert tool_names == set(MCP_TOOLS)
+
+
+def test_audit_log_path_persists_jsonl_records(tmp_path: Path) -> None:
+    """Configured audit-log path receives JSONL MCPToolCall records."""
+    audit_path = tmp_path / "logs" / "mcp_audit.jsonl"
+    config = MCPServerConfig(
+        project_root=tmp_path,
+        transport="stdio",
+        audit_log_path=audit_path,
+    )
+    server = MCPServer(config)
+
+    server.handle_tool_call("search_code", {"query": "missing"}, caller="client-a")
+    server.handle_tool_call("read_file", {"path": "/etc/passwd"}, caller="client-b")
+
+    records = [json.loads(line) for line in audit_path.read_text().splitlines()]
+    assert [record["tool_name"] for record in records] == ["search_code", "read_file"]
+    assert records[0]["caller"] == "client-a"
+    assert records[0]["allowed"] is True
+    assert records[1]["allowed"] is False
+    assert "outside allowed" in records[1]["result_summary"]
+
+
+def test_run_stdio_returns_cleanly_on_keyboard_interrupt(tmp_path: Path) -> None:
+    """Lifecycle shutdown returns cleanly when the host interrupts stdio."""
+
+    class InterruptingInput:
+        def __iter__(self) -> InterruptingInput:
+            return self
+
+        def __next__(self) -> str:
+            raise KeyboardInterrupt
+
+    config = MCPServerConfig(project_root=tmp_path, transport="stdio")
+    server = MCPServer(config)
+    output = io.StringIO()
+
+    server.run(input_stream=InterruptingInput(), output_stream=output)  # type: ignore[arg-type]
+
+    assert output.getvalue() == ""
+    assert server.is_shutdown
+
+
+def test_stdio_transport_handles_concurrent_clients_independently(tmp_path: Path) -> None:
+    """Two stdio clients can use one server without sharing JSON-RPC ids/state."""
+    audit_path = tmp_path / "mcp_audit.jsonl"
+    config = MCPServerConfig(
+        project_root=tmp_path,
+        transport="stdio",
+        audit_log_path=audit_path,
+    )
+    server = MCPServer(config)
+    (tmp_path / "a.py").write_text("def alpha():\n    pass\n")
+
+    def run_client(request_id: int) -> dict[str, object]:
+        request = {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "method": "tools/call",
+            "params": {"name": "read_file", "arguments": {"path": str(tmp_path / "a.py")}},
+        }
+        output = io.StringIO()
+        server.run(input_stream=io.StringIO(json.dumps(request) + "\n"), output_stream=output)
+        return json.loads(output.getvalue())
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        responses = list(executor.map(run_client, [101, 202]))
+
+    assert {response["id"] for response in responses} == {101, 202}
+    assert all("result" in response for response in responses)
+    assert len(server.audit_log) == 2
+    assert len(audit_path.read_text().splitlines()) == 2

@@ -7,7 +7,7 @@ use ratatui::{
 };
 
 use crate::state::model::{AppState, DetailSurface, PaletteMode, Stage};
-use crate::ui::spinner::FRAMES;
+use crate::ui::spinner::{FRAMES, VERBS};
 use crate::ui::textbuf::truncate_chars;
 
 const MIN_TERMINAL_COLS: u16 = 40;
@@ -232,6 +232,7 @@ fn render_main_content(f: &mut Frame, state: &AppState, area: Rect) {
     if state.stage == Stage::Idle
         && !has_conversation
         && state.stream_lines.is_empty()
+        && state.thinking_lines.is_empty()
         && state.current_tool.is_none()
     {
         render_ready_surface(f, state, area);
@@ -240,6 +241,7 @@ fn render_main_content(f: &mut Frame, state: &AppState, area: Rect) {
 
     if matches!(state.stage, Stage::Streaming | Stage::ToolCall)
         || !state.stream_lines.is_empty()
+        || !state.thinking_lines.is_empty()
         || state.current_tool.is_some()
     {
         render_active_surface(f, state, area);
@@ -457,7 +459,7 @@ fn render_active_surface(f: &mut Frame, state: &AppState, area: Rect) {
         transcript.push(format!("{} [{}]", tool.name, tool.status));
     }
 
-    if transcript.is_empty() {
+    if transcript.is_empty() && state.thinking_lines.is_empty() {
         let paragraph = Paragraph::new(vec![Line::from(latest_user)])
             .style(Style::default().bg(APP_BG).fg(TITLE))
             .wrap(Wrap { trim: false });
@@ -471,10 +473,40 @@ fn render_active_surface(f: &mut Frame, state: &AppState, area: Rect) {
     } else {
         transcript.len()
     };
-    let mut body_lines = transcript[..body_len]
-        .iter()
-        .map(|line| stylize_active_line(line))
-        .collect::<Vec<_>>();
+    let mut body_lines = Vec::new();
+    if !state.thinking_lines.is_empty() {
+        body_lines.push(Line::from(Span::styled(
+            "THINKING",
+            Style::default().fg(PLANNING).add_modifier(Modifier::BOLD),
+        )));
+        for line in state
+            .thinking_lines
+            .iter()
+            .rev()
+            .take(3)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+        {
+            body_lines.push(Line::from(Span::styled(
+                line.clone(),
+                Style::default().fg(QUIET).add_modifier(Modifier::ITALIC),
+            )));
+        }
+        body_lines.push(Line::from(""));
+    }
+    if !state.stream_lines.is_empty() {
+        body_lines.push(Line::from(Span::styled(
+            "VISIBLE OUTPUT",
+            Style::default().fg(ACCENT).add_modifier(Modifier::BOLD),
+        )));
+    }
+    body_lines.extend(
+        transcript[..body_len]
+            .iter()
+            .map(|line| stylize_active_line(line))
+            .collect::<Vec<_>>(),
+    );
     if body_lines.is_empty() {
         body_lines.push(Line::from(Span::styled(
             "Planning and validation updates will stream here.",
@@ -1350,22 +1382,30 @@ fn render_restore_surface(f: &mut Frame, state: &AppState, area: Rect) {
         .map(|checkpoint| checkpoint.session_id.as_str())
         .or(state.status.session_id.as_deref())
         .unwrap_or("current session");
-    let mut lines = vec![
-        Line::from(format!(
-            "↻ {} checkpoint{} · {}",
-            checkpoint_count,
-            if checkpoint_count == 1 { "" } else { "s" },
-            session_label
-        )),
-        Line::from(""),
-    ];
+    let mut lines = vec![Line::from(format!(
+        "↻ {} checkpoint{} · {}",
+        checkpoint_count,
+        if checkpoint_count == 1 { "" } else { "s" },
+        session_label
+    ))];
 
     if state.checkpoints.is_empty() {
+        lines.push(Line::from(""));
         lines.push(Line::from("No checkpoints available for this session."));
         lines.push(Line::from("Create a checkpoint before restoring."));
     } else {
+        let selected_idx = state
+            .restore_selected_idx
+            .min(state.checkpoints.len().saturating_sub(1));
+        if let Some(selected) = state.checkpoints.get(selected_idx) {
+            lines.push(Line::from(format!(
+                "selected: {} @ {}",
+                selected.id, selected.created_at
+            )));
+        }
+        lines.push(Line::from(""));
         for (idx, checkpoint) in state.checkpoints.iter().take(5).enumerate() {
-            let marker = if idx == 0 { "●" } else { "○" };
+            let marker = if idx == selected_idx { "▶" } else { "○" };
             lines.push(Line::from(format!(
                 "{} {} · {}",
                 marker, checkpoint.label, checkpoint.id
@@ -1378,10 +1418,24 @@ fn render_restore_surface(f: &mut Frame, state: &AppState, area: Rect) {
             if !active_files.is_empty() {
                 lines.push(Line::from(format!("files: {}", active_files)));
             }
-            if idx == 0 {
+            if idx == selected_idx {
                 lines.push(Line::from("↵ restore"));
             }
         }
+    }
+
+    if let Some(confirmation) = &state.restore_confirmation {
+        lines.extend([
+            Line::from(""),
+            Line::from("CONFIRM RESTORE"),
+            Line::from(format!(
+                "{} · {} · {}",
+                confirmation.checkpoint_id, confirmation.label, confirmation.session_id
+            )),
+            Line::from(format!("created: {}", confirmation.created_at)),
+            Line::from("Restores saved messages and task snapshot over current session."),
+            Line::from("Enter confirm · Esc cancel"),
+        ]);
     }
 
     lines.extend([
@@ -2028,18 +2082,12 @@ fn stage_badge(state: &AppState) -> String {
     }
 
     if state.has_pending_chat_request() {
-        return format!(
-            "{} working",
-            FRAMES[state.spinner_frame as usize % FRAMES.len()]
-        );
+        return active_spinner_badge(state);
     }
 
     match state.stage {
         Stage::Idle => "● ready".to_string(),
-        Stage::Streaming => format!(
-            "{} working",
-            FRAMES[state.spinner_frame as usize % FRAMES.len()]
-        ),
+        Stage::Streaming => active_spinner_badge(state),
         Stage::ToolCall => "● running".to_string(),
         Stage::Approval => "● approval".to_string(),
         Stage::AskUser => "● waiting".to_string(),
@@ -2048,6 +2096,14 @@ fn stage_badge(state: &AppState) -> String {
         Stage::EditorLaunch => "● editor".to_string(),
         Stage::Shutdown => "● halted".to_string(),
     }
+}
+
+fn active_spinner_badge(state: &AppState) -> String {
+    format!(
+        "{} {}",
+        FRAMES[state.spinner_frame as usize % FRAMES.len()],
+        VERBS[state.spinner_verb_idx % VERBS.len()]
+    )
 }
 
 fn stage_badge_color(state: &AppState) -> Color {
@@ -2986,7 +3042,7 @@ mod tests {
 
         let rendered = render_to_string(&state, 120, 30);
 
-        assert!(rendered.contains("working"));
+        assert!(rendered.contains(crate::ui::spinner::VERBS[0]));
     }
 
     #[test]
@@ -3005,9 +3061,9 @@ mod tests {
         );
 
         let lines = render_lines(&state, 120, 30);
-        let status_line = line_containing(&lines, "working");
+        let status_line = line_containing(&lines, crate::ui::spinner::VERBS[0]);
 
-        assert!(status_line.contains("working"));
+        assert!(status_line.contains(crate::ui::spinner::VERBS[0]));
         assert!(!status_line.contains("ready"));
     }
 
@@ -3022,11 +3078,43 @@ mod tests {
         state.status.session_id = Some("mock-session-001".into());
         state.status.tokens_in = 5;
         state.status.tokens_out = 6;
+        state.spinner_verb_idx = 17;
 
         let rendered = render_to_string(&state, 120, 30);
 
-        assert!(rendered.contains("working"));
+        assert!(rendered.contains(crate::ui::spinner::VERBS[17]));
         assert!(rendered.contains(crate::ui::spinner::FRAMES[2]));
+    }
+
+    #[test]
+    fn streaming_status_uses_rotated_spinner_verb() {
+        let mut state = AppState::new((120, 30), false);
+        state.stage = crate::state::model::Stage::Streaming;
+        state.spinner_verb_idx = 42;
+        state.status.model = "tools".into();
+        state.status.provider = "openrouter".into();
+        state.status.mode = "suggest".into();
+
+        let rendered = render_to_string(&state, 120, 30);
+
+        assert!(rendered.contains(crate::ui::spinner::VERBS[42]));
+        assert!(!rendered.contains(crate::ui::spinner::VERBS[0]));
+    }
+
+    #[test]
+    fn idle_status_does_not_show_stale_spinner_verb_after_done() {
+        let mut state = AppState::new((120, 30), false);
+        state.stage = crate::state::model::Stage::Idle;
+        state.spinner_verb_idx = 42;
+        state.status.model = "tools".into();
+        state.status.provider = "openrouter".into();
+        state.status.mode = "suggest".into();
+
+        let lines = render_lines(&state, 120, 30);
+        let status_line = line_containing(&lines, "ready");
+
+        assert!(status_line.contains("ready"));
+        assert!(!status_line.contains(crate::ui::spinner::VERBS[42]));
     }
 
     #[test]
@@ -3058,6 +3146,25 @@ mod tests {
         assert!(rendered.contains("42 + imports?: ImportNode[]"));
         assert!(rendered.contains("draft stays live while validation streams"));
         assert!(rendered.contains("tests/parser.test.ts"));
+    }
+
+    #[test]
+    fn streaming_surface_renders_thinking_separately_from_visible_output() {
+        let mut state = AppState::new((140, 40), false);
+        state.stage = Stage::Streaming;
+        state.scrollback.push_back("> explain parser flow".into());
+        state.thinking_lines = vec![
+            "checking parser branches".into(),
+            "confirming fallback behavior".into(),
+        ];
+        state.stream_lines = vec!["The parser first normalizes imports.".into()];
+
+        let rendered = render_to_string(&state, 140, 40);
+
+        assert!(rendered.contains("THINKING"));
+        assert!(rendered.contains("checking parser branches"));
+        assert!(rendered.contains("VISIBLE OUTPUT"));
+        assert!(rendered.contains("The parser first normalizes imports."));
     }
 
     #[test]
@@ -3242,6 +3349,49 @@ mod tests {
         assert!(rendered.contains("2026-04-26"));
         assert!(!rendered.contains("extractImports guard"));
         assert!(!rendered.contains("feat/parser-fix"));
+    }
+
+    #[test]
+    fn restore_surface_highlights_selected_checkpoint_and_confirmation() {
+        let mut state = AppState::new((160, 50), false);
+        state.detail_surface = Some(DetailSurface::Restore);
+        state.restore_selected_idx = 1;
+        state.checkpoints = vec![
+            crate::rpc::protocol::CheckpointEntry {
+                id: "cp-old".into(),
+                session_id: "session-live-9".into(),
+                label: "older".into(),
+                tasks_snapshot: "{}".into(),
+                messages_snapshot: "{}".into(),
+                context_summary: "".into(),
+                active_files: "[]".into(),
+                created_at: "2026-04-26T09:20:30Z".into(),
+            },
+            crate::rpc::protocol::CheckpointEntry {
+                id: "cp-selected".into(),
+                session_id: "session-live-9".into(),
+                label: "selected checkpoint".into(),
+                tasks_snapshot: "{}".into(),
+                messages_snapshot: "{}".into(),
+                context_summary: "".into(),
+                active_files: "[]".into(),
+                created_at: "2026-04-26T10:20:30Z".into(),
+            },
+        ];
+        state.restore_confirmation = Some(crate::state::model::RestoreConfirmation {
+            checkpoint_id: "cp-selected".into(),
+            label: "selected checkpoint".into(),
+            created_at: "2026-04-26T10:20:30Z".into(),
+            session_id: "session-live-9".into(),
+        });
+
+        let rendered = render_to_string(&state, 160, 50);
+
+        assert!(rendered.contains("selected: cp-selected @ 2026-04-26T10:20:30Z"));
+        assert!(rendered.contains("▶ selected checkpoint · cp-selected"));
+        assert!(rendered.contains("CONFIRM RESTORE"));
+        assert!(rendered.contains("Restores saved messages and task snapshot"));
+        assert!(rendered.contains("Enter confirm · Esc cancel"));
     }
 
     #[test]

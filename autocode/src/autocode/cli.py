@@ -419,6 +419,53 @@ def serve(
     asyncio.run(server_main(transport=resolved_transport, bind_host=host, port=port))
 
 
+@app.command("mcp-serve")
+def mcp_serve(
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
+    transport: str = typer.Option(
+        "stdio",
+        "--transport",
+        help="MCP transport: stdio.",
+    ),
+    project_root: str = typer.Option(
+        ".",
+        "--project-root",
+        help="Project root exposed to read-only MCP tools.",
+    ),
+    audit_log_path: str | None = typer.Option(
+        None,
+        "--audit-log-path",
+        help="JSONL audit log path for MCPToolCall records.",
+    ),
+) -> None:
+    """Start the read-only MCP server for external agent clients."""
+    from pathlib import Path
+
+    from autocode.core.logging import setup_logging
+    from autocode.doctor import default_mcp_audit_log_path
+    from autocode.external.mcp_server import MCPServer, MCPServerConfig
+
+    resolved_transport = transport.strip().lower()
+    if resolved_transport != "stdio":
+        console.print("[red]Invalid --transport.[/] Choose `stdio`.")
+        raise typer.Exit(2)
+
+    config = load_config()
+    setup_logging(config.logging, verbose=verbose)
+
+    server_config = MCPServerConfig(
+        enabled=True,
+        project_root=Path(project_root).resolve(),
+        transport=resolved_transport,
+        audit_log_path=(
+            Path(audit_log_path).expanduser()
+            if audit_log_path is not None
+            else default_mcp_audit_log_path()
+        ),
+    )
+    MCPServer(server_config).run()
+
+
 @app.command()
 def version() -> None:
     """Show AutoCode version."""

@@ -76,19 +76,59 @@ Blocked on:
 
 - [x] Spinner activity-correlation
   - Verification artifact: `autocode/docs/qa/test-results/20260426-170658-hr5-phase-d-spinner-activity-correlation.md`
-- [ ] Thinking/output buffer split
-- [ ] Per-slash PTY smoke coverage
-- [ ] 194-verb spinner badge wiring
+- [x] Thinking/output buffer split
+  - Verification artifact: `autocode/docs/qa/test-results/20260426-185509-hr5-phase-d-thinking-output-buffer-split-tui-verification.md`
+- [x] Per-slash PTY smoke coverage
+  - Verification artifact: `autocode/docs/qa/test-results/20260426-133155-pty-slash-surfaces-smoke.md`
+- [x] 194-verb spinner badge wiring
+  - Verification artifact: `autocode/docs/qa/test-results/20260426-195342-hr5-phase-d-spinner-verb-badge-tui-verification.md`
+
+Checkpoint 2 ordering note: 2.F.1 MCP CLI wire-up is complete via
+`autocode/docs/qa/test-results/20260426-183312-2f1-mcp-cli-wire-up.md`.
+2.B thinking/output buffer split is complete via
+`autocode/docs/qa/test-results/20260426-185509-hr5-phase-d-thinking-output-buffer-split-tui-verification.md`.
+2.F.3 cost rate accuracy is complete via
+`autocode/docs/qa/test-results/20260426-190615-2f3-cost-rate-accuracy.md`.
+2.F.4+2.F.5 deprecation/lint fixes are complete via
+`autocode/docs/qa/test-results/20260426-192007-2f4-2f5-provider-model-deprecation-team-eval-lint.md`.
+2.C per-slash PTY coverage is complete via
+`autocode/docs/qa/test-results/20260426-133155-pty-slash-surfaces-smoke.md`.
+2.D spinner verb badge is complete via
+`autocode/docs/qa/test-results/20260426-195342-hr5-phase-d-spinner-verb-badge-tui-verification.md`.
+2.F.2 MCP integration polish is complete via
+`autocode/docs/qa/test-results/20260426-200724-2f2-mcp-integration-polish.md`.
+2.F.6 per-tool output-budget PTY is complete via
+`autocode/docs/qa/test-results/20260426-201726-2f6-tool-output-budget-pty-verification.md`.
+2.F.7 tranche exit-gate sweeps are complete via
+`autocode/docs/qa/test-results/20260426-143510-2f7-tranche-exit-gate-sweeps.md`.
+2.G regression gate is complete via
+`autocode/docs/qa/test-results/20260426-145234-checkpoint2-regression-gate.md`.
+The next active item is 3.E user commit/tag decision per
+`docs/plan/stabilize-and-release-plan.md` and `AGENTS_CONVERSATION.MD` Entry
+1584. The 1.C docs sync is complete via
+`autocode/docs/qa/test-results/20260426-175205-checkpoint1-c-docs-sync.md`;
+2.E `/restore` interaction is complete via
+`autocode/docs/qa/test-results/20260426-180015-hr5-phase-c-restore-interaction-tui-verification.md`.
 
 ## Phase E — Release Gate
 
 - [x] Phase A exit gate passed
 - [x] At least `4/10` HR-5(a) bindings shipped
   - Current count: `9 shipped surfaces` (`/cc`, `/multi`, `/restore` display binding, `/plan`, `/tasks`, `/grep`, `/review`, `/diff`, `/escalation`)
-- [ ] Phase D follow-ons closed
-  - Remaining: thinking/output buffer split, per-slash PTY smoke coverage,
-    194-verb spinner badge wiring.
-- [ ] Visual-only polish re-enabled only after the gate above is met
+- [x] `/restore` interaction follow-up closed
+  - Adds row navigation, confirmation, and `checkpoint.restore` execution.
+  - Verification artifact: `autocode/docs/qa/test-results/20260426-180015-hr5-phase-c-restore-interaction-tui-verification.md`
+- [x] Phase D follow-ons closed
+  - Spinner activity-correlation, thinking/output split, per-slash PTY smoke coverage, and 194-verb spinner badge wiring are complete.
+- [x] Visual-only polish re-enabled only after the gate above is met
+  - Verification artifact: `autocode/docs/qa/test-results/20260427-113808-phase-e-gate-verification.md`
+- [x] 3.C final release-grade regression sweep
+  - Required: Python unit, benchmark tests, Rust TUI cargo fmt/test/clippy/build, PTY smoke set, and live gateway canary.
+  - Optional B7-B29 remains user-gated.
+  - Verification artifact: `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`
+- [x] 3.D tranche-spanning closeout entry
+  - Comms: `AGENTS_CONVERSATION.MD` Entry 1584
+- [ ] 3.E user commits + tags release if desired
 
 ## Hard-Requirements Override — 2026-04-22
 

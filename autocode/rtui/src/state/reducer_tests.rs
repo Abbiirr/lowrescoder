@@ -60,6 +60,17 @@ mod tests {
         }
     }
 
+    fn on_thinking_msg(text: &str) -> RPCMessage {
+        RPCMessage {
+            jsonrpc: "2.0".to_string(),
+            id: None,
+            method: Some("on_thinking".to_string()),
+            params: Some(serde_json::json!({"text": text})),
+            result: None,
+            error: None,
+        }
+    }
+
     fn on_chat_ack_msg() -> RPCMessage {
         RPCMessage {
             jsonrpc: "2.0".to_string(),
@@ -100,6 +111,23 @@ mod tests {
         })
     }
 
+    fn checkpoint_entry(
+        id: &str,
+        label: &str,
+        created_at: &str,
+    ) -> crate::rpc::protocol::CheckpointEntry {
+        crate::rpc::protocol::CheckpointEntry {
+            id: id.into(),
+            session_id: "session-live-9".into(),
+            label: label.into(),
+            tasks_snapshot: "{}".into(),
+            messages_snapshot: "{}".into(),
+            context_summary: "guarded restore context".into(),
+            active_files: "[\"src/live.rs\"]".into(),
+            created_at: created_at.into(),
+        }
+    }
+
     #[test]
     fn on_status_updates_status_info() {
         let state = new_state();
@@ -136,12 +164,77 @@ mod tests {
     }
 
     #[test]
+    fn on_thinking_appends_thinking_buffer_without_visible_output() {
+        let state = new_state();
+        let (state, _) = reduce(
+            state,
+            Event::RpcNotification(on_thinking_msg("reasoning step")),
+        );
+
+        assert_eq!(state.stage, Stage::Streaming);
+        assert_eq!(state.thinking_buf, "reasoning step");
+        assert_eq!(state.thinking_lines, vec!["reasoning step"]);
+        assert!(state.stream_buf.is_empty());
+        assert!(state.stream_lines.is_empty());
+        assert!(state.scrollback.is_empty());
+    }
+
+    #[test]
+    fn thinking_then_token_preserves_separate_stream_ordering() {
+        let state = new_state();
+        let (state, _) = reduce(
+            state,
+            Event::RpcNotification(on_thinking_msg("inspect plan")),
+        );
+        let (state, _) = reduce(
+            state,
+            Event::RpcNotification(on_token_msg("visible answer")),
+        );
+
+        assert_eq!(state.thinking_lines, vec!["inspect plan"]);
+        assert_eq!(state.stream_lines, vec!["visible answer"]);
+        assert_eq!(state.stream_buf, "visible answer");
+    }
+
+    #[test]
+    fn thinking_and_visible_chunks_preserve_recombined_boundary_order() {
+        let state = new_state();
+        let (state, _) = reduce(state, Event::RpcNotification(on_thinking_msg("X")));
+        let (state, _) = reduce(state, Event::RpcNotification(on_token_msg("visible")));
+
+        assert_eq!(state.thinking_buf, "X");
+        assert_eq!(state.stream_buf, "visible");
+        assert_eq!(
+            format!("{}{}", state.thinking_buf, state.stream_buf),
+            "Xvisible"
+        );
+    }
+
+    #[test]
     fn on_done_flushes_to_scrollback() {
         let state = new_state();
         let (state, _) = reduce(state, Event::RpcNotification(on_token_msg("response")));
         let (state, _) = reduce(state, Event::RpcNotification(on_done_msg()));
         assert_eq!(state.stage, Stage::Idle);
         assert!(state.scrollback.contains(&"response".to_string()));
+        assert!(state.stream_buf.is_empty());
+        assert!(state.stream_lines.is_empty());
+    }
+
+    #[test]
+    fn on_done_flushes_only_visible_output_and_clears_thinking_buffer() {
+        let state = new_state();
+        let (state, _) = reduce(
+            state,
+            Event::RpcNotification(on_thinking_msg("hidden chain")),
+        );
+        let (state, _) = reduce(state, Event::RpcNotification(on_token_msg("final answer")));
+        let (state, _) = reduce(state, Event::RpcNotification(on_done_msg()));
+
+        assert!(state.scrollback.contains(&"final answer".to_string()));
+        assert!(!state.scrollback.contains(&"hidden chain".to_string()));
+        assert!(state.thinking_buf.is_empty());
+        assert!(state.thinking_lines.is_empty());
         assert!(state.stream_buf.is_empty());
         assert!(state.stream_lines.is_empty());
     }
@@ -417,6 +510,35 @@ mod tests {
 
         let (_, effects) = reduce(state, Event::Tick);
         assert!(has_effect(&effects, &Effect::Render));
+    }
+
+    #[test]
+    fn tick_rotates_spinner_verb_only_during_active_chat() {
+        let mut idle = new_state();
+        idle.spinner_frame = 3;
+        idle.spinner_verb_idx = 41;
+
+        let (idle, _) = reduce(idle, Event::Tick);
+
+        assert_eq!(idle.spinner_frame, 3);
+        assert_eq!(idle.spinner_verb_idx, 41);
+
+        let mut active = new_state();
+        active.stage = Stage::Idle;
+        active.spinner_frame = 3;
+        active.spinner_verb_idx = 41;
+        active.pending_requests.insert(
+            1,
+            PendingRequest {
+                method: "chat".into(),
+                sent_at: Instant::now(),
+            },
+        );
+
+        let (active, _) = reduce(active, Event::Tick);
+
+        assert_eq!(active.spinner_frame, 0);
+        assert_eq!(active.spinner_verb_idx, 42);
     }
 
     #[test]
@@ -1217,7 +1339,148 @@ mod tests {
         assert_eq!(state.checkpoints[0].id, "cp-live-123");
         assert_eq!(state.checkpoints[0].session_id, "session-live-9");
         assert_eq!(state.checkpoints[0].label, "before risky edit");
+        assert_eq!(state.restore_selected_idx, 0);
+        assert!(state.restore_confirmation.is_none());
         assert!(has_effect(&effects, &Effect::Render));
+    }
+
+    #[test]
+    fn restore_surface_navigation_clamps_selection_to_checkpoint_rows() {
+        let mut state = new_state();
+        state.detail_surface = Some(DetailSurface::Restore);
+        state.checkpoints = vec![
+            checkpoint_entry("cp-1", "first", "2026-04-26T10:00:00Z"),
+            checkpoint_entry("cp-2", "second", "2026-04-26T11:00:00Z"),
+        ];
+
+        let (state, effects) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+        );
+        assert_eq!(state.restore_selected_idx, 1);
+        assert!(has_effect(&effects, &Effect::Render));
+
+        let (state, _) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+        );
+        assert_eq!(state.restore_selected_idx, 1);
+
+        let (state, _) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)),
+        );
+        assert_eq!(state.restore_selected_idx, 0);
+    }
+
+    #[test]
+    fn restore_enter_opens_confirmation_and_confirm_dispatches_restore_rpc() {
+        let mut state = new_state();
+        state.detail_surface = Some(DetailSurface::Restore);
+        state.checkpoints = vec![checkpoint_entry(
+            "cp-restore-1",
+            "before edit",
+            "2026-04-26T10:00:00Z",
+        )];
+
+        let (state, effects) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+        );
+        assert!(effects
+            .iter()
+            .all(|effect| !matches!(effect, Effect::SendRpc(_))));
+        assert_eq!(
+            state
+                .restore_confirmation
+                .as_ref()
+                .map(|confirmation| confirmation.checkpoint_id.as_str()),
+            Some("cp-restore-1")
+        );
+
+        let (state, effects) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+        );
+        let msg = find_sent_rpc(&effects, "checkpoint.restore").expect("checkpoint.restore");
+        assert_eq!(
+            msg.params
+                .as_ref()
+                .and_then(|params| params.get("checkpoint_id")),
+            Some(&serde_json::json!("cp-restore-1"))
+        );
+        assert!(state.restore_confirmation.is_none());
+        assert_eq!(
+            state
+                .pending_requests
+                .get(&msg.id.expect("request id"))
+                .map(|request| request.method.as_str()),
+            Some("checkpoint.restore")
+        );
+    }
+
+    #[test]
+    fn restore_confirmation_cancel_preserves_selection_without_dispatch() {
+        let mut state = new_state();
+        state.detail_surface = Some(DetailSurface::Restore);
+        state.checkpoints = vec![checkpoint_entry(
+            "cp-restore-1",
+            "before edit",
+            "2026-04-26T10:00:00Z",
+        )];
+
+        let (state, _) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+        );
+        let (state, effects) = reduce(
+            state,
+            Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)),
+        );
+
+        assert!(state.restore_confirmation.is_none());
+        assert_eq!(state.detail_surface, Some(DetailSurface::Restore));
+        assert!(effects
+            .iter()
+            .all(|effect| !matches!(effect, Effect::SendRpc(_))));
+    }
+
+    #[test]
+    fn checkpoint_restore_response_adds_transcript_feedback() {
+        let mut state = new_state();
+        state.pending_requests.insert(
+            88,
+            PendingRequest {
+                method: "checkpoint.restore".into(),
+                sent_at: Instant::now(),
+            },
+        );
+
+        let (state, _) = reduce(
+            state,
+            Event::RpcResponse(RPCMessage {
+                jsonrpc: "2.0".into(),
+                id: Some(88),
+                method: None,
+                params: None,
+                result: Some(serde_json::json!({
+                    "ok": true,
+                    "checkpoint_id": "cp-restore-1",
+                    "label": "before edit",
+                    "active_files": ["src/live.rs"],
+                    "restored_messages": 4,
+                    "restored_tool_calls": 2
+                })),
+                error: None,
+            }),
+        );
+
+        assert!(state.detail_surface.is_none());
+        assert!(state.scrollback.iter().any(|line| {
+            line.contains("Restored checkpoint cp-restore-1")
+                && line.contains("4 messages")
+                && line.contains("2 tool calls")
+        }));
     }
 
     #[test]
@@ -1874,20 +2137,11 @@ mod tests {
             .collect::<Vec<_>>()
             .join("\n");
 
-        let (state, _) = reduce(
-            state,
-            Event::RpcNotification(RPCMessage {
-                jsonrpc: "2.0".to_string(),
-                id: None,
-                method: Some("on_thinking".to_string()),
-                params: Some(serde_json::json!({ "text": payload })),
-                result: None,
-                error: None,
-            }),
-        );
+        let (state, _) = reduce(state, Event::RpcNotification(on_thinking_msg(&payload)));
 
-        assert!(state.scrollback.iter().any(|line| line == "line 0"));
-        assert!(state.stream_lines.len() <= 20);
+        assert!(!state.scrollback.iter().any(|line| line == "line 0"));
+        assert!(state.thinking_lines.len() <= 20);
+        assert!(state.stream_lines.is_empty());
     }
 
     #[test]

@@ -10,6 +10,7 @@ from autocode.doctor import (
     check_autocode_command,
     check_disk_space,
     check_git,
+    check_mcp_readiness,
     check_python_version,
     check_tree_sitter,
     doctor_json,
@@ -18,11 +19,11 @@ from autocode.doctor import (
 )
 
 
-def test_doctor_9_checks() -> None:
-    """Doctor runs exactly 9 checks."""
-    assert len(ALL_CHECKS) == 9
+def test_doctor_10_checks() -> None:
+    """Doctor runs exactly 10 checks."""
+    assert len(ALL_CHECKS) == 10
     results = run_doctor()
-    assert len(results) == 9
+    assert len(results) == 10
 
 
 def test_doctor_remediation_messages() -> None:
@@ -67,6 +68,21 @@ def test_doctor_autocode_command_check(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "uv tool install" in result.remediation
 
 
+def test_doctor_mcp_readiness_reports_command_and_audit_path(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    """MCP doctor check exposes serve command and audit-log discovery path."""
+    audit_path = tmp_path / "mcp_audit.jsonl"
+    monkeypatch.setenv("AUTOCODE_MCP_AUDIT_LOG", str(audit_path))
+
+    result = check_mcp_readiness()
+
+    assert result.passed
+    assert "autocode mcp-serve" in result.message
+    assert str(audit_path) in result.message
+
+
 def test_doctor_disk_space_check() -> None:
     """Disk space check works."""
     result = check_disk_space()
@@ -80,7 +96,7 @@ def test_doctor_returns_structured_report() -> None:
     json_report = doctor_json(results)
 
     assert isinstance(json_report, list)
-    assert len(json_report) == 9
+    assert len(json_report) == 10
     for item in json_report:
         assert "name" in item
         assert "passed" in item

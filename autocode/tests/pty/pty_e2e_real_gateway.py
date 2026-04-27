@@ -219,13 +219,27 @@ def main() -> int:
         # a real turn is in flight instead of wedging behind the chat request.
         log("\n[chat] sending live turn and probing async command discovery")
         os.write(fd, b"Count from 1 to 20, one number per line, then say OK.\r")
-        time.sleep(1.5)
-        os.write(fd, b"/")
-        time.sleep(0.2)
-        raw = read_until(fd, quiet=2.0, maxwait=15.0, stop_on=b"Slash Commands")
+        raw = read_until(fd, quiet=0.4, maxwait=20.0, stop_on=b"1")
         text = strip(raw)
         if unhealthy_runtime(text):
-            bug("E2E_async_palette_runtime", f"runtime failure during live-turn palette probe: {text[:400]}", "CRITICAL")
+            bug(
+                "E2E_chat_start_runtime",
+                f"runtime failure before palette probe: {text[:400]}",
+                "CRITICAL",
+            )
+        # Use the explicit palette shortcut here. Slash autocomplete is covered
+        # by the mock-backed slash-surface smoke and can be ambiguous if the
+        # composer is still accepting a live-turn draft.
+        os.write(fd, b"\x0b")  # Ctrl+K
+        time.sleep(0.2)
+        raw = read_until(fd, quiet=2.0, maxwait=15.0, stop_on=b"Command Palette")
+        text = strip(raw)
+        if unhealthy_runtime(text):
+            bug(
+                "E2E_async_palette_runtime",
+                f"runtime failure during live-turn palette probe: {text[:400]}",
+                "CRITICAL",
+            )
         elif command_palette_visible(text):
             ok("E2E_async_palette", "command palette loaded during live turn")
         else:

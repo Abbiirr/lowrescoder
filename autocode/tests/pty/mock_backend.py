@@ -90,7 +90,11 @@ def main() -> None:
         "true",
         "yes",
     }:
-        print("WARNING: mock backend starting — this is a test warning", file=sys.stderr, flush=True)
+        print(
+            "WARNING: mock backend starting — this is a test warning",
+            file=sys.stderr,
+            flush=True,
+        )
 
     # Small delay then send on_status so TUI transitions stageInit → stageInput
     time.sleep(0.3)
@@ -232,6 +236,61 @@ def main() -> None:
             if req_id is not None:
                 respond(req_id, {"mode": mode, "changed": True})
 
+        elif method == rpc_schema.METHOD_CHECKPOINT_LIST:
+            if req_id is not None:
+                respond(
+                    req_id,
+                    {
+                        "checkpoints": [
+                            {
+                                "id": "mock-cp-new",
+                                "session_id": "mock-session-001",
+                                "label": "after parser guard",
+                                "tasks_snapshot": "{}",
+                                "messages_snapshot": "{}",
+                                "context_summary": "newer checkpoint",
+                                "active_files": "[\"src/parser.ts\"]",
+                                "created_at": "2026-04-26T10:20:30Z",
+                            },
+                            {
+                                "id": "mock-cp-old",
+                                "session_id": "mock-session-001",
+                                "label": "before risky edit",
+                                "tasks_snapshot": "{}",
+                                "messages_snapshot": "{}",
+                                "context_summary": "older checkpoint",
+                                "active_files": "[\"src/parser.ts\", \"tests/parser.test.ts\"]",
+                                "created_at": "2026-04-26T09:20:30Z",
+                            },
+                        ]
+                    },
+                )
+
+        elif method == rpc_schema.METHOD_CHECKPOINT_RESTORE:
+            params = req.get("params") or {}
+            checkpoint_id = (
+                params.get("checkpoint_id", "mock-cp-new")
+                if isinstance(params, dict)
+                else "mock-cp-new"
+            )
+            label = (
+                "before risky edit"
+                if checkpoint_id == "mock-cp-old"
+                else "after parser guard"
+            )
+            if req_id is not None:
+                respond(
+                    req_id,
+                    {
+                        "ok": True,
+                        "checkpoint_id": checkpoint_id,
+                        "label": label,
+                        "active_files": ["src/parser.ts"],
+                        "restored_messages": 4,
+                        "restored_tool_calls": 2,
+                    },
+                )
+
         elif req_id is not None:
             respond(req_id, {"ok": True})
 
@@ -299,7 +358,10 @@ def _handle_chat(req_id: int | None, message: str) -> None:
         )
         scripted = [
             "Planning\n",
-            "Will inspect parser flow, extend ASTNode with an optional imports field, patch extractImports to guard against undefined,\n",
+            (
+                "Will inspect parser flow, extend ASTNode with an optional imports field, "
+                "patch extractImports to guard against undefined,\n"
+            ),
             "then run the targeted parser tests.\n",
             "\n",
             "Read(src/utils/parser.ts)\n",
@@ -333,6 +395,49 @@ def _handle_chat(req_id: int | None, message: str) -> None:
         send("on_token", {"text": "Working"})
         time.sleep(2.0)
         tokens = [" done", " after", " a", " slow", " pause", "."]
+    elif "__THINKING_SPLIT__" in message:
+        send("on_thinking", {"text": "checking hidden path\nconfirming split"})
+        time.sleep(0.4)
+        tokens = ["final visible answer"]
+    elif "__TOOL_OUTPUT_BUDGET__" in message:
+        send(
+            rpc_schema.METHOD_ON_TOOL_CALL,
+            {
+                "name": "small_budget_tool",
+                "status": "running",
+                "args": "{}",
+            },
+        )
+        time.sleep(0.1)
+        send(
+            rpc_schema.METHOD_ON_TOOL_CALL,
+            {
+                "name": "small_budget_tool",
+                "status": "completed",
+                "args": "{}",
+                "result": "budget marker: [… 930 chars omitted …]",
+            },
+        )
+        tokens = ["Tool", " output", " budget", " marker", " rendered", "."]
+    elif "__COST_LIMIT__" in message:
+        send(
+            rpc_schema.METHOD_ON_WARNING,
+            {
+                "message": (
+                    "Session cost limit reached: $0.0024 / $0.0010 threshold. "
+                    "Continuing; use /cost to view."
+                ),
+            },
+        )
+        send(
+            "on_cost_update",
+            {
+                "cost": "$0.0024",
+                "tokens_in": 1000,
+                "tokens_out": 25,
+            },
+        )
+        tokens = ["Cost", " limit", " warning", " rendered", "."]
     elif "__PANELS__" in message:
         send(
             rpc_schema.METHOD_ON_TASK_STATE,

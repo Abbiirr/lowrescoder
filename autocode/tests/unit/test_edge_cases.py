@@ -4,17 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from autocode.agent.bus import AgentBus, AgentMessage, MessageType
+from autocode.agent.bus import AgentBus, AgentMessage
 from autocode.agent.cost_dashboard import CostDashboard
-from autocode.agent.identity import AgentCard, AgentRole, ModelSpec
-from autocode.agent.llmloop import LLMLOOP, EditPlan, Edit, EditType
+from autocode.agent.identity import ModelSpec
+from autocode.agent.llmloop import LLMLOOP, EditPlan
 from autocode.agent.multi_edit import FileEdit, MultiEditPlan
 from autocode.agent.policy_router import PolicyRouter
-from autocode.agent.sop_runner import SOPPipeline, SOPRunner, SOPStep
 from autocode.agent.token_tracker import TokenTracker
-from autocode.eval.harness import compute_metrics, EvalReport, EvalResult
-from autocode.external.mcp_server import MCPServer
-
+from autocode.eval.harness import EvalReport, compute_metrics
+from autocode.external.mcp_server import MCPServer, MCPServerConfig
 
 # --- TokenTracker edge cases ---
 
@@ -88,7 +86,8 @@ def test_cost_dashboard_many_entries() -> None:
     """Dashboard handles many entries."""
     dash = CostDashboard()
     for i in range(100):
-        dash.record(f"agent-{i % 5}", f"task-{i}", "l4", tokens_in=100)
+        agent_id = f"agent-{i % 5}"
+        dash.record(agent_id, f"task-{i}", "l4", tokens_in=100, provider_model=agent_id)
     assert dash.total_tokens == 10_000
     assert len(dash.by_agent()) == 5
     assert len(dash.by_task()) == 100
@@ -187,7 +186,3 @@ def test_model_spec_equality() -> None:
     a = ModelSpec(provider="ollama", model="qwen3:8b", layer=4)
     b = ModelSpec(provider="ollama", model="qwen3:8b", layer=4)
     assert a == b
-
-
-# Need this import for the MCP test
-from autocode.external.mcp_server import MCPServerConfig

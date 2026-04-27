@@ -1,7 +1,7 @@
 # Backend Feature Improvement Todo
 
 > **Plan:** `docs/plan/backend-feature-improvement-plan.md`
-> **Status:** LOCAL REGRESSION COMPLETE — user-directed backend tranche closeout record. Live gateway canary remains before broad benchmark sweeps.
+> **Status:** EXIT GATES COMPLETE — user-directed backend tranche closeout record. Fresh live gateway canary remains required before broad benchmark sweeps.
 > **Executor:** Codex (Builder). Reviewer: Claude.
 
 ## Stage 1 — Transport/Chat Conformance
@@ -62,7 +62,7 @@
 
 - [x] All slices above landed with per-slice verification artifacts under `autocode/docs/qa/test-results/`
 - [x] Local deterministic regression gate green (Python unit, benchmark harness tests, cargo test/clippy/build, local PTY smokes)
-- [ ] Transport conformance coverage: thinking + in_progress + cache + search + memory + cost + checkpoint
+- [x] Transport conformance coverage: thinking + in_progress + cache + search + memory + cost + checkpoint. Artifact: `autocode/docs/qa/test-results/20260426-143510-2f7-tranche-exit-gate-sweeps.md`
 - [x] `docs/requirements_and_features.md` reflects 2026-04-25+ reality
-- [ ] Live PTY canary: thinking ON + thinking OFF + tool sequence + cost limit crossing all green
+- [x] Live PTY canary: thinking ON + thinking OFF + tool sequence + cost limit crossing all green. Artifact: `autocode/docs/qa/test-results/20260426-143510-2f7-tranche-exit-gate-sweeps.md`
 - [x] HR-5 Phase B (`/cc` real-data binding) ready to resume with backend in tighter state, subject to a fresh live gateway canary before broad sweeps

@@ -16,6 +16,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from autocode.agent.completion import SessionStats
+from autocode.agent.cost_dashboard import CostDashboard
+from autocode.agent.token_tracker import TokenTracker
 from autocode.backend.server import BackendServer
 from autocode.backend.stdio_host import StdioJsonRpcHost
 from autocode.backend.tcp_host import TcpJsonRpcHost
@@ -337,6 +340,82 @@ async def test_transport_conformance_chat_streams_thinking_tokens_and_update_tas
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("host_kind", ["stdio", "tcp"])
+async def test_transport_conformance_chat_surfaces_search_payload_and_cost_limit(
+    tmp_path: Path,
+    host_kind: str,
+) -> None:
+    server = _make_server(tmp_path)
+    dashboard = CostDashboard()
+    tracker = TokenTracker(cost_dashboard=dashboard, cost_limit_usd=0.001)
+    stats = SessionStats()
+    stats.token_tracker = tracker
+    server._session_stats = stats
+
+    class SearchAndCostLoop:
+        def __init__(self, session_id: str) -> None:
+            self.session_id = session_id
+
+        async def run(self, _message: str, **kwargs: object) -> None:
+            on_tool_call = kwargs["on_tool_call"]
+            tracker.record(
+                prompt_tokens=1_000,
+                completion_tokens=25,
+                provider="openrouter / coding",
+                cached_input_tokens=250,
+            )
+            on_tool_call(
+                "search_code",
+                "completed",
+                "src/example.py:7:def target() -> None:",
+            )
+
+    server._ensure_agent_loop = lambda: SearchAndCostLoop(server.session_id)  # type: ignore[method-assign]
+    if host_kind == "stdio":
+        messages = await _run_stdio_chat_contract(
+            server,
+            {"jsonrpc": "2.0", "id": 35, "method": "chat", "params": {"message": "search"}},
+            shutdown_id=36,
+        )
+    else:
+        messages = await _run_tcp_chat_contract(
+            server,
+            {"jsonrpc": "2.0", "id": 35, "method": "chat", "params": {"message": "search"}},
+            shutdown_id=36,
+        )
+
+    methods = [message.get("method") for message in messages if message.get("method")]
+    assert "on_tool_call" in methods
+    assert "on_warning" in methods
+    assert "on_cost_update" in methods
+    assert "on_done" in methods
+    assert methods.index("on_tool_call") < methods.index("on_warning")
+    assert methods.index("on_warning") < methods.index("on_cost_update")
+    assert methods.index("on_cost_update") < methods.index("on_done")
+
+    tool_message = next(message for message in messages if message.get("method") == "on_tool_call")
+    assert tool_message["params"]["result_payload"] == {
+        "kind": "search",
+        "query": "search_code",
+        "hits": [
+            {
+                "path": "src/example.py",
+                "line": 7,
+                "snippet": "def target() -> None:",
+            }
+        ],
+    }
+
+    warning = next(message for message in messages if message.get("method") == "on_warning")
+    assert "Session cost limit reached" in warning["params"]["message"]
+    assert "$0.0010 threshold" in warning["params"]["message"]
+    cost_update = next(message for message in messages if message.get("method") == "on_cost_update")
+    assert cost_update["params"]["cost"] == "$0.0024"
+    assert cost_update["params"]["tokens_in"] == 1_000
+    assert cost_update["params"]["tokens_out"] == 25
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("host_kind", ["stdio", "tcp"])
 async def test_transport_conformance_task_subagent_and_memory_surfaces(
     tmp_path: Path,
     host_kind: str,
@@ -417,8 +496,11 @@ async def test_transport_conformance_checkpoint_restore_rehydrates_messages(
     restore_response = next(message for message in messages if message.get("id") == 51)
     assert restore_response["result"] == {
         "ok": True,
+        "checkpoint_id": cp_id,
         "label": "transport checkpoint",
         "active_files": [],
+        "restored_messages": 1,
+        "restored_tool_calls": 0,
     }
 
     contents = [

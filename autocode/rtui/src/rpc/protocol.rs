@@ -320,6 +320,23 @@ pub struct CheckpointListResult {
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
+pub struct CheckpointRestoreResult {
+    #[serde(default)]
+    pub ok: bool,
+    #[serde(default)]
+    pub checkpoint_id: String,
+    #[serde(default)]
+    pub label: String,
+    #[serde(default)]
+    pub active_files: Vec<String>,
+    #[serde(default)]
+    pub restored_messages: usize,
+    #[serde(default)]
+    pub restored_tool_calls: usize,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
 pub struct CompactCommandResult {
     #[serde(default)]
     pub ok: bool,

@@ -50,7 +50,11 @@ prompt (e.g. `/help`) or mock where possible.
 |---|---|---|
 | `pty_smoke_rust_m1.py` | M1 evidence: backend spawn + `on_status` render + `/exit` clean exit | Rust binary + mock backend |
 | `pty_smoke_rust_comprehensive.py` | Broader Rust smoke (currently S1 on_status + S2 /exit; S3–S6 for streaming/plan/Ctrl+C/fork are aspirational in docstring but not implemented yet) | Rust binary + mock backend |
-| `pty_e2e_real_gateway.py` | Live backend + live gateway smoke: `/help`, `/cost`, real chat turn, and async command discovery during a live turn | Rust binary + reachable gateway + auth env |
+| `pty_smoke_rust_slash_surfaces.py` | High-risk slash detail surfaces: `/help`, `/plan`, `/tasks`, `/grep`, `/review`, `/diff`, `/restore`, `/cc`, `/escalation`, `/multi` | Rust binary + mock backend |
+| `pty_smoke_rust_checkpoint2_canary.py` | Checkpoint 2 canary: thinking OFF, thinking ON, tool sequence/truncation, and cost-limit warning visibility | Rust binary + mock backend |
+| `pty_smoke_rust_thinking_split.py` | Thinking-token stream and visible-output stream render separately through the Rust TUI | Rust binary + mock backend |
+| `pty_smoke_rust_tool_output_budget.py` | Oversized tool output budget/truncation marker remains visible in the Rust TUI tool panel/transcript | Rust binary + mock backend |
+| `pty_e2e_real_gateway.py` | Live backend + live gateway smoke: `/help`, `/cost`, real chat turn, and async command-palette discovery during a live turn | Rust binary + reachable gateway + auth env |
 
 Each script is designed to be run directly:
 
@@ -100,6 +104,24 @@ python3 autocode/tests/pty/pty_smoke_rust_m1.py
 
 ```bash
 python3 autocode/tests/pty/pty_smoke_rust_comprehensive.py
+```
+
+**Slash surface coverage:**
+
+```bash
+python3 autocode/tests/pty/pty_smoke_rust_slash_surfaces.py
+```
+
+**Checkpoint 2 canary:**
+
+```bash
+python3 autocode/tests/pty/pty_smoke_rust_checkpoint2_canary.py
+```
+
+**Tool output-budget visibility:**
+
+```bash
+python3 autocode/tests/pty/pty_smoke_rust_tool_output_budget.py
 ```
 
 **Live gateway end-to-end:**

@@ -118,3 +118,19 @@ def test_record_forwards_cached_tokens_to_dashboard() -> None:
     assert dashboard.total_uncached_input_tokens == 2_000
     assert dashboard.total_cached_input_tokens == 8_000
     assert dashboard.total_output_tokens == 500
+
+
+def test_record_forwards_provider_model_for_model_specific_costs() -> None:
+    """TokenTracker preserves provider/model labels for model-specific dashboard rates."""
+    dashboard = CostDashboard()
+    tracker = TokenTracker(cost_dashboard=dashboard)
+
+    tracker.record(
+        prompt_tokens=1_000_000,
+        completion_tokens=1_000_000,
+        provider="openrouter / anthropic/claude-3.5-sonnet",
+    )
+
+    assert dashboard.input_cost == 3.0
+    assert dashboard.output_cost == 15.0
+    assert dashboard.total_cost == 18.0

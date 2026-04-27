@@ -58,8 +58,6 @@ def _get_llm_backend() -> tuple[str, str]:
 
 def check_llm_backend() -> CheckResult:
     """Check 2: LLM backend reachable (gateway or Ollama)."""
-    import os
-
     provider, api_base = _get_llm_backend()
 
     # If using a gateway (openrouter provider with custom API base)
@@ -340,6 +338,48 @@ def check_disk_space() -> CheckResult:
         )
 
 
+def default_mcp_audit_log_path() -> Path:
+    """Return the discoverable MCP JSONL audit-log path."""
+    import os
+
+    configured = os.environ.get("AUTOCODE_MCP_AUDIT_LOG")
+    if configured:
+        return Path(configured).expanduser()
+    return Path.home() / ".autocode" / "mcp_audit.jsonl"
+
+
+def check_mcp_readiness() -> CheckResult:
+    """Check 10: MCP stdio server and audit-log discovery are available."""
+    try:
+        from autocode.external.mcp_server import MCPServer, MCPServerConfig
+
+        audit_path = default_mcp_audit_log_path()
+        config = MCPServerConfig(
+            enabled=True,
+            project_root=Path.cwd(),
+            transport="stdio",
+            audit_log_path=audit_path,
+        )
+        server = MCPServer(config)
+        tool_count = len(server.tools)
+        return CheckResult(
+            name="mcp_readiness",
+            passed=True,
+            message=(
+                f"autocode mcp-serve available over stdio; "
+                f"{tool_count} tools; audit log: {audit_path}"
+            ),
+            remediation="",
+        )
+    except Exception as e:
+        return CheckResult(
+            name="mcp_readiness",
+            passed=False,
+            message=f"MCP readiness check failed: {e}",
+            remediation="Run: autocode mcp-serve --help",
+        )
+
+
 ALL_CHECKS = [
     check_python_version,
     check_llm_backend,
@@ -350,11 +390,12 @@ ALL_CHECKS = [
     check_autocode_command,
     check_vram,
     check_disk_space,
+    check_mcp_readiness,
 ]
 
 
 def run_doctor() -> list[CheckResult]:
-    """Run all 8 readiness checks and return results."""
+    """Run all readiness checks and return results."""
     return [check() for check in ALL_CHECKS]
 
 

@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from autocode.agent.events import SqliteEventSink
+from autocode.agent.events import OrchestratorEvent, SqliteEventSink
 
 
 @dataclass

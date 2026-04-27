@@ -1,6 +1,6 @@
 # TUI Implementation Plan
 
-Status: active execution document for Stage 4 `tui-references` follow-through, with HR-5 runtime correctness and real-data binding now ahead of any further visual-only polish
+Status: active execution document for Stage 4 `tui-references` follow-through. HR-5 runtime correctness and real-data binding have crossed the Phase E gate; visual-only polish is unblocked for a post-release polish pass after the final release regression remains green.
 
 Last updated: 2026-04-23
 
@@ -478,7 +478,29 @@ Current state:
   state instead of frontend string-parser shims.
 - Phase D spinner activity-correlation is complete on 2026-04-26 via
   `autocode/docs/qa/test-results/20260426-170658-hr5-phase-d-spinner-activity-correlation.md`.
-- The next slice is Phase D thinking/output buffer split.
+- `/restore` interaction is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-180015-hr5-phase-c-restore-interaction-tui-verification.md`.
+- 2.F.1 MCP CLI wire-up is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-183312-2f1-mcp-cli-wire-up.md`.
+- Phase D thinking/output buffer split is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-185509-hr5-phase-d-thinking-output-buffer-split-tui-verification.md`.
+- 2.F.3 cost rate accuracy is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-190615-2f3-cost-rate-accuracy.md`.
+- 2.F.4+2.F.5 deprecation/lint fixes are complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-192007-2f4-2f5-provider-model-deprecation-team-eval-lint.md`.
+- 2.C per-slash PTY coverage is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-133155-pty-slash-surfaces-smoke.md`.
+- 2.D spinner verb badge is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-195342-hr5-phase-d-spinner-verb-badge-tui-verification.md`.
+- 2.F.2 MCP integration polish is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-200724-2f2-mcp-integration-polish.md`.
+- 2.F.6 per-tool output-budget PTY is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-201726-2f6-tool-output-budget-pty-verification.md`.
+- 2.F.7 tranche exit-gate sweeps are complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-143510-2f7-tranche-exit-gate-sweeps.md`.
+- 2.G regression gate is complete on 2026-04-26 via
+  `autocode/docs/qa/test-results/20260426-145234-checkpoint2-regression-gate.md`.
+- Checkpoint 2 now continues with 2.H user commit.
 
 Order:
 
@@ -496,9 +518,9 @@ Order:
 Scope:
 
 1. spinner activity-correlation — COMPLETE
-2. thinking/output buffer split
-3. per-slash PTY smoke coverage
-4. 194-verb spinner badge wiring
+2. thinking/output buffer split — COMPLETE
+3. per-slash PTY smoke coverage — COMPLETE
+4. 194-verb spinner badge wiring — COMPLETE
 
 ### Phase E — release gate
 
@@ -508,11 +530,17 @@ Trigger:
 - at least `4/10` HR-5(a) bindings shipped
 - Phase D runtime-correctness follow-ons closed
 
-Current HR-5(a) binding count: `9 shipped surfaces`. The earlier `10` denominator
-is a planning placeholder for the deferred `/restore` interaction follow-up or
-future bound surface, not a blocker for Phase D. The count portion of the Phase E
-gate is satisfied; Phase D runtime-correctness follow-ons still block the full
-release gate.
+Current HR-5(a) binding count: `9 shipped surfaces`: `/cc`, `/multi`,
+`/restore` display binding, `/plan`, `/tasks`, `/grep`, `/review`, `/diff`,
+and `/escalation`. The earlier `10` denominator is retained as planning count
+slot #10 for the `/restore` interaction follow-up, which is now complete. The
+count and Phase D portions of the Phase E gate are satisfied. Checkpoint 3
+items 3.A and 3.B are complete via
+`autocode/docs/qa/test-results/20260427-113808-phase-e-gate-verification.md`;
+3.C release-grade regression is complete via
+`autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`.
+3.D closeout is posted in `AGENTS_CONVERSATION.MD` Entry 1584. Remaining
+item is user-owned 3.E commit/tag decision.
 
 ## Verification Loop For Every Slice
 
@@ -533,18 +561,27 @@ For system-feature slices, also store:
 ## Immediate Next Move
 
 User design gate was approved on 2026-04-21 and the Stage 2 / 3 surface work
-is complete, but HR-5 now forbids another visual-only slice.
+is complete. HR-5 Phase E gate verification now unblocks visual-only polish for
+a post-release polish pass. The final release-grade regression sweep is green;
+the tranche-spanning closeout is posted; remaining work is user-owned commit/tag
+decision.
 
 Phase B under HR-5(a), `/cc` real-data binding, is complete. Phase C item 1,
 `/restore` / checkpoints real-data display binding, is complete. Phase C item
 2, `/plan` real-data binding, is complete. Phase C item 3, `/tasks` detail
 real-data binding, is complete. Phase C item 4, `/grep` real-data binding, is
 complete. Phase C item 5, `/review` + `/diff` real-data binding, is complete.
-Phase C item 6, `/escalation` real-data binding, is complete. The next
-technical slice is Phase D thinking/output buffer split. Phase D spinner
-activity-correlation is complete, typed `tool.result_payload` consolidation is
-complete, and remaining dedicated detail-surface mockup-copy cleanup is complete
-via the `/multi` live concurrent-work projection.
+Phase C item 6, `/escalation` real-data binding, is complete. Checkpoint 3
+now proceeds in the order captured by `docs/plan/stabilize-and-release-plan.md`
+and `AGENTS_CONVERSATION.MD` Entry 1584: 3.E user commit/tag decision next.
+Phase D spinner activity-correlation is complete, thinking/output split is
+complete, 2.C per-slash PTY coverage is complete, 2.D spinner verb badge is
+complete, 2.F.2 MCP integration polish is complete, 2.F.3 cost rate accuracy,
+2.F.6 per-tool output-budget PTY is complete, and 2.F.4+2.F.5 are complete,
+`/restore` interaction is complete, typed
+`tool.result_payload` consolidation is complete, and remaining dedicated
+detail-surface mockup-copy cleanup is complete via the `/multi` live
+concurrent-work projection.
 Phase A is closed on the canary lane and no longer blocks
 the program order. Human-driven benchmark use through the live TUI is
 unblocked, and the benchmark-owned Rust TUI path now has a green real-gateway

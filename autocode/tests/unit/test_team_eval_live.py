@@ -3,20 +3,19 @@
 from __future__ import annotations
 
 import sqlite3
+import warnings
 from unittest.mock import MagicMock
 
 import pytest
 
 from autocode.agent.events import (
     EventType,
-    NullEventSink,
     OrchestratorEvent,
     SqliteEventSink,
 )
 from autocode.agent.orchestrator import Orchestrator
-from autocode.eval.team_eval import LiveEvalCollector, TeamEvalMetrics
+from autocode.eval.team_eval import LiveEvalCollector
 from autocode.session.models import ensure_tables
-from autocode.session.task_store import TaskStore
 
 
 @pytest.fixture()
@@ -98,6 +97,21 @@ class TestLiveEvalWithOrchestrator:
             ))
         # At least one routing event was tracked
         assert len(events) >= 1
+
+    def test_orchestrator_dispatch_passes_provider_model_to_cost_dashboard(
+        self, sink: SqliteEventSink,
+    ) -> None:
+        """First-party cost recording should not use the deprecated fallback path."""
+        orch = Orchestrator(
+            agent_loop=MagicMock(),
+            event_sink=sink,
+        )
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            orch.dispatch("fix bug", task_type="bugfix")
+
+        assert [warning for warning in caught if warning.category is DeprecationWarning] == []
 
 
 # ── Failure Injection ──

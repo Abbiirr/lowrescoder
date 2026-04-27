@@ -98,6 +98,14 @@ Idle ──(Enter/chat)──► Streaming ──(tool call)──► ToolCall
 
 The Python backend exposes the agent loop, tools, LLM providers, session management, slash commands, tasks, subagents, memory, checkpoints, and config over JSON-RPC 2.0. It is launched automatically by the Rust TUI in spawn-managed stdio mode, or independently with `autocode serve --transport stdio|tcp`.
 
+External agent clients use a separate read-only MCP surface exposed by
+`autocode mcp-serve --transport stdio`. Generated Claude Code, Codex, and
+OpenCode config snippets point at that command; it supports MCP stdio
+`initialize`, `tools/list`, and `tools/call` against the L1/L2 read-only tools.
+`autocode doctor` reports MCP readiness and the audit-log path. MCP tool calls
+are always available in memory during process lifetime and can be persisted as
+JSONL with `--audit-log-path` or `AUTOCODE_MCP_AUDIT_LOG`.
+
 | Module | Responsibility |
 |--------|----------------|
 | `autocode/src/autocode/backend/server.py` | Backend application state, request dispatch surface, frontend notification helpers |
@@ -425,4 +433,7 @@ autocode chat --legacy
 
 # Python backend over stdio, used internally by the Rust TUI spawn-managed path
 uv run autocode serve --transport stdio
+
+# Read-only MCP stdio server for external agent clients
+uv run autocode mcp-serve --transport stdio --audit-log-path ~/.autocode/mcp_audit.jsonl
 ```

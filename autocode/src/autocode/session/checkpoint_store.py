@@ -174,6 +174,9 @@ class CheckpointStore:
             )
 
         conn = self._conn
+        restored_messages = 0
+        restored_tool_calls = 0
+
         try:
             conn.execute("BEGIN IMMEDIATE")
             task_store.restore_from_snapshot(
@@ -183,6 +186,13 @@ class CheckpointStore:
             if message_snapshot.get("captured"):
                 if not hasattr(session_store, "restore_messages_snapshot"):
                     raise TypeError("session_store must provide restore_messages_snapshot()")
+                restored_messages = len(message_snapshot["messages"])
+                restored_tool_calls = sum(
+                    len(message.get("tool_calls", []))
+                    for message in message_snapshot["messages"]
+                    if isinstance(message, dict)
+                    and isinstance(message.get("tool_calls", []), list)
+                )
                 session_store.restore_messages_snapshot(
                     cp.session_id,
                     message_snapshot["messages"],
@@ -200,6 +210,9 @@ class CheckpointStore:
 
         logger.info("Checkpoint restored: %s (%s)", checkpoint_id, cp.label)
         return {
+            "checkpoint_id": cp.id,
             "label": cp.label,
             "active_files": json.loads(cp.active_files),
+            "restored_messages": restored_messages,
+            "restored_tool_calls": restored_tool_calls,
         }

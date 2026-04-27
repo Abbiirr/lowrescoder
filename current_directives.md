@@ -1,18 +1,26 @@
 # Current Directives
 
-> Last updated: 2026-04-26
+> Last updated: 2026-04-27
 
 ## Active Phase
 
-**Stabilization Sprint — COMPLETE.** Stage 0A closed on 2026-04-20 with schema/docs/harness synchronization recorded in `autocode/docs/qa/test-results/20260420-171416-stage0a-verification.md`; Stage 0B is intentionally skipped because `command.list`, `model.list`, `provider.list`, and `session.list` unblock Stage 2 directly. Stage 1 closed on 2026-04-21 after the UTF-8/history, editor/inline, RPC/process, and runtime-hygiene slices recorded in the Stage 1 artifacts below. Stage 2 closed on 2026-04-21 after the visible command/picker slice and the slash-autocomplete/compact-feedback slice recorded below. Stage 3A closed on 2026-04-21 after the modal/transcript slice recorded below. Stage 3B closed on 2026-04-21 after the inspection/queue slice recorded below. Stage 4 closed on 2026-04-21 after the canonical-name-only shim-removal pass and full stabilization rerun recorded in `autocode/docs/qa/test-results/20260421-104354-stabilization-verification.md`. The product gate is now closed for the stabilization program. Execution of the sprint was carried by Codex under Entry 1266. Linux-first scope remains locked; macOS out of scope; Windows post-v1.
+**Stabilize-and-Release Program — Checkpoint 3 ACTIVE by user direction.** Canonical plan: `docs/plan/stabilize-and-release-plan.md`. Three checkpoints: (1) stabilize for commit — substantially closed; (2) Phase D + `/restore` interaction + backend robustness — closed from builder/reviewer side, pending user commit only; (3) Phase E release gate — started by user direction on 2026-04-27.
 
-## ACTIVE OVERRIDE: Backend Feature Improvement Tranche
+**Checkpoint 1 status (substantially closed 2026-04-26):**
+- 1.A typed `tool.result_payload` consolidation — DONE
+- 2.A HR-5 Phase D spinner activity-correlation — DONE (shipped ahead of plan)
+- 1.B comms cleanup — DONE (Entries 1476-1547 archived in two files under `docs/communication/old/`)
+- 1.D Checkpoint 1 regression gate — GREEN (Python `1977 passed`, Rust TUI `197 passed`, benchmark `199 passed`, PTY smokes green)
+- 1.C final docs sync — DONE (Codex Entry 1549; artifact `autocode/docs/qa/test-results/20260426-175205-checkpoint1-c-docs-sync.md`)
+- 1.E user commit — pending user
 
-**Canonical plan:** `docs/plan/backend-feature-improvement-plan.md`
-**Checklist:** `docs/plan/backend-feature-improvement-todo.md`
-**Method reference:** `docs/plan/backend-tightening-refinement-plan.md`
+**Checkpoint 2 queue:** active task list at `AGENTS_CONVERSATION.MD` Entry 1548. Completed from builder/reviewer side: 2.E `/restore` interaction layer, 2.F.1 MCP CLI wire-up, 2.B thinking/output buffer split, 2.F.3 cost rate accuracy, 2.F.4+2.F.5 deprecation/lint fixes, 2.C per-slash PTY coverage, 2.D spinner badge, 2.F.2 MCP integration polish, 2.F.6 per-tool output-budget PTY, 2.F.7 tranche exit-gate sweeps, and 2.G regression gate. 2.H user commit remains user-owned; agents must not commit.
 
-**Current queue:** `S-DOCSREFRESH-G`, the local deterministic backend tranche regression gate, HR-5 Phase B `/cc`, HR-5 Phase C item 1 `/restore`, HR-5 Phase C item 2 `/plan`, HR-5 Phase C item 3 `/tasks`, HR-5 Phase C item 4 `/grep`, HR-5 Phase C item 5 `/review` + `/diff`, HR-5 Phase C item 6 `/escalation`, remaining `/multi` mockup-copy cleanup, typed `tool.result_payload` consolidation, and Phase D spinner activity-correlation are complete. Next is Phase D thinking/output buffer split.
+**Checkpoint 3 queue:** 3.A Phase E gate verification and 3.B visual-only polish unblock are complete via `autocode/docs/qa/test-results/20260427-113808-phase-e-gate-verification.md`; 3.C final release-grade regression is complete via `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`; 3.D tranche-spanning closeout is posted in `AGENTS_CONVERSATION.MD` Entry 1584. Current pickup order: 3.E user commits and tags release if desired. Agents must not commit, tag, push, reset, or checkout.
+
+**Return rule:** continue HR-5 real-data bindings; do not start visual-only TUI slices first; run a fresh live gateway canary before any full benchmark sweep or product-path release claim.
+
+**Historical context (closed):** Stabilization Sprint (Stage 0A-4, 2026-04-20-21), Backend Feature Improvement Tranche (S-POSTTOOL → S-EPISODESUM + S-L3DOC + S-DOCSREFRESH-A through G, regression-green 2026-04-26 morning), HR-5 Phase A latency canary, HR-5 Phase B `/cc`, HR-5 Phase C all 7 detail-surface bindings, post-Phase-C typed-payload consolidation. Comprehensive history is in `docs/communication/old/` archives.
 
 **Completed in this docs-refresh pass:** `S-DOCSREFRESH-A` (`docs/requirements_and_features.md`), `S-DOCSREFRESH-B` (`docs/architecture.md`), `S-DOCSREFRESH-C` (`PLAN.md`), `S-DOCSREFRESH-D` (`EXECUTION_CHECKLIST.md`), `S-DOCSREFRESH-E` (`current_directives.md`), `S-DOCSREFRESH-F` (`autocode/TESTING.md`), and `S-DOCSREFRESH-G` (`docs/plan/archive/` cleanup).
 
@@ -37,6 +45,16 @@
 - `autocode/docs/qa/test-results/20260426-143024-hr5-phase-c-multi-mockup-copy-cleanup-tui-verification.md`
 - `autocode/docs/qa/test-results/20260426-163752-hr5-typed-tool-result-payload-consolidation.md`
 - `autocode/docs/qa/test-results/20260426-170658-hr5-phase-d-spinner-activity-correlation.md`
+- `autocode/docs/qa/test-results/20260426-183312-2f1-mcp-cli-wire-up.md`
+- `autocode/docs/qa/test-results/20260426-185509-hr5-phase-d-thinking-output-buffer-split-tui-verification.md`
+- `autocode/docs/qa/test-results/20260426-190615-2f3-cost-rate-accuracy.md`
+- `autocode/docs/qa/test-results/20260426-192007-2f4-2f5-provider-model-deprecation-team-eval-lint.md`
+- `autocode/docs/qa/test-results/20260426-133155-pty-slash-surfaces-smoke.md`
+- `autocode/docs/qa/test-results/20260426-195342-hr5-phase-d-spinner-verb-badge-tui-verification.md`
+- `autocode/docs/qa/test-results/20260426-200724-2f2-mcp-integration-polish.md`
+- `autocode/docs/qa/test-results/20260426-201726-2f6-tool-output-budget-pty-verification.md`
+- `autocode/docs/qa/test-results/20260426-143510-2f7-tranche-exit-gate-sweeps.md`
+- `autocode/docs/qa/test-results/20260426-145234-checkpoint2-regression-gate.md`
 
 ## HR-5 TUI Runtime Correctness + Parity Follow-through (Paused During Backend Override)
 
@@ -66,9 +84,9 @@
 
 **Honesty note:** the dedicated detail surfaces are real and directly triggerable, but several still render static scene text rather than real bound session data. Human-driven TUI benchmarking is unblocked, the benchmark-owned Rust TUI PTY runner now has a green real-gateway canary, and the specific Phase A latency blocker is no longer the active frontier. Larger sweeps should still start with a fresh canary on the current gateway before the long run begins.
 
-**Active task:** do not start another visual-only slice. Under HR-5, Phase A is closed on the canary lane, Phase B `/cc` is complete via `autocode/docs/qa/test-results/20260426-101346-hr5-phase-b-cc-real-data-binding-tui-verification.md`, Phase C `/restore` is complete via `autocode/docs/qa/test-results/20260426-105326-hr5-phase-c-restore-real-data-binding-tui-verification.md`, Phase C `/plan` is complete via `autocode/docs/qa/test-results/20260426-115229-hr5-phase-c-plan-real-data-binding-tui-verification.md`, Phase C `/tasks` is complete via `autocode/docs/qa/test-results/20260426-120349-hr5-phase-c-tasks-real-data-binding-tui-verification.md`, Phase C `/grep` is complete via `autocode/docs/qa/test-results/20260426-123817-hr5-phase-c-grep-real-data-binding-tui-verification.md`, Phase C `/review` + `/diff` is complete via `autocode/docs/qa/test-results/20260426-130611-hr5-phase-c-review-diff-real-data-binding-tui-verification.md`, Phase C `/escalation` is complete via `autocode/docs/qa/test-results/20260426-140749-hr5-phase-c-escalation-real-data-binding-tui-verification.md`, remaining `/multi` mockup-copy cleanup is complete via `autocode/docs/qa/test-results/20260426-143024-hr5-phase-c-multi-mockup-copy-cleanup-tui-verification.md`, typed `tool.result_payload` consolidation is complete via `autocode/docs/qa/test-results/20260426-163752-hr5-typed-tool-result-payload-consolidation.md`, and Phase D spinner activity-correlation is complete via `autocode/docs/qa/test-results/20260426-170658-hr5-phase-d-spinner-activity-correlation.md`. The active next slice is Phase D thinking/output buffer split. Keep the broader implementation order in `docs/tui-testing/tui_implementation_plan.md` and `docs/tui-testing/tui_implementation_todo.md`, with the Phase A close-out captured in the dedicated plan/checklist pair above.
+**Active task:** Phase E gate prerequisites are satisfied, visual-only polish is unblocked for a post-release polish pass, 3.C final release-grade regression is green, and 3.D closeout is posted. Under HR-5, Phase A is closed on the canary lane, all Phase B/C/D bindings and follow-ons are complete, Checkpoint 2 regression is green via `autocode/docs/qa/test-results/20260426-145234-checkpoint2-regression-gate.md`, Phase E gate verification is recorded in `autocode/docs/qa/test-results/20260427-113808-phase-e-gate-verification.md`, and release-grade regression is recorded in `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`. Current pickup is user-owned 3.E commit/tag decision.
 
-**User-directed temporary override (2026-04-24):** before more frontend binding work, run a backend-tightening tranche to check commit-readiness on the current tree and tighten backend/runtime behavior around chat streaming, subagents, context, memory, task/todo, loop, and transport correctness. Canonical plan: `docs/plan/backend-tightening-refinement-plan.md`. Backend tranche and docs-refresh progress are summarized in the active override above. The tranche is now stable enough; HR-5 Phase B `/cc`, Phase C `/restore`, `/plan`, `/tasks`, `/grep`, `/review` + `/diff`, `/escalation`, and `/multi` cleanup have completed, so continue with the typed payload consolidation follow-up before Phase D.
+**User-directed temporary override (2026-04-24):** before more frontend binding work, run a backend-tightening tranche to check commit-readiness on the current tree and tighten backend/runtime behavior around chat streaming, subagents, context, memory, task/todo, loop, and transport correctness. Canonical plan: `docs/plan/backend-tightening-refinement-plan.md`. Backend tranche and docs-refresh progress are summarized in the active override above. The tranche is locally regression-green; typed payload consolidation, spinner activity-correlation, `/restore` interaction, MCP CLI wire-up, thinking/output buffer split, per-slash PTY coverage, and spinner verb badge wiring are complete, and Checkpoint 2 now continues with the remaining robustness/runtime follow-ons.
 
 **Backend-tranche status update (2026-04-26):** `S-DOCSREFRESH-A.4` is complete from builder side: `docs/requirements_and_features.md` cross-references were audited, stale benchmark paths and deleted Go TUI file references were corrected, active Go-era UX wording was replaced with Rust/current wording, and inline repo references resolve. Verification is recorded in `autocode/docs/qa/test-results/20260426-083440-s-docsrefresh-a4-verification.md`. Subsequent docs-refresh progress is summarized in the active override above.
 
@@ -85,9 +103,9 @@
 **Active phase order (locked 2026-04-23):**
 - Phase A — HR-5(c): COMPLETE on 2026-04-23 via `docs/qa/test-results/20260423-100635-tui-benchmark-latency-verification.md`
 - Phase B — HR-5(a): `/cc` real-data binding (complete on 2026-04-26)
-- Phase C — HR-5(a): `/restore` / checkpoints (complete on 2026-04-26), `/plan` (complete on 2026-04-26), `/tasks` (complete on 2026-04-26), `/grep` (complete on 2026-04-26), `/review` + `/diff` (complete on 2026-04-26), `/escalation` (complete on 2026-04-26), `/multi` mockup-copy cleanup (complete on 2026-04-26), and typed payload consolidation (complete on 2026-04-26)
-- Phase D — HR-5(b): spinner activity-correlation (complete on 2026-04-26), thinking/output split, per-slash PTY smoke, 194-verb spinner badge
-- Phase E — release gate after at least `4/10` HR-5(a) bindings ship; current HR-5(a) count is `9 shipped surfaces` (`/cc`, `/multi`, `/restore` display binding, `/plan`, `/tasks`, `/grep`, `/review`, `/diff`, `/escalation`)
+- Phase C — HR-5(a): `/restore` / checkpoints display binding (complete on 2026-04-26), `/restore` interaction follow-up (complete on 2026-04-26), `/plan` (complete on 2026-04-26), `/tasks` (complete on 2026-04-26), `/grep` (complete on 2026-04-26), `/review` + `/diff` (complete on 2026-04-26), `/escalation` (complete on 2026-04-26), `/multi` mockup-copy cleanup (complete on 2026-04-26), and typed payload consolidation (complete on 2026-04-26)
+- Phase D — HR-5(b): spinner activity-correlation (complete on 2026-04-26), thinking/output split (complete on 2026-04-26), per-slash PTY smoke (complete on 2026-04-26), 194-verb spinner badge (complete on 2026-04-26)
+- Phase E — release gate after at least `4/10` HR-5(a) bindings ship; current HR-5(a) count is `9 shipped surfaces` (`/cc`, `/multi`, `/restore` display binding, `/plan`, `/tasks`, `/grep`, `/review`, `/diff`, `/escalation`) plus the completed `/restore` interaction follow-up as the 10th planned slot. Gate verified on 2026-04-27; visual-only polish is unblocked after 3.C release regression remains green.
 
 ## Parallel Architecture Track (User-Directed 2026-04-23)
 
@@ -100,7 +118,7 @@ This track now runs alongside HR-5; it does not pause the HR-5 product queue unl
   - Phase 2: `autocode.backend.chat` owns chat-turn execution, callback wiring, and turn-result shaping instead of `BackendServer`
   - Phase 3: backend transport abstraction is live with stdio and TCP host adapters
   - Phase 4: Rust TUI connection modes plus launcher `--attach HOST:PORT` wiring are live, the default bare `autocode` path remains intact, and the spawn-managed path is now a stdio subprocess backend rather than a PTY-backed spawn path
-  - Regression baseline is currently green: `uv run pytest autocode/tests/unit -q` → `1862 passed`; `uv run pytest benchmarks/tests -q` → `199 passed`; Rust `cargo test`, `cargo build --release`, and `cargo clippy -D warnings` are green; PTY smokes are green aside from the known `E2E_async_palette_missing` caveat
+  - Historical Phase 2-4 regression baseline was green: `uv run pytest autocode/tests/unit -q` → `1862 passed`; `uv run pytest benchmarks/tests -q` → `199 passed`; Rust `cargo test`, `cargo build --release`, and `cargo clippy -D warnings` were green. Current Checkpoint 2 regression gate is green via `autocode/docs/qa/test-results/20260426-145234-checkpoint2-regression-gate.md`, including the fixed real-gateway async command-palette canary.
   - Phase 0 follow-through is now closed via `autocode/tests/unit/test_backend_transport_conformance.py`
   - The benchmark-owned TUI harness now supports the split attach/TCP shape via `--autocode-tui-connection attach`, with backend-host artifact capture and pyte-backed screen reconstruction
   - Phase 5 swapability proof is now closed via the attach-path artifact `docs/qa/test-results/20260423-145703-B13-PROXY-autocode.json` plus the same-window spawn-managed comparator `docs/qa/test-results/20260423-150833-B13-PROXY-autocode.json`

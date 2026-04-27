@@ -6,6 +6,7 @@ the multi-agent system.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 
 
@@ -34,6 +35,15 @@ class CostEntry:
         return self.total_input_tokens + self.tokens_out
 
 
+@dataclass(frozen=True)
+class TokenRates:
+    """Per-million token rates for a provider/model."""
+
+    input_per_m: float
+    cached_input_per_m: float
+    output_per_m: float
+
+
 class CostDashboard:
     """Tracks and reports token usage across agents and tasks.
 
@@ -56,6 +66,23 @@ class CostDashboard:
         "l4": 0.0,
         "external": 0.3,  # cache reads are typically ~10% of prompt cost
     }
+    # Source checked 2026-04-26:
+    # https://platform.claude.com/docs/en/docs/about-claude/pricing
+    # Keep broad family matchers ordered from most specific to least specific.
+    MODEL_RATE_MATCHERS: tuple[tuple[str, TokenRates], ...] = (
+        (
+            "claude-opus",
+            TokenRates(input_per_m=5.0, cached_input_per_m=0.5, output_per_m=25.0),
+        ),
+        (
+            "anthropic/claude",
+            TokenRates(input_per_m=3.0, cached_input_per_m=0.3, output_per_m=15.0),
+        ),
+        (
+            "claude-3",
+            TokenRates(input_per_m=3.0, cached_input_per_m=0.3, output_per_m=15.0),
+        ),
+    )
 
     def __init__(self) -> None:
         self._entries: list[CostEntry] = []
@@ -73,16 +100,22 @@ class CostDashboard:
     ) -> None:
         """Record token usage for an agent/task."""
         is_local = layer in ("l1", "l2", "l3", "l4")
-        cost_per_m = self.COST_PER_M_TOKENS.get(layer, 0.0)
-        cached_cost_per_m = self.CACHED_COST_PER_M_TOKENS.get(layer, 0.0)
+        if provider_model is None:
+            warnings.warn(
+                "CostDashboard.record() without provider_model is deprecated; "
+                "falling back to agent_id for provider/model grouping.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        rates = self._rates_for(layer, provider_model)
         tokens_in = max(0, int(tokens_in))
         cached_input_tokens = max(0, int(cached_input_tokens))
         tokens_out = max(0, int(tokens_out))
         input_cost = (
-            (tokens_in / 1_000_000) * cost_per_m
-            + (cached_input_tokens / 1_000_000) * cached_cost_per_m
+            (tokens_in / 1_000_000) * rates.input_per_m
+            + (cached_input_tokens / 1_000_000) * rates.cached_input_per_m
         )
-        output_cost = (tokens_out / 1_000_000) * cost_per_m
+        output_cost = (tokens_out / 1_000_000) * rates.output_per_m
         cost = input_cost + output_cost
 
         self._entries.append(CostEntry(
@@ -98,6 +131,23 @@ class CostDashboard:
             is_local=is_local,
             provider_model=provider_model or agent_id,
         ))
+
+    @classmethod
+    def _rates_for(cls, layer: str, provider_model: str | None = None) -> TokenRates:
+        """Return deterministic per-million token rates for a layer/model label."""
+        base = TokenRates(
+            input_per_m=cls.COST_PER_M_TOKENS.get(layer, 0.0),
+            cached_input_per_m=cls.CACHED_COST_PER_M_TOKENS.get(layer, 0.0),
+            output_per_m=cls.COST_PER_M_TOKENS.get(layer, 0.0),
+        )
+        if layer != "external":
+            return base
+
+        normalized_model = (provider_model or "").lower()
+        for marker, rates in cls.MODEL_RATE_MATCHERS:
+            if marker in normalized_model:
+                return rates
+        return base
 
     @property
     def entries(self) -> tuple[CostEntry, ...]:
@@ -157,9 +207,11 @@ class CostDashboard:
         """Estimated savings versus paying full prompt rate for cached tokens."""
         savings = 0.0
         for entry in self._entries:
-            regular = self.COST_PER_M_TOKENS.get(entry.layer, 0.0)
-            cached = self.CACHED_COST_PER_M_TOKENS.get(entry.layer, 0.0)
-            savings += (entry.cached_input_tokens / 1_000_000) * max(0.0, regular - cached)
+            rates = self._rates_for(entry.layer, entry.provider_model)
+            savings += (
+                (entry.cached_input_tokens / 1_000_000)
+                * max(0.0, rates.input_per_m - rates.cached_input_per_m)
+            )
         return savings
 
     def check_limit(self, threshold_usd: float | None) -> tuple[bool, float, float]:
@@ -239,9 +291,12 @@ class CostDashboard:
 
         by_layer = self.by_layer()
         if by_layer:
+            cost_by_layer: dict[str, float] = {}
+            for entry in self._entries:
+                cost_by_layer[entry.layer] = cost_by_layer.get(entry.layer, 0.0) + entry.cost_usd
             lines.append("\nPer layer:")
             for layer, tokens in sorted(by_layer.items()):
-                cost = (tokens / 1_000_000) * self.COST_PER_M_TOKENS.get(layer, 0)
+                cost = cost_by_layer.get(layer, 0.0)
                 lines.append(f"  {layer}: {tokens:,} tokens (${cost:.4f})")
 
         return "\n".join(lines)

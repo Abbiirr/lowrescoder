@@ -105,6 +105,15 @@ pub struct ReviewFinding {
 }
 
 #[allow(dead_code)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RestoreConfirmation {
+    pub checkpoint_id: String,
+    pub label: String,
+    pub created_at: String,
+    pub session_id: String,
+}
+
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct PickerState {
     pub kind: PickerKind,
@@ -191,6 +200,8 @@ pub struct AppState {
     pub scrollback: VecDeque<String>,
     pub stream_buf: String,
     pub stream_lines: Vec<String>,
+    pub thinking_buf: String,
+    pub thinking_lines: Vec<String>,
     pub composer_text: TextBuf,
     pub composer_lines: Vec<String>,
     pub followup_queue: VecDeque<String>,
@@ -204,6 +215,8 @@ pub struct AppState {
     pub tasks: Vec<protocol::TaskEntry>,
     pub subagents: Vec<protocol::SubagentEntry>,
     pub checkpoints: Vec<protocol::CheckpointEntry>,
+    pub restore_selected_idx: usize,
+    pub restore_confirmation: Option<RestoreConfirmation>,
     pub grep_query: Option<String>,
     pub grep_results: Vec<GrepHit>,
     pub diff_source: Option<String>,
@@ -238,6 +251,8 @@ impl AppState {
             scrollback: VecDeque::new(),
             stream_buf: String::new(),
             stream_lines: Vec::new(),
+            thinking_buf: String::new(),
+            thinking_lines: Vec::new(),
             composer_text: TextBuf::default(),
             composer_lines: Vec::new(),
             followup_queue: VecDeque::new(),
@@ -251,6 +266,8 @@ impl AppState {
             tasks: Vec::new(),
             subagents: Vec::new(),
             checkpoints: Vec::new(),
+            restore_selected_idx: 0,
+            restore_confirmation: None,
             grep_query: None,
             grep_results: Vec::new(),
             diff_source: None,

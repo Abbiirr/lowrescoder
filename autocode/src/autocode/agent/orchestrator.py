@@ -222,6 +222,7 @@ class Orchestrator:
             task_id=msg.task_id or "",
             layer=decision.layer.value,
             tokens_in=decision.estimated_tokens,
+            provider_model=f"{agent.model.provider} / {agent.model.model}",
         )
 
         # Emit event

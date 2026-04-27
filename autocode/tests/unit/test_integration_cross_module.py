@@ -10,18 +10,16 @@ from pathlib import Path
 from autocode.agent.bus import AgentBus, AgentMessage, MessageType
 from autocode.agent.completion import SessionStats
 from autocode.agent.cost_dashboard import CostDashboard
-from autocode.agent.identity import AgentCard, AgentRegistry, AgentRole, ModelSpec
-from autocode.agent.llmloop import LLMLOOP, EditPlan, Edit, EditType
+from autocode.agent.identity import AgentRegistry
+from autocode.agent.llmloop import LLMLOOP
 from autocode.agent.multi_edit import FileEdit, MultiEditPlan, apply_multi_edit
 from autocode.agent.policy_router import PolicyRouter, RoutingLayer
-from autocode.agent.sop_runner import SOPPipeline, SOPRunner, SOPStatus
 from autocode.agent.team import AgentTeam, TeamStore
-from autocode.agent.token_tracker import TokenTracker
-from autocode.eval.harness import EvalHarness, EvalScenario
+from autocode.doctor import run_doctor
 from autocode.eval.context_packer import ALL_STRATEGIES
+from autocode.eval.harness import EvalHarness, EvalScenario
 from autocode.external.mcp_server import MCPServer, MCPServerConfig
 from autocode.external.tracker import ExternalToolTracker
-from autocode.doctor import run_doctor
 
 
 def test_team_with_bus_and_sop() -> None:
@@ -63,7 +61,7 @@ def test_policy_router_with_cost_dashboard() -> None:
     assert decision.layer == RoutingLayer.L1
 
     # Track the cost
-    dash.record("scout", "task-1", decision.layer.value, tokens_in=100)
+    dash.record("scout", "task-1", decision.layer.value, tokens_in=100, provider_model="scout")
     assert dash.total_cost == 0.0  # L1 is free
     assert dash.by_layer()["l1"] == 100
 
@@ -160,8 +158,8 @@ def test_multi_edit_with_team(tmp_path: Path) -> None:
 def test_doctor_with_platform_detect() -> None:
     """Doctor integrates with platform detection."""
     results = run_doctor()
-    # Should have 9 checks (includes autocode command PATH check)
-    assert len(results) == 9
+    # Includes autocode command PATH and MCP readiness checks.
+    assert len(results) == 10
     # Python check should pass
     py_check = next(r for r in results if r.name == "python_version")
     assert py_check.passed

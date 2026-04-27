@@ -20,6 +20,24 @@ Basis:
 
 These baseline results mean the Rust TUI compiles and its unit tests are green. They do **not** mean the TUI UX or test harness state is correct.
 
+## Observed Flake Risks
+
+### F1. `stale_request_detection` failed once during Checkpoint 2 spinner validation
+
+Severity: Medium
+
+Observed / evidence:
+- During the 2026-04-26 Checkpoint 2 item 2.D full Rust gate, one `cd autocode/rtui && cargo test` run failed in `state::reducer_tests::tests::stale_request_detection`.
+- The isolated rerun `cargo test stale_request_detection -- --nocapture` passed.
+- A later full rerun `cargo test` also passed (`210` main tests after the 2.D additions).
+- The failure was recorded in comms Entry 1568 and Claude flagged it in Entry 1570 as a flake risk to track.
+
+Impact:
+- If this recurs during 2.G, treat it as a Checkpoint 2 reopener. Timing-sensitive tests can hide real runtime regressions.
+
+Status:
+- Non-reproducing as of 2026-04-26 after isolated and full reruns. No code fix attempted without a reliable repro.
+
 ## Confirmed product issues
 
 ### 1. Slash-command autocomplete/discoverability is missing

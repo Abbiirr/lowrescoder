@@ -977,6 +977,7 @@ class TestHandleCost:
             tokens_in=1_722,
             cached_input_tokens=8_512,
             tokens_out=5_389,
+            provider_model="openrouter / coding",
         )
         app._cost_dashboard = dashboard
 

@@ -24,6 +24,7 @@
 | `autocode chat --tui` | Fullscreen Textual fallback UI | `autocode/src/autocode/cli.py` |
 | `autocode chat --legacy` | Legacy Rich REPL fallback without the agent loop | `autocode/src/autocode/cli.py` |
 | `autocode serve --transport stdio|tcp` | Start the backend JSON-RPC server independently | `autocode/src/autocode/cli.py` |
+| `autocode mcp-serve --transport stdio [--audit-log-path PATH]` | Start the read-only MCP server used by generated external-agent configs; optional JSONL audit path records `MCPToolCall` activity | `autocode/src/autocode/cli.py`, `autocode/src/autocode/external/mcp_server.py` |
 | `autocode ask` | Single question, streamed response | `autocode/src/autocode/cli.py` |
 | `autocode edit` | AI-assisted file editing command surface | `autocode/src/autocode/cli.py` |
 | `autocode config` | Show/set/check/path for configuration | `autocode/src/autocode/cli.py` |
@@ -214,7 +215,7 @@ Use `autocode chat --tui` only as a fallback path. New frontend behavior should 
 | `/checkpoint` | `/ckpt` | List or save checkpoints |
 | `/undo` | — | Undo by restoring the most recent checkpoint |
 | `/diff` | — | Show git diff of changes in the current session |
-| `/cost` | `/tokens`, `/usage` | Show token usage and estimated cost for this session |
+| `/cost` | `/tokens`, `/usage` | Show token usage and model-aware estimated cost for this session |
 | `/export` | — | Export conversation to markdown file |
 
 ### 2.11 Configuration

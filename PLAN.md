@@ -1,6 +1,6 @@
 # Plan
 
-Last updated: 2026-04-26
+Last updated: 2026-04-27
 Owner: Codex
 Purpose: detailed implementation plan for the active backend-tightening/docs-refresh tranche plus historical roadmap sections. `EXECUTION_CHECKLIST.md` is the live status board; this file is the detailed execution map and ordered backlog. For every open checklist item, find the matching section or source-plan pointer here before implementing.
 
@@ -20,7 +20,7 @@ Purpose: detailed implementation plan for the active backend-tightening/docs-ref
 
 Follow this order unless the user explicitly redirects:
 
-1. **Stabilize-and-Release Program — ACTIVE.** Canonical plan: `docs/plan/stabilize-and-release-plan.md`. Three checkpoints: (1) stabilize for commit (1.A typed-payload consolidation done; 1.B comms cleanup batched, 1.C docs sync, 1.D regression gate, 1.E user commit), (2) Phase D + `/restore` interaction + backend robustness (2.A spinner activity-correlation done; 2.B-2.F + 2.G regression gate + 2.H commit pending), (3) Phase E release gate. **User directive 2026-04-26: complete Checkpoint 1 (comms cleanup → docs sync → regression gate) before resuming Phase D.** HR-5 program canonical: `docs/tui-testing/tui_implementation_plan.md` and `docs/tui-testing/tui_implementation_todo.md`.
+1. **Stabilize-and-Release Program — ACTIVE.** Canonical plan: `docs/plan/stabilize-and-release-plan.md`. Three checkpoints: (1) stabilize for commit (1.A typed-payload consolidation done; 1.B comms cleanup batched, 1.C docs sync done, 1.D regression gate green, 1.E user commit), (2) Phase D + `/restore` interaction + backend robustness (2.A spinner activity-correlation done; 2.E `/restore` interaction done; 2.F.1 MCP CLI wire-up done; 2.B thinking/output buffer split done; 2.F.3 cost rate accuracy done; 2.F.4+2.F.5 deprecation/lint fixes done; 2.C per-slash PTY coverage done; 2.D spinner verb badge done; 2.F.2 MCP integration polish done; 2.F.6 per-tool output-budget PTY done; 2.F.7 tranche exit-gate sweeps done; 2.G regression gate done; 2.H user commit remains user-owned), (3) Phase E release gate active by user direction, with 3.A gate verification, 3.B visual-polish unblock, 3.C release-grade regression, and 3.D closeout done; remaining item is user-owned 3.E commit/tag decision. HR-5 program canonical: `docs/tui-testing/tui_implementation_plan.md` and `docs/tui-testing/tui_implementation_todo.md`.
 2. **Backend Feature Improvement Tranche — local regression complete.** Use `docs/plan/backend-feature-improvement-plan.md` and `docs/plan/backend-feature-improvement-todo.md` as the closeout record. Docs-refresh A-G and the local deterministic regression gate are complete; live gateway canary remains before any broad benchmark sweep or product-path release claim.
 3. HR-5 Phase C-D follow-through surfaces and spinner/thinking parity.
 4. Section 1: Large Codebase Comprehension.
@@ -37,7 +37,7 @@ Follow this order unless the user explicitly redirects:
 | 0. Harness Architecture Refinement | Landed policy/reference | Use as design guardrails only; not the active work queue. |
 | 1. Large Codebase Comprehension | Backlog | Resume after higher-priority backend/TUI stabilization work. |
 | 1f. Stable TUI Program | Historical/deferred | Milestones C-F were absorbed or superseded by Rust TUI + HR-5 work; do not treat as current Go work. |
-| 1g. TUI Testing Strategy | HR-5 reference | Phase A benchmark latency, Phase B `/cc`, Phase C `/multi`, `/restore`, `/plan`, `/tasks`, `/grep`, `/review` + `/diff`, `/escalation`, typed payload consolidation, and Phase D spinner activity-correlation are closed; Phase D thinking/output split is next. |
+| 1g. TUI Testing Strategy | HR-5 reference | Phase A benchmark latency, Phase B `/cc`, Phase C `/multi`, `/restore`, `/plan`, `/tasks`, `/grep`, `/review` + `/diff`, `/escalation`, typed payload consolidation, Phase D spinner activity-correlation, `/restore` interaction, 2.F.1 MCP CLI wire-up, 2.B thinking/output split, 2.F.3 cost rate accuracy, 2.F.4+2.F.5, 2.C per-slash PTY coverage, 2.D spinner verb badge, 2.F.2 MCP integration polish, 2.F.6 per-tool output-budget PTY, 2.F.7 tranche exit-gate sweeps, 2.G regression gate, 3.A/3.B Phase E gate verification/visual-polish unblock, 3.C release-grade regression, and 3.D closeout are closed; remaining item is user-owned 3.E commit/tag decision. |
 | 2. Native External-Harness Orchestration | Backlog | Keep as post-stabilization harness roadmap. |
 | 3. Terminal-Bench / Harness Engineering | Backlog | Re-measure before broadening; not current. |
 | 4. Research Corpus Maintenance | Ongoing hygiene | Update when new research docs land. |
@@ -100,8 +100,9 @@ Current practical rule:
 - HR-5 Phase C `/escalation` real-data binding is complete in `autocode/docs/qa/test-results/20260426-140749-hr5-phase-c-escalation-real-data-binding-tui-verification.md`
 - HR-5 Phase C `/multi` mockup-copy cleanup is complete in `autocode/docs/qa/test-results/20260426-143024-hr5-phase-c-multi-mockup-copy-cleanup-tui-verification.md`
 - typed `tool.result_payload` consolidation is complete in `autocode/docs/qa/test-results/20260426-163752-hr5-typed-tool-result-payload-consolidation.md`
-- Phase D runtime-correctness follow-ons are now the next product slice
-- Phase E HR-5(a) binding count is `9 shipped surfaces`: `/cc`, `/multi`, `/restore` display binding, `/plan`, `/tasks`, `/grep`, `/review`, `/diff`, and `/escalation`
+- Checkpoint 2 is closed from builder/reviewer side: 2.G regression gate closed in `autocode/docs/qa/test-results/20260426-145234-checkpoint2-regression-gate.md`; 2.H user commit remains user-owned
+- Checkpoint 3 is active by user direction: 3.A/3.B closed in `autocode/docs/qa/test-results/20260427-113808-phase-e-gate-verification.md`; 3.C closed in `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`; 3.D closeout posted in `AGENTS_CONVERSATION.MD` Entry 1584; remaining item is user-owned 3.E commit/tag decision
+- Phase E HR-5(a) binding count is `9 shipped surfaces`: `/cc`, `/multi`, `/restore` display binding, `/plan`, `/tasks`, `/grep`, `/review`, `/diff`, and `/escalation`; the 10th planned slot, `/restore` interaction, is now complete
 - run a fresh live gateway canary before any full benchmark sweep or product-path release claim
 - keep deferred items visible in `DEFERRED_PENDING_TODO.md`; do NOT dismiss anything
 - treat Section 0 as landed foundation unless a new gap is discovered
@@ -335,9 +336,9 @@ Make the retrieval dependency/runtime contract explicit rather than half-optiona
 
 ## 1f. Stable TUI Program
 
-**Last updated: 2026-04-26**
+**Last updated: 2026-04-27**
 
-> **Status:** Historical/deferred. This section preserves the pre-Rust stable-v1 TUI plan and original Go/Python fallback assumptions. Do not treat it as the active frontend plan. Current execution flows through HR-5 real-data bindings in `docs/tui-testing/tui_implementation_plan.md`; Phase C `/escalation`, `/multi` cleanup, typed payload consolidation, and Phase D spinner activity-correlation are complete, and Phase D thinking/output split is next.
+> **Status:** Historical/deferred. This section preserves the pre-Rust stable-v1 TUI plan and original Go/Python fallback assumptions. Do not treat it as the active frontend plan. Current execution flows through `docs/plan/stabilize-and-release-plan.md` and HR-5 real-data bindings in `docs/tui-testing/tui_implementation_plan.md`; Phase C `/escalation`, `/multi` cleanup, typed payload consolidation, Phase D spinner activity-correlation, `/restore` interaction, 2.F.1 MCP CLI wire-up, 2.B thinking/output split, 2.F.3 cost rate accuracy, 2.F.4+2.F.5, 2.C per-slash PTY coverage, 2.D spinner verb badge, 2.F.2 MCP integration polish, 2.F.6 per-tool output-budget PTY, 2.F.7 tranche exit-gate sweeps, 2.G regression gate, 3.A/3.B Phase E gate verification/visual-polish unblock, 3.C release-grade regression, and 3.D closeout are complete. Remaining item is user-owned 3.E commit/tag decision.
 
 ### Goal
 
@@ -836,7 +837,7 @@ After Milestone A, move in order:
 
 ## 1g. TUI Testing Strategy (HR-5 Reference; Active Real-Data Binding)
 
-**Last updated:** 2026-04-26 (14-scene parity program remains the HR-5 reference. Phase A benchmark-latency close-out, Phase B `/cc`, Phase C `/multi`, `/restore` / checkpoints, Phase C `/plan`, Phase C `/tasks`, Phase C `/grep`, Phase C `/review` + `/diff`, Phase C `/escalation`, typed payload consolidation, and Phase D spinner activity-correlation are recorded; Phase D thinking/output buffer split is next.)
+**Last updated:** 2026-04-27 (14-scene parity program remains the HR-5 reference. Phase A benchmark-latency close-out, Phase B `/cc`, Phase C `/multi`, `/restore` / checkpoints, Phase C `/plan`, Phase C `/tasks`, Phase C `/grep`, Phase C `/review` + `/diff`, Phase C `/escalation`, typed payload consolidation, Phase D spinner activity-correlation, `/restore` interaction, 2.F.1 MCP CLI wire-up, 2.B thinking/output buffer split, 2.F.3 cost rate accuracy, 2.F.4+2.F.5, 2.C per-slash PTY coverage, 2.D spinner verb badge, 2.F.2 MCP integration polish, 2.F.6 per-tool output-budget PTY, 2.F.7 tranche exit-gate sweeps, 2.G regression gate, 3.A/3.B Phase E gate verification/visual-polish unblock, 3.C release-grade regression, and 3.D closeout are recorded; remaining item is user-owned 3.E commit/tag decision.)
 **Status:** Architecture APPROVED by Codex Entry 1141 + doc-polish
 delta APPROVED by Codex Entry 1144. Phase 1 Track 1 substrate
 implemented under `autocode/tests/tui-comparison/` with positive +
@@ -887,8 +888,22 @@ Typed `tool.result_payload` consolidation is complete via
 `autocode/docs/qa/test-results/20260426-163752-hr5-typed-tool-result-payload-consolidation.md`.
 Phase D spinner activity-correlation is complete via
 `autocode/docs/qa/test-results/20260426-170658-hr5-phase-d-spinner-activity-correlation.md`.
-The next active slice is Phase D thinking/output buffer split. The
-latest runtime slice is `autocode/docs/qa/test-results/20260422-114723-tui-runtime-gateway-pass.md`.
+2.D spinner verb badge is complete via
+`autocode/docs/qa/test-results/20260426-195342-hr5-phase-d-spinner-verb-badge-tui-verification.md`.
+2.F.2 MCP integration polish is complete via
+`autocode/docs/qa/test-results/20260426-200724-2f2-mcp-integration-polish.md`.
+2.F.6 per-tool output-budget PTY is complete via
+`autocode/docs/qa/test-results/20260426-201726-2f6-tool-output-budget-pty-verification.md`.
+2.F.7 tranche exit-gate sweeps are complete via
+`autocode/docs/qa/test-results/20260426-143510-2f7-tranche-exit-gate-sweeps.md`.
+2.G regression gate is complete via
+`autocode/docs/qa/test-results/20260426-145234-checkpoint2-regression-gate.md`.
+3.A/3.B Phase E gate verification and visual-polish unblock are complete via
+`autocode/docs/qa/test-results/20260427-113808-phase-e-gate-verification.md`.
+3.C release-grade regression is complete via
+`autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`.
+3.D closeout is posted in `AGENTS_CONVERSATION.MD` Entry 1584. Remaining
+item is user-owned 3.E commit/tag decision.
 
 ### Post-Codex-1138 Three-Track Architecture (AUTHORITATIVE)
 

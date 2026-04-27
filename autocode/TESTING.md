@@ -16,6 +16,9 @@
 | Unit tests | `uv run pytest autocode/tests/unit/ -v` | ~180s |
 | Unit tests + coverage | `make test` | ~200s |
 | Lint | `make lint` | ~20s |
+| MCP CLI/server slice | `uv run pytest autocode/tests/unit/test_cli.py::TestCLIMCPServe autocode/tests/unit/test_mcp_server.py autocode/tests/unit/test_config_merge.py autocode/tests/unit/test_mcp_real_tools.py autocode/tests/unit/test_doctor.py -q` | ~1s |
+| Checkpoint 2 PTY canary | `python3 autocode/tests/pty/pty_smoke_rust_checkpoint2_canary.py` | ~15s |
+| Tool output-budget PTY smoke | `python3 autocode/tests/pty/pty_smoke_rust_tool_output_budget.py` | ~15s |
 | Type check | `cd autocode && uv run mypy src/autocode/` | ~15s |
 | Sprint verification | `uv run pytest autocode/tests/test_sprint_verify.py -v` | ~10s |
 | Rust TUI tests | `cd autocode/rtui && cargo test` | ~1s |
@@ -205,6 +208,10 @@ Extend these harnesses instead of creating one-off scripts:
 |---|---|
 | `autocode/tests/pty/pty_e2e_real_gateway.py` | Real backend plus real LLM gateway, used for supported-path canaries |
 | `autocode/tests/pty/pty_smoke_rust_comprehensive.py` | Broad Rust TUI surfaces and slash-command smoke |
+| `autocode/tests/pty/pty_smoke_rust_slash_surfaces.py` | High-risk slash detail-surface smoke for `/help`, `/plan`, `/tasks`, `/grep`, `/review`, `/diff`, `/restore`, `/cc`, `/escalation`, and `/multi` |
+| `autocode/tests/pty/pty_smoke_rust_checkpoint2_canary.py` | Checkpoint 2 canary for thinking OFF/ON, tool sequence/truncation, and cost-limit warning visibility |
+| `autocode/tests/pty/pty_smoke_rust_thinking_split.py` | Thinking-token stream and visible-output stream render separately |
+| `autocode/tests/pty/pty_smoke_rust_restore_interaction.py` | `/restore` row navigation, confirmation, `checkpoint.restore`, and transcript feedback |
 | `autocode/tests/pty/pty_smoke_rust_stage3b.py` | Stage 3B inspection surfaces |
 | `autocode/tests/pty/pty_smoke_rust_m1.py` | M1 startup and scaffold checks |
 | `autocode/tests/pty/dead_backend.py` | Failure-mode backend for recovery behavior |
