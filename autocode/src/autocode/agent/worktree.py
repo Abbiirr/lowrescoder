@@ -1,9 +1,11 @@
 """Worktree isolation for subagents and risky tasks.
 
 Based on Claude Code's worktree isolation pattern: create a
-temporary git worktree for risky operations, merge back on success.
+temporary git worktree for risky operations.
 
 Uses git worktrees for lightweight isolation without full clones.
+Integration back to the parent repository is user-owned: this module never
+commits, merges, resets, checkouts, restores, or deletes branches.
 """
 
 from __future__ import annotations
@@ -31,8 +33,8 @@ def create_worktree(
     """Create an isolated git worktree for a subagent.
 
     Creates a new branch and worktree in a temp location.
-    The subagent works in the worktree; changes are merged
-    back on success or discarded on failure.
+    The subagent works in the worktree; integration back to the parent branch
+    is user-owned.
     """
     wt_id = f"{prefix}-{uuid.uuid4().hex[:8]}"
     branch = f"autocode/{wt_id}"
@@ -59,52 +61,28 @@ def create_worktree(
 
 
 def merge_worktree(info: WorktreeInfo) -> bool:
-    """Merge worktree changes back into the parent branch.
+    """Report whether a worktree is clean enough for user-owned integration.
 
-    Returns True if merge succeeded.
+    Auto-merge used to live here, but commits and merges are user-owned
+    operations. Return False when changes exist so callers can surface a
+    proposed command sequence instead of executing it.
     """
     try:
-        # Check if worktree has changes
         status = subprocess.run(
             ["git", "status", "--porcelain"],
             cwd=str(info.path),
             capture_output=True, text=True, timeout=10,
         )
-        if status.stdout.strip():
-            # Commit pending changes
-            subprocess.run(
-                ["git", "add", "-A"],
-                cwd=str(info.path),
-                capture_output=True, timeout=10,
-            )
-            subprocess.run(
-                ["git", "commit", "-m", f"autocode: worktree {info.worktree_id}"],
-                cwd=str(info.path),
-                capture_output=True, timeout=10,
-            )
-
-        # Merge into parent
-        result = subprocess.run(
-            ["git", "merge", "--no-ff", info.branch,
-             "-m", f"Merge autocode worktree {info.worktree_id}"],
-            cwd=str(info.parent_repo),
-            capture_output=True, text=True, timeout=30,
-        )
-        return result.returncode == 0
+        return status.returncode == 0 and not status.stdout.strip()
     except Exception:
         return False
 
 
 def cleanup_worktree(info: WorktreeInfo) -> None:
-    """Remove a worktree and its branch (discard changes)."""
+    """Remove a worktree path without deleting its branch."""
     try:
         subprocess.run(
             ["git", "worktree", "remove", "--force", str(info.path)],
-            cwd=str(info.parent_repo),
-            capture_output=True, timeout=10,
-        )
-        subprocess.run(
-            ["git", "branch", "-D", info.branch],
             cwd=str(info.parent_repo),
             capture_output=True, timeout=10,
         )

@@ -294,6 +294,16 @@ Wire format: newline-delimited JSON (one JSON object per line) over either stdio
 
 The system always tries the cheapest layer first and only escalates when necessary. Layers 1-2 use zero LLM tokens.
 
+Java LSP support is registered through `autocode.layer2.lsp_servers.java.JavaLSPAdapter`. It maps `.java` files to `jdtls`, keeps startup lazy through the shared subprocess LSP client, and reports `jdtls` plus Java 17+ runtime readiness through `autocode doctor` without spawning the language server. Tests assert only project-local symbols so results do not depend on JDK source or Javadoc availability.
+
+JavaScript and TypeScript LSP support use `typescript-language-server --stdio` through separate adapter classes for explicit routing: `.js` / `.jsx` / `.mjs` map to JavaScript, and `.ts` / `.tsx` / `.d.ts` map to TypeScript. Both adapters share non-spawning readiness metadata for the server and `typescript` peer dependency; TypeScript adds type-diagnostic initialization metadata.
+
+C, Kotlin, and Python LSP support follow the same adapter pattern. C maps `.c` / `.h` to `clangd` with `compile_commands.json` discovery, Kotlin maps `.kt` / `.kts` to `kotlin-language-server` with an extended timeout and Java runtime readiness, and Python maps `.py` / `.pyi` to `pylsp` while preserving the existing Jedi-backed `lsp_*` tools as a fallback path for one release.
+
+Go and Rust complete the current eight-language LSP adapter matrix. Go maps `.go` files to `gopls` with `go.mod` discovery and Go 1.16+ readiness metadata. Rust maps `.rs` files to `rust-analyzer` with `Cargo.toml` discovery, rustup component readiness metadata, clippy-diagnostics initialization metadata, and an extended cold-cache timeout.
+
+The agent runtime consumes that LSP substrate through post-edit auto-verify. After a successful filesystem-mutating tool call, `AgentLoop` extracts touched files, runs `autocode.agent.auto_verify.verify_after_edit(...)` for files with registered adapters, and appends normalized diagnostics to the tool result. Unsupported languages are skipped, `/verify on|off|status` controls the feature, persistent failures do not roll back automatically, and the existing checkpoint/rollback path remains user-confirmable.
+
 ---
 
 ## Directory Structure

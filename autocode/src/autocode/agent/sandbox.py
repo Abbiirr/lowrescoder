@@ -264,17 +264,23 @@ async def _communicate_async(
     process: asyncio.subprocess.Process,
     timeout_s: int,
 ) -> tuple[str, str, int]:
+    communicate_task = asyncio.create_task(process.communicate())
     try:
-        stdout, stderr = await asyncio.wait_for(
-            process.communicate(),
-            timeout=timeout_s,
-        )
+        stdout, stderr = await asyncio.wait_for(communicate_task, timeout=timeout_s)
     except TimeoutError:
         _terminate_process_group(process)
+        if not communicate_task.done():
+            communicate_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await communicate_task
         await _wait_for_process_exit(process)
         return "", f"Timeout after {timeout_s}s", 124
     except asyncio.CancelledError:
         _terminate_process_group(process)
+        if not communicate_task.done():
+            communicate_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await communicate_task
         await _wait_for_process_exit(process)
         raise
 

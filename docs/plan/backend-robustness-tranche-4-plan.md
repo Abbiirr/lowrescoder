@@ -91,14 +91,14 @@ After each checkpoint gate is green: user reviews, optionally commits (commits a
 **Surface:**
 - New reducer state in `autocode/src/autocode/agent/loop.py` and `autocode/src/autocode/session/checkpoint_store.py`: snapshot working-tree-relevant files before each `mutates_fs=True` tool call.
 - **Snapshot mechanism: local file copies under `~/.autocode/snapshots/<session_id>/<tool_call_id>/`.** No `git stash` (per AGENTS.md "no tree-mutating git commands"). G1 has no dependency on G7'.
-- New slash command `/rollback` (alias `/rb`): list recent per-tool checkpoints with diff preview and rollback action.
+- New slash command `/rollback` (alias `/rb`): list recent per-tool checkpoints, preview by ID or `--last`, and restore only via explicit `/rollback restore <id>`.
 - Reuse existing `CheckpointStore` schema; add a `parent_tool_call_id` field plus a per-tool-checkpoint type.
 - Rollback execution: agent overwrites working-tree files from local snapshot directory after user confirms; agent does NOT run `git checkout`/`git restore`.
 
 **TDD:**
 - RED unit test: agent loop snapshots before each `write_file` / `edit_file` / `apply_patch` / `run_command` call.
 - RED reducer test: `/rollback` lists per-tool checkpoints with file diffs.
-- RED reducer test: confirming `/rollback <id>` reverses changes from the snapshot.
+- RED reducer test: `/rollback <id>` previews without restoring; confirming with `/rollback restore <id>` reverses changes from the snapshot.
 
 **Validation:** focused unit tests + Rust render test + PTY smoke that runs an edit, triggers `/rollback`, and asserts the file returns to pre-edit state.
 

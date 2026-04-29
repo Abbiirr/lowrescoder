@@ -63,6 +63,29 @@ _MVP_SCENES: frozenset[str] = frozenset(
     }
 )
 
+_REFERENCE_SCENE_ORDER: tuple[str, ...] = (
+    "ready",
+    "active",
+    "multi",
+    "plan",
+    "review",
+    "cc",
+    "recovery",
+    "restore",
+    "sessions",
+    "palette",
+    "diff",
+    "grep",
+    "escalation",
+    "narrow",
+)
+
+_SCENE_ALIASES: dict[str, str] = {
+    "center": "cc",
+    "search": "grep",
+    "escalate": "escalation",
+}
+
 
 @dataclass
 class BundlerPayload:
@@ -290,7 +313,7 @@ _REGION_CLASSES: frozenset[str] = frozenset(
 
 
 def _collect_scene(template_id: str, attrs: dict[str, str], inner: str) -> SceneRecord:
-    scene_id = template_id.removeprefix("t-")
+    scene_id = _SCENE_ALIASES.get(template_id.removeprefix("t-"), template_id.removeprefix("t-"))
 
     walker = _TextAndClassCollector()
     walker.feed(inner)
@@ -301,6 +324,8 @@ def _collect_scene(template_id: str, attrs: dict[str, str], inner: str) -> Scene
     page_match = re.match(r"\s*(\d+)", label)
     page_number = int(page_match.group(1)) if page_match else 0
 
+    if "composer" in walker.class_counts and "composer-wrap" not in walker.class_counts:
+        walker.class_counts["composer-wrap"] = walker.class_counts["composer"]
     region_classes = sorted(_REGION_CLASSES.intersection(walker.class_counts))
 
     return SceneRecord(
@@ -328,8 +353,15 @@ def extract_scenes(html_path: Path) -> list[SceneRecord]:
         inner = payload["inner"]
         scenes.append(_collect_scene(tid, attrs, inner))
 
-    scenes.sort(key=lambda s: (s.page_number, s.scene_id))
-    return scenes
+    by_scene: dict[str, SceneRecord] = {}
+    for scene in scenes:
+        if scene.scene_id in _REFERENCE_SCENE_ORDER:
+            by_scene.setdefault(scene.scene_id, scene)
+    return [
+        by_scene[scene_id]
+        for scene_id in _REFERENCE_SCENE_ORDER
+        if scene_id in by_scene
+    ]
 
 
 # ----------------------------------------------------------------- yaml emit
@@ -387,7 +419,14 @@ def emit_manifest_yaml(scenes: list[SceneRecord]) -> str:
 def _default_html_path() -> Path:
     here = Path(__file__).resolve()
     repo_root = here.parents[3]
-    return repo_root / "tui-references" / "AutoCode TUI _standalone_.html"
+    reference_dir = repo_root / "tui-references"
+    preferred = reference_dir / "AutoCode TUI _standalone_.html"
+    if preferred.is_file():
+        return preferred
+    exported = sorted(reference_dir.glob("AutoCode TUI _standalone_*.html"))
+    if exported:
+        return exported[0]
+    return preferred
 
 
 def _default_out_path() -> Path:

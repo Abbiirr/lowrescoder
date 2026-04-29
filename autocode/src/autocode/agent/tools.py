@@ -394,12 +394,14 @@ def _handle_read_file(
 
 
 def _git_auto_commit(file_path: Path) -> str | None:
-    """Create a safety commit before modifying a file.
+    """Create a local safety snapshot before modifying a tracked file.
 
-    Returns the commit SHA if successful, None otherwise.
-    Only commits if the file is tracked in a git repo.
+    Returns a snapshot token if successful, None otherwise.
+    Kept under the legacy name for compatibility; this never commits.
     """
+    import shutil
     import subprocess
+    import uuid
 
     try:
         # Find git root
@@ -434,30 +436,16 @@ def _git_auto_commit(file_path: Path) -> str | None:
         if diff_check.returncode == 0:
             return None  # No changes to commit
 
-        # Auto-commit the current state
-        subprocess.run(
-            ["git", "add", str(file_path)],
-            capture_output=True,
-            timeout=5,
-            cwd=git_root.stdout.strip(),
+        snapshot_dir = (
+            Path.home()
+            / ".autocode"
+            / "safety-snapshots"
+            / uuid.uuid4().hex
         )
-        result = subprocess.run(
-            ["git", "commit", "-m", f"autocode: safety snapshot before edit ({file_path.name})"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            cwd=git_root.stdout.strip(),
-            env=_safe_shell_env(),
-        )
-        if result.returncode == 0:
-            sha = subprocess.run(
-                ["git", "rev-parse", "--short", "HEAD"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                cwd=git_root.stdout.strip(),
-            )
-            return sha.stdout.strip()
+        snapshot_dir.mkdir(parents=True, exist_ok=False)
+        snapshot_path = snapshot_dir / file_path.name
+        shutil.copy2(file_path, snapshot_path)
+        return str(snapshot_dir)
     except Exception:
         pass
     return None

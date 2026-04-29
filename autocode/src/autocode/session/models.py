@@ -229,6 +229,9 @@ class CheckpointRow(BaseModel):
     context_summary: str = ""
     active_files: str = "[]"
     created_at: datetime
+    parent_tool_call_id: str | None = None
+    tool_call_idx: int | None = None
+    kind: str | None = None
 
 
 def ensure_tables(conn: sqlite3.Connection) -> None:

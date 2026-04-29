@@ -219,6 +219,51 @@ class TestAgentLoop:
         )
 
     @pytest.mark.asyncio()
+    async def test_interruptible_async_tool_is_drained_on_cancellation(
+        self,
+        store: SessionStore,
+        session_id: str,
+    ) -> None:
+        """Cancelled async tool handlers are awaited so coroutine warnings do not leak."""
+        started = asyncio.Event()
+        cleaned_up = asyncio.Event()
+
+        async def slow_tool() -> str:
+            started.set()
+            try:
+                await asyncio.sleep(60)
+            finally:
+                cleaned_up.set()
+            return "unreachable"
+
+        registry = ToolRegistry()
+        registry.register(ToolDefinition(
+            name="slow_tool",
+            description="Slow async tool.",
+            parameters={"type": "object", "properties": {}},
+            handler=slow_tool,
+            interruptible=True,
+        ))
+        loop = AgentLoop(
+            provider=AsyncMock(),
+            tool_registry=registry,
+            approval_manager=ApprovalManager(ApprovalMode.AUTO),
+            session_store=store,
+            session_id=session_id,
+        )
+        tool = registry.get("slow_tool")
+        assert tool is not None
+
+        task = asyncio.create_task(loop._invoke_tool_handler(tool, {}))
+        await started.wait()
+
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+        assert cleaned_up.is_set()
+
+    @pytest.mark.asyncio()
     async def test_large_tool_result_is_recorded_in_tool_result_cache(
         self, store: SessionStore, session_id: str,
     ) -> None:
@@ -956,6 +1001,63 @@ class TestApprovalPrompting:
         assert len(callback_calls) == 0
         # But the file should have been written
         assert (tmp_path / "auto.txt").exists()
+
+    @pytest.mark.asyncio()
+    async def test_mutating_tool_success_stages_and_surfaces_commit_proposal(
+        self,
+        store: SessionStore,
+        session_id: str,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Successful FS-mutating tools should stage touched files and surface a proposal."""
+        from autocode.agent.git_aware_staging import StagingResult
+
+        tool_response = LLMResponse(
+            content="",
+            tool_calls=[ToolCall(
+                id="tc1",
+                name="write_file",
+                arguments={"path": "staged.txt", "content": "staged"},
+            )],
+        )
+        final_response = LLMResponse(content="Done")
+        provider = _make_mock_provider([tool_response, final_response])
+        registry = create_default_registry(project_root=str(tmp_path))
+        approval = ApprovalManager(ApprovalMode.AUTO)
+        calls: list[tuple[list[str], Path]] = []
+
+        def fake_stage(files: list[str], *, project_root: Path, **kwargs: Any) -> StagingResult:
+            calls.append((files, project_root))
+            return StagingResult(
+                staged=True,
+                files=files,
+                proposed_commit_message="Update staged.txt",
+            )
+
+        monkeypatch.setattr("autocode.agent.loop.stage_post_edit", fake_stage)
+        loop = AgentLoop(
+            provider,
+            registry,
+            approval,
+            store,
+            session_id,
+            project_root=tmp_path,
+        )
+        tool_results: list[str] = []
+
+        await loop.run(
+            "write a file",
+            on_tool_call=lambda name, status, result: tool_results.append(result)
+            if status == "completed"
+            else None,
+        )
+
+        assert calls == [(["staged.txt"], tmp_path)]
+        assert any(
+            "Proposed commit message: Update staged.txt" in result
+            for result in tool_results
+        )
 
     @pytest.mark.asyncio()
     async def test_auto_mode_hard_blocks_dangerous_write_path(

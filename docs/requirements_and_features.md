@@ -285,7 +285,7 @@ Phase 3 implemented 2026-02-13. All gates passed. 840 Python tests, all Go tests
 | BM25 keyword search with TF-IDF scoring | DONE | `src/autocode/layer2/embeddings.py` |
 | LanceDB code index (file-hash invalidation, incremental, gitignore-aware) | DONE | `src/autocode/layer2/index.py` |
 | Hybrid search (BM25 + vector + RRF fusion, k=60) | DONE | `src/autocode/layer2/search.py` |
-| Repository map generator (ranked symbols, 600-token budget) | DONE | `src/autocode/layer2/repomap.py` |
+| Repository map generator (dependency-ranked symbols, mtime+sha cache, Python+Go extraction, 1000-token default budget) | DONE | `src/autocode/layer2/repomap.py` |
 | Rules loader (CLAUDE.md, .rules/, .cursorrules) | DONE | `src/autocode/layer2/rules.py` |
 | Context assembler (5000-token budget, priority-based) | DONE | `src/autocode/core/context.py` |
 

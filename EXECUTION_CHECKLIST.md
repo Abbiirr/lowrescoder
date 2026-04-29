@@ -1,7 +1,7 @@
 # Execution Checklist
 
-Last updated: 2026-04-27 evening (**Stabilize-and-Release Tranche 3 fully CLOSED** — user 3.E commit landed in `1700d66 Closes backend v2`; optional release tag at user discretion. **Backend Robustness Tranche 4 plans are READY**: `docs/plan/backend-robustness-tranche-4-plan.md` + `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md` + `docs/plan/backend-robustness-tranche-4-checklist.md`; first slice on user kickoff is C4.G1 per-tool-call atomic checkpoint. Tranche-3 comms archive cut: `docs/communication/old/2026-04-27-stabilize-and-release-tranche-3-1548-1586.md`. Agents must not commit, push, tag, or run any tree-mutating git command.)
-Owner: Codex (Tranche 4 builder, on user kickoff) / Claude (Tranche 4 reviewer-architect)
+Last updated: 2026-04-29 (**Backend Robustness Tranche 4 C5.GATE locally complete, pending Claude review.** C4 foundation/safety and C5 multi-language LSP + auto-verify are locally regression-green. Latest gate artifact: `autocode/docs/qa/test-results/20260429-111435-c5-gate-regression-and-benchmark.md`. Live B7-B29/B7-B30 clean sweep remains deferred behind gateway/provider stabilization per `DEFERRED_PENDING_TODO.md` §6.6. Tranche 4 master plan: `docs/plan/backend-robustness-tranche-4-plan.md` + sub-plan + checklist. Active comms starts at Entry 1657; C5.G4 review request is Entry 1659, C5.GATE kickoff is Entry 1660. Agents must not commit, push, tag, or run any tree-mutating git command.)
+Owner: OpenCode (Builder primary, Codex fallback when OpenCode is unavailable) / Claude (Reviewer-Architect; Codex co-review available if user redirects)
 Purpose: live status checklist for source-of-truth work, active next-frontier research-to-implementation items, and any benchmark/harness follow-up. Re-check this file every 10 minutes during active work.
 
 Detailed implementation map:
@@ -19,11 +19,17 @@ Detailed implementation map:
 
 ## Current Active Queue
 
-**Active program: Backend Robustness Tranche 4** (`docs/plan/backend-robustness-tranche-4-plan.md`). Plans READY; awaiting explicit user kickoff for first slice C4.G1.
+**Active program: Backend Robustness Tranche 4** (`docs/plan/backend-robustness-tranche-4-plan.md`). C5.GATE is locally complete and waiting for Claude review. Builder = OpenCode primary, Codex fallback when OpenCode is unavailable. Reviewer = Claude default.
+
+**Authoritative current direction:** `AGENTS_CONVERSATION.MD` Entry 1657 (post-archive roadmap and C5.G4 handoff), Entry 1659 (C5.G4 review request), and Entry 1660 (C5.GATE verification kickoff).
+
+**Active sequence:**
+1. **C5.GATE — LOCAL COMPLETE, REVIEW PENDING.** Full unit `2079 passed, 12 skipped`; benchmark harness `77 passed`; all 8 LSP PTY smokes passed; auto-verify smoke passed; `git diff --check` clean. Artifact: `autocode/docs/qa/test-results/20260429-111435-c5-gate-regression-and-benchmark.md`.
+2. **C6.G5 — NEXT AFTER REVIEW.** Headless `--json` / `--output-schema` mode.
+3. **C6.G6 + C6.GATE, then C7.G8-G15 + C7.GATE** — remaining stable-commit path per master plan.
+4. **Parked for after Tranche 4 closes:** Packets 1, 2, 4, 5 from new TUI kickoff (audit, current-architecture doc, fixtures, Rust TUI plan).
 
 **Predecessor Stabilize-and-Release Tranche 3** is fully closed (Codex Entry 1584 closeout, Claude Entry 1585 reviewer APPROVE, Codex Entry 1586 ack, user 3.E commit `1700d66 Closes backend v2` 2026-04-27). Optional release tag remains user discretion.
-
-**Tranche 4 first-slice pickup (when user authorises):** C4.G1 per-tool-call atomic checkpoint with diff-rollback. See `docs/plan/backend-robustness-tranche-4-checklist.md` §4.G1 for atomic task list.
 
 Below is the historical Tranche 3 record kept for reference. Checkpoint 2 work queue in `AGENTS_CONVERSATION.MD` Entry 1548 was closed from builder/reviewer side. Checkpoint 3 was started by user direction on 2026-04-27 and closed via user commit `1700d66 Closes backend v2`. Optional release tag remains user discretion.
 

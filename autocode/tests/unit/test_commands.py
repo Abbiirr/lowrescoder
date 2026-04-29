@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -92,8 +93,10 @@ class TestCommandRouter:
             "copy",
             "freeze",
             "thinking",
+            "verify",
             "clear",
             "index",
+            "repomap",
             "tasks",
             "plan",
             "research",
@@ -104,6 +107,7 @@ class TestCommandRouter:
             "loop",
             "tui",
             "undo",
+            "rollback",
             "diff",
             "cost",
             "export",
@@ -221,6 +225,13 @@ class TestCommandRouter:
         assert result is not None
         assert result[0].name == "freeze"
 
+    def test_repomap_alias_dispatches(self) -> None:
+        """The /map alias resolves to /repomap."""
+        router = create_default_router()
+        result = router.dispatch("/map")
+        assert result is not None
+        assert result[0].name == "repomap"
+
 
 def _make_mock_app(tmp_path: Path) -> MagicMock:
     """Create a mock app with real SessionStore and config for handler tests."""
@@ -298,6 +309,162 @@ class TestHandleNew:
         await _handle_new(app, "My Custom Title")
         assert app._agent_loop is None
         assert "My Custom Title" in app._messages[-1]
+
+
+class TestHandleRollback:
+    def _mock_checkpoint(self, checkpoint_id: str = "ckpt123") -> SimpleNamespace:
+        return SimpleNamespace(
+            id=checkpoint_id,
+            label="pre write_file",
+            kind="pre_tool",
+            active_files='["src/app.py"]',
+            parent_tool_call_id="tool123",
+        )
+
+    @pytest.mark.asyncio()
+    async def test_rollback_restore_parses_restore_subcommand_before_lookup(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """`/rollback restore <id>` restores checkpoint <id>, not `restore <id>`."""
+        from autocode.app.commands import _handle_rollback
+
+        app = _make_mock_app(tmp_path)
+        cp = self._mock_checkpoint("ckpt123")
+        cp_store = MagicMock()
+        cp_store.get_checkpoint.side_effect = lambda checkpoint_id: (
+            cp if checkpoint_id == "ckpt123" else None
+        )
+        snap_dir = tmp_path / ".autocode" / "snapshots" / app.session_id / "tool123"
+        snap_dir.mkdir(parents=True)
+
+        with (
+            patch("autocode.session.checkpoint_store.CheckpointStore", return_value=cp_store),
+            patch("autocode.session.task_store.TaskStore", return_value=MagicMock()),
+            patch("autocode.session.file_snapshot.restore_snapshot", return_value=["src/app.py"]),
+            patch("pathlib.Path.home", return_value=tmp_path),
+        ):
+            await _handle_rollback(app, "restore ckpt123")
+
+        assert cp_store.get_checkpoint.call_args_list[0].args == ("ckpt123",)
+        cp_store.restore_checkpoint.assert_called_once()
+        assert "Rolled back to checkpoint" in app._messages[-1]
+
+    @pytest.mark.asyncio()
+    async def test_rollback_checkpoint_id_previews_without_restore(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """`/rollback <id>` shows preview only and does not restore."""
+        from autocode.app.commands import _handle_rollback
+
+        app = _make_mock_app(tmp_path)
+        cp_store = MagicMock()
+        cp_store.get_checkpoint.return_value = self._mock_checkpoint("ckpt123")
+
+        with patch("autocode.session.checkpoint_store.CheckpointStore", return_value=cp_store):
+            await _handle_rollback(app, "ckpt123")
+
+        cp_store.get_checkpoint.assert_called_with("ckpt123")
+        cp_store.restore_checkpoint.assert_not_called()
+        assert "Rollback preview" in app._messages[-1]
+        assert "/rollback restore ckpt123" in app._messages[-1]
+
+    @pytest.mark.asyncio()
+    async def test_rollback_last_previews_latest_without_restore(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """`/rollback --last` previews latest checkpoint; restore remains explicit."""
+        from autocode.app.commands import _handle_rollback
+
+        app = _make_mock_app(tmp_path)
+        cp = self._mock_checkpoint("latest123")
+        cp_store = MagicMock()
+        cp_store.list_per_tool_checkpoints.return_value = [cp]
+        cp_store.get_checkpoint.return_value = cp
+
+        with patch("autocode.session.checkpoint_store.CheckpointStore", return_value=cp_store):
+            await _handle_rollback(app, "--last")
+
+        cp_store.get_checkpoint.assert_called_with("latest123")
+        cp_store.restore_checkpoint.assert_not_called()
+        assert "Rollback preview" in app._messages[-1]
+        assert "/rollback restore latest123" in app._messages[-1]
+
+    @pytest.mark.asyncio()
+    async def test_rollback_restore_without_id_errors_cleanly(self, tmp_path: Path) -> None:
+        """`/rollback restore` with no ID returns a clean error."""
+        from autocode.app.commands import _handle_rollback
+
+        app = _make_mock_app(tmp_path)
+        cp_store = MagicMock()
+        cp_store.get_checkpoint.return_value = None
+
+        with patch("autocode.session.checkpoint_store.CheckpointStore", return_value=cp_store):
+            await _handle_rollback(app, "restore")
+
+        cp_store.get_checkpoint.assert_not_called()
+        cp_store.restore_checkpoint.assert_not_called()
+        assert "Usage: `/rollback restore <id>`" in app._messages[-1]
+
+    @pytest.mark.asyncio()
+    async def test_rollback_without_args_lists_per_tool_checkpoints(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """`/rollback` lists recent per-tool checkpoints."""
+        from autocode.app.commands import _handle_rollback
+
+        app = _make_mock_app(tmp_path)
+        cp_store = MagicMock()
+        cp_store.list_per_tool_checkpoints.return_value = [
+            self._mock_checkpoint("ckpt123"),
+        ]
+
+        with patch("autocode.session.checkpoint_store.CheckpointStore", return_value=cp_store):
+            await _handle_rollback(app, "")
+
+        cp_store.list_per_tool_checkpoints.assert_called_once()
+        cp_store.restore_checkpoint.assert_not_called()
+        assert "Per-tool checkpoints" in app._messages[-1]
+        assert "`ckpt123`" in app._messages[-1]
+
+    @pytest.mark.asyncio()
+    async def test_rollback_restore_nonexistent_errors_without_restore_attempt(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """`/rollback restore <missing>` reports a clean miss and does not restore."""
+        from autocode.app.commands import _handle_rollback
+
+        app = _make_mock_app(tmp_path)
+        cp_store = MagicMock()
+        cp_store.get_checkpoint.return_value = None
+
+        with patch("autocode.session.checkpoint_store.CheckpointStore", return_value=cp_store):
+            await _handle_rollback(app, "restore missing123")
+
+        cp_store.get_checkpoint.assert_called_once_with("missing123")
+        cp_store.restore_checkpoint.assert_not_called()
+        assert "Checkpoint not found: `missing123`" in app._messages[-1]
+
+
+class TestHandleRepoMap:
+    @pytest.mark.asyncio()
+    async def test_repomap_command_generates_repo_map(self, tmp_path: Path) -> None:
+        """`/repomap` builds and displays a ranked repo map."""
+        from autocode.app.commands import _handle_repomap
+
+        app = _make_mock_app(tmp_path)
+        generator = MagicMock()
+        generator.generate.return_value = "# Repo Map\n\n## main.py\n- function: `main` L1\n"
+
+        with patch("autocode.layer2.repomap.RepoMapGenerator", return_value=generator):
+            await _handle_repomap(app, "")
+
+        generator.generate.assert_called_once_with(tmp_path)
+        assert app._messages[-1].startswith("# Repo Map")
 
 
 class TestHandleResume:

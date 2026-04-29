@@ -158,8 +158,8 @@ def test_multi_edit_with_team(tmp_path: Path) -> None:
 def test_doctor_with_platform_detect() -> None:
     """Doctor integrates with platform detection."""
     results = run_doctor()
-    # Includes autocode command PATH and MCP readiness checks.
-    assert len(results) == 10
+    # Includes autocode command PATH, MCP readiness, and LSP readiness checks.
+    assert len(results) == 11
     # Python check should pass
     py_check = next(r for r in results if r.name == "python_version")
     assert py_check.passed

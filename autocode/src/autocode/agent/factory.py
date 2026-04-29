@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from autocode.agent.approval import ApprovalManager
+from autocode.agent.auto_verify import AutoVerifyConfig
 from autocode.agent.completion import SessionStats
 from autocode.agent.context import ContextEngine
 from autocode.agent.cost_dashboard import CostDashboard
@@ -98,6 +99,9 @@ def create_agent_loop(
     tool_result_cache: Any | None = None,
     tool_result_cache_min_bytes: int = 1024,
     cost_limit_usd: float | None = None,
+    checkpoint_store: Any | None = None,
+    project_root: Path | None = None,
+    verify_config: Any | None = None,
 ) -> tuple[AgentLoop, SessionStats]:
     """Create a fully-wired AgentLoop with all Phase 7 runtime modules.
 
@@ -159,6 +163,9 @@ def create_agent_loop(
         layer2_config=layer2_config,
         tool_result_cache=tool_result_cache,
         tool_result_cache_min_bytes=tool_result_cache_min_bytes,
+        checkpoint_store=checkpoint_store,
+        project_root=project_root,
+        verify_config=_normalize_verify_config(verify_config),
     )
 
     return loop, session_stats
@@ -183,6 +190,9 @@ def create_orchestrator(
     tool_result_cache: Any | None = None,
     tool_result_cache_min_bytes: int = 1024,
     cost_limit_usd: float | None = None,
+    checkpoint_store: Any | None = None,
+    project_root: Path | None = None,
+    verify_config: Any | None = None,
 ) -> tuple[Any, SessionStats]:
     """Create a fully-wired Orchestrator wrapping an AgentLoop.
 
@@ -213,6 +223,9 @@ def create_orchestrator(
         tool_result_cache=tool_result_cache,
         tool_result_cache_min_bytes=tool_result_cache_min_bytes,
         cost_limit_usd=cost_limit_usd,
+        checkpoint_store=checkpoint_store,
+        project_root=project_root,
+        verify_config=verify_config,
     )
 
     # Event infrastructure
@@ -233,3 +246,16 @@ def create_orchestrator(
     )
 
     return orchestrator, session_stats
+
+
+def _normalize_verify_config(config: Any | None) -> AutoVerifyConfig | None:
+    if config is None:
+        return None
+    if isinstance(config, AutoVerifyConfig):
+        return config
+    return AutoVerifyConfig(
+        enabled=bool(getattr(config, "enabled", True)),
+        max_iterations=int(getattr(config, "max_iterations", 3)),
+        on_failure=getattr(config, "on_failure", "surface_to_user"),
+        languages=tuple(getattr(config, "languages", []) or ()),
+    )

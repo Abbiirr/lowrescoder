@@ -380,6 +380,40 @@ def check_mcp_readiness() -> CheckResult:
         )
 
 
+def check_lsp_readiness() -> CheckResult:
+    """Check LSP adapter registry without starting language servers."""
+    try:
+        from autocode.layer2.lsp_servers import lsp_doctor_checks
+
+        checks = lsp_doctor_checks()
+        missing = [str(c["language"]) for c in checks if not c["available"]]
+        if not checks:
+            return CheckResult(
+                name="lsp_readiness",
+                passed=True,
+                message="LSP adapter framework available; no language adapters registered yet",
+            )
+        if missing:
+            return CheckResult(
+                name="lsp_readiness",
+                passed=True,
+                message=f"LSP adapter framework available; optional servers missing: {', '.join(missing)}",
+                remediation="Install the listed language servers to enable those adapters.",
+            )
+        return CheckResult(
+            name="lsp_readiness",
+            passed=True,
+            message=f"{len(checks)} LSP language server checks available",
+        )
+    except Exception as e:
+        return CheckResult(
+            name="lsp_readiness",
+            passed=False,
+            message=f"LSP readiness check failed: {e}",
+            remediation="Verify autocode.layer2.lsp_servers imports cleanly.",
+        )
+
+
 ALL_CHECKS = [
     check_python_version,
     check_llm_backend,
@@ -391,6 +425,7 @@ ALL_CHECKS = [
     check_vram,
     check_disk_space,
     check_mcp_readiness,
+    check_lsp_readiness,
 ]
 
 

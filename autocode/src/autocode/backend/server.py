@@ -509,6 +509,9 @@ class BackendServer:
                 layer2_config=self.config.layer2,
                 tool_result_cache=self._tool_result_cache,
                 cost_limit_usd=self.config.agent.cost_limit_usd,
+                checkpoint_store=self._checkpoint_store,
+                project_root=self.project_root,
+                verify_config=self.config.agent.verify,
             )
 
             # Apply persisted agent mode

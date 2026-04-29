@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import inspect
 import json
 import os
 import subprocess
@@ -441,6 +442,35 @@ class AutoCodeAdapter:
             "Benchmark verification passed. Stop editing and report the fix briefly.",
         )
 
+    def _wrap_run_command_with_grading(
+        self,
+        run_command_handler: Any,
+        grading_command: str,
+        *,
+        sandbox: Path,
+        work_dir: Path,
+    ) -> Any:
+        """Decorate run_command while preserving async handler semantics."""
+        async def _handle_run_command_with_grading(
+            command: str,
+            timeout: int = 30,
+        ) -> str:
+            output = run_command_handler(
+                command=command,
+                timeout=timeout,
+            )
+            if inspect.isawaitable(output):
+                output = await output
+            return self._maybe_terminate_grading_command_result(
+                command,
+                str(output),
+                grading_command,
+                sandbox=sandbox,
+                work_dir=work_dir,
+            )
+
+        return _handle_run_command_with_grading
+
     async def solve_task(
         self,
         task: BenchmarkTask,
@@ -599,21 +629,14 @@ class AutoCodeAdapter:
                         _work_dir_for_command = work_dir
                         _grading_command = task.grading_command
 
-                        def _handle_run_command_with_grading(
-                            command: str,
-                            timeout: int = 30,
-                        ) -> str:
-                            output = _run_command_handler(
-                                command=command,
-                                timeout=timeout,
-                            )
-                            return self._maybe_terminate_grading_command_result(
-                                command,
-                                output,
+                        _handle_run_command_with_grading = (
+                            self._wrap_run_command_with_grading(
+                                _run_command_handler,
                                 _grading_command,
                                 sandbox=_sandbox_for_command,
                                 work_dir=_work_dir_for_command,
                             )
+                        )
 
                         registry.register(ToolDefinition(
                             name=run_command_tool.name,
@@ -623,6 +646,10 @@ class AutoCodeAdapter:
                             requires_approval=run_command_tool.requires_approval,
                             mutates_fs=run_command_tool.mutates_fs,
                             executes_shell=run_command_tool.executes_shell,
+                            interruptible=run_command_tool.interruptible,
+                            output_budget_tokens=run_command_tool.output_budget_tokens,
+                            direct_call_eligible=run_command_tool.direct_call_eligible,
+                            orchestrated_eligible=run_command_tool.orchestrated_eligible,
                         ))
 
                 # Enforce tool restriction (B8 bash-only lane)

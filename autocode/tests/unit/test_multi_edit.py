@@ -114,7 +114,11 @@ def test_apply_multi_edit_with_rollback(tmp_path: Path) -> None:
     """Apply creates rollback point in git repo."""
     # Init git repo
     subprocess.run(["git", "init", "-b", "main"], cwd=str(tmp_path), capture_output=True)
-    subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=str(tmp_path), capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@t.com"],
+        cwd=str(tmp_path),
+        capture_output=True,
+    )
     subprocess.run(["git", "config", "user.name", "T"], cwd=str(tmp_path), capture_output=True)
     (tmp_path / "init.py").write_text("init\n")
     subprocess.run(["git", "add", "."], cwd=str(tmp_path), capture_output=True)
@@ -137,7 +141,11 @@ def test_multi_edit_dirty_tree_no_capture(tmp_path: Path) -> None:
 
     # Set up git repo with committed file
     subprocess.run(["git", "init", "-b", "main"], cwd=str(tmp_path), capture_output=True)
-    subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=str(tmp_path), capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@t.com"],
+        cwd=str(tmp_path),
+        capture_output=True,
+    )
     subprocess.run(["git", "config", "user.name", "T"], cwd=str(tmp_path), capture_output=True)
     (tmp_path / "tracked.py").write_text("original\n")
     subprocess.run(["git", "add", "."], cwd=str(tmp_path), capture_output=True)
@@ -152,7 +160,8 @@ def test_multi_edit_dirty_tree_no_capture(tmp_path: Path) -> None:
 
     # Rollback with scoped files should work (only stages plan files)
     (tmp_path / "plan_target.py").write_text("plan file\n")
-    sha2 = create_rollback_point(tmp_path, files=["plan_target.py"])
+    snapshot = create_rollback_point(tmp_path, files=["plan_target.py"])
+    assert snapshot
     # May or may not produce a commit depending on whether plan_target is tracked
     # Key assertion: tracked.py's unrelated change is NOT committed
     log = subprocess.run(

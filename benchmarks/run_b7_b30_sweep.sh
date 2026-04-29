@@ -7,7 +7,7 @@
 #     and let the human intervene.
 #   - On per-lane failure, continue to the next lane; the benchmark_runner
 #     already uses --resume so partial progress is saved.
-#   - Use gateway aliases (swebench, terminal_bench), never underlying
+#   - Use gateway aliases (tools, terminal_bench), never underlying
 #     model names.
 #
 # Usage:
@@ -24,6 +24,13 @@
 #   - Summary log at
 #     autocode/docs/qa/test-results/<timestamp>-b7-b30-sweep.log
 #   - Per-lane artifacts written by benchmark_runner (see its docstring)
+#
+# Tuning:
+#   - BENCHMARK_TASK_TIMEOUT_S defaults to 600 seconds. This is an internal
+#     benchmark_runner per-task timeout that still writes JSON result artifacts.
+#   - BENCHMARK_LANE_TIMEOUT_S defaults to 7200 seconds. This is only a final
+#     guardrail around each lane process if setup/cleanup hangs outside the
+#     internal per-task timeout path.
 
 set -u -o pipefail
 
@@ -36,6 +43,10 @@ export BENCHMARK_RUN_ID
 
 BENCH_HOST="${AUTOCODE_LLM_API_BASE:-http://localhost:4000/v1}"
 GATEWAY_HEALTH="${BENCH_HOST%/v1}/health/readiness"
+BENCHMARK_TASK_TIMEOUT_S="${BENCHMARK_TASK_TIMEOUT_S:-600}"
+BENCHMARK_LANE_TIMEOUT_S="${BENCHMARK_LANE_TIMEOUT_S:-7200}"
+export BENCHMARK_TASK_TIMEOUT_S
+export BENCHMARK_LANE_TIMEOUT_S
 
 STATE_DIR="/tmp/bench-${BENCHMARK_RUN_ID}"
 mkdir -p "$STATE_DIR"
@@ -94,12 +105,13 @@ LANES=(
     "B30-TBENCH"
 )
 
-# Gateway alias per lane. Default is swebench; B30-TBENCH uses
-# terminal_bench alias (matches PLAN.md §3 Harbor wiring).
+# Gateway alias per lane. The loop runner always sends tool schemas, so default
+# lanes use the tool-capable `tools` alias. B30-TBENCH keeps the Terminal-Bench
+# specific `terminal_bench` alias.
 lane_model() {
     case "$1" in
         B30-TBENCH) echo "terminal_bench" ;;
-        *)          echo "swebench" ;;
+        *)          echo "tools" ;;
     esac
 }
 
@@ -109,6 +121,8 @@ log "Run ID: $BENCHMARK_RUN_ID"
 log "Gateway: $BENCH_HOST"
 log "State dir: $STATE_DIR"
 log "Summary: $SUMMARY_LOG"
+log "Task timeout: ${BENCHMARK_TASK_TIMEOUT_S}s"
+log "Lane timeout: ${BENCHMARK_LANE_TIMEOUT_S}s"
 log "=========================================="
 
 if ! wait_for_gateway; then
@@ -142,9 +156,11 @@ for lane in "${LANES[@]}"; do
     log "  model alias: $model"
 
     start_ts="$(date +%s)"
+    timeout "$BENCHMARK_LANE_TIMEOUT_S" \
     uv run python benchmarks/benchmark_runner.py \
         --agent autocode --lane "$lane" --max-tasks 5 \
-        --model "$model" --run-id "$BENCHMARK_RUN_ID" --resume 2>&1 \
+        --model "$model" --run-id "$BENCHMARK_RUN_ID" --resume \
+        --task-timeout-s "$BENCHMARK_TASK_TIMEOUT_S" 2>&1 \
         | tee -a "$SUMMARY_LOG"
     rc="${PIPESTATUS[0]}"
     end_ts="$(date +%s)"
@@ -157,6 +173,9 @@ for lane in "${LANES[@]}"; do
     else
         FAIL_LANES+=("$lane")
         log "  $lane exited rc=$rc after ${elapsed}s"
+        if [ "$rc" -eq 124 ]; then
+            log "  $lane hit BENCHMARK_LANE_TIMEOUT_S=${BENCHMARK_LANE_TIMEOUT_S}s"
+        fi
         if ! wait_for_gateway; then
             log "!! gateway down after $lane — stopping sweep"
             log "!! resume with: BENCHMARK_RUN_ID=$BENCHMARK_RUN_ID bash benchmarks/run_b7_b30_sweep.sh"

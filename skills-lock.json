@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "agent-comms": {
+      "source": "Abbiirr/agent-comms",
+      "sourceType": "github",
+      "computedHash": "f3b5eb64716050766828042b6fe9e2dbb1b0584ff1a4cf0f9f62ea2fd984f019"
+    }
+  }
+}

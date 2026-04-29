@@ -783,6 +783,26 @@ def test_bash_only_constant_is_correct():
     assert BASH_ONLY_TOOLS == frozenset({"run_command", "read_file"})
 
 
+def test_run_command_grading_wrapper_awaits_async_handler(tmp_path):
+    """Benchmark run_command grading wrapper must not leak async handler coroutines."""
+    adapter = AutoCodeAdapter(model="tools")
+
+    async def async_run_command(command: str, timeout: int = 30) -> str:
+        assert timeout == 7
+        return "ok"
+
+    wrapped = adapter._wrap_run_command_with_grading(
+        async_run_command,
+        "pytest",
+        sandbox=tmp_path,
+        work_dir=tmp_path,
+    )
+
+    result = asyncio.run(wrapped(command="echo not-grading", timeout=7))
+
+    assert result == "ok"
+
+
 # --- P0: Patch file extraction ---
 
 

@@ -704,6 +704,28 @@ async def _handle_thinking(app: AppContext, args: str) -> None:
     app.add_system_message(f"Thinking: **{state}**")
 
 
+async def _handle_verify(app: AppContext, args: str) -> None:
+    normalized = args.strip().lower()
+    verify = app.config.agent.verify
+    if normalized in {"on", "true", "yes", "1"}:
+        verify.enabled = True
+        app.add_system_message("Verify: **on**")
+        return
+    if normalized in {"off", "false", "no", "0"}:
+        verify.enabled = False
+        app.add_system_message("Verify: **off**")
+        return
+    if normalized in {"", "status"}:
+        state = "on" if verify.enabled else "off"
+        languages = ", ".join(verify.languages) if verify.languages else "all"
+        app.add_system_message(
+            f"Verify: **{state}** · max iterations: {verify.max_iterations} · "
+            f"on failure: {verify.on_failure} · languages: {languages}"
+        )
+        return
+    app.add_system_message("Usage: /verify [on|off|status]")
+
+
 async def _handle_clear(app: AppContext, args: str) -> None:
     # Print ANSI clear sequence + reprint welcome banner
     import sys
@@ -1057,6 +1079,18 @@ async def _handle_index(app: AppContext, args: str) -> None:
         app.add_system_message(f"Index build failed: {e}")
 
 
+async def _handle_repomap(app: AppContext, args: str) -> None:
+    """Build and display the ranked repository map for the current project."""
+    try:
+        from autocode.layer2.repomap import RepoMapGenerator
+
+        budget = getattr(getattr(app.config, "layer2", object()), "repomap_budget", 1000)
+        generator = RepoMapGenerator(budget_tokens=budget)
+        app.add_system_message(generator.generate(app.project_root))
+    except Exception as e:
+        app.add_system_message(f"Repo map failed: {e}")
+
+
 async def _handle_freeze(app: AppContext, args: str) -> None:
     # Textual TUI has a frozen ChatView; inline mode uses native scrollback
     if hasattr(app, "query_one"):
@@ -1233,6 +1267,14 @@ def create_default_router() -> CommandRouter:
     )
     router.register(
         SlashCommand(
+            name="verify",
+            aliases=[],
+            description="Toggle post-edit verification",
+            handler=_handle_verify,
+        )
+    )
+    router.register(
+        SlashCommand(
             name="clear",
             aliases=["cls"],
             description="Clear the terminal screen",
@@ -1253,6 +1295,14 @@ def create_default_router() -> CommandRouter:
             aliases=[],
             description="Build or rebuild the code search index",
             handler=_handle_index,
+        )
+    )
+    router.register(
+        SlashCommand(
+            name="repomap",
+            aliases=["map"],
+            description="Build and display the ranked repository map",
+            handler=_handle_repomap,
         )
     )
     router.register(
@@ -1319,6 +1369,14 @@ def create_default_router() -> CommandRouter:
     )
     router.register(
         SlashCommand(
+            name="rollback",
+            aliases=["rb"],
+            description="Rollback: list/restore per-tool checkpoints with diff preview",
+            handler=_handle_rollback,
+        )
+    )
+    router.register(
+        SlashCommand(
             name="diff",
             aliases=[],
             description="Show git diff of changes in the current session",
@@ -1364,6 +1422,111 @@ async def _handle_undo(app: AppContext, args: str) -> None:
         app.add_system_message(f"Undone to checkpoint: **{result['label']}**")
     except Exception as e:
         app.add_system_message(f"Undo failed: {e}")
+
+
+async def _handle_rollback(app: AppContext, args: str) -> None:
+    """List or restore per-tool checkpoints with diff preview."""
+    try:
+        import json
+        from pathlib import Path
+
+        from autocode.session.checkpoint_store import CheckpointStore
+        from autocode.session.file_snapshot import restore_snapshot
+        from autocode.session.models import ensure_tables
+        from autocode.session.task_store import TaskStore
+
+        conn = app.session_store.get_connection()
+        ensure_tables(conn)
+        cp_store = CheckpointStore(conn, app.session_id)
+
+        arg = args.strip()
+        restore_mode = False
+
+        if arg == "restore":
+            app.add_system_message("Usage: `/rollback restore <id>`")
+            return
+
+        if arg.startswith("restore "):
+            restore_mode = True
+            arg = arg.removeprefix("restore ").strip()
+            if not arg:
+                app.add_system_message("Usage: `/rollback restore <id>`")
+                return
+
+        if arg == "--last":
+            per_tool = cp_store.list_per_tool_checkpoints()
+            if not per_tool:
+                app.add_system_message("No per-tool checkpoints to rollback.")
+                return
+            latest = per_tool[0]
+            arg = latest.id
+
+        if arg:
+            cp = cp_store.get_checkpoint(arg)
+            if cp is None:
+                app.add_system_message(f"Checkpoint not found: `{arg}`")
+                return
+            if cp.kind not in ("pre_tool", "post_tool"):
+                app.add_system_message(
+                    f"Checkpoint `{arg}` is a session-level checkpoint. Use `/undo` instead."
+                )
+                return
+
+            files = json.loads(cp.active_files) if cp.active_files else []
+            if not files:
+                app.add_system_message(
+                    f"Checkpoint `{cp.id}` ({cp.label}) has no file snapshot."
+                )
+                return
+
+            if not restore_mode:
+                app.add_system_message(
+                    f"**Rollback preview: {cp.label}**\n"
+                    f"Tool: {cp.kind}\n"
+                    f"Files: {', '.join(files)}\n"
+                    f"Use `/rollback restore {cp.id}` to confirm rollback."
+                )
+                return
+
+            task_store = TaskStore(conn, app.session_id)
+            cp_store.restore_checkpoint(cp.id, task_store, app.session_store)
+
+            snap_base = (
+                Path.home() / ".autocode" / "snapshots"
+                / app.session_id / cp.parent_tool_call_id
+            )
+            if snap_base.exists():
+                restore_snapshot(snap_base, app.project_root)
+                app.add_system_message(
+                    f"**Rolled back to checkpoint: {cp.label}**\n"
+                    f"Restored {len(files)} files from snapshot."
+                )
+            else:
+                app.add_system_message(
+                    f"**Rolled back task state to: {cp.label}** (snapshot dir not found on disk)"
+                )
+        else:
+            per_tool = cp_store.list_per_tool_checkpoints()
+            if not per_tool:
+                app.add_system_message(
+                    "No per-tool checkpoints. Checkpoints are created automatically "
+                    "before FS-mutating tool calls (write_file, edit_file, apply_patch)."
+                )
+                return
+            lines = ["**Per-tool checkpoints (newest first):**"]
+            for cp in per_tool[:20]:
+                files = json.loads(cp.active_files) if cp.active_files else []
+                file_str = ", ".join(files[:3])
+                if len(files) > 3:
+                    file_str += f" +{len(files) - 3} more"
+                lines.append(
+                    f"- `{cp.id}` {cp.label} "
+                    f"({cp.kind}, tc={cp.parent_tool_call_id}) "
+                    f"[{file_str}]"
+                )
+            app.add_system_message("\n".join(lines))
+    except Exception as e:
+        app.add_system_message(f"Rollback failed: {e}")
 
 
 async def _handle_diff(app: AppContext, args: str) -> None:

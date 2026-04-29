@@ -151,11 +151,25 @@ def _migrate_v4(conn: sqlite3.Connection) -> None:
         pass  # column already exists
 
 
+def _migrate_v5(conn: sqlite3.Connection) -> None:
+    """v5: per-tool-checkpoint columns (parent_tool_call_id, tool_call_idx, kind)."""
+    for col_sql in [
+        "ALTER TABLE checkpoints ADD COLUMN parent_tool_call_id TEXT",
+        "ALTER TABLE checkpoints ADD COLUMN tool_call_idx INTEGER",
+        "ALTER TABLE checkpoints ADD COLUMN kind TEXT",
+    ]:
+        try:
+            conn.execute(col_sql)
+        except sqlite3.OperationalError:
+            pass  # column already exists
+
+
 MIGRATIONS: list[tuple[int, str, Callable[[sqlite3.Connection], None]]] = [
     (1, "orchestrator_events table", _migrate_v1),
     (2, "agent_mailbox table", _migrate_v2),
     (3, "task board columns and tables", _migrate_v3),
     (4, "checkpoint message snapshots", _migrate_v4),
+    (5, "per-tool-checkpoint columns", _migrate_v5),
 ]
 """List of (version, description, function) in ascending order."""
 

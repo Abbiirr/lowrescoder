@@ -16,7 +16,7 @@
 > referenced by a current slice. Sections 6-8 are CURRENT and authoritative
 > for items deferred from Tranche 4.
 
-Last updated: 2026-04-27 (Tranche 4 plan files drafted; sections 6-8 added).
+Last updated: 2026-04-28 (C4.G2 repo-map prompt injection deferral added as §6.5).
 Original sections 1-5 last updated: 2026-04-17 late-session.
 Owner: Claude (Reviewer/Architect) for sections 6-8; original Coder ownership
 preserved on legacy sections.
@@ -314,6 +314,28 @@ Per user direction after the post-Stabilize-and-Release gap analysis (Entry 1585
 - **Why deferred:** auto-routing needs to prove itself before exposing knobs; user-custom config adds CLI/slash-command surface area that's not load-bearing for the first release
 - **Revive trigger:** auto-routing is shipped and stable, AND a real user reports they want to override the default per-task model selection
 - **Related items already shipped:** per-model rate tables (2.F.3), `/cost --detail` (S-COST), `provider_model` deprecation warning (2.F.4)
+
+---
+
+### 6.5 Repo-map system-prompt auto-injection (C4.G2 partial-deferred)
+
+- **Source:** Claude Entry 1618 review of Codex Entry 1617; `docs/plan/backend-robustness-tranche-4-checklist.md` §4.G2 "Integration"
+- **What it would add:** automatic insertion of the upgraded ranked repo map into the agent system prompt through the existing prompt `context` parameter
+- **What shipped in C4.G2 instead:** ranked, token-budgeted repo-map generator; persistent mtime+sha cache; dependency fan-in ranking; Python tree-sitter extraction; conservative Go extraction; explicit `/repomap` and `/map` command surface
+- **Why deferred:** automatic first-turn repo-map generation violates the existing bootstrap latency invariant enforced by `test_first_turn_includes_environment_bootstrap_snapshot`; repo-map generation must stay explicit or be composed by a later context-assembly path that can budget latency intentionally
+- **Revive trigger:** a context-assembly slice intentionally decides when repo-map text belongs in prompt context, or C5 LSP integration adds a cheap incremental repo-map path that preserves first-turn latency
+
+---
+
+### 6.6 Clean B7-B30 rerun after gateway/provider stabilization (C4.GATE carryover)
+
+- **Source:** Claude Entry 1639 review of Codex Entry 1637; full sweep artifact `autocode/docs/qa/test-results/20260428-202255-b7-b30-full-sweep-summary.md`
+- **What it would add:** a clean post-fix B7-B30 benchmark verdict after gateway aliases and provider availability are stable.
+- **Current sweep verdict:** `COMPLETE_WITH_FAILURES` from run id `20260428-122348-742618`: 24/24 lanes completed, 120/120 tasks recorded, 84/120 resolved, 31/120 infra failures, 0 lane process failures.
+- **Pre-tranche baseline:** `120/120 (100%)` and `23/23 GREEN` per `current_directives.md` canonical benchmark state.
+- **Why deferred:** the completed sweep exposed external gateway/provider instability, including unavailable `terminal_bench`, provider 403/429/404 paths, and intermittent gateway connectivity. The harness path itself now completes and records artifacts.
+- **Revive trigger:** gateway/provider stabilization, specifically `terminal_bench` alias availability on the gateway plus a clean post-fix re-run path for B7/B8 lane processes.
+- **Post-stabilization action:** run the full B7-B30 sweep with the current task-timeout harness and compare against the pre-tranche baseline. Strong-lane signal from the completed sweep suggests near-baseline recovery is expected once aliases/providers are stable.
 
 ---
 

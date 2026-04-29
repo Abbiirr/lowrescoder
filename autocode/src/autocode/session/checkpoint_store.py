@@ -216,3 +216,80 @@ class CheckpointStore:
             "restored_messages": restored_messages,
             "restored_tool_calls": restored_tool_calls,
         }
+
+    def save_per_tool_checkpoint(
+        self,
+        task_store: Any,
+        tool_call_id: str,
+        tool_name: str,
+        tool_call_idx: int,
+        kind: str,
+        files_touched: list[str] | None = None,
+        label: str = "",
+        context_summary: str = "",
+        session_store: Any | None = None,
+        message_limit: int = DEFAULT_MESSAGE_LIMIT,
+    ) -> str:
+        """Save a per-tool-call checkpoint with pre/post_tool kind."""
+        checkpoint_id = uuid.uuid4().hex[:12]
+        now = _now_iso()
+        tasks_snapshot = json.dumps(task_store.snapshot())
+        messages_snapshot = json.dumps(
+            self._build_message_snapshot(session_store, context_summary, message_limit)
+        )
+        files_json = json.dumps(files_touched or [])
+
+        self._conn.execute(
+            "INSERT INTO checkpoints "
+            "(id, session_id, label, tasks_snapshot, messages_snapshot, "
+            "context_summary, active_files, created_at, "
+            "parent_tool_call_id, tool_call_idx, kind) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                checkpoint_id,
+                self._session_id,
+                label or f"{kind} {tool_name}",
+                tasks_snapshot,
+                messages_snapshot,
+                context_summary,
+                files_json,
+                now,
+                tool_call_id,
+                tool_call_idx,
+                kind,
+            ),
+        )
+        self._conn.commit()
+        logger.info(
+            "Per-tool checkpoint saved: %s (%s, %s, tc=%s)",
+            checkpoint_id, kind, tool_name, tool_call_id,
+        )
+        return checkpoint_id
+
+    def list_per_tool_checkpoints(self) -> list[CheckpointRow]:
+        """List per-tool checkpoints for this session (kind is not NULL), newest first."""
+        cursor = self._conn.execute(
+            "SELECT * FROM checkpoints "
+            "WHERE session_id = ? AND kind IS NOT NULL "
+            "ORDER BY created_at DESC",
+            (self._session_id,),
+        )
+        return [CheckpointRow(**dict(row)) for row in cursor.fetchall()]
+
+    def enforce_retention(self, limit: int = 50) -> int:
+        """Delete oldest per-tool checkpoints beyond limit. Returns count removed."""
+        per_tool = self.list_per_tool_checkpoints()
+        if len(per_tool) <= limit:
+            return 0
+        to_remove = per_tool[limit:]
+        removed = 0
+        for cp in to_remove:
+            cursor = self._conn.execute(
+                "DELETE FROM checkpoints WHERE id = ? AND session_id = ?",
+                (cp.id, self._session_id),
+            )
+            if cursor.rowcount > 0:
+                removed += 1
+        self._conn.commit()
+        logger.info("Retention removed %d per-tool checkpoints (limit=%d)", removed, limit)
+        return removed

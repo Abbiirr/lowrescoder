@@ -19,6 +19,15 @@
 | MCP CLI/server slice | `uv run pytest autocode/tests/unit/test_cli.py::TestCLIMCPServe autocode/tests/unit/test_mcp_server.py autocode/tests/unit/test_config_merge.py autocode/tests/unit/test_mcp_real_tools.py autocode/tests/unit/test_doctor.py -q` | ~1s |
 | Checkpoint 2 PTY canary | `python3 autocode/tests/pty/pty_smoke_rust_checkpoint2_canary.py` | ~15s |
 | Tool output-budget PTY smoke | `python3 autocode/tests/pty/pty_smoke_rust_tool_output_budget.py` | ~15s |
+| Java LSP adapter smoke | `python3 autocode/tests/pty/pty_smoke_lsp_java.py` | ~1s without `jdtls` |
+| JavaScript LSP adapter smoke | `python3 autocode/tests/pty/pty_smoke_lsp_javascript.py` | ~1s without `typescript-language-server` |
+| TypeScript LSP adapter smoke | `python3 autocode/tests/pty/pty_smoke_lsp_typescript.py` | ~1s without `typescript-language-server` |
+| C LSP adapter smoke | `python3 autocode/tests/pty/pty_smoke_lsp_c.py` | ~1s without `clangd` |
+| Kotlin LSP adapter smoke | `python3 autocode/tests/pty/pty_smoke_lsp_kotlin.py` | ~1s without `kotlin-language-server` |
+| Python LSP adapter smoke | `python3 autocode/tests/pty/pty_smoke_lsp_python.py` | ~1s without `pylsp` |
+| Go LSP adapter smoke | `python3 autocode/tests/pty/pty_smoke_lsp_go.py` | ~1s without `gopls` |
+| Rust LSP adapter smoke | `python3 autocode/tests/pty/pty_smoke_lsp_rust.py` | ~1s without `rust-analyzer` |
+| Auto-verify smoke | `python3 autocode/tests/pty/pty_smoke_auto_verify.py` | ~1s |
 | Type check | `cd autocode && uv run mypy src/autocode/` | ~15s |
 | Sprint verification | `uv run pytest autocode/tests/test_sprint_verify.py -v` | ~10s |
 | Rust TUI tests | `cd autocode/rtui && cargo test` | ~1s |
@@ -213,6 +222,15 @@ Extend these harnesses instead of creating one-off scripts:
 | `autocode/tests/pty/pty_smoke_rust_thinking_split.py` | Thinking-token stream and visible-output stream render separately |
 | `autocode/tests/pty/pty_smoke_rust_restore_interaction.py` | `/restore` row navigation, confirmation, `checkpoint.restore`, and transcript feedback |
 | `autocode/tests/pty/pty_smoke_rust_stage3b.py` | Stage 3B inspection surfaces |
+| `autocode/tests/pty/pty_smoke_lsp_java.py` | Java LSP adapter registration, fake-server operation path, and non-spawning doctor metadata; self-skips real `jdtls` if unavailable |
+| `autocode/tests/pty/pty_smoke_lsp_javascript.py` | JavaScript LSP adapter registration, fake-server operation path, and non-spawning doctor metadata; self-skips real server if unavailable |
+| `autocode/tests/pty/pty_smoke_lsp_typescript.py` | TypeScript LSP adapter registration, fake-server operation path, and non-spawning doctor metadata; self-skips real server if unavailable |
+| `autocode/tests/pty/pty_smoke_lsp_c.py` | C LSP adapter registration, fake-server operation path, and non-spawning doctor metadata; self-skips real `clangd` if unavailable |
+| `autocode/tests/pty/pty_smoke_lsp_kotlin.py` | Kotlin LSP adapter registration, fake-server operation path, extended timeout config, and non-spawning doctor metadata; self-skips real server if unavailable |
+| `autocode/tests/pty/pty_smoke_lsp_python.py` | Python subprocess LSP adapter registration, fake-server operation path, and Jedi fallback metadata; self-skips real `pylsp` if unavailable |
+| `autocode/tests/pty/pty_smoke_lsp_go.py` | Go LSP adapter registration, fake-server operation path, and non-spawning doctor metadata; self-skips real `gopls` if unavailable |
+| `autocode/tests/pty/pty_smoke_lsp_rust.py` | Rust LSP adapter registration, fake-server operation path, extended timeout config, and non-spawning doctor metadata; self-skips real `rust-analyzer` if unavailable |
+| `autocode/tests/pty/pty_smoke_auto_verify.py` | AgentLoop post-edit verification hook with deterministic diagnostics and no-auto-rollback messaging |
 | `autocode/tests/pty/pty_smoke_rust_m1.py` | M1 startup and scaffold checks |
 | `autocode/tests/pty/dead_backend.py` | Failure-mode backend for recovery behavior |
 | `autocode/tests/pty/mock_backend.py` | Deterministic mock backend for frontend assertions |
@@ -240,6 +258,59 @@ This table is a heuristic, not a substitute for judgment. If the user can observ
 - Store live-PTY artifacts at `autocode/docs/qa/test-results/<timestamp>-<slice>-pty-smoke.md`.
 - Pair the PTY artifact with the unit-test verification artifact; PTY smoke does not replace targeted unit or transport-contract tests.
 - For benchmark-owned canaries, preserve the supported path: bare `autocode` for spawn-managed mode, or `autocode serve --transport tcp` plus `autocode --attach HOST:PORT` for attach mode.
+
+---
+
+## 4c. Java LSP Setup
+
+Java LSP support uses Eclipse JDT Language Server (`jdtls`) through the subprocess LSP adapter framework. Unit tests and `pty_smoke_lsp_java.py` do not require `jdtls`; they use the deterministic fake stdio LSP server and self-skip the real-server portion when `jdtls` is absent.
+
+To enable real Java LSP operation locally:
+
+```bash
+java -version   # Java 17+ required
+jdtls --version # or ensure the jdtls launcher is on PATH
+python3 autocode/tests/pty/pty_smoke_lsp_java.py
+```
+
+The Java fixture assertions are project-local only. Do not rely on JDK source/Javadoc availability for deterministic tests.
+
+JavaScript and TypeScript LSP support use `typescript-language-server --stdio` with the `typescript` peer dependency. Unit tests and `pty_smoke_lsp_javascript.py` / `pty_smoke_lsp_typescript.py` use the deterministic fake stdio LSP server, so they do not require Node packages.
+
+To enable real JS/TS LSP operation locally:
+
+```bash
+typescript-language-server --version
+typescript --version
+python3 autocode/tests/pty/pty_smoke_lsp_javascript.py
+python3 autocode/tests/pty/pty_smoke_lsp_typescript.py
+```
+
+C, Kotlin, Python, Go, and Rust subprocess LSP adapters are also registered. Unit tests and PTY smokes use the fake stdio LSP server, so local real-server installs are optional.
+
+To enable real operation locally:
+
+```bash
+clangd --version
+kotlin-language-server --version
+java -version
+pylsp --version
+go version
+gopls version
+rustup --version
+rust-analyzer --version
+python3 autocode/tests/pty/pty_smoke_lsp_c.py
+python3 autocode/tests/pty/pty_smoke_lsp_kotlin.py
+python3 autocode/tests/pty/pty_smoke_lsp_python.py
+python3 autocode/tests/pty/pty_smoke_lsp_go.py
+python3 autocode/tests/pty/pty_smoke_lsp_rust.py
+```
+
+Go uses `go.mod` discovery and reports both `gopls` and Go 1.16+ runtime readiness in doctor metadata. Rust uses `Cargo.toml` discovery, marks clippy diagnostics in adapter metadata, and uses an extended request timeout because `rust-analyzer` cold starts can be slower than most language servers.
+
+Post-edit auto-verify uses the registered LSP adapter matrix after successful filesystem-mutating tools. Unit tests use deterministic diagnostics and do not require real language servers; run `python3 autocode/tests/pty/pty_smoke_auto_verify.py` to verify the AgentLoop hook and no-auto-rollback user message.
+
+Python defaults to `pylsp` for the subprocess adapter while preserving the existing Jedi-backed `lsp_*` tools as fallback for one release window.
 
 ---
 

@@ -54,6 +54,15 @@ prompt (e.g. `/help`) or mock where possible.
 | `pty_smoke_rust_checkpoint2_canary.py` | Checkpoint 2 canary: thinking OFF, thinking ON, tool sequence/truncation, and cost-limit warning visibility | Rust binary + mock backend |
 | `pty_smoke_rust_thinking_split.py` | Thinking-token stream and visible-output stream render separately through the Rust TUI | Rust binary + mock backend |
 | `pty_smoke_rust_tool_output_budget.py` | Oversized tool output budget/truncation marker remains visible in the Rust TUI tool panel/transcript | Rust binary + mock backend |
+| `pty_smoke_lsp_java.py` | Java LSP adapter registration, deterministic fake-server operation path, and non-spawning doctor metadata | Python backend; real `jdtls` optional/self-skipped |
+| `pty_smoke_lsp_javascript.py` | JavaScript LSP adapter registration, deterministic fake-server operation path, and non-spawning doctor metadata | Python backend; real `typescript-language-server` optional/self-skipped |
+| `pty_smoke_lsp_typescript.py` | TypeScript LSP adapter registration, deterministic fake-server operation path, and non-spawning doctor metadata | Python backend; real `typescript-language-server` optional/self-skipped |
+| `pty_smoke_lsp_c.py` | C LSP adapter registration, deterministic fake-server operation path, and non-spawning doctor metadata | Python backend; real `clangd` optional/self-skipped |
+| `pty_smoke_lsp_kotlin.py` | Kotlin LSP adapter registration, deterministic fake-server operation path, extended timeout config, and non-spawning doctor metadata | Python backend; real `kotlin-language-server` optional/self-skipped |
+| `pty_smoke_lsp_python.py` | Python subprocess LSP adapter registration, deterministic fake-server operation path, and Jedi fallback metadata | Python backend; real `pylsp` optional/self-skipped |
+| `pty_smoke_lsp_go.py` | Go LSP adapter registration, deterministic fake-server operation path, and non-spawning doctor metadata | Python backend; real `gopls` optional/self-skipped |
+| `pty_smoke_lsp_rust.py` | Rust LSP adapter registration, deterministic fake-server operation path, extended timeout config, and non-spawning doctor metadata | Python backend; real `rust-analyzer` optional/self-skipped |
+| `pty_smoke_auto_verify.py` | AgentLoop post-edit auto-verify hook, deterministic diagnostic feedback, and no-auto-rollback messaging | Python backend |
 | `pty_e2e_real_gateway.py` | Live backend + live gateway smoke: `/help`, `/cost`, real chat turn, and async command-palette discovery during a live turn | Rust binary + reachable gateway + auth env |
 
 Each script is designed to be run directly:

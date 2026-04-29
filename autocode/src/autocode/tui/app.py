@@ -176,6 +176,8 @@ class AutoCodeApp(App[None]):
             layer2_config=self.config.layer2,
             tool_result_cache=self._tool_result_cache,
             cost_limit_usd=self.config.agent.cost_limit_usd,
+            project_root=self.project_root,
+            verify_config=self.config.agent.verify,
         )
         if self._agent_mode != AgentMode.NORMAL:
             self._agent_loop.set_mode(self._agent_mode)

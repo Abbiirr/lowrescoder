@@ -1,10 +1,20 @@
 # Current Directives
 
-> Last updated: 2026-04-27
+> Last updated: 2026-04-29
 
 ## Active Phase
 
-**Backend Robustness Tranche 4 — PLANS READY, KICKOFF AWAITING USER.** Canonical plan: `docs/plan/backend-robustness-tranche-4-plan.md`. Sub-plan: `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md`. Master atomic checklist: `docs/plan/backend-robustness-tranche-4-checklist.md`. Four checkpoints (C4 foundation/safety, C5 multi-language LSP + auto-verify, C6 headless + cost-aware routing, C7 polish), 15 high-level slices (G1-G15), 23 execution sub-slices, 4 gates. First slice on user kickoff: **C4.G1 per-tool-call atomic checkpoint with diff-rollback** per checklist §4.G1. All non-tree-mutating git ops only per `AGENTS.md`. Per-slice docs+artifact-before-review rule (constraint #8) is in force.
+**Backend Robustness Tranche 4 — C5.GATE locally complete, pending Claude review.** Canonical plan: `docs/plan/backend-robustness-tranche-4-plan.md`. Sub-plan: `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md`. Master atomic checklist: `docs/plan/backend-robustness-tranche-4-checklist.md`. C4 foundation/safety is complete; C5 multi-language LSP + auto-verify is locally regression-green via `autocode/docs/qa/test-results/20260429-111435-c5-gate-regression-and-benchmark.md`. The live B7-B29/B7-B30 clean sweep remains deferred behind gateway/provider stabilization per `DEFERRED_PENDING_TODO.md` §6.6.
+
+**Next slice after review:** C6.G5 headless `--json` / `--output-schema` mode, then C6.G6 cost-aware routing. Active comms thread starts at `AGENTS_CONVERSATION.MD` Entry 1657; C5.G4 review request is Entry 1659 and C5.GATE pre-task is Entry 1660.
+
+**Completed Tranche 4 checkpoints so far:** Packet 3 feature contracts, C4.G1 per-tool checkpoints + `/rollback`, C4.G2 ranked repo-map + `/repomap`, C4.G7' git-aware staging + forbidden-git enforcement, C4.GATE, C5.G3.0 LSP framework, all 8 language adapters, C5.G4 auto-verify loop, and C5.GATE local regression/smoke gate.
+
+**Builder routing:** OpenCode primary, Codex fallback when OpenCode is unavailable for the slice. **Reviewer:** Claude default; Codex co-review available if user redirects (open question — not yet locked).
+
+**Parked for after Tranche 4 closes:** Packets 1, 2, 4, 5 from the new TUI kickoff brief (audit, current-architecture doc, fixtures, Rust TUI plan).
+
+All non-tree-mutating git ops only per `AGENTS.md`. Per-slice docs+artifact-before-review rule (constraint #8) is in force.
 
 **Stabilize-and-Release Program — CLOSED.** Canonical plan: `docs/plan/stabilize-and-release-plan.md`. Three checkpoints fully closed including user 3.E commit `1700d66 Closes backend v2` (2026-04-27). Optional release tag remains user discretion. Final regression artifact: `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md` (Python `1999`, Rust TUI `210`, benchmark `199`, real-gateway PTY canary green). Tranche-3 comms archive cut: `docs/communication/old/2026-04-27-stabilize-and-release-tranche-3-1548-1586.md`. Agents must not commit, push, tag, or run any tree-mutating git command.
 
@@ -88,7 +98,7 @@
 
 **Honesty note:** the dedicated detail surfaces are real and directly triggerable, but several still render static scene text rather than real bound session data. Human-driven TUI benchmarking is unblocked, the benchmark-owned Rust TUI PTY runner now has a green real-gateway canary, and the specific Phase A latency blocker is no longer the active frontier. Larger sweeps should still start with a fresh canary on the current gateway before the long run begins.
 
-**Active task:** Backend Robustness Tranche 4 plans are READY; user kickoff awaited for first slice C4.G1 per `docs/plan/backend-robustness-tranche-4-checklist.md` §4.G1. Predecessor program is fully closed: Phase E gate prerequisites satisfied, visual-only polish unblocked, 3.C release-grade regression green via `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`, 3.D closeout posted in `AGENTS_CONVERSATION.MD` Entry 1584, 3.E commit landed in `1700d66 Closes backend v2` (2026-04-27). Optional release tag remains user discretion.
+**Active task:** Backend Robustness Tranche 4 — kickoff AUTHORIZED 2026-04-27 late; first slice IN FLIGHT is the **Packet 3 prep slice** (16 feature contracts under `docs/features/`) per `docs/plan/backend-first-tui-kickoff-2026-04-27.md` Work packet 3 + `AGENTS_CONVERSATION.MD` Entry 1604 (Builder direction with 49-checkbox atomic todo). C4.G1 per-tool-call atomic checkpoint (`docs/plan/backend-robustness-tranche-4-checklist.md` §4.G1) auto-flows after Packet 3 reviewer APPROVE. Predecessor program is fully closed: Phase E gate prerequisites satisfied, visual-only polish unblocked, 3.C release-grade regression green via `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`, 3.D closeout posted in `AGENTS_CONVERSATION.MD` Entry 1584, 3.E commit landed in `1700d66 Closes backend v2` (2026-04-27). Optional release tag remains user discretion.
 
 **User-directed temporary override (2026-04-24):** before more frontend binding work, run a backend-tightening tranche to check commit-readiness on the current tree and tighten backend/runtime behavior around chat streaming, subagents, context, memory, task/todo, loop, and transport correctness. Canonical plan: `docs/plan/backend-tightening-refinement-plan.md`. Backend tranche and docs-refresh progress are summarized in the active override above. The tranche is locally regression-green; typed payload consolidation, spinner activity-correlation, `/restore` interaction, MCP CLI wire-up, thinking/output buffer split, per-slash PTY coverage, and spinner verb badge wiring are complete, and Checkpoint 2 now continues with the remaining robustness/runtime follow-ons.
 

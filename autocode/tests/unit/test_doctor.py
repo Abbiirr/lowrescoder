@@ -10,6 +10,7 @@ from autocode.doctor import (
     check_autocode_command,
     check_disk_space,
     check_git,
+    check_lsp_readiness,
     check_mcp_readiness,
     check_python_version,
     check_tree_sitter,
@@ -19,11 +20,11 @@ from autocode.doctor import (
 )
 
 
-def test_doctor_10_checks() -> None:
-    """Doctor runs exactly 10 checks."""
-    assert len(ALL_CHECKS) == 10
+def test_doctor_11_checks() -> None:
+    """Doctor runs exactly 11 checks."""
+    assert len(ALL_CHECKS) == 11
     results = run_doctor()
-    assert len(results) == 10
+    assert len(results) == 11
 
 
 def test_doctor_remediation_messages() -> None:
@@ -83,6 +84,14 @@ def test_doctor_mcp_readiness_reports_command_and_audit_path(
     assert str(audit_path) in result.message
 
 
+def test_doctor_lsp_readiness_reports_framework_without_spawning() -> None:
+    """LSP doctor check reports optional server readiness without spawning."""
+    result = check_lsp_readiness()
+
+    assert result.passed
+    assert "LSP adapter framework" in result.message
+
+
 def test_doctor_disk_space_check() -> None:
     """Disk space check works."""
     result = check_disk_space()
@@ -96,7 +105,7 @@ def test_doctor_returns_structured_report() -> None:
     json_report = doctor_json(results)
 
     assert isinstance(json_report, list)
-    assert len(json_report) == 10
+    assert len(json_report) == 11
     for item in json_report:
         assert "name" in item
         assert "passed" in item

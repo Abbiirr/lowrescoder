@@ -830,6 +830,7 @@ async def run_lane(
     run_id: str = "",
     started_at: str = "",
     resume: bool = False,
+    task_timeout_s: int = 0,
 ) -> dict:
     """Run all tasks in a lane sequentially and return aggregated results."""
     run_id = run_id or "adhoc-run"
@@ -1264,7 +1265,34 @@ async def run_lane(
                     },
                 )
             else:
-                result = await agent.solve_task(task, sandbox, budget)
+                try:
+                    solve_coro = agent.solve_task(task, sandbox, budget)
+                    if task_timeout_s > 0:
+                        result = await asyncio.wait_for(
+                            solve_coro,
+                            timeout=task_timeout_s,
+                        )
+                    else:
+                        result = await solve_coro
+                except TimeoutError:
+                    result = AgentResult(
+                        task_id=task.task_id,
+                        resolved=False,
+                        error=f"Task timed out after {task_timeout_s}s",
+                        wall_time_s=float(task_timeout_s),
+                        artifacts={
+                            "failure_type": "INFRA_FAIL",
+                            "failure_evidence": {
+                                "timeout_source": "agent_task",
+                                "timeout_s": task_timeout_s,
+                                "grading_launch": None,
+                                "docker_state": (
+                                    inspect_container_state(container_name)
+                                    if container_name else None
+                                ),
+                            },
+                        },
+                    )
 
         finally:
             # Always clean up Docker container
@@ -1562,6 +1590,15 @@ async def main() -> int:
         default="",
         help="Run identifier for progress/locks (required with --resume)",
     )
+    parser.add_argument(
+        "--task-timeout-s",
+        type=int,
+        default=0,
+        help=(
+            "Per-task agent timeout in seconds. 0 uses the lane budget "
+            "without an extra harness timeout."
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -1688,6 +1725,7 @@ async def main() -> int:
                 run_id=run_id,
                 started_at=started_at,
                 resume=args.resume,
+                task_timeout_s=args.task_timeout_s,
             )
         finally:
             _release_run_lock(lock_path)

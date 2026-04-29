@@ -14,6 +14,7 @@ from autocode.layer4.llm import (
     LLMResponse,
     OllamaProvider,
     OpenRouterProvider,
+    _extract_openai_usage,
     _extract_tool_calls_from_text,
     _format_openrouter_error,
     _is_connection_error,
@@ -284,6 +285,48 @@ class TestOpenRouterRetryClassification:
             api_base="http://localhost:4000/v1",
         ) == "Model alias 'definitely-not-real' is not available on the configured gateway."
 
+    def test_gateway_alias_error_includes_response_detail_when_available(self) -> None:
+        class FakeResponse:
+            status_code = 400
+
+            @staticmethod
+            def json() -> dict[str, object]:
+                return {"error": {"message": "No deployment for model alias tools"}}
+
+        class BadRequestError(Exception):
+            response = FakeResponse()
+
+        message = _format_openrouter_error(
+            BadRequestError("Error code: 400 - model alias rejected"),
+            model="tools",
+            api_base="http://localhost:4000/v1",
+        )
+
+        assert message == (
+            "Model alias 'tools' is not available on the configured gateway. "
+            "Detail: No deployment for model alias tools"
+        )
+
+    def test_function_calling_disabled_error_is_not_reported_as_missing_alias(self) -> None:
+        class BadRequestError(Exception):
+            def __init__(self, msg: str, status_code: int) -> None:
+                super().__init__(msg)
+                self.status_code = status_code
+
+        exc = BadRequestError(
+            "Error code: 400 - Function calling is not enabled for models/gemma-3-27b-it",
+            400,
+        )
+
+        message = _format_openrouter_error(
+            exc,
+            model="coding",
+            api_base="http://localhost:4000/v1",
+        )
+
+        assert "does not support tool/function calling" in message
+        assert "coding" in message
+
 
 class TestProviderReasoningFlags:
     """Provider request flags for user-controlled thinking mode."""
@@ -396,6 +439,19 @@ class TestProviderReasoningFlags:
 
 class TestProviderUsageCapture:
     """Provider usage extraction for cost accounting."""
+
+    def test_openrouter_ignores_non_numeric_usage_fields(self) -> None:
+        usage = SimpleNamespace(
+            prompt_tokens="tool_use_failed",
+            completion_tokens=None,
+            prompt_tokens_details=SimpleNamespace(cached_tokens="not-a-number"),
+        )
+
+        assert _extract_openai_usage(usage) == {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "cached_input_tokens": 0,
+        }
 
     @pytest.mark.asyncio()
     async def test_openrouter_captures_cached_tokens_from_response(self) -> None:

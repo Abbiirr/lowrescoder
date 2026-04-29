@@ -21,7 +21,8 @@ def test_shell_timeout_or_error() -> None:
     """Shell commands timeout or fail gracefully."""
     result = _handle_run_command("sleep 60", timeout=1)
     # May timeout or fail with sandbox permission error — both are acceptable
-    assert "timed out" in result.lower() or "exit code" in result.lower() or "error" in result.lower()
+    lowered = result.lower()
+    assert "timed out" in lowered or "exit code" in lowered or "error" in lowered
 
 
 def test_shell_env_noninteractive() -> None:
@@ -31,7 +32,7 @@ def test_shell_env_noninteractive() -> None:
 
 
 def test_git_autocommit_before_edit(tmp_path: Path) -> None:
-    """Auto-commit creates a safety snapshot before file modification."""
+    """Legacy auto-commit helper creates a local safety snapshot."""
     from autocode.agent.tools import _git_auto_commit
 
     # Set up a git repo
@@ -62,20 +63,24 @@ def test_git_autocommit_before_edit(tmp_path: Path) -> None:
         cwd=str(repo), capture_output=True, timeout=5,
     )
 
+    before_count = subprocess.run(
+        ["git", "rev-list", "--count", "HEAD"],
+        cwd=str(repo), capture_output=True, text=True, timeout=5,
+    ).stdout.strip()
+
     # Modify the file (unstaged change)
     test_file.write_text("x = 2\n")
 
-    # Auto-commit should create a safety snapshot
-    sha = _git_auto_commit(test_file)
-    assert sha is not None
-    assert len(sha) >= 7  # short SHA
+    snapshot = _git_auto_commit(test_file)
+    assert snapshot is not None
+    assert Path(snapshot).exists()
+    assert (Path(snapshot) / "hello.py").read_text(encoding="utf-8") == "x = 2\n"
 
-    # Verify the commit exists
-    log = subprocess.run(
-        ["git", "log", "--oneline", "-1"],
+    after_count = subprocess.run(
+        ["git", "rev-list", "--count", "HEAD"],
         cwd=str(repo), capture_output=True, text=True, timeout=5,
-    )
-    assert "autocode: safety snapshot" in log.stdout
+    ).stdout.strip()
+    assert after_count == before_count
 
 
 def test_git_autocommit_no_changes(tmp_path: Path) -> None:

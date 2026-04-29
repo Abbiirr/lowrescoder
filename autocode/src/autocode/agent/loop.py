@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import inspect
 import json
 import logging
@@ -15,8 +16,10 @@ from pathlib import Path
 from typing import Any
 
 from autocode.agent.approval import ApprovalManager, ApprovalMode
+from autocode.agent.auto_verify import AutoVerifyConfig, verify_after_edit
 from autocode.agent.context import ContextEngine
 from autocode.agent.event_recorder import EventRecorder
+from autocode.agent.git_aware_staging import stage_post_edit
 from autocode.agent.hooks import HookEvent
 from autocode.agent.prompts import build_dynamic_suffix, build_static_prefix
 from autocode.agent.tool_result_cache import ToolResultCache
@@ -141,6 +144,9 @@ class AgentLoop:
         hook_registry: Any | None = None,
         tool_result_cache: ToolResultCache | None = None,
         tool_result_cache_min_bytes: int = 1024,
+        checkpoint_store: Any | None = None,
+        project_root: Path | None = None,
+        verify_config: AutoVerifyConfig | None = None,
     ) -> None:
         self.provider = provider
         self.tool_registry = tool_registry
@@ -163,6 +169,11 @@ class AgentLoop:
         self._hook_registry = hook_registry
         self._tool_result_cache = tool_result_cache
         self._tool_result_cache_min_bytes = tool_result_cache_min_bytes
+        self._checkpoint_store = checkpoint_store
+        self._project_root = project_root
+        self._verify_config = verify_config
+        self._verification_failure_count = 0
+        self._tool_call_idx = 0
         self._hook_session_started = False
         self._current_episode_id: str | None = None
         self._cancelled = False
@@ -289,12 +300,34 @@ class AgentLoop:
         self._tool_result_cache.record(tc.name, tc.arguments, result)
 
     def _resolve_project_root(self) -> Path:
-        """Return the current project root for environment bootstrap."""
-        session = self.session_store.get_session(self.session_id)
-        project_dir = getattr(session, "project_dir", "") if session else ""
-        if project_dir:
-            return Path(str(project_dir)).expanduser().resolve()
+        """Resolve the project root from explicit config, session metadata, or cwd."""
+        try:
+            if self._project_root:
+                return self._project_root
+        except Exception:
+            pass
+        try:
+            session = self.session_store.get_session(self.session_id)
+            if session and session.project_dir:
+                return Path(session.project_dir)
+        except Exception:
+            pass
         return Path.cwd()
+
+    @staticmethod
+    def _extract_touched_files(tool_name: str, arguments: dict[str, Any]) -> list[str]:
+        """Extract file paths from tool arguments for FS-mutating tools."""
+        paths: list[str] = []
+        if tool_name in ("write_file", "edit_file") and "path" in arguments:
+            paths.append(str(arguments["path"]))
+        elif tool_name == "apply_patch":
+            if "path" in arguments:
+                paths.append(str(arguments["path"]))
+            elif "patches" in arguments and isinstance(arguments["patches"], list):
+                for patch in arguments["patches"]:
+                    if isinstance(patch, dict) and "path" in patch:
+                        paths.append(str(patch["path"]))
+        return paths
 
     def _build_environment_snapshot(self) -> str:
         """Build a compact one-time workspace snapshot for iteration zero."""
@@ -977,19 +1010,32 @@ class AgentLoop:
         arguments: dict[str, Any],
     ) -> tuple[str, bool]:
         """Run a tool handler and return (result, cancel_after_completion)."""
-        raw_result = tool.handler(**arguments)
-        if not inspect.isawaitable(raw_result):
-            return raw_result, False
-
-        if tool.interruptible:
-            return await raw_result, False
-
-        handler_task = asyncio.create_task(raw_result)
+        raw_result: Any | None = None
         try:
-            return await asyncio.shield(handler_task), False
-        except asyncio.CancelledError:
-            result = await handler_task
-            return result, True
+            raw_result = tool.handler(**arguments)
+            if not inspect.isawaitable(raw_result):
+                return raw_result, False
+
+            handler_task = asyncio.ensure_future(raw_result)
+            raw_result = None
+            if tool.interruptible:
+                try:
+                    return await handler_task, False
+                except asyncio.CancelledError:
+                    handler_task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await handler_task
+                    raise
+
+            try:
+                return await asyncio.shield(handler_task), False
+            except asyncio.CancelledError:
+                result = await handler_task
+                return result, True
+        except BaseException:
+            if inspect.iscoroutine(raw_result):
+                raw_result.close()
+            raise
 
     async def _execute_tool_call(
         self,
@@ -1176,6 +1222,34 @@ class AgentLoop:
                 on_tool_call(tc.name, "blocked", result)
             return ToolExecutionOutcome((result, None))
 
+        # Per-tool checkpoint: snapshot files before FS-mutating tools
+        if (
+            tool
+            and tool.mutates_fs
+            and self._checkpoint_store
+            and self._project_root
+            and self._task_store
+        ):
+            try:
+                from autocode.session.file_snapshot import snapshot_files
+                touched = self._extract_touched_files(tc.name, tc.arguments)
+                if touched:
+                    snap_dir = Path.home() / ".autocode" / "snapshots" / self.session_id / tc.id
+                    snap_dir.mkdir(parents=True, exist_ok=True)
+                    snapshot_files(self._project_root, snap_dir, touched)
+                    self._checkpoint_store.save_per_tool_checkpoint(
+                        self._task_store,
+                        tool_call_id=tc.id,
+                        tool_name=tc.name,
+                        tool_call_idx=self._tool_call_idx,
+                        kind="pre_tool",
+                        files_touched=touched,
+                        label=f"pre {tc.name}",
+                    )
+                    self._tool_call_idx += 1
+            except Exception:
+                logger.debug("Per-tool checkpoint failed (non-blocking)", exc_info=True)
+
         # Execute
         start = time.monotonic()
         profile_name = f"tool-{tc.id}"
@@ -1197,6 +1271,13 @@ class AgentLoop:
                 self._session_stats.record_tool_use(tc.name)
                 if tc.name in ("write_file", "edit_file") and "path" in tc.arguments:
                     self._session_stats.record_file_change(tc.arguments["path"])
+            if tool and tool.mutates_fs and self._project_root:
+                staging_note = self._stage_successful_edit(tc, result)
+                if staging_note:
+                    result = f"{result}\n\n{staging_note}"
+                verification_note = await self._verify_successful_edit(tc)
+                if verification_note:
+                    result = f"{result}\n\n{verification_note}"
             duration_ms = int((time.monotonic() - start) * 1000)
             if self._profiler:
                 self._profiler.stop(profile_name, "tool", tool_name=tc.name)
@@ -1302,3 +1383,83 @@ class AgentLoop:
                 duration_ms=duration_ms,
             )
             return ToolExecutionOutcome((error, None))
+
+    def _stage_successful_edit(self, tc: ToolCall, result: str) -> str:
+        """Stage files touched by a successful mutating tool call."""
+        if not self._project_root:
+            return ""
+        touched = self._extract_touched_files(tc.name, tc.arguments)
+        if not touched:
+            return ""
+        try:
+            staging = stage_post_edit(touched, project_root=self._project_root)
+        except Exception:
+            logger.debug("Git-aware staging failed (non-blocking)", exc_info=True)
+            return ""
+        if not staging.staged:
+            return ""
+        return (
+            "Git-aware staging: staged "
+            f"{', '.join(staging.files)}.\n"
+            f"Proposed commit message: {staging.proposed_commit_message}"
+        )
+
+    async def _verify_successful_edit(self, tc: ToolCall) -> str:
+        """Run post-edit verification for files touched by one mutating tool."""
+        if not self._project_root:
+            return ""
+        config = self._verify_config or AutoVerifyConfig()
+        if not config.enabled:
+            return ""
+        touched = self._extract_touched_files(tc.name, tc.arguments)
+        if not touched:
+            return ""
+        try:
+            result = await verify_after_edit(
+                touched,
+                project_root=self._project_root,
+                config=config,
+            )
+        except Exception as exc:
+            logger.debug("Post-edit verification failed (non-blocking)", exc_info=True)
+            return f"Verification unavailable: {type(exc).__name__}: {exc}"
+        if not result.checked_files:
+            return ""
+        if result.ok:
+            self._verification_failure_count = 0
+            return result.to_system_message(project_root=self._project_root)
+
+        self._verification_failure_count += 1
+        note = result.to_system_message(project_root=self._project_root)
+        cost_warning = self._pop_cost_limit_warning()
+        if cost_warning is not None:
+            total, limit = cost_warning
+            return (
+                f"{note}\n"
+                "Verification retry halted: cost limit reached "
+                f"(${total:.2f} used, ${limit:.2f} limit)."
+            )
+        if self._verification_failure_count >= config.max_iterations:
+            plural = "s" if config.max_iterations != 1 else ""
+            return (
+                f"{note}\n"
+                f"Verification failed after {config.max_iterations} iteration{plural}. "
+                "No automatic rollback was performed. Use /rollback to inspect or restore "
+                "a user-confirmed checkpoint."
+            )
+        return note
+
+    def _pop_cost_limit_warning(self) -> tuple[float, float] | None:
+        if self._token_tracker is None:
+            return None
+        pop_warning = getattr(self._token_tracker, "pop_cost_limit_warning", None)
+        if not callable(pop_warning):
+            return None
+        warning = pop_warning()
+        if warning is None:
+            return None
+        try:
+            total, limit = warning
+            return float(total), float(limit)
+        except Exception:
+            return None

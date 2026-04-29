@@ -9,7 +9,6 @@ from autocode.agent.worktree import (
     WorktreeInfo,
     cleanup_worktree,
     create_worktree,
-    list_worktrees,
 )
 
 

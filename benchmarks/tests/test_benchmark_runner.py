@@ -52,6 +52,39 @@ def _make_task(
     )
 
 
+# --- Sweep script contract ---
+
+
+def test_b7_b30_sweep_uses_tool_capable_alias_for_loop_lanes() -> None:
+    """Loop-runner benchmark lanes require tool/function-calling model aliases."""
+    script = (PROJECT_ROOT / "benchmarks" / "run_b7_b30_sweep.sh").read_text(
+        encoding="utf-8",
+    )
+
+    assert '*)          echo "tools" ;;' in script
+    assert 'B30-TBENCH) echo "terminal_bench" ;;' in script
+
+
+def test_b7_b30_sweep_has_bounded_lane_timeout() -> None:
+    """Release-gate sweeps must fail slow lanes instead of hanging indefinitely."""
+    script = (PROJECT_ROOT / "benchmarks" / "run_b7_b30_sweep.sh").read_text(
+        encoding="utf-8",
+    )
+
+    assert "BENCHMARK_LANE_TIMEOUT_S=" in script
+    assert 'timeout "$BENCHMARK_LANE_TIMEOUT_S"' in script
+
+
+def test_b7_b30_sweep_uses_internal_task_timeout_for_artifacts() -> None:
+    """Full sweeps should record timed-out tasks as benchmark JSON artifacts."""
+    script = (PROJECT_ROOT / "benchmarks" / "run_b7_b30_sweep.sh").read_text(
+        encoding="utf-8",
+    )
+
+    assert "BENCHMARK_TASK_TIMEOUT_S=" in script
+    assert "--task-timeout-s \"$BENCHMARK_TASK_TIMEOUT_S\"" in script
+
+
 # --- Setup failure handling ---
 
 
@@ -144,6 +177,36 @@ def test_artifacts_persisted_in_results():
     result = run_data["results"][0]
     assert "artifacts" in result
     assert result["artifacts"]["grade_attempts"][0]["attempt"] == 1
+
+
+def test_run_lane_records_agent_task_timeout(tmp_path: Path):
+    """Internal task timeout should produce a structured artifact instead of hanging."""
+    agent = _make_agent(resolved=True)
+    task = _make_task()
+    budget = BudgetProfile(wall_time_s=60, token_cap=1000, max_tool_calls=10)
+
+    async def slow_solve(
+        task: BenchmarkTask,
+        sandbox: Path,
+        budget: BudgetProfile,
+    ) -> AgentResult:
+        await asyncio.sleep(60)
+        return AgentResult(task_id=task.task_id, resolved=True)
+
+    agent.solve_task = AsyncMock(side_effect=slow_solve)
+
+    with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox:
+        mock_sandbox.return_value = tmp_path
+        run_data = asyncio.run(
+            run_lane(agent, "B7", [task], budget, None, task_timeout_s=1),
+        )
+
+    result = run_data["results"][0]
+    assert result["resolved"] is False
+    assert result["error"] == "Task timed out after 1s"
+    assert result["artifacts"]["failure_type"] == "INFRA_FAIL"
+    assert result["artifacts"]["failure_evidence"]["timeout_source"] == "agent_task"
+    assert run_data["aggregate"]["infra_fails"] == 1
 
 
 # --- Tool restriction injection ---

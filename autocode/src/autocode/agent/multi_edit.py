@@ -1,12 +1,14 @@
 """Multi-file editing — edit multiple files in a single operation.
 
 Supports atomic multi-file changes with preview, accept/reject,
-and git-based undo/rollback.
+and local file-copy undo/rollback.
 """
 
 from __future__ import annotations
 
-import subprocess
+import json
+import shutil
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -42,7 +44,7 @@ class MultiEditPlan:
 
     edits: list[FileEdit] = field(default_factory=list)
     description: str = ""
-    rollback_sha: str = ""  # git SHA before edits for undo
+    rollback_sha: str = ""  # local snapshot token before edits for undo
 
     @property
     def file_count(self) -> int:
@@ -96,43 +98,43 @@ def create_rollback_point(
     project_root: Path,
     files: list[str] | None = None,
 ) -> str:
-    """Create a scoped rollback point. Returns SHA.
+    """Create a scoped local rollback point.
 
-    Only stages the specified files (not the entire repo).
-    Refuses to commit if the tree has unrelated dirty state
-    and no files are scoped — prevents capturing unrelated work.
+    Returns a snapshot directory token. This intentionally does not use git:
+    no commit, reset, checkout, restore, or stash mutation.
     """
     try:
-        cwd = str(project_root)
-        if files:
-            # Scoped: only stage the files we're about to edit
-            subprocess.run(
-                ["git", "add", "--"] + files,
-                cwd=cwd, capture_output=True, timeout=10,
-            )
-        else:
-            # No files specified — refuse on dirty tree
-            status = subprocess.run(
-                ["git", "status", "--porcelain"],
-                cwd=cwd, capture_output=True, text=True, timeout=5,
-            )
-            if status.stdout.strip():
-                return ""  # Dirty tree, won't capture unrelated changes
-
-        result = subprocess.run(
-            ["git", "commit", "-m", "autocode: rollback point",
-             "--allow-empty"],
-            cwd=cwd, capture_output=True, text=True, timeout=10,
+        if not files:
+            return ""
+        snapshot_dir = (
+            Path.home()
+            / ".autocode"
+            / "multi-edit-snapshots"
+            / uuid.uuid4().hex
         )
-        if result.returncode == 0:
-            sha = subprocess.run(
-                ["git", "rev-parse", "--short", "HEAD"],
-                cwd=cwd, capture_output=True, text=True, timeout=5,
-            )
-            return sha.stdout.strip()
+        snapshot_dir.mkdir(parents=True, exist_ok=False)
+        manifest: list[dict[str, str | bool]] = []
+        for raw in files:
+            rel = str(raw)
+            source = project_root / rel
+            snapshot_name = uuid.uuid4().hex
+            snapshot_path = snapshot_dir / snapshot_name
+            existed = source.exists()
+            if existed and source.is_file():
+                snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, snapshot_path)
+            manifest.append({
+                "path": rel,
+                "existed": existed,
+                "snapshot": snapshot_name,
+            })
+        (snapshot_dir / "manifest.json").write_text(
+            json.dumps({"files": manifest}, indent=2),
+            encoding="utf-8",
+        )
+        return str(snapshot_dir)
     except Exception:
-        pass
-    return ""
+        return ""
 
 
 def apply_multi_edit(
@@ -188,14 +190,13 @@ def rollback(
     project_root: Path | None = None,
     created_files: list[str] | None = None,
 ) -> bool:
-    """Rollback to a previous git state.
+    """Rollback to a previous local snapshot.
 
-    Also removes files that were created by the edit (untracked by git)
-    since git reset --hard doesn't clean untracked files.
+    Also removes files that were created by the edit.
     """
     root = project_root or Path.cwd()
     try:
-        # Remove files that were created (git reset won't touch them)
+        # Remove files that were created outside the snapshot manifest.
         if created_files:
             for f in created_files:
                 path = root / f
@@ -206,11 +207,21 @@ def rollback(
                     if parent != root and parent.exists() and not any(parent.iterdir()):
                         parent.rmdir()
 
-        result = subprocess.run(
-            ["git", "reset", "--hard", sha],
-            cwd=str(root),
-            capture_output=True, timeout=10,
-        )
-        return result.returncode == 0
+        snapshot_dir = Path(sha)
+        manifest_path = snapshot_dir / "manifest.json"
+        if not manifest_path.exists():
+            return False
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        for item in manifest.get("files", []):
+            rel = str(item["path"])
+            target = root / rel
+            if item.get("existed"):
+                snapshot_path = snapshot_dir / str(item["snapshot"])
+                if snapshot_path.exists():
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(snapshot_path, target)
+            elif target.exists():
+                target.unlink()
+        return True
     except Exception:
         return False

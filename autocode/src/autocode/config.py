@@ -71,7 +71,7 @@ class Layer2Config(BaseModel):
     db_path: str = Field(default="~/.autocode/index.lancedb", description="LanceDB index path")
     relevance_threshold: float = Field(default=0.3, ge=0.0, le=1.0)
     max_files: int = Field(default=50000, ge=1, description="Max files to index")
-    repomap_budget: int = Field(default=600, ge=1, description="Repo map token budget")
+    repomap_budget: int = Field(default=1000, ge=1, description="Repo map token budget")
     context_budget: int = Field(default=5000, ge=1, description="Total context token budget")
 
 
@@ -180,6 +180,16 @@ class AgentConfig(BaseModel):
     memory_decay_factor: float = Field(default=0.95, ge=0.5, le=1.0)  # Sprint 4C
     memory_context_max_tokens: int = Field(default=500, ge=50)  # Sprint 4C
     cost_limit_usd: float | None = Field(default=None, ge=0)
+    verify: "VerifyConfig" = Field(default_factory=lambda: VerifyConfig())
+
+
+class VerifyConfig(BaseModel):
+    """Post-edit verification configuration."""
+
+    enabled: bool = True
+    max_iterations: int = Field(default=3, ge=1)
+    on_failure: Literal["surface_to_user", "rollback", "continue"] = "surface_to_user"
+    languages: list[str] = Field(default_factory=list)
 
 
 # --- Top-level config ---

@@ -283,3 +283,194 @@ class TestCheckpointStore:
             "message 5",
             "message 6",
         ]
+
+
+class TestPerToolCheckpoint:
+    """C4.G1: per-tool-call atomic checkpoint with diff-rollback."""
+
+    def test_save_per_tool_checkpoint(self, setup) -> None:
+        """save_per_tool_checkpoint stores kind=pre_tool with parent_tool_call_id."""
+        conn, task_store, cp_store = setup
+        task_store.create_task("Task A")
+        cp_id = cp_store.save_per_tool_checkpoint(
+            task_store,
+            tool_call_id="tc-001",
+            tool_name="write_file",
+            tool_call_idx=0,
+            kind="pre_tool",
+            files_touched=["src/app.py", "lib/util.py"],
+            label="pre write_file",
+        )
+        assert cp_id
+        checkpoints = cp_store.list_checkpoints()
+        assert len(checkpoints) == 1
+        cp = checkpoints[0]
+        assert cp.kind == "pre_tool"
+        assert cp.parent_tool_call_id == "tc-001"
+        assert cp.tool_call_idx == 0
+
+    def test_list_per_tool_checkpoints_filters_by_kind(self, setup) -> None:
+        """list_per_tool_checkpoints returns only per-tool checkpoints."""
+        conn, task_store, cp_store = setup
+        task_store.create_task("Task A")
+        cp_store.save_checkpoint(task_store, "session checkpoint")
+        cp_store.save_per_tool_checkpoint(
+            task_store, "tc-001", "write_file", 0, "pre_tool",
+            files_touched=["src/a.py"], label="pre write_file",
+        )
+        cp_store.save_per_tool_checkpoint(
+            task_store, "tc-002", "edit_file", 1, "pre_tool",
+            files_touched=["src/b.py"], label="pre edit_file",
+        )
+        per_tool = cp_store.list_per_tool_checkpoints()
+        assert len(per_tool) == 2
+        assert all(cp.kind in ("pre_tool", "post_tool") for cp in per_tool)
+
+    def test_retention_drops_oldest_beyond_limit(self, setup) -> None:
+        """Retention drops oldest per-tool checkpoints beyond N."""
+        conn, task_store, cp_store = setup
+        task_store.create_task("Task A")
+        for i in range(5):
+            cp_store.save_per_tool_checkpoint(
+                task_store, f"tc-{i:03d}", "write_file", i, "pre_tool",
+                files_touched=[f"src/file{i}.py"], label=f"pre write_file {i}",
+            )
+        per_tool = cp_store.list_per_tool_checkpoints()
+        assert len(per_tool) == 5
+        removed = cp_store.enforce_retention(limit=3)
+        assert removed == 2
+        remaining = cp_store.list_per_tool_checkpoints()
+        assert len(remaining) == 3
+        ids = [cp.parent_tool_call_id for cp in remaining]
+        assert "tc-000" not in ids
+        assert "tc-001" not in ids
+
+    def test_restore_per_tool_checkpoint(self, setup) -> None:
+        """Restoring a per-tool checkpoint rehydrates task state."""
+        conn, task_store, cp_store = setup
+        tid = task_store.create_task("Task A")
+        task_store.update_task(tid, status="in_progress")
+        cp_id = cp_store.save_per_tool_checkpoint(
+            task_store, "tc-001", "write_file", 0, "pre_tool",
+            files_touched=["src/app.py"], label="pre write_file",
+        )
+        task_store.update_task(tid, status="completed")
+        task_store.create_task("Task B")
+
+        class _FakeSessionStore:
+            def __init__(self, c):
+                self._conn = c
+            def add_message(self, session_id, role, content, *, autocommit=True):
+                from datetime import UTC, datetime
+                now = datetime.now(UTC).isoformat()
+                self._conn.execute(
+                    "INSERT INTO messages (session_id, role, content, token_count, created_at) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (session_id, role, content, 0, now),
+                )
+                if autocommit:
+                    self._conn.commit()
+
+        fake_ss = _FakeSessionStore(conn)
+        result = cp_store.restore_checkpoint(cp_id, task_store, fake_ss)
+        assert result["label"] == "pre write_file"
+        tasks = task_store.list_tasks()
+        assert len(tasks) == 1
+        assert tasks[0].status == "in_progress"
+
+    def test_old_session_checkpoints_load_after_migration(self, setup) -> None:
+        """Old session-level checkpoints (no kind column) still load correctly."""
+        conn, task_store, cp_store = setup
+        task_store.create_task("Task A")
+        cp_id = cp_store.save_checkpoint(task_store, "legacy checkpoint")
+        cp = cp_store.get_checkpoint(cp_id)
+        assert cp is not None
+        assert cp.label == "legacy checkpoint"
+        assert cp.kind is None or cp.kind == "session"
+
+    def test_get_checkpoint_returns_files_touched(self, setup) -> None:
+        """Per-tool checkpoint stores files_touched."""
+        conn, task_store, cp_store = setup
+        task_store.create_task("Task A")
+        cp_id = cp_store.save_per_tool_checkpoint(
+            task_store, "tc-001", "write_file", 0, "pre_tool",
+            files_touched=["src/main.py", "lib/helper.py"],
+            label="pre write_file",
+        )
+        cp = cp_store.get_checkpoint(cp_id)
+        assert cp is not None
+        assert json.loads(cp.active_files) == ["src/main.py", "lib/helper.py"]
+
+
+class TestFileSnapshot:
+    """C4.G1: local file-copy snapshot mechanism."""
+
+    def test_snapshot_files_copies_to_disk(self, tmp_path) -> None:
+        """snapshot_files copies specified files to snapshot directory."""
+        from autocode.session.file_snapshot import snapshot_files
+
+        src_dir = tmp_path / "project"
+        src_dir.mkdir()
+        (src_dir / "a.py").write_text("print('hello')")
+        (src_dir / "b.py").write_text("print('world')")
+
+        snap_dir = tmp_path / "snaps" / "sess-1" / "tc-001"
+        snap_dir.mkdir(parents=True)
+
+        snapshot_files(
+            src_dir, snap_dir, files=["a.py", "b.py"],
+        )
+
+        assert (snap_dir / "a.py").read_text() == "print('hello')"
+        assert (snap_dir / "b.py").read_text() == "print('world')"
+
+    def test_snapshot_files_skips_missing(self, tmp_path) -> None:
+        """snapshot_files silently skips files that don't exist."""
+        from autocode.session.file_snapshot import snapshot_files
+
+        src_dir = tmp_path / "project"
+        src_dir.mkdir()
+        (src_dir / "exists.py").write_text("content")
+
+        snap_dir = tmp_path / "snaps" / "sess-1" / "tc-002"
+        snap_dir.mkdir(parents=True)
+
+        snapshot_files(
+            src_dir, snap_dir, files=["exists.py", "missing.py"],
+        )
+
+        assert (snap_dir / "exists.py").read_text() == "content"
+        assert not (snap_dir / "missing.py").exists()
+
+    def test_restore_snapshot_overwrites_files(self, tmp_path) -> None:
+        """restore_snapshot copies files back from snapshot to working tree."""
+        from autocode.session.file_snapshot import snapshot_files, restore_snapshot
+
+        src_dir = tmp_path / "project"
+        src_dir.mkdir()
+        (src_dir / "a.py").write_text("original")
+
+        snap_dir = tmp_path / "snaps" / "sess-1" / "tc-003"
+        snap_dir.mkdir(parents=True)
+
+        snapshot_files(src_dir, snap_dir, files=["a.py"])
+        (src_dir / "a.py").write_text("modified")
+
+        restore_snapshot(snap_dir, src_dir)
+
+        assert (src_dir / "a.py").read_text() == "original"
+
+    def test_retention_cleans_oldest_snapshot_dirs(self, tmp_path) -> None:
+        """Retention enforcement deletes oldest snapshot directories."""
+        from autocode.session.file_snapshot import enforce_snapshot_retention
+
+        base = tmp_path / "snaps" / "sess-1"
+        for i in range(5):
+            d = base / f"tc-{i:03d}"
+            d.mkdir(parents=True)
+            (d / "file.py").write_text(f"content {i}")
+
+        removed = enforce_snapshot_retention(base, limit=3)
+        assert removed == 2
+        remaining = sorted(p.name for p in base.iterdir())
+        assert remaining == ["tc-002", "tc-003", "tc-004"]

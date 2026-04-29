@@ -55,6 +55,14 @@ def _usage_get(obj: Any, key: str, default: Any = None) -> Any:
     return getattr(obj, key, default)
 
 
+def _usage_int(value: Any) -> int:
+    """Coerce provider usage counters defensively."""
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _extract_cached_input_tokens(usage: Any) -> int:
     details = (
         _usage_get(usage, "prompt_tokens_details")
@@ -67,22 +75,19 @@ def _extract_cached_input_tokens(usage: Any) -> int:
         or _usage_get(details, "cache_read_input_tokens")
         or 0
     )
-    try:
-        return max(0, int(cached))
-    except (TypeError, ValueError):
-        return 0
+    return _usage_int(cached)
 
 
 def _extract_openai_usage(usage: Any) -> dict[str, int]:
     """Normalize OpenAI-compatible usage metadata."""
     if usage is None:
         return {}
-    prompt_tokens = int(
+    prompt_tokens = _usage_int(
         _usage_get(usage, "prompt_tokens")
         or _usage_get(usage, "input_tokens")
         or 0
     )
-    completion_tokens = int(
+    completion_tokens = _usage_int(
         _usage_get(usage, "completion_tokens")
         or _usage_get(usage, "output_tokens")
         or 0
@@ -517,6 +522,29 @@ def _extract_http_status_code(exc: Exception) -> int | None:
     return None
 
 
+def _extract_gateway_error_detail(exc: Exception) -> str:
+    """Best-effort extraction of provider/gateway response detail."""
+    response = getattr(exc, "response", None)
+    if response is not None:
+        try:
+            payload = response.json()
+        except Exception:
+            payload = None
+        if isinstance(payload, dict):
+            error = payload.get("error")
+            if isinstance(error, dict):
+                message = error.get("message") or error.get("detail")
+                if isinstance(message, str) and message.strip():
+                    return message.strip()
+            detail = payload.get("detail") or payload.get("message")
+            if isinstance(detail, str) and detail.strip():
+                return detail.strip()
+        text = getattr(response, "text", "")
+        if isinstance(text, str) and text.strip():
+            return text.strip()
+    return ""
+
+
 def _is_loopback_api_base(api_base: str) -> bool:
     """Return True when the configured API base is localhost/loopback."""
     try:
@@ -562,10 +590,28 @@ def _format_openrouter_error(exc: Exception, *, model: str, api_base: str) -> st
     if _is_connection_error(exc):
         return f"Could not reach the configured gateway at {api_base}."
 
+    if status_code == 400 and any(
+        token in lowered for token in (
+            "function calling is not enabled",
+            "function calling is not supported",
+            "tool calling is not enabled",
+            "tool calling is not supported",
+        )
+    ):
+        return (
+            f"Model alias '{model}' resolved, but the routed provider does not support "
+            "tool/function calling. Route this alias to a tool-capable model or use a "
+            "tool-capable benchmark alias."
+        )
+
     if status_code in {400, 404} and any(
         token in lowered for token in ("model", "alias", "not found")
     ):
-        return f"Model alias '{model}' is not available on the configured gateway."
+        detail = _extract_gateway_error_detail(exc)
+        message = f"Model alias '{model}' is not available on the configured gateway."
+        if detail:
+            return f"{message} Detail: {detail[:500]}"
+        return message
     if status_code == 401:
         return "Gateway authentication failed (401). Check the configured API key."
     if status_code == 403:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import subprocess
 from unittest.mock import patch
 
@@ -9,6 +10,7 @@ from autocode.agent.sandbox import (
     SandboxConfig,
     SandboxPolicy,
     SandboxResult,
+    _communicate_async,
     _run_bwrap,
     _should_fallback_from_bwrap,
     detect_sandbox_support,
@@ -49,6 +51,13 @@ def test_sandbox_result_structure() -> None:
     )
     assert result.enforced
     assert result.sandbox_type == "bwrap"
+
+
+def test_async_communicate_uses_task_for_cancellation_cleanup() -> None:
+    """Cancellation paths must await/cancel communicate() to avoid RuntimeWarning leaks."""
+    source = inspect.getsource(_communicate_async)
+
+    assert "asyncio.create_task(process.communicate())" in source
 
 
 def test_sandbox_captures_output() -> None:
