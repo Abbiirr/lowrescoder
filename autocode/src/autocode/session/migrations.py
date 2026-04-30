@@ -164,12 +164,21 @@ def _migrate_v5(conn: sqlite3.Connection) -> None:
             pass  # column already exists
 
 
+def _migrate_v6(conn: sqlite3.Connection) -> None:
+    """v6: parent_session_id for session fork/tree relationships."""
+    try:
+        conn.execute("ALTER TABLE sessions ADD COLUMN parent_session_id TEXT")
+    except sqlite3.OperationalError:
+        pass  # column already exists
+
+
 MIGRATIONS: list[tuple[int, str, Callable[[sqlite3.Connection], None]]] = [
     (1, "orchestrator_events table", _migrate_v1),
     (2, "agent_mailbox table", _migrate_v2),
     (3, "task board columns and tables", _migrate_v3),
     (4, "checkpoint message snapshots", _migrate_v4),
     (5, "per-tool-checkpoint columns", _migrate_v5),
+    (6, "session parent links", _migrate_v6),
 ]
 """List of (version, description, function) in ascending order."""
 

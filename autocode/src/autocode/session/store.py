@@ -47,15 +47,16 @@ class SessionStore:
         model: str,
         provider: str,
         project_dir: str = "",
+        parent_session_id: str | None = None,
     ) -> str:
         """Create a new session, returning its UUID."""
         session_id = str(uuid.uuid4())
         now = _now_iso()
         self._conn.execute(
             "INSERT INTO sessions "
-            "(id, title, model, provider, project_dir, created_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (session_id, title, model, provider, project_dir, now, now),
+            "(id, title, model, provider, project_dir, parent_session_id, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (session_id, title, model, provider, project_dir, parent_session_id, now, now),
         )
         self._conn.commit()
         log_event(

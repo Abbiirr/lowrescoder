@@ -1,0 +1,5 @@
+name: fix-bug
+goal: Reproduce, fix, and verify a bug.
+steps:
+  - task: Reproduce the bug with a failing test
+  - prompt: Fix the bug and rerun the failing test plus adjacent regression

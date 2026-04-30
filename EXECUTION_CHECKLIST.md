@@ -1,6 +1,6 @@
 # Execution Checklist
 
-Last updated: 2026-04-29 (**Backend Robustness Tranche 4 C5.GATE locally complete, pending Claude review.** C4 foundation/safety and C5 multi-language LSP + auto-verify are locally regression-green. Latest gate artifact: `autocode/docs/qa/test-results/20260429-111435-c5-gate-regression-and-benchmark.md`. Live B7-B29/B7-B30 clean sweep remains deferred behind gateway/provider stabilization per `DEFERRED_PENDING_TODO.md` §6.6. Tranche 4 master plan: `docs/plan/backend-robustness-tranche-4-plan.md` + sub-plan + checklist. Active comms starts at Entry 1657; C5.G4 review request is Entry 1659, C5.GATE kickoff is Entry 1660. Agents must not commit, push, tag, or run any tree-mutating git command.)
+Last updated: 2026-04-30 (**Backend Robustness Tranche 4 — CLOSED from agent side; awaiting user-owned stable commit.** C4 + C5 + C6 + C7 all CLOSED/builder-complete and Claude-approved via Entry 1694 as `COMPLETE_WITH_DEFERRED_LIVE_SWEEP`. C7.GATE verification: `autocode/docs/qa/test-results/20260430-194659-c7-gate-final-release-and-benchmark.md`. Live B7-B29/B7-B30 clean sweep remains deferred per `DEFERRED_PENDING_TODO.md` §6.6. User runs the commit. Tranche 4 master plan: `docs/plan/backend-robustness-tranche-4-plan.md` + sub-plan + checklist. Agents must not commit, push, tag, or run any tree-mutating git command.)
 Owner: OpenCode (Builder primary, Codex fallback when OpenCode is unavailable) / Claude (Reviewer-Architect; Codex co-review available if user redirects)
 Purpose: live status checklist for source-of-truth work, active next-frontier research-to-implementation items, and any benchmark/harness follow-up. Re-check this file every 10 minutes during active work.
 
@@ -13,21 +13,29 @@ Detailed implementation map:
 - `docs/plan/hr5-phase-a-benchmark-latency-checklist.md` — closed Phase A checklist and exit-gate record
 - **`docs/plan/stabilization-and-parity-plan.md`** — APPROVED 2026-04-20; primary source of truth for the sprint
 - `PLAN.md` — long-form roadmap; current active order follows Backend Robustness Tranche 4 from `docs/plan/backend-robustness-tranche-4-plan.md` (Stabilize-and-Release Tranche 3 is the closed predecessor)
+- **`docs/plan/post-c7-stable-commit-roadmap.md`** — single authoritative reference for the post-C7.GATE program (P1 AI verification harness → P1a telemetry → P2 prompt cache → P2a scratch store → P3 memory → P3a-d reliability/evals → P4 deferred-conditional Item/Turn/Thread → P4a TUI refactor/rewrite → P5 feature-flag tier). Tier deep specs at repo root in `00-INDEX.md` through `05-cross-cutting-concerns.md` and `07-tier5-harness-reliability.md` through `10-tier8-observability-evals.md`.
+- **`docs/plan/post-c7-builder-handoff.md`** — comprehensive post-commit builder handoff and ordered task list.
 - `bugs/codex-tui-issue-inventory.md` — 60 items + §S1–§S12 adversarial sweeps
 - `docs/tui-testing/tui_testing_checklist.md` — enforced per-change checklist; §6.5 sweeps + §7 regression table gate the ship
 - `DEFERRED_PENDING_TODO.md` — store of everything NOT in the current active slice
 
 ## Current Active Queue
 
-**Active program: Backend Robustness Tranche 4** (`docs/plan/backend-robustness-tranche-4-plan.md`). C5.GATE is locally complete and waiting for Claude review. Builder = OpenCode primary, Codex fallback when OpenCode is unavailable. Reviewer = Claude default.
+**Active program: Backend Robustness Tranche 4 closeout** (`docs/plan/backend-robustness-tranche-4-plan.md`). C5 + C6.G5 + C6.G6 + C6.GATE + C7 SB1 + C7 SB2 + C7 SB3 + C7.GATE are closed from the agent side and Claude-approved in Entry 1694. User-owned stable commit is the only remaining closeout action.
 
-**Authoritative current direction:** `AGENTS_CONVERSATION.MD` Entry 1657 (post-archive roadmap and C5.G4 handoff), Entry 1659 (C5.G4 review request), and Entry 1660 (C5.GATE verification kickoff).
+**Authoritative current direction:** `AGENTS_CONVERSATION.MD` Entry 1694 (final C7.GATE APPROVE), Entry 1695 (post-commit routing/reset), and `docs/plan/post-c7-builder-handoff.md`. Resolved C5-C7 fast-forward entries were archived to `docs/communication/old/2026-04-30-tranche-4-c5-c7-fast-forward-1664-1693.md`. The user's direct prompt to the builder is sufficient signoff; no separate comms signoff entry is required.
 
-**Active sequence:**
-1. **C5.GATE — LOCAL COMPLETE, REVIEW PENDING.** Full unit `2079 passed, 12 skipped`; benchmark harness `77 passed`; all 8 LSP PTY smokes passed; auto-verify smoke passed; `git diff --check` clean. Artifact: `autocode/docs/qa/test-results/20260429-111435-c5-gate-regression-and-benchmark.md`.
-2. **C6.G5 — NEXT AFTER REVIEW.** Headless `--json` / `--output-schema` mode.
-3. **C6.G6 + C6.GATE, then C7.G8-G15 + C7.GATE** — remaining stable-commit path per master plan.
-4. **Parked for after Tranche 4 closes:** Packets 1, 2, 4, 5 from new TUI kickoff (audit, current-architecture doc, fixtures, Rust TUI plan).
+**Closeout sequence (resolved by Entry 1694):**
+1. **C5.G4 + C5.GATE — CLOSED.** APPROVE verdicts via Entry 1664. Full unit `2079 passed, 12 skipped`; benchmark harness `77 passed`; all 8 LSP PTY smokes passed; auto-verify smoke passed; `git diff --check` clean. Artifact: `autocode/docs/qa/test-results/20260429-111435-c5-gate-regression-and-benchmark.md`.
+2. **C6.G5 — CLOSED.** Headless `--json` mode using Tier 4.4-compatible NDJSON subset; APPROVE in Entry 1675.
+3. **C6.G6 — CLOSED.** Cost-aware router with cache-multiplier hook; artifact `autocode/docs/qa/test-results/20260430-171806-c6-g6-cost-aware-router.md`; full unit `2139 passed, 12 skipped`; approved in Entry 1681.
+4. **C6.GATE — CLOSED.** Artifact `autocode/docs/qa/test-results/20260430-172302-c6-gate-regression-and-benchmark.md`; benchmark harness `204 passed`; focused C6 smoke `57 passed`; full unit baseline `2139 passed, 12 skipped`; B7-B29 live sweep deferred per `DEFERRED_PENDING_TODO.md` §6.6; approved in Entry 1681.
+5. **C7 SB1 — CLOSED.** Architect/editor model split, nested `AGENTS.md` memory, and session fork/tree/replay payload implemented. Artifact `autocode/docs/qa/test-results/20260430-191933-c7-sb1-runtime-features.md`; focused SB1 `8 passed`; adjacent command/rules/backend/router `259 passed`; full unit `2147 passed, 12 skipped`; adjacent slash-surface PTY smoke passed; `git diff --check` clean; approved in Entry 1694.
+6. **C7 SB2 — CLOSED.** Prompt-cache keepalive and recipe/workflow YAML packaging implemented. Artifact `autocode/docs/qa/test-results/20260430-192908-c7-sb2-cache-recipes.md`; focused SB2 `6 passed`; adjacent agent/config/command/cost `203 passed`; full unit `2153 passed, 12 skipped`; `git diff --check` clean; approved in Entry 1694.
+7. **C7 SB3 — CLOSED.** Worktree subagent handoff, watch parser/command, and static marketplace registry pointer implemented. Artifact `autocode/docs/qa/test-results/20260430-193829-c7-sb3-worktree-watch-marketplace.md`; focused SB3 `6 passed`; adjacent command/worktree/subagent `163 passed`; full unit `2159 passed, 12 skipped`; adjacent slash-surface PTY smoke passed; `git diff --check` clean; approved in Entry 1694.
+8. **C7.GATE — CLOSED / APPROVED.** Artifact `autocode/docs/qa/test-results/20260430-194659-c7-gate-final-release-and-benchmark.md`; full unit `2159 passed, 12 skipped`; benchmark harness `204 passed`; all 8 LSP PTY smokes passed; auto-verify PTY passed; cost-routing canary `10 passed`; real-gateway PTY passed; `git diff --check` clean. Claude APPROVE in Entry 1694; user commits next.
+9. **Parked for after Tranche 4 closes:** Packets 1, 2, 4, 5 from new TUI kickoff (audit, current-architecture doc, fixtures, Rust TUI plan).
+10. **Post-stable-commit horizon (gated on user commit):** P1 AI verification harness narrow substrate; P1a telemetry plumbing; P2 prompt cache + verify-before-use; P2a scratch store; P3 file-system memory; P3a drift detectors; P3b PEV/Ralph loops; P3c entropy + verify tightening; P3d eval suite expansion; P4 conditional Item/Turn/Thread; P4a TUI refactor/rewrite; P5 feature-flag tracks. **Authoritative reference:** `docs/plan/post-c7-stable-commit-roadmap.md`; **builder handoff:** `docs/plan/post-c7-builder-handoff.md`.
 
 **Predecessor Stabilize-and-Release Tranche 3** is fully closed (Codex Entry 1584 closeout, Claude Entry 1585 reviewer APPROVE, Codex Entry 1586 ack, user 3.E commit `1700d66 Closes backend v2` 2026-04-27). Optional release tag remains user discretion.
 

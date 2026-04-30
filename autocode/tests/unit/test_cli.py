@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -74,6 +75,52 @@ class TestCLIEdit:
         result = runner.invoke(app, ["edit", "test.py", "add docstring"])
         assert result.exit_code == 0
         assert "not yet implemented" in result.output
+
+
+class TestCLIExec:
+    """Test headless exec command behavior."""
+
+    def test_json_mode_runner_construction_failure_emits_error_event(self) -> None:
+        with patch("autocode.cli.load_config", return_value=AutoCodeConfig()):
+            with patch(
+                "autocode.backend.headless_runner.HeadlessRunner",
+                side_effect=RuntimeError("cannot create session"),
+            ):
+                result = runner.invoke(app, ["exec", "hello", "--json"])
+
+        assert result.exit_code == 1
+        event = json.loads(result.stdout.strip())
+        assert event["type"] == "error"
+        assert event["protocol_version"] == "0.1.0-c6g5-subset"
+        assert event["message"] == "cannot create session"
+
+    def test_json_mode_auto_approve_flag_is_explicit(self) -> None:
+        mock_runner = MagicMock()
+        mock_runner.run = AsyncMock(return_value=None)
+
+        with patch("autocode.cli.load_config", return_value=AutoCodeConfig()):
+            with patch(
+                "autocode.backend.headless_runner.HeadlessRunner",
+                return_value=mock_runner,
+            ) as runner_cls:
+                result = runner.invoke(app, ["exec", "hello", "--json", "--auto-approve"])
+
+        assert result.exit_code == 0
+        assert runner_cls.call_args.kwargs["auto_approve"] is True
+
+    def test_json_mode_denies_approvals_by_default(self) -> None:
+        mock_runner = MagicMock()
+        mock_runner.run = AsyncMock(return_value=None)
+
+        with patch("autocode.cli.load_config", return_value=AutoCodeConfig()):
+            with patch(
+                "autocode.backend.headless_runner.HeadlessRunner",
+                return_value=mock_runner,
+            ) as runner_cls:
+                result = runner.invoke(app, ["exec", "hello", "--json"])
+
+        assert result.exit_code == 0
+        assert runner_cls.call_args.kwargs["auto_approve"] is False
 
 
 class TestCLIHelp:

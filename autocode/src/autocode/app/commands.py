@@ -966,6 +966,200 @@ async def _handle_review(app: AppContext, args: str) -> None:
         app.add_system_message("Usage: `/review on` (read-only review), `/review off`")
 
 
+async def _handle_architect(app: AppContext, args: str) -> None:
+    """Set or show the model override for planning/architecture mode."""
+    model = args.strip()
+    if not model:
+        current = app.config.agent.architect_model or "(not set)"
+        app.add_system_message(f"Architect model: {current}")
+        return
+    app.config.agent.architect_model = model
+    app.add_system_message(f"Architect model set to: {model}")
+
+
+async def _handle_editor(app: AppContext, args: str) -> None:
+    """Set or show the model override for build/edit execution mode."""
+    model = args.strip()
+    if not model:
+        current = app.config.agent.editor_model or "(not set)"
+        app.add_system_message(f"Editor model: {current}")
+        return
+    app.config.agent.editor_model = model
+    app.add_system_message(f"Editor model set to: {model}")
+
+
+async def _handle_agents(app: AppContext, args: str) -> None:
+    """Reload nested AGENTS.md memory for the active working directory."""
+    arg = args.strip().lower()
+    if arg not in {"reload", ""}:
+        app.add_system_message("Usage: `/agents reload`")
+        return
+    try:
+        from autocode.layer2.rules import RulesLoader
+
+        repo_root = Path(getattr(app, "repo_root", app.project_root))
+        result = RulesLoader().load_agents_nested(
+            cwd=app.project_root,
+            repo_root=repo_root,
+        )
+        setattr(app, "_rules_result", result)
+        source_count = len(result.sources)
+        suffix = "" if source_count == 1 else "s"
+        app.add_system_message(
+            f"Reloaded {source_count} AGENTS.md source{suffix} from nested memory."
+        )
+    except Exception as e:
+        app.add_system_message(f"Agents reload failed: {e}")
+
+
+async def _handle_fork(app: AppContext, args: str) -> None:
+    """Create a branch copy of the selected or current session."""
+    try:
+        from autocode.backend.services import fork_session
+
+        source_session_id = args.strip() or app.session_id
+        result = fork_session(
+            session_store=app.session_store,
+            source_session_id=source_session_id,
+            config=app.config,
+            project_root=app.project_root,
+        )
+        app.add_system_message(
+            f"Forked session `{source_session_id[:8]}` -> "
+            f"`{str(result['new_session_id'])[:8]}`"
+        )
+    except Exception as e:
+        app.add_system_message(f"Fork failed: {e}")
+
+
+async def _handle_tree(app: AppContext, args: str) -> None:
+    """Show session fork relationships."""
+    sessions = app.session_store.list_sessions()
+    if not sessions:
+        app.add_system_message("No sessions.")
+        return
+    lines = ["**Session tree:**"]
+    for session in sessions:
+        parent = getattr(session, "parent_session_id", None)
+        marker = "*" if session.id == app.session_id else "-"
+        parent_text = f" <- {parent[:8]}" if parent else ""
+        lines.append(f"{marker} `{session.id[:8]}` {session.title}{parent_text}")
+    app.add_system_message("\n".join(lines))
+
+
+async def _handle_recipe(app: AppContext, args: str) -> None:
+    """List or run workflow recipes."""
+    try:
+        from autocode.agent.recipes import RecipeRegistry
+        from autocode.session.task_store import TaskStore
+
+        registry = RecipeRegistry(project_root=app.project_root)
+        parts = args.strip().split(maxsplit=1)
+        action = parts[0].lower() if parts else "list"
+        rest = parts[1].strip() if len(parts) > 1 else ""
+        if action in {"", "list"}:
+            recipes = registry.list()
+            if not recipes:
+                app.add_system_message("No recipes found.")
+                return
+            lines = ["**Recipes:**"]
+            for recipe in recipes:
+                lines.append(f"- `{recipe.name}` — {recipe.goal}")
+            app.add_system_message("\n".join(lines))
+            return
+        if action != "run" or not rest:
+            app.add_system_message("Usage: `/recipe list` or `/recipe run <name>`")
+            return
+
+        recipe = registry.get(rest)
+        task_store = TaskStore(app.session_store.get_connection(), app.session_id)
+        prompt_count = 0
+        task_count = 0
+        for step in recipe.steps:
+            if step.task:
+                task_store.create_task(step.task, description=f"Recipe: {recipe.name}")
+                task_count += 1
+            if step.prompt:
+                await app.run_loop_prompt(step.prompt)
+                prompt_count += 1
+            if step.subagent:
+                await app.run_loop_prompt(f"Spawn subagent for recipe step: {step.subagent}")
+                prompt_count += 1
+        app.add_system_message(
+            f"Ran recipe `{recipe.name}`: {task_count} task(s), {prompt_count} prompt step(s)."
+        )
+    except KeyError:
+        app.add_system_message("Recipe not found.")
+    except Exception as e:
+        app.add_system_message(f"Recipe failed: {e}")
+
+
+async def _handle_watch(app: AppContext, args: str) -> None:
+    """Enable, disable, or inspect watch mode state."""
+    from autocode.agent.watch import WatchMode
+
+    state = getattr(app, "_watch_mode", None)
+    if not isinstance(state, WatchMode):
+        state = WatchMode()
+        setattr(app, "_watch_mode", state)
+    arg = args.strip().lower() or "status"
+    if arg == "on":
+        state.enabled = True
+        app.add_system_message("Watch mode ON.")
+    elif arg == "off":
+        state.enabled = False
+        app.add_system_message("Watch mode OFF.")
+    elif arg == "status":
+        app.add_system_message(f"Watch mode is {state.status()}.")
+    else:
+        app.add_system_message("Usage: `/watch on|off|status`")
+
+
+async def _handle_marketplace(app: AppContext, args: str) -> None:
+    """List or inspect static marketplace registry items."""
+    try:
+        from autocode.external.registry import PluginRegistry
+
+        registry = PluginRegistry()
+        parts = args.strip().split(maxsplit=1)
+        action = parts[0].lower() if parts else "list"
+        rest = parts[1].strip() if len(parts) > 1 else ""
+        if action in {"", "list"}:
+            lines = ["**Marketplace:**"]
+            for item in registry.list():
+                lines.append(f"- `{item.name}` ({item.kind}) — {item.description}")
+            app.add_system_message("\n".join(lines))
+            return
+        if action == "info" and rest:
+            item = registry.get(rest)
+            app.add_system_message(
+                f"**{item.name}**\nKind: {item.kind}\nSource: {item.source}\n"
+                f"{item.description}"
+            )
+            return
+        if action == "install" and rest:
+            item = registry.get(rest)
+            source = app.project_root / item.source
+            if not source.exists():
+                app.add_system_message(
+                    "Remote install is not supported in this iteration. "
+                    f"Manual source: {item.source}"
+                )
+                return
+            app.add_system_message(
+                f"Local install source is available for `{item.name}`: {item.source}"
+            )
+            return
+        app.add_system_message(
+            "Usage: `/marketplace list`, `/marketplace info <name>`, "
+            "`/marketplace install <name>`"
+        )
+    except KeyError:
+        app.add_system_message("Marketplace item not found.")
+    except Exception as e:
+        app.add_system_message(f"Marketplace failed: {e}")
+
+
 async def _handle_memory(app: AppContext, args: str) -> None:
     """Show learned patterns from MemoryStore."""
     try:
@@ -1341,6 +1535,64 @@ def create_default_router() -> CommandRouter:
             name="review",
             description="Review mode: /review on (read-only review), /review off",
             handler=_handle_review,
+        )
+    )
+    router.register(
+        SlashCommand(
+            name="architect",
+            description="Set planning/architecture model override",
+            handler=_handle_architect,
+        )
+    )
+    router.register(
+        SlashCommand(
+            name="editor",
+            description="Set build/edit model override",
+            handler=_handle_editor,
+        )
+    )
+    router.register(
+        SlashCommand(
+            name="agents",
+            description="Reload nested AGENTS.md project memory",
+            handler=_handle_agents,
+        )
+    )
+    router.register(
+        SlashCommand(
+            name="fork",
+            description="Fork current or selected session",
+            handler=_handle_fork,
+        )
+    )
+    router.register(
+        SlashCommand(
+            name="tree",
+            description="Show session fork tree",
+            handler=_handle_tree,
+        )
+    )
+    router.register(
+        SlashCommand(
+            name="recipe",
+            aliases=["recipes"],
+            description="List or run workflow recipes",
+            handler=_handle_recipe,
+        )
+    )
+    router.register(
+        SlashCommand(
+            name="watch",
+            description="Watch mode: /watch on, /watch off, /watch status",
+            handler=_handle_watch,
+        )
+    )
+    router.register(
+        SlashCommand(
+            name="marketplace",
+            aliases=["market"],
+            description="List or inspect static marketplace registry items",
+            handler=_handle_marketplace,
         )
     )
     router.register(

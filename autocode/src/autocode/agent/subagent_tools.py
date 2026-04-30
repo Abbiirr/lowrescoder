@@ -6,6 +6,7 @@ import logging
 
 from autocode.agent.subagent import SubagentManager
 from autocode.agent.tools import ToolDefinition, ToolRegistry
+from autocode.agent.worktree import build_merge_back_plan, create_worktree
 from autocode.core.logging import log_event
 
 logger = logging.getLogger(__name__)
@@ -16,10 +17,23 @@ def _make_spawn_handler(manager: SubagentManager):
         subagent_type: str = "explore",
         task: str = "",
         context: str = "",
+        use_worktree: bool = False,
         **_kwargs,
     ) -> str:
         if not task:
             return "Error: task is required to spawn a subagent."
+        worktree_note = ""
+        if use_worktree:
+            repo_root = getattr(manager, "project_root", None)
+            if repo_root is None:
+                return "Error: manager has no project_root for worktree isolation."
+            info = create_worktree(repo_root)
+            plan = build_merge_back_plan(info)
+            context = (
+                f"{context}\n\n[Worktree]\nPath: {info.path}\nBranch: {info.branch}\n"
+                f"Merge-back: {' '.join(plan.diff_command)}\n{plan.instructions}"
+            ).strip()
+            worktree_note = f" in worktree {info.path}"
         try:
             subagent_id = manager.spawn(subagent_type, task, context)
         except (RuntimeError, ValueError) as e:
@@ -30,7 +44,7 @@ def _make_spawn_handler(manager: SubagentManager):
             task=task[:100],
         )
         return (
-            f"Spawned {subagent_type} subagent '{subagent_id}'. "
+            f"Spawned {subagent_type} subagent '{subagent_id}'{worktree_note}. "
             f"Use check_subagent(subagent_id='{subagent_id}') to get results."
         )
     return handler
@@ -121,6 +135,10 @@ def register_subagent_tools(
                 "context": {
                     "type": "string",
                     "description": "Optional extra context",
+                },
+                "use_worktree": {
+                    "type": "boolean",
+                    "description": "Run subagent in an isolated git worktree",
                 },
             },
             "required": ["subagent_type", "task"],

@@ -164,6 +164,39 @@ class RulesLoader:
 
         return result
 
+    def load_agents_nested(
+        self,
+        *,
+        cwd: str | Path,
+        repo_root: str | Path,
+        strip_html_comments: bool = True,
+        max_file_bytes: int = _DEFAULT_MAX_FILE_BYTES,
+    ) -> RulesResult:
+        """Load nested AGENTS.md files from repo root to cwd.
+
+        Parent files are emitted before child files so more specific rules
+        appear later in the prompt and can override broader guidance.
+        """
+        root = Path(cwd).resolve()
+        ceiling = Path(repo_root).resolve()
+        result = RulesResult()
+        visited: set[Path] = set()
+        for directory in self._directory_chain(root, ceiling):
+            self._load_file_into(
+                directory / "AGENTS.md",
+                kind=Provenance.AGENTS_MD,
+                project_root=root,
+                result=result,
+                visited=visited,
+                include_imports=True,
+                max_import_depth=_DEFAULT_MAX_IMPORT_DEPTH,
+                external_import_approver=None,
+                strip_html_comments=strip_html_comments,
+                max_file_bytes=max_file_bytes,
+                current_depth=0,
+            )
+        return result
+
     # ----- internal helpers -----
 
     def _directory_chain(self, root: Path, ceiling: Path | None) -> list[Path]:

@@ -6,6 +6,7 @@ Typer app with commands: chat, ask, edit, config, version.
 from __future__ import annotations
 
 import asyncio
+import sys
 from typing import TYPE_CHECKING
 
 import typer
@@ -558,3 +559,92 @@ def rename(
         console.print(format_rename_preview(result))
         if result.occurrences:
             console.print("\nRun with --apply to execute the rename.")
+
+
+@app.command("exec")
+def exec_cmd(
+    prompt: str = typer.Argument(..., help="Prompt to send to the agent"),
+    json_output: bool = typer.Option(
+        False, "--json", help="Output Tier 4.4 NDJSON event stream to stdout."
+    ),
+    output_schema: str | None = typer.Option(
+        None,
+        "--output-schema",
+        help="Path to a JSON Schema file; the response is validated against it.",
+    ),
+    auto_approve: bool = typer.Option(
+        False,
+        "--auto-approve",
+        help="Auto-approve tool requests in headless --json mode.",
+    ),
+    verbose: bool = typer.Option(False, "--verbose", "-v"),
+) -> None:
+    """Execute a single agent turn in headless mode."""
+    from autocode.core.logging import setup_logging
+
+    config = load_config()
+    if verbose:
+        config.ui.verbose = True
+
+    if json_output:
+        import logging as _logging
+
+        _logging.basicConfig(stream=sys.stderr, level=_logging.WARNING)
+        setup_logging(config.logging, verbose=False)
+
+        from autocode.backend.headless_runner import HeadlessRunner
+
+        try:
+            runner = HeadlessRunner(config=config, auto_approve=auto_approve)
+            asyncio.run(runner.run(prompt))
+        except Exception as exc:
+            from autocode.backend.headless_schema import ErrorEvent, emit_event
+
+            emit_event(ErrorEvent(message=str(exc)))
+            raise typer.Exit(1) from exc
+    elif output_schema:
+        from pathlib import Path
+
+        from autocode.layer4.llm import create_provider
+
+        setup_logging(config.logging, verbose=verbose)
+
+        schema_path = Path(output_schema)
+        schema_text = schema_path.read_text()
+        import json
+
+        schema_dict = json.loads(schema_text)
+
+        provider = create_provider(config)
+        messages = [
+            {"role": "system", "content": "You are AutoCode, an AI coding assistant."},
+            {"role": "user", "content": prompt},
+        ]
+        try:
+            result = asyncio.run(
+                provider.generate_json(messages, schema=schema_dict)
+            )
+            print(json.dumps(result, indent=2))
+        except Exception as exc:
+            print(f'{{"error": "{exc}"}}', file=sys.stderr)
+            raise typer.Exit(1) from exc
+    else:
+        console.print("Use --json for NDJSON output or --output-schema for typed JSON.")
+        raise typer.Exit(1)
+
+
+@app.command("generate-schema")
+def generate_schema(
+    out: str = typer.Option(
+        "./schemas",
+        "--out",
+        help="Output directory for JSON Schema files.",
+    ),
+) -> None:
+    """Emit JSON Schema files for the headless NDJSON event protocol."""
+    from autocode.backend.headless_schema import write_schema_files
+
+    written = write_schema_files(out)
+    for path in written:
+        console.print(f"  {path}")
+    console.print(f"Generated {len(written)} schema files in {out}")

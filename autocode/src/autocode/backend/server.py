@@ -198,6 +198,7 @@ class BackendServer:
 
         # Agent (lazy init)
         self._provider: Any = None
+        self._last_provider_selection: Any | None = None
         self._tool_registry: ToolRegistry | None = None
         self._tool_result_cache: Any | None = None
         self._approval_manager: ApprovalManager | None = None
@@ -353,6 +354,7 @@ class BackendServer:
 
     def _select_chat_layer(self, message: str) -> tuple[int, str, bool]:
         if self._force_l4_routing():
+            self._apply_layer45_selection("forced_l4", confidence=1.0)
             return 4, "forced_l4", True
 
         try:
@@ -375,7 +377,61 @@ class BackendServer:
             if request_type == RequestType.SIMPLE_EDIT:
                 return 3, request_type.value, False
 
+        self._apply_layer45_selection(request_type, confidence=0.9)
         return 4, request_type.value, False
+
+    def _apply_layer45_selection(self, task_class: Any, *, confidence: float) -> None:
+        routing = getattr(self.config, "routing", None)
+        if not getattr(routing, "enabled", False):
+            return
+        try:
+            from autocode.layer4_5.router import Layer45Router, ProviderSelection
+
+            router = Layer45Router.from_config(self.config)
+            selection = router.select(task_class, confidence=confidence)
+        except Exception as exc:  # noqa: BLE001 - routing must not block L4 fallback
+            log_event(
+                logger,
+                logging.WARNING,
+                "backend_layer45_selection_failed",
+                session_id=self.session_id,
+                error=str(exc),
+            )
+            return
+        mode_model = self._mode_model_override()
+        if mode_model:
+            selection = ProviderSelection(
+                provider=selection.provider,
+                model=mode_model,
+                tier=selection.tier,
+                reason=f"{selection.reason}; mode override model={mode_model}",
+                estimated_cost_delta=selection.estimated_cost_delta,
+                estimated_cost=selection.estimated_cost,
+            )
+        self._last_provider_selection = selection
+        self.config.llm.provider = selection.provider
+        self.config.llm.model = selection.model
+        log_event(
+            logger,
+            logging.INFO,
+            "backend_layer45_provider_selected",
+            session_id=self.session_id,
+            provider=selection.provider,
+            model=selection.model,
+            tier=selection.tier,
+            reason=selection.reason,
+            estimated_cost=selection.estimated_cost,
+            estimated_cost_delta=selection.estimated_cost_delta,
+        )
+
+    def _mode_model_override(self) -> str | None:
+        """Return configured architect/editor model override for the active mode."""
+        agent_config = getattr(self.config, "agent", None)
+        if self._agent_mode in {AgentMode.PLANNING, AgentMode.RESEARCH, AgentMode.REVIEW}:
+            return getattr(agent_config, "architect_model", None)
+        if self._agent_mode == AgentMode.BUILD:
+            return getattr(agent_config, "editor_model", None)
+        return None
 
     def _emit_chat_ack(self, request_id: int) -> None:
         self.emit_notification(
@@ -512,6 +568,7 @@ class BackendServer:
                 checkpoint_store=self._checkpoint_store,
                 project_root=self.project_root,
                 verify_config=self.config.agent.verify,
+                prompt_cache_keepalive_config=self.config.agent.cache,
             )
 
             # Apply persisted agent mode

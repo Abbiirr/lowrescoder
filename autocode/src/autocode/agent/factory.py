@@ -102,6 +102,7 @@ def create_agent_loop(
     checkpoint_store: Any | None = None,
     project_root: Path | None = None,
     verify_config: Any | None = None,
+    prompt_cache_keepalive_config: Any | None = None,
 ) -> tuple[AgentLoop, SessionStats]:
     """Create a fully-wired AgentLoop with all Phase 7 runtime modules.
 
@@ -166,6 +167,9 @@ def create_agent_loop(
         checkpoint_store=checkpoint_store,
         project_root=project_root,
         verify_config=_normalize_verify_config(verify_config),
+        prompt_cache_keepalive_config=_normalize_prompt_cache_config(
+            prompt_cache_keepalive_config
+        ),
     )
 
     return loop, session_stats
@@ -193,6 +197,7 @@ def create_orchestrator(
     checkpoint_store: Any | None = None,
     project_root: Path | None = None,
     verify_config: Any | None = None,
+    prompt_cache_keepalive_config: Any | None = None,
 ) -> tuple[Any, SessionStats]:
     """Create a fully-wired Orchestrator wrapping an AgentLoop.
 
@@ -226,6 +231,7 @@ def create_orchestrator(
         checkpoint_store=checkpoint_store,
         project_root=project_root,
         verify_config=verify_config,
+        prompt_cache_keepalive_config=prompt_cache_keepalive_config,
     )
 
     # Event infrastructure
@@ -258,4 +264,17 @@ def _normalize_verify_config(config: Any | None) -> AutoVerifyConfig | None:
         max_iterations=int(getattr(config, "max_iterations", 3)),
         on_failure=getattr(config, "on_failure", "surface_to_user"),
         languages=tuple(getattr(config, "languages", []) or ()),
+    )
+
+
+def _normalize_prompt_cache_config(config: Any | None) -> Any | None:
+    if config is None:
+        return None
+    from autocode.agent.prompt_cache_keepalive import PromptCacheKeepaliveConfig
+
+    if isinstance(config, PromptCacheKeepaliveConfig):
+        return config
+    return PromptCacheKeepaliveConfig(
+        enabled=bool(getattr(config, "keepalive_enabled", True)),
+        interval_seconds=int(getattr(config, "keepalive_interval_seconds", 300)),
     )

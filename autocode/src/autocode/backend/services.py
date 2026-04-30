@@ -457,9 +457,22 @@ def fork_session(
         model=config.llm.model,
         provider=config.llm.provider,
         project_dir=str(project_root),
+        parent_session_id=source_session_id,
     )
 
-    for message in session_store.get_messages(source_session_id):
-        session_store.add_message(new_id, message.role, message.content)
+    messages = session_store.get_messages(source_session_id)
+    snapshot = session_store.snapshot_messages(source_session_id, limit=len(messages))
+    session_store.restore_messages_snapshot(new_id, snapshot)
 
-    return {"new_session_id": new_id}
+    return {"new_session_id": new_id, "parent_session_id": source_session_id}
+
+
+def build_rollout_replay_payload(
+    session_store: SessionStore,
+    session_id: str,
+) -> dict[str, Any]:
+    """Return a deterministic replay payload for a stored session rollout."""
+    return {
+        "session_id": session_id,
+        "messages": session_store.get_messages_with_tool_calls(session_id),
+    }

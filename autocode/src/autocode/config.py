@@ -82,6 +82,36 @@ class Layer4Config(BaseModel):
     max_retries: int = Field(default=3, ge=0)
 
 
+class RoutingModelRateConfig(BaseModel):
+    """Provider/model rate metadata for Layer 4.5 routing."""
+
+    provider: Literal["ollama", "openrouter"]
+    model: str
+    tier: Literal["cheap", "mid", "frontier"]
+    input_per_m: float = Field(default=0.0, ge=0.0)
+    output_per_m: float = Field(default=0.0, ge=0.0)
+
+
+class RoutingConfig(BaseModel):
+    """Layer 4.5 deterministic provider/model routing configuration."""
+
+    enabled: bool = True
+    default_tier_map: dict[str, Literal["cheap", "mid", "frontier"]] = Field(
+        default_factory=lambda: {
+            "simple_edit": "cheap",
+            "chat": "mid",
+            "complex_task": "frontier",
+            "bug_fix": "mid",
+            "refactor": "frontier",
+            "architecture": "frontier",
+            "planning": "frontier",
+        }
+    )
+    low_confidence_tier: Literal["cheap", "mid", "frontier"] = "mid"
+    fallback_tier: Literal["cheap", "mid", "frontier"] = "mid"
+    model_rates: list[RoutingModelRateConfig] = Field(default_factory=list)
+
+
 class EditConfig(BaseModel):
     """Edit system configuration."""
 
@@ -169,6 +199,14 @@ class LoggingConfig(BaseModel):
 class AgentConfig(BaseModel):
     """Agent orchestration configuration (Phase 4)."""
 
+    architect_model: str | None = Field(
+        default=None,
+        description="Optional model override for planning/architecture modes.",
+    )
+    editor_model: str | None = Field(
+        default=None,
+        description="Optional model override for build/edit execution modes.",
+    )
     compaction_threshold: float = Field(default=0.75, ge=0.5, le=0.95)
     compaction_kept_messages: int = Field(default=4, ge=1)
     tool_result_max_tokens: int = Field(default=500, ge=50)
@@ -181,6 +219,7 @@ class AgentConfig(BaseModel):
     memory_context_max_tokens: int = Field(default=500, ge=50)  # Sprint 4C
     cost_limit_usd: float | None = Field(default=None, ge=0)
     verify: "VerifyConfig" = Field(default_factory=lambda: VerifyConfig())
+    cache: "PromptCacheConfig" = Field(default_factory=lambda: PromptCacheConfig())
 
 
 class VerifyConfig(BaseModel):
@@ -190,6 +229,13 @@ class VerifyConfig(BaseModel):
     max_iterations: int = Field(default=3, ge=1)
     on_failure: Literal["surface_to_user", "rollback", "continue"] = "surface_to_user"
     languages: list[str] = Field(default_factory=list)
+
+
+class PromptCacheConfig(BaseModel):
+    """Prompt-cache keepalive configuration."""
+
+    keepalive_enabled: bool = True
+    keepalive_interval_seconds: int = Field(default=300, ge=30)
 
 
 # --- Top-level config ---
@@ -203,6 +249,7 @@ class AutoCodeConfig(BaseModel):
     layer2: Layer2Config = Field(default_factory=Layer2Config)
     layer3: Layer3Config = Field(default_factory=Layer3Config)
     layer4: Layer4Config = Field(default_factory=Layer4Config)
+    routing: RoutingConfig = Field(default_factory=RoutingConfig)
     edit: EditConfig = Field(default_factory=EditConfig)
     git: GitConfig = Field(default_factory=GitConfig)
     shell: ShellConfig = Field(default_factory=ShellConfig)

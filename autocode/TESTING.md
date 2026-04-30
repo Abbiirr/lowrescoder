@@ -625,3 +625,65 @@ Use this naming convention:
 | `autocode/docs/qa/test-results/` | Stored backend, Rust TUI, and PTY verification artifacts |
 | `sandboxes/` | Benchmark sandbox outputs |
 | `sandboxes/progress/` | Benchmark resume checkpoints |
+
+---
+
+## 11. Headless `--json` Mode Testing
+
+### Overview
+
+Headless mode (`autocode exec [PROMPT] --json`) emits a Tier 4.4-compatible NDJSON event stream to stdout. This section covers testing the schema, the runner, and the CLI surface.
+
+Tool approvals are denied by default in headless JSON mode. Pass `--auto-approve` only for trusted sandboxed runs that are allowed to execute requested tools without an interactive approval prompt.
+
+### Schema versioning
+
+- Every event carries `protocol_version: "0.1.0-c6g5-subset"`.
+- The protocol version will bump to `0.2.0` when Tier 2.1 Item/Turn/Thread lands, with no breaking change for C6.G5 consumers.
+- `item.kind` is constrained to: {`agent_message`, `tool_execution`, `plan_update`, `approval`}.
+- Reserved for future (documented but not emitted): {`reasoning`, `subagent_delegation`, `diff`}.
+
+### Test files
+
+| File | Coverage |
+|------|----------|
+| `autocode/tests/unit/test_headless_schema.py` | Event schema validation, item.kind constraint, usage block, error events, schema generation, round-trip validation |
+| `autocode/tests/unit/test_headless_runner.py` | Stdout-only-NDJSON, no-TUI-import, error path, usage always present, ChatHost adapter event mapping, full turn sequence, jq-compatible output, schema validation against generated files |
+
+### Key test invariants
+
+1. **Stdout-only-NDJSON**: Every line emitted in `--json` mode must be valid JSON with `protocol_version` present. No banners, log lines, or human-readable text.
+2. **No TUI import**: The headless schema and runner modules must not import from `autocode.tui` or `autocode.rtui` (verified by AST analysis).
+3. **Error path**: Errors emit a final `error` event then exit non-zero.
+4. **Usage block**: `turn_completed` always includes a `usage` block with all six fields, zero-defaulted.
+5. **Item kind constraint**: Emitting or validating `item.kind` outside the subset raises `ValueError`.
+6. **Item lifecycle**: every `item_started` must be matched by `item_completed` before `turn_completed`; assistant token deltas reuse one stable `agent_message` item.
+7. **Approval visibility**: tool requests emit an `approval` item whether they are auto-approved or denied.
+
+### Schema generation
+
+Run `autocode generate-schema --out ./schemas` to produce JSON Schema files for all event types plus a `meta.schema.json` documenting valid/reserved kinds.
+
+### `--output-schema` scope
+
+`autocode exec [PROMPT] --output-schema PATH` validates the provider response against the provided JSON Schema using the direct Layer 4 `generate_json()` path. This is intentionally a typed-output helper, not the full agent execution path: it does not assemble repository context, run tools, stream NDJSON events, or use the ChatHost lifecycle.
+
+---
+
+## 12. Layer 4.5 Cost-Aware Router Testing
+
+Layer 4.5 routing (`autocode/src/autocode/layer4_5/router.py`) is deterministic and unit-tested without live LLM calls.
+
+### Test files
+
+| File | Coverage |
+|------|----------|
+| `autocode/tests/unit/test_layer45_router.py` | Tier mapping, low-confidence fallback, cache-multiplier cost shifts, config-built router, backend pre-provider integration, cost-dashboard routing-tier breakdown |
+
+### Key test invariants
+
+1. **Tier routing**: simple edits route to the cheap tier; refactor/architecture/planning routes to frontier; ambiguous chat uses `routing.default_tier_map`.
+2. **Fallback safety**: low-confidence routing uses `routing.low_confidence_tier`.
+3. **Cache hook**: `billable_input_cost_factor=1.0` preserves default selection; synthetic `0.3` and `1.25` factors can change model ranking within a tier.
+4. **Explainability**: every `ProviderSelection` includes a non-empty `reason`, `estimated_cost`, and `estimated_cost_delta`.
+5. **No behavior surprise by default**: if no `routing.model_rates` are configured, the router preserves the current `config.llm.provider/model` across all tiers.

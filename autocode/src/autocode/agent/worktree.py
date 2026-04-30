@@ -26,6 +26,30 @@ class WorktreeInfo:
     worktree_id: str
 
 
+@dataclass(frozen=True)
+class MergeBackPlan:
+    """Read-only merge-back plan for a completed worktree."""
+
+    diff_command: list[str]
+    instructions: str
+
+
+def build_merge_back_plan(info: WorktreeInfo) -> MergeBackPlan:
+    """Return a read-only diff command plus apply_patch handoff guidance."""
+    diff_command = [
+        "git",
+        "diff",
+        "--no-ext-diff",
+        str(info.parent_repo),
+        str(info.path),
+    ]
+    instructions = (
+        "Review the diff command output, then apply accepted hunks in the main "
+        "tree with the approval-gated apply_patch tool. Do not git merge/pull/checkout."
+    )
+    return MergeBackPlan(diff_command=diff_command, instructions=instructions)
+
+
 def create_worktree(
     repo_root: Path,
     prefix: str = "autocode-wt",

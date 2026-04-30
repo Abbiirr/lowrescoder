@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     model TEXT NOT NULL,
     provider TEXT NOT NULL,
     project_dir TEXT NOT NULL DEFAULT '',
+    parent_session_id TEXT,
     summary TEXT,
     token_count INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
@@ -130,6 +131,7 @@ class SessionRow(BaseModel):
     model: str
     provider: str
     project_dir: str = ""
+    parent_session_id: str | None = None
     summary: str | None = None
     token_count: int = 0
     created_at: datetime

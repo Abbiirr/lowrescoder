@@ -1,0 +1,22 @@
+{
+  "items": [
+    {
+      "name": "fix-bug",
+      "kind": "recipe",
+      "description": "Bundled bug reproduction, fix, and verification recipe.",
+      "source": "autocode/src/autocode/agent/recipes/fix-bug.yaml"
+    },
+    {
+      "name": "add-feature",
+      "kind": "recipe",
+      "description": "Bundled feature implementation recipe.",
+      "source": "autocode/src/autocode/agent/recipes/add-feature.yaml"
+    },
+    {
+      "name": "refactor",
+      "kind": "recipe",
+      "description": "Bundled safe refactor recipe.",
+      "source": "autocode/src/autocode/agent/recipes/refactor.yaml"
+    }
+  ]
+}

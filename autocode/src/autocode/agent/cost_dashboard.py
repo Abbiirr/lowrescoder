@@ -25,6 +25,7 @@ class CostEntry:
     output_cost_usd: float = 0.0
     is_local: bool = True
     provider_model: str = ""
+    routing_tier: str = ""
 
     @property
     def total_input_tokens(self) -> int:
@@ -97,6 +98,7 @@ class CostDashboard:
         cached_input_tokens: int = 0,
         tokens_out: int = 0,
         provider_model: str | None = None,
+        routing_tier: str = "",
     ) -> None:
         """Record token usage for an agent/task."""
         is_local = layer in ("l1", "l2", "l3", "l4")
@@ -130,6 +132,7 @@ class CostDashboard:
             output_cost_usd=output_cost,
             is_local=is_local,
             provider_model=provider_model or agent_id,
+            routing_tier=routing_tier,
         ))
 
     @classmethod
@@ -275,6 +278,16 @@ class CostDashboard:
             bucket["cost"] += entry.cost_usd
         return result
 
+    def by_routing_tier(self) -> dict[str, dict[str, float]]:
+        """Usage grouped by Layer 4.5 routing tier."""
+        result: dict[str, dict[str, float]] = {}
+        for entry in self._entries:
+            key = entry.routing_tier or "unrouted"
+            bucket = result.setdefault(key, {"tokens": 0.0, "cost": 0.0})
+            bucket["tokens"] += entry.total_tokens
+            bucket["cost"] += entry.cost_usd
+        return result
+
     def summary(self) -> str:
         """Human-readable cost summary."""
         lines = ["Cost Dashboard", "=" * 40]
@@ -298,5 +311,14 @@ class CostDashboard:
             for layer, tokens in sorted(by_layer.items()):
                 cost = cost_by_layer.get(layer, 0.0)
                 lines.append(f"  {layer}: {tokens:,} tokens (${cost:.4f})")
+
+        by_tier = self.by_routing_tier()
+        routed_tiers = {tier: data for tier, data in by_tier.items() if tier != "unrouted"}
+        if routed_tiers:
+            lines.append("\nPer routing tier:")
+            for tier, data in sorted(routed_tiers.items()):
+                lines.append(
+                    f"  {tier}: {int(data['tokens']):,} tokens (${data['cost']:.4f})"
+                )
 
         return "\n".join(lines)

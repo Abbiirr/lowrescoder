@@ -1,0 +1,5 @@
+name: add-feature
+goal: Add a feature with a focused implementation plan and verification.
+steps:
+  - task: Draft implementation plan
+  - prompt: Implement the smallest safe feature slice and test it

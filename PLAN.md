@@ -1,6 +1,6 @@
 # Plan
 
-Last updated: 2026-04-29
+Last updated: 2026-04-30
 Owner: Codex
 Purpose: detailed implementation plan for the active backend-tightening/docs-refresh tranche plus historical roadmap sections. `EXECUTION_CHECKLIST.md` is the live status board; this file is the detailed execution map and ordered backlog. For every open checklist item, find the matching section or source-plan pointer here before implementing.
 
@@ -20,7 +20,7 @@ Purpose: detailed implementation plan for the active backend-tightening/docs-ref
 
 Follow this order unless the user explicitly redirects:
 
-1. **Backend Robustness Tranche 4 — C5.GATE locally complete, pending Claude review.** Canonical plan: `docs/plan/backend-robustness-tranche-4-plan.md`. Sub-plan: `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md`. Master atomic checklist: `docs/plan/backend-robustness-tranche-4-checklist.md`. C4 foundation/safety and C5 multi-language LSP + auto-verify are locally regression-green via `autocode/docs/qa/test-results/20260429-111435-c5-gate-regression-and-benchmark.md`. C6 is next: G5 headless `--json` / `--output-schema`, then G6 Layer 4.5 cost-aware router. C7 polish remains after C6. All non-tree-mutating git ops only per `AGENTS.md`. Parked for after Tranche 4 closes: Packets 1, 2, 4, 5 from the TUI kickoff brief.
+1. **Backend Robustness Tranche 4 — closed from agent side; user-owned stable commit next.** Canonical plan: `docs/plan/backend-robustness-tranche-4-plan.md`. Sub-plan: `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md`. Master atomic checklist: `docs/plan/backend-robustness-tranche-4-checklist.md`. C4 + C5 + C6 + C7 are builder-complete and Claude-approved via `AGENTS_CONVERSATION.MD` Entry 1694 as `COMPLETE_WITH_DEFERRED_LIVE_SWEEP`. Final gate artifact: `autocode/docs/qa/test-results/20260430-194659-c7-gate-final-release-and-benchmark.md`. Post-commit roadmap: `docs/plan/post-c7-stable-commit-roadmap.md`; builder handoff: `docs/plan/post-c7-builder-handoff.md`. All non-tree-mutating git ops only per `AGENTS.md`. Parked for after Tranche 4 closes: Packets 1, 2, 4, 5 from the TUI kickoff brief.
 2. **Stabilize-and-Release Program — CLOSED.** Canonical plan: `docs/plan/stabilize-and-release-plan.md`. Three checkpoints all closed; user 3.E commit landed in `1700d66 Closes backend v2` on 2026-04-27. Optional release tag remains user discretion. Final regression artifact: `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md` (Python `1999`, Rust TUI `210`, benchmark `199`, real-gateway PTY canary green). Tranche-3 comms archive cut: `docs/communication/old/2026-04-27-stabilize-and-release-tranche-3-1548-1586.md`. HR-5 program canonical: `docs/tui-testing/tui_implementation_plan.md` and `docs/tui-testing/tui_implementation_todo.md`.
 3. **Backend Feature Improvement Tranche — local regression complete.** Use `docs/plan/backend-feature-improvement-plan.md` and `docs/plan/backend-feature-improvement-todo.md` as the closeout record. Docs-refresh A-G and the local deterministic regression gate are complete; live gateway canary remains before any broad benchmark sweep or product-path release claim.
 4. HR-5 Phase C-D follow-through surfaces and spinner/thinking parity.

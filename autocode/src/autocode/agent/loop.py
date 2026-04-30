@@ -21,6 +21,10 @@ from autocode.agent.context import ContextEngine
 from autocode.agent.event_recorder import EventRecorder
 from autocode.agent.git_aware_staging import stage_post_edit
 from autocode.agent.hooks import HookEvent
+from autocode.agent.prompt_cache_keepalive import (
+    PromptCacheKeepalive,
+    PromptCacheKeepaliveConfig,
+)
 from autocode.agent.prompts import build_dynamic_suffix, build_static_prefix
 from autocode.agent.tool_result_cache import ToolResultCache
 from autocode.agent.tools import CACHE_MANAGEMENT_TOOL_NAMES, ToolRegistry
@@ -147,6 +151,7 @@ class AgentLoop:
         checkpoint_store: Any | None = None,
         project_root: Path | None = None,
         verify_config: AutoVerifyConfig | None = None,
+        prompt_cache_keepalive_config: PromptCacheKeepaliveConfig | None = None,
     ) -> None:
         self.provider = provider
         self.tool_registry = tool_registry
@@ -172,6 +177,8 @@ class AgentLoop:
         self._checkpoint_store = checkpoint_store
         self._project_root = project_root
         self._verify_config = verify_config
+        self._prompt_cache_keepalive_config = prompt_cache_keepalive_config
+        self._prompt_cache_keepalive: PromptCacheKeepalive | None = None
         self._verification_failure_count = 0
         self._tool_call_idx = 0
         self._hook_session_started = False
@@ -182,6 +189,23 @@ class AgentLoop:
         self._static_prefix: str | None = None
         self._cached_tool_schemas: list[dict[str, Any]] | None = None
         self._environment_snapshot: str | None = None
+
+    def _ensure_prompt_cache_keepalive(self) -> None:
+        """Start provider-gated prompt-cache keepalive for the stable prefix."""
+        if self._static_prefix is None:
+            return
+        if self._prompt_cache_keepalive is not None:
+            self._prompt_cache_keepalive.start()
+            return
+        dashboard = getattr(self._token_tracker, "cost_dashboard", None)
+        self._prompt_cache_keepalive = PromptCacheKeepalive(
+            provider=self.provider,
+            static_prompt=self._static_prefix,
+            cost_dashboard=dashboard,
+            provider_label=self._token_provider_label(),
+            config=self._prompt_cache_keepalive_config,
+        )
+        self._prompt_cache_keepalive.start()
 
     def _token_provider_label(self) -> str:
         """Return a stable provider/model label for token and cost reporting."""
@@ -561,6 +585,7 @@ class AgentLoop:
         # Ensure static prefix is cached
         if self._static_prefix is None:
             self._static_prefix = build_static_prefix()
+        self._ensure_prompt_cache_keepalive()
 
         if self._context_engine:
             task_summary = self._task_store.summary() if self._task_store else ""

@@ -186,7 +186,7 @@ Use `autocode chat --tui` only as a fallback path. New frontend behavior should 
 | Native scrollback preservation | DONE | Inline launch mode preserves terminal scrollback |
 | Launch-mode preference | DONE | `/tui` / `/screen` command and CLI `--mode` |
 
-### 2.10 Slash Commands (29 Commands)
+### 2.10 Slash Commands (40 Commands)
 
 | Command | Aliases | Description |
 |---------|---------|-------------|
@@ -205,17 +205,28 @@ Use `autocode chat --tui` only as a fallback path. New frontend behavior should 
 | `/copy` | `/cp` | Copy last response, a specific response, or all responses |
 | `/freeze` | `/scroll-lock` | Toggle auto-scroll for text selection |
 | `/thinking` | `/think` | Toggle thinking token visibility and provider reasoning request gating |
+| `/verify` | — | Toggle post-edit verification |
 | `/clear` | `/cls` | Clear the terminal screen |
 | `/loop` | — | Recurring jobs: `/loop <interval> <payload>`, `/loop list`, `/loop cancel <id>` |
 | `/index` | — | Build or rebuild the code search index |
+| `/repomap` | `/map` | Build and display the ranked repository map |
 | `/tasks` | `/t` | Show task board |
 | `/plan` | — | Plan mode: `/plan on`, `/plan approve`, `/plan off`, `/plan export`, `/plan sync` |
 | `/research` | `/comprehend` | Research mode: `/research on`, `/research off`, `/research status` |
 | `/build` | — | Build mode: `/build on` (verification required), `/build off` |
 | `/review` | — | Review mode: `/review on` (read-only review), `/review off` |
+| `/architect` | — | Set planning/architecture model override |
+| `/editor` | — | Set build/edit model override |
+| `/agents` | — | Reload nested `AGENTS.md` project memory |
+| `/fork` | — | Fork current or selected session |
+| `/tree` | — | Show session fork tree |
+| `/recipe` | `/recipes` | List or run workflow recipes |
+| `/watch` | — | Watch mode: `/watch on`, `/watch off`, `/watch status` |
+| `/marketplace` | `/market` | List or inspect static marketplace registry items |
 | `/memory` | `/mem` | Show learned patterns |
 | `/checkpoint` | `/ckpt` | List or save checkpoints |
 | `/undo` | — | Undo by restoring the most recent checkpoint |
+| `/rollback` | `/rb` | List, preview, or restore per-tool checkpoints |
 | `/diff` | — | Show git diff of changes in the current session |
 | `/cost` | `/tokens`, `/usage` | Show token usage and model-aware estimated cost for this session |
 | `/export` | — | Export conversation to markdown file |

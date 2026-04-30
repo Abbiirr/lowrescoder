@@ -1,16 +1,20 @@
 # Current Directives
 
-> Last updated: 2026-04-29
+> Last updated: 2026-04-30
 
 ## Active Phase
 
-**Backend Robustness Tranche 4 — C5.GATE locally complete, pending Claude review.** Canonical plan: `docs/plan/backend-robustness-tranche-4-plan.md`. Sub-plan: `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md`. Master atomic checklist: `docs/plan/backend-robustness-tranche-4-checklist.md`. C4 foundation/safety is complete; C5 multi-language LSP + auto-verify is locally regression-green via `autocode/docs/qa/test-results/20260429-111435-c5-gate-regression-and-benchmark.md`. The live B7-B29/B7-B30 clean sweep remains deferred behind gateway/provider stabilization per `DEFERRED_PENDING_TODO.md` §6.6.
+**Backend Robustness Tranche 4 — CLOSED from agent side; awaiting user-owned stable commit.** Canonical plan: `docs/plan/backend-robustness-tranche-4-plan.md`. Sub-plan: `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md`. Master atomic checklist: `docs/plan/backend-robustness-tranche-4-checklist.md`. C4 + C5 + C6 + C7 SB1/SB2/SB3 + C7.GATE are builder-complete and Claude-approved through Entry 1694 as `COMPLETE_WITH_DEFERRED_LIVE_SWEEP`. C7.GATE verification artifact: `autocode/docs/qa/test-results/20260430-194659-c7-gate-final-release-and-benchmark.md`. Live B7-B29/B7-B30 clean sweep remains deferred behind gateway/provider stabilization per `DEFERRED_PENDING_TODO.md` §6.6 (pre-documented infra deferral, not a code regression).
 
-**Next slice after review:** C6.G5 headless `--json` / `--output-schema` mode, then C6.G6 cost-aware routing. Active comms thread starts at `AGENTS_CONVERSATION.MD` Entry 1657; C5.G4 review request is Entry 1659 and C5.GATE pre-task is Entry 1660.
+**Fast-forward batch authorization (Entry 1675):** spent. Codex carried C6.G6 → C6.GATE → C7 SB1/SB2/SB3 → C7.GATE under the user redirect and Claude approved the final gate in Entry 1694. Post-commit work returns to standard per-slice workflow unless the user explicitly re-authorizes batch mode.
 
-**Completed Tranche 4 checkpoints so far:** Packet 3 feature contracts, C4.G1 per-tool checkpoints + `/rollback`, C4.G2 ranked repo-map + `/repomap`, C4.G7' git-aware staging + forbidden-git enforcement, C4.GATE, C5.G3.0 LSP framework, all 8 language adapters, C5.G4 auto-verify loop, and C5.GATE local regression/smoke gate.
+**Next step:** user-owned stable commit. Latest full unit is `2159 passed, 12 skipped`; benchmark harness `204 passed`; all 8 LSP PTY smokes passed; auto-verify PTY passed; cost-routing canary passed; real-gateway PTY canary passed; `git diff --check` clean. Active comms thread = Entry 1685 (post-C7 roadmap pointer), Entry 1694 (final C7.GATE APPROVE), and Entry 1695 (post-commit routing/reset). Resolved C5-C7 fast-forward entries were archived to `docs/communication/old/2026-04-30-tranche-4-c5-c7-fast-forward-1664-1693.md`.
 
-**Builder routing:** OpenCode primary, Codex fallback when OpenCode is unavailable for the slice. **Reviewer:** Claude default; Codex co-review available if user redirects (open question — not yet locked).
+**Post-C7.GATE roadmap reference:** `docs/plan/post-c7-stable-commit-roadmap.md`; builder handoff: `docs/plan/post-c7-builder-handoff.md`. Phase order is P1 AI verification harness narrow substrate → P1a telemetry plumbing → P2 prompt cache + verify-before-use → P2a scratch store → P3 file-system memory → P3a-d reliability/eval phases → P4 conditional Item/Turn/Thread → P4a TUI refactor/rewrite → P5 feature-flag tracks. Tier deep specs live at repo root in `00-INDEX.md` through `05-cross-cutting-concerns.md` and `07-tier5-harness-reliability.md` through `10-tier8-observability-evals.md`. No post-C7 phase starts until the user lands the stable commit and signals the user-decision defaults/overrides.
+
+**Completed Tranche 4 checkpoints:** Packet 3 feature contracts, C4.G1 per-tool checkpoints + `/rollback`, C4.G2 ranked repo-map + `/repomap`, C4.G7' git-aware staging + forbidden-git enforcement, C4.GATE, C5.G3.0 LSP framework, all 8 language adapters, C5.G4 auto-verify loop, C5.GATE, C6.G5 headless NDJSON mode, C6.G6 Layer 4.5 cost router, C6.GATE, C7 SB1/SB2/SB3, and C7.GATE.
+
+**Builder routing after stable commit:** OpenCode primary, Codex fallback when OpenCode is unavailable for the slice. **Reviewer:** Claude default; Codex co-review available if user redirects.
 
 **Parked for after Tranche 4 closes:** Packets 1, 2, 4, 5 from the new TUI kickoff brief (audit, current-architecture doc, fixtures, Rust TUI plan).
 
