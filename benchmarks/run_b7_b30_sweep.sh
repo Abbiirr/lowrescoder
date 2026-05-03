@@ -7,7 +7,7 @@
 #     and let the human intervene.
 #   - On per-lane failure, continue to the next lane; the benchmark_runner
 #     already uses --resume so partial progress is saved.
-#   - Use gateway aliases (tools, terminal_bench), never underlying
+#   - Use gateway aliases (coding, terminal_bench), never underlying
 #     model names.
 #
 # Usage:
@@ -45,8 +45,12 @@ BENCH_HOST="${AUTOCODE_LLM_API_BASE:-http://localhost:4000/v1}"
 GATEWAY_HEALTH="${BENCH_HOST%/v1}/health/readiness"
 BENCHMARK_TASK_TIMEOUT_S="${BENCHMARK_TASK_TIMEOUT_S:-600}"
 BENCHMARK_LANE_TIMEOUT_S="${BENCHMARK_LANE_TIMEOUT_S:-7200}"
+BENCHMARK_LOOP_MODEL="${BENCHMARK_LOOP_MODEL:-coding}"
+B30_TBENCH_MODEL="${B30_TBENCH_MODEL:-terminal_bench}"
 export BENCHMARK_TASK_TIMEOUT_S
 export BENCHMARK_LANE_TIMEOUT_S
+export BENCHMARK_LOOP_MODEL
+export B30_TBENCH_MODEL
 
 STATE_DIR="/tmp/bench-${BENCHMARK_RUN_ID}"
 mkdir -p "$STATE_DIR"
@@ -106,12 +110,12 @@ LANES=(
 )
 
 # Gateway alias per lane. The loop runner always sends tool schemas, so default
-# lanes use the tool-capable `tools` alias. B30-TBENCH keeps the Terminal-Bench
-# specific `terminal_bench` alias.
+# lanes use the tool-capable benchmark coding alias. B30-TBENCH keeps the
+# Terminal-Bench-specific alias.
 lane_model() {
     case "$1" in
-        B30-TBENCH) echo "terminal_bench" ;;
-        *)          echo "tools" ;;
+        B30-TBENCH) echo "$B30_TBENCH_MODEL" ;;
+        *)          echo "$BENCHMARK_LOOP_MODEL" ;;
     esac
 }
 
@@ -123,6 +127,8 @@ log "State dir: $STATE_DIR"
 log "Summary: $SUMMARY_LOG"
 log "Task timeout: ${BENCHMARK_TASK_TIMEOUT_S}s"
 log "Lane timeout: ${BENCHMARK_LANE_TIMEOUT_S}s"
+log "Loop model alias: ${BENCHMARK_LOOP_MODEL}"
+log "B30 model alias: ${B30_TBENCH_MODEL}"
 log "=========================================="
 
 if ! wait_for_gateway; then

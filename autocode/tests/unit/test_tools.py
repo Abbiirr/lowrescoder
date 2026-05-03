@@ -38,7 +38,7 @@ class TestToolRegistry:
     def test_get_schemas_openai_format(self) -> None:
         registry = create_default_registry()
         schemas = registry.get_schemas_openai_format()
-        assert len(schemas) == 27
+        assert len(schemas) == 31
         names = {s["function"]["name"] for s in schemas}
         assert names == {
             "read_file", "write_file", "edit_file", "list_files",
@@ -56,6 +56,9 @@ class TestToolRegistry:
             "lsp_get_type", "lsp_symbols",
             # Planning + discovery tools
             "todo_write", "todo_read", "glob_files", "grep_content",
+            # Durable memory tools
+            "memory_read_topic", "memory_write_topic",
+            "memory_grep_logs", "memory_index_show",
         }
         for schema in schemas:
             assert schema["type"] == "function"
@@ -333,6 +336,10 @@ class TestDeferredToolLoading:
             # Planning tools must be visible on the default schema path
             "todo_write",
             "todo_read",
+            # Durable memory tools must stay visible for explicit verify/write flows
+            "memory_index_show",
+            "memory_read_topic",
+            "memory_write_topic",
         }
         assert expected == CORE_TOOL_NAMES
 

@@ -2,7 +2,7 @@
 
 > **Purpose:** identify which sections of `docs/requirements_and_features.md` have drifted from 2026-04-25 reality, so Codex can split S-DOCSREFRESH-A into focused sub-slices instead of one large rewrite.
 > **Source doc:** `docs/requirements_and_features.md` — last updated 2026-02-17 (476 lines).
-> **Method:** cross-reference against `docs/features_behavior.md`, `current_directives.md`, `modular_migration_plan.md`, and code spot-checks performed 2026-04-25.
+> **Method:** cross-reference against `docs/features_behavior.md`, `current_directives.md`, `docs/plan/deferred/modular_migration_plan.md`, and code spot-checks performed 2026-04-25.
 
 ## Drift severity legend
 
@@ -79,7 +79,7 @@ For each sub-slice:
 - `docs/requirements_and_features.md` (the doc being assessed; 476 lines)
 - `docs/features_behavior.md` (current runtime inventory)
 - `current_directives.md` (active directives)
-- `modular_migration_plan.md` and `modular_migration_todo.md` (architecture state)
+- `docs/plan/deferred/modular_migration_plan.md` and `docs/plan/deferred/modular_migration_todo.md` (architecture state)
 - `autocode/src/autocode/app/commands.py` (slash command source of truth, line 1100+)
 - `autocode/src/autocode/agent/tools.py` (tool registry source of truth, ~60 tools)
 - `autocode/src/autocode/agent/loop.py` (MAX_ITERATIONS = 1000)

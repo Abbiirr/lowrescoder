@@ -27,7 +27,7 @@ Codex's Entry 1417 adds a **TDD framing**: three test layers (A unit, B transpor
 
 - Agent-driven survey (Explore) across 12 backend subsystems
 - Manual spot-check of high-impact claims via grep/read
-- Cross-reference against `requirements_and_features.md` (baseline, ~stale), `features_behavior.md` (current), `rpc-schema-v1.md` (contract), `modular_migration_todo.md` (open architecture items)
+- Cross-reference against `requirements_and_features.md` (baseline, ~stale), `features_behavior.md` (current), `rpc-schema-v1.md` (contract), `docs/plan/deferred/modular_migration_todo.md` (open architecture items)
 
 ### 2.1 Spot-check corrections to the Explore audit
 
@@ -253,7 +253,7 @@ Higher effort — new design.
 18. **L1/L2 context auto-preview on iteration-zero** — small, cheap preview; defer full search.
 19. **Episode store summarization mercy rule** — before purge, summarize into a checkpoint-tier entry.
 
-### P3 — Architecture cleanup (already in Codex plan / `modular_migration_todo.md`)
+### P3 — Architecture cleanup (already in Codex plan / `docs/plan/deferred/modular_migration_todo.md`)
 
 Overlaps with Codex Stage 4 and the Phase 2-4 Follow-through list. No new items here; tracked elsewhere.
 
@@ -302,7 +302,7 @@ Overlaps with Codex Stage 4 and the Phase 2-4 Follow-through list. No new items 
 
 - `docs/plan/backend-tightening-refinement-plan.md` — Codex's method plan
 - `AGENTS_CONVERSATION.MD` Entry 1417 — TDD framing
-- `modular_migration_todo.md` — Phase 2-4 Follow-through items (architecture cleanup overlap)
+- `docs/plan/deferred/modular_migration_todo.md` — Phase 2-4 Follow-through items (architecture cleanup overlap)
 - `docs/features_behavior.md` — current runtime inventory
 - `docs/reference/rpc-schema-v1.md` — wire contract
 - `docs/requirements_and_features.md` — 2026-02-17 feature catalog (baseline; stale)

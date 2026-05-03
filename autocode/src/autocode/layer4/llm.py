@@ -78,6 +78,36 @@ def _extract_cached_input_tokens(usage: Any) -> int:
     return _usage_int(cached)
 
 
+def _extract_cache_creation_tokens(usage: Any) -> int:
+    details = (
+        _usage_get(usage, "prompt_tokens_details")
+        or _usage_get(usage, "input_tokens_details")
+        or {}
+    )
+    created = (
+        _usage_get(usage, "cache_creation_tokens")
+        or _usage_get(usage, "cache_creation_input_tokens")
+        or _usage_get(details, "cache_creation_tokens")
+        or _usage_get(details, "cache_creation_input_tokens")
+        or 0
+    )
+    return _usage_int(created)
+
+
+def _extract_reasoning_tokens(usage: Any) -> int:
+    details = (
+        _usage_get(usage, "completion_tokens_details")
+        or _usage_get(usage, "output_tokens_details")
+        or {}
+    )
+    reasoning = (
+        _usage_get(usage, "reasoning_tokens")
+        or _usage_get(details, "reasoning_tokens")
+        or 0
+    )
+    return _usage_int(reasoning)
+
+
 def _extract_openai_usage(usage: Any) -> dict[str, int]:
     """Normalize OpenAI-compatible usage metadata."""
     if usage is None:
@@ -97,7 +127,14 @@ def _extract_openai_usage(usage: Any) -> dict[str, int]:
         "prompt_tokens": prompt_tokens,
         "completion_tokens": completion_tokens,
         "cached_input_tokens": cached_input_tokens,
+        "cache_creation_tokens": _extract_cache_creation_tokens(usage),
+        "reasoning_tokens": _extract_reasoning_tokens(usage),
     }
+
+
+def _capture_cache_usage(response: Any) -> dict[str, int]:
+    """Capture cache/reasoning usage from an OpenAI-compatible response."""
+    return _extract_openai_usage(getattr(response, "usage", response))
 
 
 def _extract_ollama_usage(result: Any) -> dict[str, int]:
@@ -110,11 +147,121 @@ def _extract_ollama_usage(result: Any) -> dict[str, int]:
         "prompt_tokens": prompt_tokens,
         "completion_tokens": completion_tokens,
         "cached_input_tokens": 0,
+        "cache_creation_tokens": 0,
+        "reasoning_tokens": 0,
     }
 
 
 # Tool schema type for OpenAI-compatible APIs
 ToolSchema = dict[str, Any]
+
+
+def _supports_explicit_cache(provider: str, model: str) -> bool:
+    provider_norm = provider.strip().lower()
+    model_norm = model.strip().lower()
+    return (
+        provider_norm == "anthropic"
+        or (
+            provider_norm == "openrouter"
+            and (
+                model_norm.startswith("anthropic/")
+                or model_norm.startswith("google/gemini-")
+            )
+        )
+    )
+
+
+def _supports_implicit_cache(provider: str, model: str) -> bool:
+    provider_norm = provider.strip().lower()
+    model_norm = model.strip().lower()
+    return (
+        provider_norm == "openai"
+        or (provider_norm == "openrouter" and model_norm.startswith("openai/"))
+        or (provider_norm == "openrouter" and model_norm.startswith("deepseek/"))
+    )
+
+
+def _cache_control_count(messages: list[dict[str, Any]]) -> int:
+    count = 0
+    for message in messages:
+        content = message.get("content")
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict) and "cache_control" in block:
+                    count += 1
+        elif isinstance(content, dict) and "cache_control" in content:
+            count += 1
+    return count
+
+
+def _enforce_cache_control_limit(messages: list[dict[str, Any]], limit: int = 4) -> None:
+    count = _cache_control_count(messages)
+    if count > limit:
+        raise ValueError(f"cache_control block count {count} exceeds provider limit {limit}")
+
+
+def _inject_cache_breakpoint(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Attach one ephemeral cache breakpoint to the stable system prefix."""
+    from autocode.agent.prompts import CACHE_BOUNDARY_MARKER
+
+    injected: list[dict[str, Any]] = []
+    applied = False
+    for message in messages:
+        next_message = dict(message)
+        content = next_message.get("content")
+        if (
+            not applied
+            and next_message.get("role") == "system"
+            and isinstance(content, str)
+            and CACHE_BOUNDARY_MARKER in content
+        ):
+            stable, dynamic = content.split(CACHE_BOUNDARY_MARKER, maxsplit=1)
+            next_message["content"] = [
+                {
+                    "type": "text",
+                    "text": stable.strip(),
+                    "cache_control": {"type": "ephemeral", "ttl": "1h"},
+                },
+                {"type": "text", "text": dynamic.strip()},
+            ]
+            applied = True
+        injected.append(next_message)
+    _enforce_cache_control_limit(injected)
+    return injected
+
+
+def _strip_cache_control(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return messages with provider-specific cache_control fields removed."""
+    stripped: list[dict[str, Any]] = []
+    for message in messages:
+        next_message = dict(message)
+        content = next_message.get("content")
+        if isinstance(content, list):
+            blocks = []
+            for block in content:
+                if isinstance(block, dict):
+                    clean = dict(block)
+                    clean.pop("cache_control", None)
+                    blocks.append(clean)
+                else:
+                    blocks.append(block)
+            next_message["content"] = blocks
+        stripped.append(next_message)
+    return stripped
+
+
+def _cache_control_rejected(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return "cache_control" in message or "cache control" in message
+
+
+def _cache_extra_headers(provider: str, model: str) -> dict[str, str]:
+    """Provider-specific headers needed for explicit prompt caching."""
+    provider_norm = provider.strip().lower()
+    model_norm = model.strip().lower()
+    if provider_norm == "openrouter" and model_norm.startswith("anthropic/"):
+        return {"anthropic-beta": "prompt-caching-2024-07-31"}
+    return {}
 
 
 @runtime_checkable
@@ -457,6 +604,13 @@ def _fix_ollama_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]
 
     fixed = copy.deepcopy(messages)
     for msg in fixed:
+        content = msg.get("content")
+        if isinstance(content, list):
+            msg["content"] = "\n".join(
+                str(block.get("text", ""))
+                for block in content
+                if isinstance(block, dict)
+            )
         if "tool_calls" not in msg:
             continue
         for tc in msg["tool_calls"]:
@@ -1198,6 +1352,17 @@ class OpenRouterProvider:
 
         # Sanitize tool_call_ids for multi-provider gateway compatibility
         messages = self._sanitize_tool_call_ids(messages)
+        cache_enabled = (
+            os.environ.get("AUTOCODE_DISABLE_PROMPT_CACHE", "").lower()
+            not in {"1", "true", "yes", "on"}
+            and _supports_explicit_cache("openrouter", self.model)
+        )
+        extra_headers = (
+            _cache_extra_headers("openrouter", self.model)
+            if cache_enabled else {}
+        )
+        if cache_enabled:
+            messages = _inject_cache_breakpoint(messages)
 
         extra_body: dict[str, Any] = {}
         # Only send reasoning extension for actual OpenRouter, not LLM Gateway
@@ -1221,10 +1386,12 @@ class OpenRouterProvider:
                     result = await self._tools_streaming(
                         client, messages, tools, extra_body,
                         on_chunk, on_thinking_chunk,
+                        extra_headers=extra_headers,
                     )
                 else:
                     result = await self._tools_non_streaming(
                         client, messages, tools, extra_body,
+                        extra_headers=extra_headers,
                     )
 
                 _duration_ms = int((time.monotonic() - _start) * 1000)
@@ -1259,6 +1426,19 @@ class OpenRouterProvider:
                 return result
 
             except Exception as e:
+                if cache_enabled and _cache_control_rejected(e):
+                    cache_enabled = False
+                    messages = _strip_cache_control(messages)
+                    extra_headers = {}
+                    log_event(
+                        logger,
+                        logging.WARNING,
+                        "prompt_cache_disabled",
+                        provider="openrouter",
+                        model=self.model,
+                        reason="provider_rejected_cache_control",
+                    )
+                    continue
                 retryable = _is_openrouter_retryable_error(e, api_base=self.api_base)
                 if retryable and attempt < self.MAX_RETRIES - 1:
                     # Longer delay on rate limit (429)
@@ -1311,6 +1491,7 @@ class OpenRouterProvider:
         extra_body: dict[str, Any],
         on_chunk: Any | None,
         on_thinking_chunk: Any | None,
+        extra_headers: dict[str, str] | None = None,
     ) -> LLMResponse:
         """Streaming path for generate_with_tools."""
         content_parts: list[str] = []
@@ -1329,10 +1510,11 @@ class OpenRouterProvider:
             stream=True,
             stream_options={"include_usage": True},
             extra_body=extra_body or None,
+            extra_headers=extra_headers or None,
         )
 
         async for chunk in response_stream:  # type: ignore[union-attr]
-            chunk_usage = _extract_openai_usage(getattr(chunk, "usage", None))
+            chunk_usage = _capture_cache_usage(chunk)
             if chunk_usage:
                 usage = chunk_usage
             if not chunk.choices:
@@ -1404,6 +1586,7 @@ class OpenRouterProvider:
         messages: list[dict[str, Any]],
         tools: list[ToolSchema],
         extra_body: dict[str, Any],
+        extra_headers: dict[str, str] | None = None,
     ) -> LLMResponse:
         """Non-streaming fallback — more reliable on free tier."""
         import json
@@ -1416,6 +1599,7 @@ class OpenRouterProvider:
             tools=tools,  # type: ignore[arg-type]
             stream=False,
             extra_body=extra_body or None,
+            extra_headers=extra_headers or None,
         )
 
         choice = result.choices[0]
@@ -1445,7 +1629,7 @@ class OpenRouterProvider:
             tool_calls=tool_calls,
             finish_reason="tool_calls" if tool_calls else finish_reason,
             reasoning=reasoning,
-            usage=_extract_openai_usage(getattr(result, "usage", None)),
+            usage=_capture_cache_usage(result),
         )
 
     @staticmethod

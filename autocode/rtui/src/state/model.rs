@@ -58,6 +58,7 @@ pub struct StatusInfo {
     pub session_id: Option<String>,
     pub tokens_in: u32,
     pub tokens_out: u32,
+    pub cached_input_tokens: u32,
     pub cost: Option<String>,
     pub bg_tasks: u32,
 }

@@ -10,10 +10,10 @@
 
 | # | Document | Description | File |
 |---|----------|-------------|------|
-| 00 | **This Index** | Master plan table of contents | `00-master-plan-index.md` |
-| 01 | **LLM Inference Research** | Ollama, llama.cpp, Outlines, models, quantization | `01-local-llm-inference-research.md` |
-| 02 | **Competitive Analysis** | Market landscape, competitors, gaps | `02-competitive-analysis.md` |
-| 03 | **Code Intelligence Research** | tree-sitter, LSP, LanceDB, embeddings, benchmarks | `03-code-intelligence-research.md` |
+| 00 | **This Index** | Master plan table of contents | `docs/plan/roadmaps/2026-04-30-tier-roadmap/00-master-plan-index.md` |
+| 01 | **LLM Inference Research** | Ollama, llama.cpp, Outlines, models, quantization | `docs/plan/roadmaps/2026-04-30-tier-roadmap/01-local-llm-inference-research.md` |
+| 02 | **Competitive Analysis** | Market landscape, competitors, gaps | `docs/plan/roadmaps/2026-04-30-tier-roadmap/02-competitive-analysis.md` |
+| 03 | **Code Intelligence Research** | tree-sitter, LSP, LanceDB, embeddings, benchmarks | `docs/plan/roadmaps/2026-04-30-tier-roadmap/03-code-intelligence-research.md` |
 | P1 | **Phase 1: Tech Stack** | Every component justified with versions and alternatives | `phase1-tech-stack.md` |
 | P2 | **Phase 2: HLD** | System architecture, data flow, security, performance | `phase2-hld.md` |
 | P3 | **Phase 3: LLD** | Data models, algorithms, APIs, schemas, test mapping | `phase3-lld.md` |

@@ -382,7 +382,7 @@ Phase 3 implemented 2026-02-13. All gates passed. 840 Python tests, all Go tests
 > **Legacy plan:** `docs/plan/archive/phase5-agent-teams.md`
 > **Lock checklist:** `docs/plan/archive/phase5-roadmap-lock-checklist.md`
 > **Strategy:** **"Standalone first, then interact."**
-> **Current state:** the 5A0-5D agent-teams/delegation substrate is complete as historical product work; remaining active architecture cleanup lives in `modular_migration_todo.md`.
+> **Current state:** the 5A0-5D agent-teams/delegation substrate is complete as historical product work; remaining active architecture cleanup lives in `docs/plan/deferred/modular_migration_todo.md`.
 > **Modular Phase 5:** swapability proof is complete separately via `autocode/docs/qa/test-results/20260423-210037-modular-phase5-closeout.md`, with attach/spawn benchmark artifacts `docs/qa/test-results/20260423-145703-B13-PROXY-autocode.json` and `docs/qa/test-results/20260423-150833-B13-PROXY-autocode.json`.
 
 | Sprint | Feature | Priority | Description |

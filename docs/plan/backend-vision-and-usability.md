@@ -101,7 +101,7 @@ Pain points users hit today. Each lists repro + which slice (if any) addresses i
 ### P-10: Backend stderr crashes vanish
 **Repro:** Backend Python module fails on import (e.g., bad config). `autocode` shows nothing.
 **Today:** `autocode/rtui/src/backend/pty.rs:19` sets `cmd.stderr(Stdio::null())`.
-**Plan slice:** OUT — modular_migration_todo.md "Phase 2-4 Follow-through" item ("preserve backend stderr on the live user path"). NOT in backend feature tranche.
+**Plan slice:** OUT — docs/plan/deferred/modular_migration_todo.md "Phase 2-4 Follow-through" item ("preserve backend stderr on the live user path"). NOT in backend feature tranche.
 
 ### P-11: Checkpoint restores tasks but not conversation
 **Repro:** `/checkpoint save before-experiment` → do experimental work → `/checkpoint restore before-experiment`. Tasks restored. Messages lost.

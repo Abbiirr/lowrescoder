@@ -1576,6 +1576,7 @@ fn handle_notification(
                     state.status.cost = Some(cost.cost);
                     state.status.tokens_in = cost.tokens_in;
                     state.status.tokens_out = cost.tokens_out;
+                    state.status.cached_input_tokens = cost.cached_input_tokens;
                 }
             }
             (state, vec![Effect::Render])

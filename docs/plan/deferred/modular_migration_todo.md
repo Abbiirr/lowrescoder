@@ -1,7 +1,7 @@
 # Modular Migration Todo
 
 > **Status:** ACTIVE — user-directed architecture track. Phase 5 is complete; Phase 2-4 follow-through and Phase 6 cleanup remain.
-> **Plan:** `modular_migration_plan.md`
+> **Plan:** `docs/plan/deferred/modular_migration_plan.md`
 > **Relationship to HR-5:** runs alongside the HR-5 product queue unless the user explicitly pauses HR-5.
 
 ## Phase 0 — Contract And Guardrails

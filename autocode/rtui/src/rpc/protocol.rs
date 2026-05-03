@@ -149,6 +149,8 @@ pub struct CostUpdateParams {
     pub cost: String,
     pub tokens_in: u32,
     pub tokens_out: u32,
+    #[serde(default)]
+    pub cached_input_tokens: u32,
 }
 
 #[allow(dead_code)]

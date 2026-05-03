@@ -38,7 +38,7 @@ class TestStdoutOnlyNDJSON:
         assert line.endswith("\n")
         parsed = json.loads(line.strip())
         assert parsed["type"] == "thread_started"
-        assert parsed["protocol_version"] == "0.1.0-c6g5-subset"
+        assert parsed["protocol_version"] == "0.2.0-harness"
 
     def test_multiple_events_produce_valid_ndjson_lines(self):
         from autocode.backend.headless_schema import (
@@ -58,7 +58,7 @@ class TestStdoutOnlyNDJSON:
         for line in lines:
             parsed = json.loads(line)
             assert "protocol_version" in parsed
-            assert parsed["protocol_version"] == "0.1.0-c6g5-subset"
+            assert parsed["protocol_version"] == "0.2.0-harness"
 
     def test_no_human_readable_text_in_output(self):
         from autocode.backend.headless_schema import (
@@ -122,7 +122,7 @@ class TestErrorPath:
 
         raw = json.loads(ErrorEvent(message="x").model_dump_json())
         assert raw["type"] == "error"
-        assert raw["protocol_version"] == "0.1.0-c6g5-subset"
+        assert raw["protocol_version"] == "0.2.0-harness"
 
 
 class TestUsageAlwaysPresent:
@@ -209,13 +209,16 @@ class TestHeadlessRunnerEmitNotification:
             "result": "ok",
         })
         lines = buf.getvalue().strip().split("\n")
-        assert len(lines) == 2
-        started = json.loads(lines[0])
-        assert started["type"] == "item_started"
-        assert started["kind"] == "tool_execution"
-        completed = json.loads(lines[1])
-        assert completed["type"] == "item_completed"
-        assert completed["item_id"] == started["item_id"]
+        assert len(lines) == 4
+        events = [json.loads(line) for line in lines]
+        assert events[0]["type"] == "tool_call_started"
+        assert events[0]["tool_name"] == "read_file"
+        assert events[1]["type"] == "item_started"
+        assert events[1]["kind"] == "tool_execution"
+        assert events[2]["type"] == "item_completed"
+        assert events[2]["item_id"] == events[1]["item_id"]
+        assert events[3]["type"] == "tool_call_completed"
+        assert events[3]["tool_name"] == "read_file"
 
     def test_on_tool_call_closes_non_success_tool_execution(self):
         runner, buf = self._make_runner()
@@ -225,10 +228,15 @@ class TestHeadlessRunnerEmitNotification:
             "result": "denied",
         })
         events = [json.loads(line) for line in buf.getvalue().strip().split("\n")]
-        assert [event["type"] for event in events] == ["item_started", "item_completed"]
-        assert events[0]["kind"] == "tool_execution"
-        assert events[1]["item_id"] == events[0]["item_id"]
-        assert "error" in events[1]["result"]
+        types = [event["type"] for event in events]
+        assert types[0] == "tool_call_started"
+        assert types[1] == "item_started"
+        assert events[1]["kind"] == "tool_execution"
+        assert types[2] == "item_completed"
+        assert events[2]["item_id"] == events[1]["item_id"]
+        assert "error" in events[2]["result"]
+        assert types[3] == "tool_call_failed"
+        assert events[3]["tool_name"] == "write_file"
 
     @pytest.mark.asyncio
     async def test_tool_request_emits_approval_item(self):

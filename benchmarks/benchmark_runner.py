@@ -30,6 +30,7 @@ import os
 import re
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 from datetime import UTC, datetime
@@ -820,6 +821,341 @@ async def _run_competitive_task(
 
 # --- Task Runner ---
 
+def _consume_cancelled_task_exception(task: asyncio.Task) -> None:
+    """Drain background task exceptions so loop shutdown stays quiet."""
+    try:
+        if not task.cancelled():
+            task.exception()
+    except (asyncio.CancelledError, Exception):
+        pass
+
+
+def _agent_task_timeout_result(
+    task: BenchmarkTask,
+    task_timeout_s: int,
+    container_name: str | None,
+) -> AgentResult:
+    return AgentResult(
+        task_id=task.task_id,
+        resolved=False,
+        error=f"Task timed out after {task_timeout_s}s",
+        wall_time_s=float(task_timeout_s),
+        artifacts={
+            "failure_type": "INFRA_FAIL",
+            "failure_evidence": {
+                "timeout_source": "agent_task",
+                "timeout_s": task_timeout_s,
+                "grading_launch": None,
+                "docker_state": (
+                    inspect_container_state(container_name)
+                    if container_name else None
+                ),
+            },
+        },
+    )
+
+
+async def _solve_task_with_deadline(
+    agent: AgentAdapter,
+    task: BenchmarkTask,
+    sandbox: Path,
+    budget: BudgetProfile,
+    task_timeout_s: int,
+    container_name: str | None,
+) -> AgentResult:
+    if task_timeout_s <= 0:
+        return await agent.solve_task(task, sandbox, budget)
+
+    solve_task = asyncio.create_task(agent.solve_task(task, sandbox, budget))
+    done, _pending = await asyncio.wait({solve_task}, timeout=task_timeout_s)
+    if solve_task in done:
+        return solve_task.result()
+
+    solve_task.cancel()
+    solve_task.add_done_callback(_consume_cancelled_task_exception)
+    return _agent_task_timeout_result(task, task_timeout_s, container_name)
+
+
+def _agent_result_to_dict(result: AgentResult) -> dict[str, Any]:
+    return {
+        "task_id": result.task_id,
+        "resolved": result.resolved,
+        "score": result.score,
+        "wall_time_s": result.wall_time_s,
+        "tool_calls": result.tool_calls,
+        "tokens_in": result.tokens_in,
+        "tokens_out": result.tokens_out,
+        "error": result.error,
+        "output": result.output,
+        "artifacts": result.artifacts,
+    }
+
+
+def _agent_result_from_dict(data: dict[str, Any]) -> AgentResult:
+    return AgentResult(
+        task_id=str(data.get("task_id", "")),
+        resolved=bool(data.get("resolved", False)),
+        score=float(data.get("score", 0.0) or 0.0),
+        wall_time_s=float(data.get("wall_time_s", 0.0) or 0.0),
+        tool_calls=int(data.get("tool_calls", 0) or 0),
+        tokens_in=int(data.get("tokens_in", 0) or 0),
+        tokens_out=int(data.get("tokens_out", 0) or 0),
+        error=str(data.get("error", "") or ""),
+        output=str(data.get("output", "") or ""),
+        artifacts=dict(data.get("artifacts") or {}),
+    )
+
+
+TRANSIENT_INFRA_CLASSES = {
+    "gateway_route_rejection",
+    "rate_limit",
+    "connection_reset",
+    "request_timeout",
+    "provider_timeout",
+}
+
+
+def _is_transient_infra_result(result: AgentResult) -> tuple[bool, str]:
+    artifacts = dict(result.artifacts or {})
+    if result.resolved or artifacts.get("failure_type") != "INFRA_FAIL":
+        return False, ""
+
+    evidence = artifacts.get("failure_evidence")
+    if isinstance(evidence, dict) and "transient_class" in evidence:
+        transient_class = str(evidence.get("transient_class") or "")
+        return transient_class in TRANSIENT_INFRA_CLASSES, transient_class
+
+    error = result.error or ""
+    if not error:
+        return False, ""
+    legacy_keywords = (
+        "429",
+        "500",
+        "502",
+        "503",
+        "504",
+        "timeout",
+        "Timeout",
+        "connection",
+        "Connection",
+        "RateLimit",
+        "tool/function calling",
+        "tool calling is not supported",
+        "tool calling is not enabled",
+        "function calling is not supported",
+        "function calling is not enabled",
+    )
+    if any(kw in error for kw in legacy_keywords):
+        return True, "legacy_error_keyword"
+    return False, ""
+
+
+def _task_to_dict(task: BenchmarkTask) -> dict[str, Any]:
+    return {
+        "task_id": task.task_id,
+        "description": task.description,
+        "repo": task.repo,
+        "difficulty": task.difficulty,
+        "language": task.language,
+        "category": task.category,
+        "setup_commands": task.setup_commands,
+        "grading_command": task.grading_command,
+        "extra": task.extra,
+    }
+
+
+def _budget_to_dict(budget: BudgetProfile) -> dict[str, int]:
+    return {
+        "wall_time_s": budget.wall_time_s,
+        "token_cap": budget.token_cap,
+        "max_tool_calls": budget.max_tool_calls,
+    }
+
+
+def _adapter_can_run_in_subprocess(agent: AgentAdapter) -> bool:
+    return agent.name in AGENT_REGISTRY
+
+
+def _task_worker_payload(
+    agent: AgentAdapter,
+    task: BenchmarkTask,
+    sandbox: Path,
+    budget: BudgetProfile,
+) -> dict[str, Any]:
+    return {
+        "agent_name": agent.name,
+        "model": agent.model,
+        "autocode_runner": getattr(agent, "_runner", "loop"),
+        "autocode_tui_connection": getattr(agent, "_tui_connection", "spawn"),
+        "task": _task_to_dict(task),
+        "sandbox": str(sandbox),
+        "budget": _budget_to_dict(budget),
+    }
+
+
+async def _terminate_process_group(
+    proc: asyncio.subprocess.Process,
+    *,
+    grace_s: float = 2.0,
+) -> None:
+    if proc.returncode is not None:
+        return
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    except OSError:
+        proc.terminate()
+    try:
+        await asyncio.wait_for(proc.wait(), timeout=grace_s)
+        return
+    except TimeoutError:
+        pass
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        return
+    except OSError:
+        proc.kill()
+    await proc.wait()
+
+
+async def _run_task_worker_subprocess(
+    command: list[str],
+    result_path: Path,
+    task: BenchmarkTask,
+    task_timeout_s: int,
+    container_name: str | None,
+) -> AgentResult:
+    result_path.parent.mkdir(parents=True, exist_ok=True)
+    proc = await asyncio.create_subprocess_exec(
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        start_new_session=True,
+    )
+    try:
+        stdout, stderr = await asyncio.wait_for(
+            proc.communicate(),
+            timeout=task_timeout_s,
+        )
+    except TimeoutError:
+        await _terminate_process_group(proc)
+        return _agent_task_timeout_result(task, task_timeout_s, container_name)
+
+    stdout_text = stdout.decode("utf-8", errors="replace")
+    stderr_text = stderr.decode("utf-8", errors="replace")
+    if result_path.is_file():
+        try:
+            return _agent_result_from_dict(
+                json.loads(result_path.read_text(encoding="utf-8")),
+            )
+        except (json.JSONDecodeError, OSError, TypeError, ValueError) as exc:
+            return AgentResult(
+                task_id=task.task_id,
+                resolved=False,
+                error=f"Task worker result parse failed: {exc}",
+                artifacts={
+                    "failure_type": "INFRA_FAIL",
+                    "failure_evidence": {
+                        "timeout_source": None,
+                        "worker_returncode": proc.returncode,
+                        "worker_stdout": stdout_text[-1000:],
+                        "worker_stderr": stderr_text[-1000:],
+                    },
+                },
+            )
+
+    return AgentResult(
+        task_id=task.task_id,
+        resolved=False,
+        error=f"Task worker exited without result (rc={proc.returncode})",
+        artifacts={
+            "failure_type": "INFRA_FAIL",
+            "failure_evidence": {
+                "timeout_source": None,
+                "worker_returncode": proc.returncode,
+                "worker_stdout": stdout_text[-1000:],
+                "worker_stderr": stderr_text[-1000:],
+            },
+        },
+    )
+
+
+async def _solve_task_in_subprocess(
+    agent: AgentAdapter,
+    task: BenchmarkTask,
+    sandbox: Path,
+    budget: BudgetProfile,
+    task_timeout_s: int,
+    container_name: str | None,
+) -> AgentResult:
+    if task_timeout_s <= 0 or not _adapter_can_run_in_subprocess(agent):
+        return await _solve_task_with_deadline(
+            agent, task, sandbox, budget, task_timeout_s, container_name,
+        )
+
+    worker_dir = sandbox / ".benchmark-worker"
+    worker_dir.mkdir(parents=True, exist_ok=True)
+    payload_path = worker_dir / f"{task.task_id}-{uuid4().hex}.json"
+    result_path = worker_dir / f"{task.task_id}-{uuid4().hex}-result.json"
+    payload_path.write_text(
+        json.dumps(
+            _task_worker_payload(agent, task, sandbox, budget),
+            indent=2,
+            default=str,
+        ),
+        encoding="utf-8",
+    )
+    command = [
+        sys.executable,
+        "-u",
+        "-m",
+        "benchmarks.benchmark_runner",
+        "--task-worker-input",
+        str(payload_path),
+        "--task-worker-output",
+        str(result_path),
+    ]
+    return await _run_task_worker_subprocess(
+        command,
+        result_path,
+        task,
+        task_timeout_s,
+        container_name,
+    )
+
+
+async def _run_task_worker(input_path: Path, output_path: Path) -> int:
+    payload = json.loads(input_path.read_text(encoding="utf-8"))
+    task = BenchmarkTask.from_dict(payload["task"])
+    budget_data = payload["budget"]
+    budget = BudgetProfile(
+        wall_time_s=int(budget_data.get("wall_time_s", 600)),
+        token_cap=int(budget_data.get("token_cap", 50_000)),
+        max_tool_calls=int(budget_data.get("max_tool_calls", 100)),
+    )
+    agent = get_adapter(
+        str(payload["agent_name"]),
+        model=str(payload.get("model", "")),
+        autocode_runner=str(payload.get("autocode_runner", "loop")),
+        autocode_tui_connection=str(
+            payload.get("autocode_tui_connection", "spawn"),
+        ),
+    )
+    result = await agent.solve_task(
+        task,
+        Path(str(payload["sandbox"])),
+        budget,
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(_agent_result_to_dict(result), indent=2, default=str),
+        encoding="utf-8",
+    )
+    return 0
+
+
 async def run_lane(
     agent: AgentAdapter,
     lane: str,
@@ -1266,32 +1602,19 @@ async def run_lane(
                 )
             else:
                 try:
-                    solve_coro = agent.solve_task(task, sandbox, budget)
-                    if task_timeout_s > 0:
-                        result = await asyncio.wait_for(
-                            solve_coro,
-                            timeout=task_timeout_s,
-                        )
-                    else:
-                        result = await solve_coro
+                    result = await _solve_task_in_subprocess(
+                        agent,
+                        task,
+                        sandbox,
+                        budget,
+                        task_timeout_s,
+                        container_name,
+                    )
                 except TimeoutError:
-                    result = AgentResult(
-                        task_id=task.task_id,
-                        resolved=False,
-                        error=f"Task timed out after {task_timeout_s}s",
-                        wall_time_s=float(task_timeout_s),
-                        artifacts={
-                            "failure_type": "INFRA_FAIL",
-                            "failure_evidence": {
-                                "timeout_source": "agent_task",
-                                "timeout_s": task_timeout_s,
-                                "grading_launch": None,
-                                "docker_state": (
-                                    inspect_container_state(container_name)
-                                    if container_name else None
-                                ),
-                            },
-                        },
+                    result = _agent_task_timeout_result(
+                        task,
+                        task_timeout_s,
+                        container_name,
                     )
 
         finally:
@@ -1307,22 +1630,17 @@ async def run_lane(
 
         # --- INFRA_FAIL auto-retry (single retry, transient only) ---
         task_artifacts = dict(result.artifacts or {})
-        _is_transient_infra = (
-            not result.resolved
-            and task_artifacts.get("failure_type") == "INFRA_FAIL"
-            and result.error
-            and any(
-                kw in result.error
-                for kw in ("429", "500", "502", "503", "504",
-                           "timeout", "Timeout", "connection",
-                           "Connection", "RateLimit")
-            )
+        _is_transient_infra, _transient_reason_class = (
+            _is_transient_infra_result(result)
         )
         if _is_transient_infra:
             print("  INFRA_FAIL detected (transient). Retrying in 30s...")
             await asyncio.sleep(30)
             task_artifacts["infra_retry_attempted"] = True
             task_artifacts["infra_retry_reason"] = result.error[:200]
+            task_artifacts["infra_retry_reason_class"] = (
+                _transient_reason_class
+            )
             try:
                 retry_result = await agent.solve_task(
                     task, sandbox, budget,
@@ -1599,8 +1917,30 @@ async def main() -> int:
             "without an extra harness timeout."
         ),
     )
+    parser.add_argument(
+        "--task-worker-input",
+        type=Path,
+        default=None,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--task-worker-output",
+        type=Path,
+        default=None,
+        help=argparse.SUPPRESS,
+    )
 
     args = parser.parse_args()
+
+    if args.task_worker_input or args.task_worker_output:
+        if not args.task_worker_input or not args.task_worker_output:
+            parser.error(
+                "--task-worker-input and --task-worker-output are paired",
+            )
+        return await _run_task_worker(
+            args.task_worker_input,
+            args.task_worker_output,
+        )
 
     if args.list_lanes:
         print("\nAvailable benchmark lanes:")

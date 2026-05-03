@@ -60,7 +60,7 @@ Codex's TDD framing (Entry 1417) applies unchanged: Layer A unit, Layer B transp
 
 **Revisit trigger.** Add L3 back to the roadmap when either (a) offline-first deployment becomes a product requirement, or (b) L4 gateway costs exceed a configurable per-session budget frequently enough to warrant local fallback.
 
-**Slice:** `S-L3DOC` adds a clear opt-in/experimental docstring + TODO comment and records this decision in `modular_migration_todo.md` under a new "Opt-in Capabilities" section.
+**Slice:** `S-L3DOC` adds a clear opt-in/experimental docstring + TODO comment and records this decision in `docs/plan/deferred/modular_migration_todo.md` under a new "Opt-in Capabilities" section.
 
 ---
 
@@ -307,7 +307,7 @@ Each slice below follows Codex's TDD Red → Green → Refactor order.
 
 **S-L3DOC — Layer 3 opt-in decision record**
 - **Scope:** §3 decision, corrected by S-L3DOC pre-read and Claude Entry 1482: Layer 3 is not unreachable; `BackendServer` can select it when `config.layer3.enabled`, the `layer3` optional extra is installed, and the request router classifies a simple edit. Core installs leave it dormant via graceful ImportError fallback. Add an opt-in/experimental docstring to `layer3/provider.py` that states this honestly, and treat any future broadening as a separate tranche requiring architecture docs and provider/route/integration tests.
-- **Files:** `autocode/src/autocode/layer3/provider.py`, `modular_migration_todo.md`, `docs/features/features_behavior.md`, `docs_summaries/02_runtime_architecture_and_backend.md`.
+- **Files:** `autocode/src/autocode/layer3/provider.py`, `docs/plan/deferred/modular_migration_todo.md`, `docs/features/features_behavior.md`, `docs_summaries/02_runtime_architecture_and_backend.md`.
 - **Tests:** None (doc-only).
 - **Status 2026-04-26:** Complete from builder side after Claude Entry 1482 correction. `provider.py` now has an opt-in local constrained-generation docstring, file-local mypy issues were cleaned up, and the runtime inventory / architecture summary / modular todo now describe Layer 3 as optional-extra gated. Validation: provider Ruff clean, provider mypy clean, `test_l3_provider.py` `5 passed`, and `pytest -q -k layer3` deselected all tests as expected. Artifact: `autocode/docs/qa/test-results/20260426-001202-s-l3doc-verification.md`.
 - **Exit:** Future readers encounter clear opt-in status + activation contract.
@@ -392,7 +392,7 @@ This tranche is complete when:
 - **Hard-abort cost limits.** This tranche ships warn+continue only.
 - **L3 Layer wiring.** §3 decision.
 - **Tool-call execution memoization.** Original S-CACHE plan (skip execution on `(tool, args_hash)` cache hit) is deferred. Invalidation risk for file-reading tools (mtime check) is nontrivial. Revisit post-tranche with a dedicated design. The in-scope S-CLEAR-RESULTS slice handles prompt-pressure relief via selective clearing, which is what `ToolResultCache` was designed for.
-- **Architecture cleanup items that live in `modular_migration_todo.md` "Phase 2-4 Follow-through"**: those are governed by that plan, not this one. Examples: `ChatHost` narrowing, `pty.rs` rename + stderr capture, `ChildGuard` dead scaffolding cleanup.
+- **Architecture cleanup items that live in `docs/plan/deferred/modular_migration_todo.md` "Phase 2-4 Follow-through"**: those are governed by that plan, not this one. Examples: `ChatHost` narrowing, `pty.rs` rename + stderr capture, `ChildGuard` dead scaffolding cleanup.
 
 ---
 
@@ -424,7 +424,7 @@ Risks worth a Codex eye during execution. Each lists the slice(s) it threatens, 
 | R8 | Doc refresh stall | S-DOCSREFRESH-A | 476 stale lines is one big PR; review fatigue → blocks tranche exit | Split into A.1 (Section 2 feature catalog; complete), A.2 (historical Go decision / tech stack; complete), A.3 (Phase-5 disambiguation; complete), A.4 (cross-reference audit; complete) |
 | R9 | Streaming + cancel interaction | S-INTERRUPT × S-THINK-B | If S-INTERRUPT lands and a streaming `<think>` block is in flight when user cancels, the parser state machine may leak | Add cancellation reset in S-INTERRUPT spec: when CancelledError fires, parser state must reset to OUTSIDE and pending buffer must be flushed |
 | R10 | Checkpoint tool-call loss | S-CKPTMSG | Restoring messages without their `tool_calls` table rows means restored sessions look "complete" but lack tool result history | Use `SessionStore.get_messages_with_tool_calls()` for capture; restore must repopulate both tables |
-| R11 | Subagent gap re-opens | (out-of-scope this tranche) | If user reprioritizes mid-tranche, partial subagent work creates a half-baked permission system | Preserve `Phase 2-4 Follow-through` items in `modular_migration_todo.md`; do not partially land |
+| R11 | Subagent gap re-opens | (out-of-scope this tranche) | If user reprioritizes mid-tranche, partial subagent work creates a half-baked permission system | Preserve `Phase 2-4 Follow-through` items in `docs/plan/deferred/modular_migration_todo.md`; do not partially land |
 | R12 | L3 opt-in path drift | S-L3DOC | If new code broadens Layer 3 routing without optional-extra/install and integration proof, users hit an unvalidated local-model path | Opt-in docstring + future architecture/integration-test requirement before broadening routed request types |
 
 ## 13. Effort Estimates (rough order-of-magnitude)
@@ -471,5 +471,5 @@ If the user wants a faster path: ship a **P0-only minimum tranche** first (S-POS
 - `AGENTS_CONVERSATION.MD` Entries 1415, 1417, 1420, 1421 — planning chain
 - `docs/reference/rpc-schema-v1.md` — contract doc to update as features land
 - `docs/features/features_behavior.md` — post-modularization inventory
-- `modular_migration_todo.md` §"Phase 2-4 Follow-through" — architecture cleanup (separate track)
+- `docs/plan/deferred/modular_migration_todo.md` §"Phase 2-4 Follow-through" — architecture cleanup (separate track)
 - `docs/tui-testing/tui_implementation_plan.md` — HR-5 Phase B/C (resumes after this tranche)

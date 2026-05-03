@@ -115,6 +115,18 @@ CREATE TABLE IF NOT EXISTS checkpoints (
 );
 CREATE INDEX IF NOT EXISTS idx_checkpoints_session ON checkpoints(session_id);
 
+CREATE TABLE IF NOT EXISTS session_token_usage (
+    session_id TEXT PRIMARY KEY REFERENCES sessions(id),
+    prompt_tokens INTEGER NOT NULL DEFAULT 0,
+    completion_tokens INTEGER NOT NULL DEFAULT 0,
+    cached_input_tokens INTEGER NOT NULL DEFAULT 0,
+    cache_creation_tokens INTEGER NOT NULL DEFAULT 0,
+    reasoning_tokens INTEGER NOT NULL DEFAULT 0,
+    call_count INTEGER NOT NULL DEFAULT 0,
+    per_provider_json TEXT NOT NULL DEFAULT '{}',
+    updated_at TEXT NOT NULL
+);
+
 -- Schema migration tracking
 CREATE TABLE IF NOT EXISTS schema_version (
     version INTEGER PRIMARY KEY,

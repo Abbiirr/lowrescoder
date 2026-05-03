@@ -29,7 +29,7 @@ These docs define how work is prioritized, how agents operate, and which docs ar
   - Good for install/run/build/test commands and the big-picture architecture.
 - [docs/session-onramp.md](../docs/session-onramp.md) is the fastest session-start guide.
   - It tells a contributor what to read, what commands matter, and how to store artifacts.
-- [DEFERRED_PENDING_TODO.md](../DEFERRED_PENDING_TODO.md) is a parking lot, not the active source of truth.
+- [docs/plan/deferred/deferred-pending-todo.md](../docs/plan/deferred/deferred-pending-todo.md) is a parking lot, not the active source of truth.
 
 ## Practical reading order
 

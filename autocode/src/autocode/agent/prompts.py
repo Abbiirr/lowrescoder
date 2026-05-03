@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import json
+from typing import Any
+
+CACHE_BOUNDARY_MARKER = "# === DANGEROUS_uncachedSystemPromptSection_BELOW ==="
+
 SYSTEM_PROMPT = (
     "You are AutoCode, an AI coding assistant running locally "
     "on the user's machine.\n\n"
@@ -52,6 +57,34 @@ SYSTEM_PROMPT = (
     "- Check subagent results with check_subagent\n"
 )
 
+VERIFY_BEFORE_USE_SECTION = """
+
+## Memory and recall discipline
+
+You may have access to memory from past sessions (loaded as MEMORY.md and
+topic files). Treat ALL such memory as a HINT, not as ground truth. Codebases
+change between sessions: dependencies are updated, files are renamed, decisions
+are reversed.
+
+Before acting on any remembered information:
+1. If the memory is about a file's contents, structure, or behavior, re-read
+   the file with read_file before relying on it.
+2. If the memory is about a tool's availability or signature, check with
+   tool_search before calling.
+3. If the memory is about a project decision or convention, confirm it's
+   still current via grep or by asking the user.
+
+You DO NOT need to verify:
+- Truly stable facts, such as programming language semantics or well-known
+  library APIs.
+- The user's stated preferences in the current session.
+
+When you find that memory contradicts current reality, update memory to correct
+it when a memory-writing tool is available. Do not leave stale information.
+"""
+
+STABLE_INSTRUCTIONS = SYSTEM_PROMPT + VERIFY_BEFORE_USE_SECTION
+
 
 def build_static_prefix() -> str:
     """Return the cacheable static portion of the system prompt.
@@ -60,6 +93,63 @@ def build_static_prefix() -> str:
     for prompt-caching (e.g., Anthropic's cache_control).
     """
     return SYSTEM_PROMPT
+
+
+def serialize_tool_defs_stable(tools: list[dict[str, Any]]) -> str:
+    """Serialize tool definitions deterministically for prompt caching."""
+    def _tool_name(tool: dict[str, Any]) -> str:
+        function = tool.get("function")
+        if isinstance(function, dict):
+            return str(function.get("name", ""))
+        return str(tool.get("name", ""))
+
+    ordered = sorted(tools, key=_tool_name)
+    return json.dumps(ordered, sort_keys=True, separators=(",", ":"))
+
+
+def build_stable_prefix(
+    *,
+    tool_definitions_json: str = "",
+    rules_text: str = "",
+    skill_catalog_index: str = "",
+) -> str:
+    """Build the deterministic cacheable prompt prefix."""
+    parts = [STABLE_INSTRUCTIONS]
+    if tool_definitions_json:
+        parts.append(f"\n\n## Tool Definitions\n{tool_definitions_json}")
+    if rules_text:
+        parts.append(f"\n\n## Repository Rules\n{rules_text}")
+    if skill_catalog_index:
+        parts.append(f"\n\n## Skill Catalog\n{skill_catalog_index}")
+    return "".join(parts)
+
+
+def build_dynamic_tail(
+    *,
+    cwd: str = "",
+    git_status_summary: str = "",
+    current_iso_date: str = "",
+    current_todo_state: str = "",
+    open_tasks_summary: str = "",
+) -> str:
+    """Build the uncached per-turn prompt tail."""
+    lines = ["## Dynamic Runtime Context"]
+    if cwd:
+        lines.append(f"- Working directory: {cwd}")
+    if git_status_summary:
+        lines.append(f"- Git status: {git_status_summary}")
+    if current_iso_date:
+        lines.append(f"- Current date: {current_iso_date}")
+    if current_todo_state:
+        lines.append(f"\n## Current Todo State\n{current_todo_state}")
+    if open_tasks_summary:
+        lines.append(f"\n## Open Tasks\n{open_tasks_summary}")
+    return "\n".join(lines) + "\n"
+
+
+def assemble_system_prompt(*, stable: str, dynamic: str) -> str:
+    """Join stable and dynamic prompt regions with an explicit cache boundary."""
+    return f"{stable.rstrip()}\n\n{CACHE_BOUNDARY_MARKER}\n\n{dynamic.lstrip()}"
 
 
 def build_dynamic_suffix(
@@ -179,7 +269,8 @@ def build_system_prompt(
         agent_mode: Explicit agent mode (normal, planning, research).
         memory_context: Learned patterns from MemoryStore.
     """
-    return build_static_prefix() + build_dynamic_suffix(
+    stable = build_static_prefix()
+    dynamic = build_dynamic_suffix(
         memory_content,
         shell_enabled=shell_enabled,
         approval_mode=approval_mode,
@@ -191,3 +282,4 @@ def build_system_prompt(
         agent_mode=agent_mode,
         memory_context=memory_context,
     )
+    return assemble_system_prompt(stable=stable, dynamic=dynamic)

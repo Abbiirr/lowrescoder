@@ -20,8 +20,8 @@ The current product runtime is a Rust frontend plus a Python backend joined by a
 This “what is true today” view is captured best in:
 
 - [docs/features/features_behavior.md](../docs/features/features_behavior.md)
-- [modular_migration_plan.md](../modular_migration_plan.md)
-- [modular_migration_todo.md](../modular_migration_todo.md)
+- [docs/plan/deferred/modular_migration_plan.md](../docs/plan/deferred/modular_migration_plan.md)
+- [docs/plan/deferred/modular_migration_todo.md](../docs/plan/deferred/modular_migration_todo.md)
 
 ## Architecture docs by role
 
@@ -77,8 +77,8 @@ The modularization track says:
 
 The important docs are:
 
-- [modular_migration_plan.md](../modular_migration_plan.md)
-- [modular_migration_todo.md](../modular_migration_todo.md)
+- [docs/plan/deferred/modular_migration_plan.md](../docs/plan/deferred/modular_migration_plan.md)
+- [docs/plan/deferred/modular_migration_todo.md](../docs/plan/deferred/modular_migration_todo.md)
 
 The high-level reading is:
 
@@ -103,6 +103,6 @@ That is consistent with the current backend-tightening plan and the latest agent
 - [docs/requirements_and_features.md](../docs/requirements_and_features.md)
 - [docs/reference/rpc-schema-v1.md](../docs/reference/rpc-schema-v1.md)
 - [autocode/rtui/README.md](../autocode/rtui/README.md)
-- [modular_migration_plan.md](../modular_migration_plan.md)
-- [modular_migration_todo.md](../modular_migration_todo.md)
+- [docs/plan/deferred/modular_migration_plan.md](../docs/plan/deferred/modular_migration_plan.md)
+- [docs/plan/deferred/modular_migration_todo.md](../docs/plan/deferred/modular_migration_todo.md)
 - [docs/plan/backend-tightening-refinement-plan.md](../docs/plan/backend-tightening-refinement-plan.md)

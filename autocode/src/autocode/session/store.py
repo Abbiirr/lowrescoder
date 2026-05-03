@@ -91,6 +91,71 @@ class SessionStore:
         )
         self._conn.commit()
 
+    def save_token_usage(self, session_id: str, snapshot: dict[str, object]) -> None:
+        """Persist session-level token/cache counters."""
+        now = _now_iso()
+        per_provider = snapshot.get("per_provider") or {}
+        self._conn.execute(
+            """
+            INSERT INTO session_token_usage (
+                session_id,
+                prompt_tokens,
+                completion_tokens,
+                cached_input_tokens,
+                cache_creation_tokens,
+                reasoning_tokens,
+                call_count,
+                per_provider_json,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(session_id) DO UPDATE SET
+                prompt_tokens = excluded.prompt_tokens,
+                completion_tokens = excluded.completion_tokens,
+                cached_input_tokens = excluded.cached_input_tokens,
+                cache_creation_tokens = excluded.cache_creation_tokens,
+                reasoning_tokens = excluded.reasoning_tokens,
+                call_count = excluded.call_count,
+                per_provider_json = excluded.per_provider_json,
+                updated_at = excluded.updated_at
+            """,
+            (
+                session_id,
+                int(snapshot.get("prompt_tokens") or 0),
+                int(snapshot.get("completion_tokens") or 0),
+                int(snapshot.get("cached_input_tokens") or 0),
+                int(snapshot.get("cache_creation_tokens") or 0),
+                int(snapshot.get("reasoning_tokens") or 0),
+                int(snapshot.get("call_count") or 0),
+                json.dumps(per_provider),
+                now,
+            ),
+        )
+        self._conn.commit()
+
+    def load_token_usage(self, session_id: str) -> dict[str, object]:
+        """Load persisted session token/cache counters."""
+        cursor = self._conn.execute(
+            "SELECT * FROM session_token_usage WHERE session_id = ?",
+            (session_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return {}
+        try:
+            per_provider = json.loads(row["per_provider_json"])
+        except json.JSONDecodeError:
+            per_provider = {}
+        return {
+            "prompt_tokens": int(row["prompt_tokens"]),
+            "completion_tokens": int(row["completion_tokens"]),
+            "cached_input_tokens": int(row["cached_input_tokens"]),
+            "cache_creation_tokens": int(row["cache_creation_tokens"]),
+            "reasoning_tokens": int(row["reasoning_tokens"]),
+            "call_count": int(row["call_count"]),
+            "per_provider": per_provider if isinstance(per_provider, dict) else {},
+        }
+
     # --- Messages ---
 
     def add_message(

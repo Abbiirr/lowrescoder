@@ -76,6 +76,6 @@ This backend tranche is complete enough to hand control back to frontend work on
 1. the commit-readiness baseline is green on the current tree
 2. the expanded backend transport/conformance coverage is green
 3. live backend-visible failures are surfaced honestly rather than hanging silently
-4. the remaining backend follow-through items are either fixed or recorded explicitly in `modular_migration_todo.md`
+4. the remaining backend follow-through items are either fixed or recorded explicitly in `docs/plan/deferred/modular_migration_todo.md`
 
 At that point, resume HR-5 Phase B `/cc` real-data binding with the backend contract in a tighter state.

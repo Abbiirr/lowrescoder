@@ -32,6 +32,8 @@ app = typer.Typer(
     invoke_without_command=True,
 )
 console = Console()
+telemetry_app = typer.Typer(help="Inspect local AutoCode telemetry.")
+app.add_typer(telemetry_app, name="telemetry")
 
 
 def _version_callback(value: bool) -> None:
@@ -465,6 +467,101 @@ def mcp_serve(
         ),
     )
     MCPServer(server_config).run()
+
+
+@telemetry_app.command("summary")
+def telemetry_summary(
+    last: str = typer.Option("7d", "--last", help="Window: 7d, 30d, all, or YYYY-MM-DD."),
+) -> None:
+    """Show local telemetry event counts."""
+    from autocode.telemetry.aggregator import TelemetryAggregator, since_from_window
+
+    summary = TelemetryAggregator().summary(since=since_from_window(last))
+    console.print(f"Total events: {summary.total_events}")
+    if summary.by_kind:
+        console.print("By kind:")
+        for kind, count in sorted(summary.by_kind.items()):
+            console.print(f"  {kind}: {count}")
+    if summary.by_session:
+        console.print("By session:")
+        for session_id, count in sorted(summary.by_session.items()):
+            console.print(f"  {session_id}: {count}")
+
+
+@telemetry_app.command("events")
+def telemetry_events(
+    kind: str | None = typer.Option(None, "--kind", help="Filter by telemetry event kind."),
+    session_id: str | None = typer.Option(None, "--session", help="Filter by session ID."),
+    last: str = typer.Option("7d", "--last", help="Window: 7d, 30d, all, or YYYY-MM-DD."),
+) -> None:
+    """Print local telemetry events as JSONL."""
+    import json
+
+    from autocode.telemetry.aggregator import TelemetryAggregator, since_from_window
+
+    for event in TelemetryAggregator().events(
+        kind=kind,
+        session_id=session_id,
+        since=since_from_window(last),
+    ):
+        console.print(json.dumps(event, separators=(",", ":")), highlight=False)
+
+
+@telemetry_app.command("session")
+def telemetry_session(
+    session_id: str = typer.Argument(..., help="Session ID to inspect."),
+) -> None:
+    """Print telemetry events for one session as JSONL."""
+    import json
+
+    from autocode.telemetry.aggregator import TelemetryAggregator
+
+    for event in TelemetryAggregator().events(session_id=session_id):
+        console.print(json.dumps(event, separators=(",", ":")), highlight=False)
+
+
+@telemetry_app.command("drift")
+def telemetry_drift(
+    last: str = typer.Option("7d", "--last", help="Window: 7d, 30d, all, or YYYY-MM-DD."),
+) -> None:
+    """Show local drift detector telemetry counts."""
+    from autocode.telemetry.aggregator import TelemetryAggregator, since_from_window
+
+    summary = TelemetryAggregator().drift_summary(since=since_from_window(last))
+    if not summary:
+        console.print("No drift events.")
+        return
+    for (tool_name, drift_kind, severity), count in sorted(summary.items()):
+        console.print(f"{tool_name} {drift_kind} {severity}: {count}")
+
+
+@telemetry_app.command("export")
+def telemetry_export(
+    since: str | None = typer.Option(None, "--since", help="Start date: YYYY-MM-DD."),
+    format: str = typer.Option("jsonl", "--format", help="Export format: jsonl or csv."),
+) -> None:
+    """Export local telemetry data."""
+    from autocode.telemetry.aggregator import TelemetryAggregator, since_from_window
+
+    aggregator = TelemetryAggregator()
+    since_date = since_from_window(since)
+    resolved_format = format.strip().lower()
+    if resolved_format == "jsonl":
+        console.print(aggregator.export_jsonl(since=since_date), highlight=False)
+    elif resolved_format == "csv":
+        console.print(aggregator.export_csv(since=since_date), highlight=False, end="")
+    else:
+        console.print("[red]Invalid --format.[/] Choose `jsonl` or `csv`.")
+        raise typer.Exit(2)
+
+
+@telemetry_app.command("purge")
+def telemetry_purge() -> None:
+    """Delete the local telemetry store."""
+    from autocode.telemetry.store import purge_telemetry
+
+    purge_telemetry()
+    console.print("Telemetry store purged.")
 
 
 @app.command()

@@ -216,7 +216,8 @@ def planning_bootstrap(ctx: MiddlewareContext) -> None:
     has_tasks = bool(ctx.metadata.get("has_tasks"))
     has_task_tools = bool(ctx.metadata.get("has_task_tools"))
     user_message = str(ctx.metadata.get("user_message", ""))
-    required = has_task_tools and not has_tasks and looks_multi_step_request(user_message)
+    planning_enabled = bool(ctx.metadata.get("planning_enforcement", True))
+    required = planning_enabled and has_task_tools and not has_tasks and looks_multi_step_request(user_message)
 
     ctx.metadata["_planning_initialized"] = True
     ctx.metadata["_planning_required"] = required

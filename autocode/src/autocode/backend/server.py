@@ -40,6 +40,8 @@ from autocode.core.logging import log_event, setup_session_logging
 from autocode.layer4.llm import create_provider
 from autocode.session.checkpoint_store import CheckpointStore
 from autocode.session.episode_store import EpisodeStore
+from autocode.session.memory_fs import MemoryFS
+from autocode.session.session_notes import SessionNotes
 from autocode.session.store import SessionStore
 from autocode.session.task_store import TaskStore
 
@@ -191,6 +193,15 @@ class BackendServer:
             project_dir=str(self.project_root),
         )
         self._session_log_dir = setup_session_logging(self.config.logging, self.session_id)
+        self._telemetry_store: Any | None = None
+        try:
+            from autocode.telemetry.store import TelemetryStore, telemetry_disabled
+
+            if not telemetry_disabled():
+                self._telemetry_store = TelemetryStore()
+        except Exception:
+            self._telemetry_store = None
+        self._emit_telemetry("thread_start", {"parent_thread_id": None})
 
         # Commands
         self.command_router: CommandRouter = create_default_router()
@@ -208,7 +219,7 @@ class BackendServer:
         self._llm_scheduler: LLMScheduler | None = None
         self._subagent_manager: SubagentManager | None = None
         self._delegation_policy: DelegationPolicy | None = None
-        self._memory_store: MemoryStore | None = None
+        self._memory_store: Any | None = None
         self._checkpoint_store: CheckpointStore | None = None
         self._l3_provider: Any = None
         self._context_assembler: Any = None
@@ -234,6 +245,14 @@ class BackendServer:
         self._request_broker = PendingRequestBroker(next_request_id=_PYTHON_REQUEST_ID_START)
         self._running: bool = True
         self._transport: BackendTransport | None = StdoutTransport()
+
+    def _emit_telemetry(self, kind: str, data: dict[str, Any] | None = None) -> None:
+        if self._telemetry_store is None:
+            return
+        try:
+            self._telemetry_store.emit(kind, session_id=self.session_id, data=data or {})
+        except Exception:
+            logger.debug("Backend telemetry emit failed for %s", kind, exc_info=True)
 
     @property
     def _next_request_id(self) -> int:
@@ -323,12 +342,16 @@ class BackendServer:
         """
         tokens_in = 0
         tokens_out = 0
+        cached_input_tokens = 0
         cost = "$0.0000"
         if self._session_stats:
             tracker = self._session_stats.token_tracker
             tokens = tracker.total
             tokens_in = tokens.prompt_tokens
             tokens_out = tokens.completion_tokens
+            cached = getattr(tokens, "cached_input_tokens", 0)
+            if isinstance(cached, (float, int)):
+                cached_input_tokens = int(cached)
             dashboard = getattr(tracker, "cost_dashboard", None)
             total_cost = getattr(dashboard, "total_cost", None)
             if isinstance(total_cost, (float, int)):
@@ -341,6 +364,7 @@ class BackendServer:
                 "cost": cost,
                 "tokens_in": self._total_tokens_in,
                 "tokens_out": self._total_tokens_out,
+                "cached_input_tokens": cached_input_tokens,
             },
         )
 
@@ -478,17 +502,34 @@ class BackendServer:
             )
             register_task_tools(self._tool_registry, self._task_store)
 
-            # Sprint 4C: MemoryStore + CheckpointStore
+            # P3: MemoryFS is default; legacy SQLite memory remains behind rollback.
             project_id = str(self.project_root)
             conn = self.session_store.get_connection()
-            self._memory_store = MemoryStore(
-                conn,
-                project_id,
-                max_entries=self.config.agent.memory_max_entries,
-                max_context_tokens=self.config.agent.memory_context_max_tokens,
-            )
+            if os.environ.get("AUTOCODE_USE_LEGACY_MEMORY", "").lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }:
+                self._memory_store = MemoryStore(
+                    conn,
+                    project_id,
+                    max_entries=self.config.agent.memory_max_entries,
+                    max_context_tokens=self.config.agent.memory_context_max_tokens,
+                )
+            else:
+                self._memory_store = MemoryFS(project_root=self.project_root)
             self._memory_store.apply_decay()  # decay at session start
             self._checkpoint_store = CheckpointStore(conn, self.session_id)
+            session_notes_base = (
+                self._memory_store.base_dir
+                if isinstance(self._memory_store, MemoryFS)
+                else MemoryFS(project_root=self.project_root).base_dir
+            )
+            session_notes = SessionNotes(
+                session_id=self.session_id,
+                base_dir=session_notes_base,
+            )
 
             # Sprint 4C: L3Provider (graceful degradation)
             try:
@@ -569,6 +610,9 @@ class BackendServer:
                 project_root=self.project_root,
                 verify_config=self.config.agent.verify,
                 prompt_cache_keepalive_config=self.config.agent.cache,
+                drift_config=self.config.agent.drift,
+                telemetry_store=self._telemetry_store,
+                session_notes=session_notes,
             )
 
             # Apply persisted agent mode
@@ -712,6 +756,13 @@ class BackendServer:
         new value immediately (fixes Codex Entry 1071 blocker #1: visible
         current-model state was stale after switching).
         """
+        self._emit_telemetry(
+            "slash_command_invoked",
+            {
+                "command": cmd.split(maxsplit=1)[0] if cmd else "",
+                "args_present": bool(cmd.split(maxsplit=1)[1:]),
+            },
+        )
         try:
             result = await backend_services.execute_command(
                 cmd=cmd,
@@ -746,6 +797,7 @@ class BackendServer:
             teardown_agent_resources=self._teardown_agent_resources,
         )
         self._apply_session_transition(transition)
+        self._emit_telemetry("thread_start", {"parent_thread_id": None})
         self._emit_status()
         self.emit_response(
             request_id,
@@ -793,6 +845,7 @@ class BackendServer:
             return
 
         self._apply_session_transition(transition)
+        self._emit_telemetry("session_resumed", {})
         self._emit_status()
         self.emit_response(
             request_id,
@@ -937,6 +990,7 @@ class BackendServer:
         If no run is active, returns a structured error so the caller can
         distinguish "nothing to steer" from a real failure.
         """
+        self._emit_telemetry("turn_steered", {"steer_chars": len(message)})
         self.emit_response(
             request_id,
             backend_services.inject_steer(
@@ -961,12 +1015,23 @@ class BackendServer:
             config=self.config,
             project_root=self.project_root,
         )
+        self._emit_telemetry(
+            "thread_fork",
+            {
+                "parent_session_id": self.session_id,
+                "parent_turn_id": None,
+                "forked_session_id": payload.get("session_id"),
+            },
+        )
         self._emit_status()
         self.emit_response(request_id, payload)
 
     async def handle_shutdown(self, request_id: int) -> None:
         """Gracefully shut down the server."""
+        self._emit_telemetry("session_end", {})
         await self._teardown_agent_resources()
+        if self._telemetry_store is not None:
+            self._telemetry_store.shutdown()
         self.emit_response(request_id, {"ok": True})
         self._running = False
 

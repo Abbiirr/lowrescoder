@@ -172,6 +172,23 @@ def _migrate_v6(conn: sqlite3.Connection) -> None:
         pass  # column already exists
 
 
+def _migrate_v7(conn: sqlite3.Connection) -> None:
+    """v7: persisted per-session token/cache usage."""
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS session_token_usage (
+            session_id TEXT PRIMARY KEY REFERENCES sessions(id),
+            prompt_tokens INTEGER NOT NULL DEFAULT 0,
+            completion_tokens INTEGER NOT NULL DEFAULT 0,
+            cached_input_tokens INTEGER NOT NULL DEFAULT 0,
+            cache_creation_tokens INTEGER NOT NULL DEFAULT 0,
+            reasoning_tokens INTEGER NOT NULL DEFAULT 0,
+            call_count INTEGER NOT NULL DEFAULT 0,
+            per_provider_json TEXT NOT NULL DEFAULT '{}',
+            updated_at TEXT NOT NULL
+        );
+    """)
+
+
 MIGRATIONS: list[tuple[int, str, Callable[[sqlite3.Connection], None]]] = [
     (1, "orchestrator_events table", _migrate_v1),
     (2, "agent_mailbox table", _migrate_v2),
@@ -179,6 +196,7 @@ MIGRATIONS: list[tuple[int, str, Callable[[sqlite3.Connection], None]]] = [
     (4, "checkpoint message snapshots", _migrate_v4),
     (5, "per-tool-checkpoint columns", _migrate_v5),
     (6, "session parent links", _migrate_v6),
+    (7, "session token usage", _migrate_v7),
 ]
 """List of (version, description, function) in ascending order."""
 

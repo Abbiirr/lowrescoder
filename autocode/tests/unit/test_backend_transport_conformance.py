@@ -22,6 +22,7 @@ from autocode.agent.token_tracker import TokenTracker
 from autocode.backend.server import BackendServer
 from autocode.backend.stdio_host import StdioJsonRpcHost
 from autocode.backend.tcp_host import TcpJsonRpcHost
+from autocode.backend.transport import StdoutTransport
 from autocode.config import AutoCodeConfig
 from autocode.session.checkpoint_store import CheckpointStore
 from autocode.session.task_store import TaskStore
@@ -33,6 +34,17 @@ def _make_server(tmp_path: Path) -> BackendServer:
     config.logging.log_dir = str(tmp_path / "logs")
     config.logging.file_enabled = False
     return BackendServer(config=config, project_root=tmp_path)
+
+
+def test_backend_telemetry_emit_preserves_attached_transport(tmp_path: Path) -> None:
+    server = _make_server(tmp_path)
+    stdout = io.StringIO()
+    server.set_transport(StdoutTransport(stdout))
+
+    attached = server._transport
+    server._emit_telemetry("test_event", {})
+
+    assert server._transport is attached
 
 
 def _free_tcp_port() -> int:

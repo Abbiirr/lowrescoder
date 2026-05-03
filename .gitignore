@@ -75,4 +75,14 @@ jobs/
 
 wiki/
 .agents/
+.autocode/scratch/
+.autocode/snapshots/
+.autocode/sessions/
+.autocode/telemetry/
+.autocode/projects/
+benchmarks/__pycache__/
+benchmarks/.pytest_cache/
+benchmarks/sandboxes/
+benchmarks/**/__pycache__/
+benchmarks/**/.pytest_cache/
 benchmarks/

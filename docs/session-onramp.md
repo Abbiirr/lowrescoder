@@ -16,7 +16,7 @@ Fastest way to rebuild working context in a new session.
 ## 2) Current State
 
 - Stabilize-and-Release Checkpoints 1-3 are closed from builder/reviewer side; user-owned commit/tag decision remains.
-- Modular migration phases 0-5 are complete, with follow-through still tracked in `modular_migration_todo.md`.
+- Modular migration phases 0-5 are complete, with follow-through still tracked in `docs/plan/deferred/modular_migration_todo.md`.
 - Rust TUI (`autocode/rtui/target/release/autocode-tui`) is the sole interactive frontend; Go TUI and Python inline are deleted
 - `autocode` (bare) launches the Rust TUI via `cli.py`
 - `docs/reference/rpc-schema-v1.md` is the canonical backend/TUI contract

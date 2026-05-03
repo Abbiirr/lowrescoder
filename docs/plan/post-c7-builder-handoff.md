@@ -1,14 +1,16 @@
 # Post-C7 Builder Handoff
 
-> Status: ready after user-owned stable commit.  
-> Source roadmap: `docs/plan/post-c7-stable-commit-roadmap.md`.  
-> Current gate: Tranche 4 agent-closed by Claude Entry 1694; user commit still required before implementation starts.
+> Status: stable commit `386ef04 Implements till c7` landed (2026-04-30); 6 user-decisions LOCKED; awaiting User go-ahead prompt for P1.
+> Source roadmap: `docs/plan/post-c7-stable-commit-roadmap.md`.
+> **Master atomic checklist (authoritative implementation map): `docs/plan/post-c7-pass-atomic-checklist.md`**.
+> Telemetry spec: `docs/plan/post-c7-telemetry-spec.md`.
 
 ## Start Conditions
 
-- User lands the stable commit for Backend Robustness Tranche 4.
-- User either answers the six open roadmap decisions or explicitly accepts defaults.
-- Builder reads `AGENTS.md`, `current_directives.md`, `EXECUTION_CHECKLIST.md`, this handoff, and `docs/plan/post-c7-stable-commit-roadmap.md`.
+- ✅ User lands the stable commit for Backend Robustness Tranche 4 — DONE in `386ef04 Implements till c7` (2026-04-30).
+- ✅ User answers/locks the six post-commit decisions — DONE (see "Locked User Decisions" below).
+- ⏳ User prompts Builder (OpenCode primary; Codex fallback) to begin P1.
+- Builder reads `AGENTS.md`, `current_directives.md`, `EXECUTION_CHECKLIST.md`, `next_remaining_plan.md`, `next_remaining_todo.md`, `docs/plan/ai-verification-harness-fixes-plan.md` while HFIX is active, this handoff, `docs/plan/post-c7-pass-atomic-checklist.md`, `docs/plan/post-c7-stable-commit-roadmap.md`, `docs/plan/post-c7-telemetry-spec.md`, and the tier source docs under `docs/plan/roadmaps/2026-04-30-tier-roadmap/`.
 - Builder posts a pre-task intent in `AGENTS_CONVERSATION.MD` before code/doc changes.
 
 ## Current Defaults
@@ -19,14 +21,14 @@
 - No agent commits, pushes, tags, resets, checkouts, merges, pulls, or other tree-mutating git operations.
 - Constraint #8 remains mandatory: docs + verification artifact before every review request.
 
-## Open User Decisions
+## Locked User Decisions (from User direction 2026-04-30)
 
-1. P2 timing: default is strictly post-commit, not interleaved.
-2. Second client surface: default is none within six months, so P4 stays deferred-conditional.
-3. AI verification harness scope: default is narrow substrate, not the full seven-milestone harness.
-4. TUI path: default is Path A refactor; Path B rewrite is gated on P4.
-5. Telemetry CI strictness: default is soft gate first, then promote to hard after stability.
-6. `agent/loop.py` hook refactor: default is yes, inserted between P3 and P3a.
+1. **P2 timing — LOCKED: strictly post-commit (already satisfied).** User direction "we shall commit later focus on work" — Builder works continuously through phases; commits at User discretion, not gating phase boundaries.
+2. **Second client surface — LOCKED: OUT OF SCOPE for this pass.** P4 (Item/Turn/Thread) DEFERRED. Tier 4.2 (ephemeral fork) and Tier 4.3 (sticky env) DEFERRED with P4.
+3. **AI verification harness — LOCKED: narrow substrate using EXISTING features and interfaces only.** No new infrastructure for the harness itself. Reuse `benchmarks/`, C6.G5 NDJSON output, C7.G12 recipe schema, PTY harness pattern, and existing test-result artifact format. See atomic checklist §"P1 — AI Verification Harness Narrow Substrate".
+4. **TUI path — LOCKED: Path A refactor only.** Path B rewrite is OUT (eliminated by #2). When P4a activates, refactor to ~−2900 LOC; do not rewrite. See atomic checklist §"P4a — TUI Refactor (Path A only)".
+5. **Telemetry CI gate strictness — DEFERRED to spec.** `docs/plan/post-c7-telemetry-spec.md` is the placeholder. Final strictness locked when P1a + P3d ship; v1 default = soft gate first 2 weeks, then promote to hard.
+6. **`agent/loop.py` hook-architecture refactor — LOCKED: YES.** Insert between P3 and P3a per checklist §"Hook Architecture Refactor".
 
 ## Ordered Builder Tasks
 
@@ -48,7 +50,7 @@
 ## Post-C7 Polish Backlog
 
 - Add direct PTY coverage for new C7 commands: `/architect`, `/editor`, `/agents reload`, `/fork`, `/tree`, `/recipe list|run`, `/watch on|off|status`, and `/marketplace list|info|install`.
-- Re-attempt full live B7-B29/B7-B30 cost comparison sweep when gateway/provider stability is credible; keep current deferral in `DEFERRED_PENDING_TODO.md` §6.6 until then.
+- Re-attempt full live B7-B29/B7-B30 cost comparison sweep when gateway/provider stability is credible; keep current deferral in `docs/plan/deferred/deferred-pending-todo.md` §6.6 until then.
 - Promote watch mode from parser/state/command surface to a persistent filesystem observer loop.
 - Add marketplace remote fetch/submission only after local static registry use is stable.
 - Add direct worktree-subagent PTY coverage and end-to-end merge-back handoff proof without forbidden git operations.

@@ -168,6 +168,17 @@ Tool families:
   - VHS visual regressions
   - transport conformance suites
   - TUI reference matrix and diff/rule checks.
+- AI verification harness (HFIX):
+  - Headless protocol `0.2.0-harness` with structured `tool_call_started/completed/failed` events providing first-class tool-execution evidence.
+  - Typed trajectory assertions (`must_use_tools`, `must_not_use_tools`, `in_order_tools`, `any_order_tools`, `must_use_tool_families`, `min/max_tool_calls`).
+  - Typed artifact assertions (`must_change_files`, `must_not_change_files`, `require_non_empty_diff`, `forbid_noop_pass`, `must_contain_text`, `must_remove_text`).
+  - Typed turn assertions (`min_turns`, `max_turns`, `no_regression_after_pass`, `require_final_turn_grading`).
+  - Per-run artifacts: `turns.json`, `tool_calls.jsonl`, `trajectory_report.json`, `run_summary.json`, `grading_report.json`.
+  - Infrastructure classification: empty turns, 429/rate-limit, timeouts, sandbox failures classified as `INFRA_FAIL` distinct from `FAIL`/`PASS`/`PARTIAL`.
+  - Subprocess-isolated benchmark lane workers with process-group timeout kill.
+  - Structured transient retry classification via `failure_evidence.transient_class`.
+  - Canaries: `refactor-noop-guard.yaml`, `multi-turn-regression.yaml`, `tool-trajectory-git.yaml`, `ask-user-scripted.yaml` (gateway-deferred), `semantic-search-required.yaml`, `spawn-subagent-required.yaml`.
+  - `summarize_runs.py` report CLI scanning run dirs for verdict counts, infra reasons, tool coverage, assertion failures, missing artifacts, and slowest runs.
 
 ## 12) Slash Commands (Backend-Owned Registry)
 

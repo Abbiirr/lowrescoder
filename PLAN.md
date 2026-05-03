@@ -20,7 +20,7 @@ Purpose: detailed implementation plan for the active backend-tightening/docs-ref
 
 Follow this order unless the user explicitly redirects:
 
-1. **Backend Robustness Tranche 4 — closed from agent side; user-owned stable commit next.** Canonical plan: `docs/plan/backend-robustness-tranche-4-plan.md`. Sub-plan: `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md`. Master atomic checklist: `docs/plan/backend-robustness-tranche-4-checklist.md`. C4 + C5 + C6 + C7 are builder-complete and Claude-approved via `AGENTS_CONVERSATION.MD` Entry 1694 as `COMPLETE_WITH_DEFERRED_LIVE_SWEEP`. Final gate artifact: `autocode/docs/qa/test-results/20260430-194659-c7-gate-final-release-and-benchmark.md`. Post-commit roadmap: `docs/plan/post-c7-stable-commit-roadmap.md`; builder handoff: `docs/plan/post-c7-builder-handoff.md`. All non-tree-mutating git ops only per `AGENTS.md`. Parked for after Tranche 4 closes: Packets 1, 2, 4, 5 from the TUI kickoff brief.
+1. **Backend Robustness Tranche 4 — CLOSED. Stable commit `386ef04 Implements till c7` landed (2026-04-30).** Canonical plan: `docs/plan/backend-robustness-tranche-4-plan.md`. Sub-plan: `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md`. Master atomic checklist: `docs/plan/backend-robustness-tranche-4-checklist.md`. C4 + C5 + C6 + C7 are builder-complete and Claude-approved via `AGENTS_CONVERSATION.MD` Entry 1694 as `COMPLETE_WITH_DEFERRED_LIVE_SWEEP`. Final gate artifact: `autocode/docs/qa/test-results/20260430-194659-c7-gate-final-release-and-benchmark.md`. Post-commit roadmap: `docs/plan/post-c7-stable-commit-roadmap.md`; builder handoff: `docs/plan/post-c7-builder-handoff.md`. All non-tree-mutating git ops only per `AGENTS.md`. Parked for after Tranche 4 closes: Packets 1, 2, 4, 5 from the TUI kickoff brief. Next active program: post-C7 phase queue; awaiting User decision-signal/defaults before P1 starts.
 2. **Stabilize-and-Release Program — CLOSED.** Canonical plan: `docs/plan/stabilize-and-release-plan.md`. Three checkpoints all closed; user 3.E commit landed in `1700d66 Closes backend v2` on 2026-04-27. Optional release tag remains user discretion. Final regression artifact: `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md` (Python `1999`, Rust TUI `210`, benchmark `199`, real-gateway PTY canary green). Tranche-3 comms archive cut: `docs/communication/old/2026-04-27-stabilize-and-release-tranche-3-1548-1586.md`. HR-5 program canonical: `docs/tui-testing/tui_implementation_plan.md` and `docs/tui-testing/tui_implementation_todo.md`.
 3. **Backend Feature Improvement Tranche — local regression complete.** Use `docs/plan/backend-feature-improvement-plan.md` and `docs/plan/backend-feature-improvement-todo.md` as the closeout record. Docs-refresh A-G and the local deterministic regression gate are complete; live gateway canary remains before any broad benchmark sweep or product-path release claim.
 4. HR-5 Phase C-D follow-through surfaces and spinner/thinking parity.
@@ -105,7 +105,7 @@ Current practical rule:
 - Checkpoint 3 fully closed: 3.A/3.B in `autocode/docs/qa/test-results/20260427-113808-phase-e-gate-verification.md`; 3.C in `autocode/docs/qa/test-results/20260427-115709-release-grade-regression-sweep.md`; 3.D closeout in `AGENTS_CONVERSATION.MD` Entry 1584; 3.E commit `1700d66 Closes backend v2` 2026-04-27; optional release tag at user discretion
 - Phase E HR-5(a) binding count is `9 shipped surfaces`: `/cc`, `/multi`, `/restore` display binding, `/plan`, `/tasks`, `/grep`, `/review`, `/diff`, and `/escalation`; the 10th planned slot, `/restore` interaction, is now complete
 - run a fresh live gateway canary before any full benchmark sweep or product-path release claim
-- keep deferred items visible in `DEFERRED_PENDING_TODO.md`; do NOT dismiss anything
+- keep deferred items visible in `docs/plan/deferred/deferred-pending-todo.md`; do NOT dismiss anything
 - treat Section 0 as landed foundation unless a new gap is discovered
 - treat Section 1f (Unified TUI) residuals as paused, not cancelled
 - do not broaden B30 work while the higher-leverage comprehension/adapter items are still moving
@@ -1596,7 +1596,7 @@ stores artifacts.
 - [ ] Phase 3 reference baselines stored for ≥ 3 reference TUIs (claude, codex, one more)
 - [ ] Phase 4 hard-gate predicates pass for autocode's current state
 - [ ] session-isolation test proves no writes to user's real `~/.claude/`, `~/.codex/`, `~/.opencode/`, `~/.config/goose/`, `~/.pi/`, `~/.forge/`
-- [ ] `DEFERRED_PENDING_TODO.md` §2 "side-by-side pi ↔ autocode smoke test" replaced by artifact citation
+- [ ] `docs/plan/deferred/deferred-pending-todo.md` §2 "side-by-side pi ↔ autocode smoke test" replaced by artifact citation
 - [ ] Codex APPROVE on the implementation before any commit decision
 
 ### Proposed Research + Design Work (Pre-Implementation)
@@ -1651,7 +1651,7 @@ stores artifacts.
 - [ ] all 8 open design questions answered in this section
 - [ ] working prototype on autocode + pi
 - [ ] stored artifacts under `autocode/docs/qa/tui-comparison/`
-- [ ] `DEFERRED_PENDING_TODO.md` §2 entry for "Side-by-side pi ↔
+- [ ] `docs/plan/deferred/deferred-pending-todo.md` §2 entry for "Side-by-side pi ↔
       autocode smoke test" removed and replaced by an artifact
       citation
 - [ ] Codex review verdict on the design (post review request once

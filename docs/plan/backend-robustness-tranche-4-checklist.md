@@ -92,7 +92,7 @@ Plan ref: `backend-robustness-tranche-4-plan.md` §4.G2.
 
 #### Integration
 
-- [ ] Wire upgraded repomap into `autocode/src/autocode/agent/prompts.py` system-prompt builder — deferred to `DEFERRED_PENDING_TODO.md` §6.5 because automatic first-turn generation violates the bootstrap latency invariant
+- [ ] Wire upgraded repomap into `autocode/src/autocode/agent/prompts.py` system-prompt builder — deferred to `docs/plan/deferred/deferred-pending-todo.md` §6.5 because automatic first-turn generation violates the bootstrap latency invariant
 - [ ] Add `/repomap` slash command (alias `/map`) for ad-hoc rebuild + display
 
 #### TDD evidence
@@ -463,7 +463,7 @@ Plan ref: `backend-robustness-tranche-4-plan.md` §C5.GATE.
 - [x] Standard regression set (same as C4.GATE)
 - [x] All 8 per-language LSP PTY smokes pass
 - [x] Auto-verify integration test passes
-- [x] **Benchmark sweep B7-B29** with cost comparison vs C4.GATE baseline deferred per `DEFERRED_PENDING_TODO.md` §6.6; latest completed sweep remains `20260428-122348-742618`
+- [x] **Benchmark sweep B7-B29** with cost comparison vs C4.GATE baseline deferred per `docs/plan/deferred/deferred-pending-todo.md` §6.6; latest completed sweep remains `20260428-122348-742618`
 - [x] `git diff --check` clean
 - [x] Verification artifact at `autocode/docs/qa/test-results/20260429-111435-c5-gate-regression-and-benchmark.md`
 - [x] Claude review APPROVE for the gate — `AGENTS_CONVERSATION.MD` Entry 1664 closed C5.GATE as `COMPLETE_WITH_DEFERRED_LIVE_SWEEP`
@@ -497,7 +497,7 @@ Plan ref: `backend-robustness-tranche-4-plan.md` §6.G5. Contract update locked 
 - [x] GREEN: all pass
 - [x] Integration test: pipe through `jq`, assert well-formed NDJSON
 - [x] Schema validation test: emitted events validate against the schema files produced by `generate-schema`
-- [x] Headless-mode benchmark canary deferred to C6.GATE per `DEFERRED_PENDING_TODO.md` §6.6 (gateway-gated; same pattern as C5.GATE)
+- [x] Headless-mode benchmark canary deferred to C6.GATE per `docs/plan/deferred/deferred-pending-todo.md` §6.6 (gateway-gated; same pattern as C5.GATE)
 - [x] Update `autocode/TESTING.md` with headless mode docs (include schema versioning + subset rationale)
 - [x] Update `docs/features/backend_features.md`
 - [x] `git diff --check` clean
@@ -509,7 +509,7 @@ Plan ref: `backend-robustness-tranche-4-plan.md` §6.G5. Contract update locked 
 
 ### 6.G6 — Layer 4.5 cost-aware multi-provider router (with cache-multiplier hook)
 
-Plan ref: `backend-robustness-tranche-4-plan.md` §6.G6. User-custom config deferred per `DEFERRED_PENDING_TODO.md` §6.4. Cache-multiplier hook contract locked in `AGENTS_CONVERSATION.MD` Entry 1664 (post-commit Phase 2 prompt-cache work feeds this hook later).
+Plan ref: `backend-robustness-tranche-4-plan.md` §6.G6. User-custom config deferred per `docs/plan/deferred/deferred-pending-todo.md` §6.4. Cache-multiplier hook contract locked in `AGENTS_CONVERSATION.MD` Entry 1664 (post-commit Phase 2 prompt-cache work feeds this hook later).
 
 - [x] Create `autocode/src/autocode/layer4_5/router.py` with `Layer45Router` class
 - [x] Inputs: task class (from `core/router.py`), provider/model rate table (from `agent/cost_dashboard.py`), confidence signal, **`billable_input_cost_factor: float = 1.0`** (cache-multiplier hook)
@@ -543,7 +543,7 @@ Plan ref: `backend-robustness-tranche-4-plan.md` §6.G6. User-custom config defe
 
 - [x] Standard regression set
 - [x] Cost-routing canary lane shows expected cost reduction at deterministic unit level (`test_layer45_router.py`; live benchmark canary deferred below)
-- [x] **Benchmark sweep B7-B29** with cost comparison deferred per `DEFERRED_PENDING_TODO.md` §6.6 gateway/provider stabilization; local benchmark harness tests passed
+- [x] **Benchmark sweep B7-B29** with cost comparison deferred per `docs/plan/deferred/deferred-pending-todo.md` §6.6 gateway/provider stabilization; local benchmark harness tests passed
 - [x] Verification artifact at `autocode/docs/qa/test-results/20260430-172302-c6-gate-regression-and-benchmark.md`
 - [ ] Claude review APPROVE for the gate
 
@@ -685,7 +685,7 @@ Plan ref: `backend-robustness-tranche-4-plan.md` §C7.GATE.
 - [x] All 8 per-language LSP PTY smokes still pass
 - [x] Auto-verify integration test still passes
 - [x] Cost-routing canary still shows expected reduction
-- [x] **Benchmark sweep B7-B29** with full cost comparison (C4 → C5 → C6 → C7) remains deferred per `DEFERRED_PENDING_TODO.md` §6.6; benchmark harness tests pass
+- [x] **Benchmark sweep B7-B29** with full cost comparison (C4 → C5 → C6 → C7) remains deferred per `docs/plan/deferred/deferred-pending-todo.md` §6.6; benchmark harness tests pass
 - [x] Real-gateway PTY canary green
 - [x] `git diff --check` clean
 - [x] Verification artifact at `autocode/docs/qa/test-results/20260430-194659-c7-gate-final-release-and-benchmark.md`
@@ -719,4 +719,4 @@ When all C7.GATE checkboxes are green:
   - [ ] `docs/plan/backend-robustness-tranche-4-plan.md` → `docs/plan/archive/`
   - [ ] `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md` → `docs/plan/archive/`
   - [ ] `docs/plan/backend-robustness-tranche-4-checklist.md` → `docs/plan/archive/`
-- [ ] User decides next tranche scope (candidates from `docs/plan/stabilize-and-release-plan.md` brainstorm inventory R-1 through R-11, plus deferrals in `DEFERRED_PENDING_TODO.md` §6)
+- [ ] User decides next tranche scope (candidates from `docs/plan/stabilize-and-release-plan.md` brainstorm inventory R-1 through R-11, plus deferrals in `docs/plan/deferred/deferred-pending-todo.md` §6)

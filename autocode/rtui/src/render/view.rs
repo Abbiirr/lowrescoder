@@ -93,6 +93,16 @@ fn render_status_bar(f: &mut Frame, state: &AppState, area: Rect) {
     if !compact && (state.status.tokens_in > 0 || state.status.tokens_out > 0) {
         let token_text = format!("{}↑{}↓", state.status.tokens_in, state.status.tokens_out);
         push_status_chunk(&mut spans, token_text, Style::default());
+        if state.status.cached_input_tokens > 0 && state.status.tokens_in > 0 {
+            let pct = ((state.status.cached_input_tokens as f64 / state.status.tokens_in as f64)
+                * 100.0)
+                .round() as u32;
+            push_status_chunk(
+                &mut spans,
+                format!("⚡{}% cached", pct),
+                Style::default().fg(Color::Yellow),
+            );
+        }
     }
 
     if !compact {

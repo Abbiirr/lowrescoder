@@ -7,7 +7,7 @@
 > - `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md` — detailed sub-plan for the multi-language LSP slice (Checkpoint 5)
 > - `docs/plan/backend-robustness-tranche-4-checklist.md` — master atomic checklist with per-task checkboxes
 > - `docs/plan/stabilize-and-release-plan.md` — predecessor program (closed)
-> - `DEFERRED_PENDING_TODO.md` §6 — items explicitly deferred from this tranche
+> - `docs/plan/deferred/deferred-pending-todo.md` §6 — items explicitly deferred from this tranche
 
 This plan organises the path from the **fully closed Stabilize-and-Release Program** (Codex Entry 1584 closeout, Claude Entry 1585 reviewer APPROVE, Codex Entry 1586 ack, user 3.E commit `1700d66 Closes backend v2` 2026-04-27 — optional release tag at user discretion) to a release-ready, robust backend that closes most of the 2026-frontier-product feature gap. After Tranche 4 closes, archive this file alongside the other completed plans and update `PLAN.md` Ordered Backlog item 1.
 
@@ -29,7 +29,7 @@ This plan organises the path from the **fully closed Stabilize-and-Release Progr
 - LSP-style tools (Jedi-backed, Python only — 4 of 9 ops)
 - Sub-agents via task tools
 
-**Tranche 4 scope:** comprehensive (Tier 1 + Tier 2 = 15 slices) per user direction. All Tier 3 items (cloud sandbox, A2A, GitHub PR pipeline) explicitly deferred to `DEFERRED_PENDING_TODO.md` §6 except multi-language LSP which is in scope.
+**Tranche 4 scope:** comprehensive (Tier 1 + Tier 2 = 15 slices) per user direction. All Tier 3 items (cloud sandbox, A2A, GitHub PR pipeline) explicitly deferred to `docs/plan/deferred/deferred-pending-todo.md` §6 except multi-language LSP which is in scope.
 
 **Operating cadence (same as Tranche 3, with new constraint #8 added 2026-04-27):**
 1. Codex does not block on review — kickoff → work → completion review request → continue to next slice immediately.
@@ -235,7 +235,7 @@ Each language sub-slice ships:
 
 **Why:** OI-MAS research shows ~80% cost reduction with confidence-aware routing; opencode/Goose/Continue all ship cost tiering. Our 4-layer architecture (L1-L4) is task-class routing; this adds intra-layer model tiering within L4.
 
-**Per user direction 2026-04-27:** Layer 4.5 router with auto-selection. **User-custom config (e.g. `/route lint=haiku refactor=sonnet plan=opus`) is DEFERRED** to `DEFERRED_PENDING_TODO.md` §6.4.
+**Per user direction 2026-04-27:** Layer 4.5 router with auto-selection. **User-custom config (e.g. `/route lint=haiku refactor=sonnet plan=opus`) is DEFERRED** to `docs/plan/deferred/deferred-pending-todo.md` §6.4.
 
 **Surface:**
 - New `autocode/src/autocode/layer4_5/router.py`: takes the routing decision before L4 invocation.
@@ -322,7 +322,7 @@ Each language sub-slice ships:
 - Frontend feature catalog: `docs/requirements_and_features.md`
 - Research components: `research-components/MANIFEST.md` and `docs/plan/research-components-feature-checklist.md`
 - Multi-agent landscape: `docs/research/multi-agent-landscape-2026.md`
-- Deferrals tracker: `DEFERRED_PENDING_TODO.md` §6
+- Deferrals tracker: `docs/plan/deferred/deferred-pending-todo.md` §6
 - HR-5 program (closed): `docs/tui-testing/tui_implementation_plan.md`
 - Sub-plans:
   - `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md`

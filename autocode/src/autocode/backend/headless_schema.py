@@ -1,8 +1,10 @@
 """Tier 4.4-compatible NDJSON event schema for headless --json mode.
 
-Every event carries ``protocol_version: "0.1.0-c6g5-subset"``.
+Every event carries ``protocol_version: "0.2.0-harness"``.
 The ``type`` discriminator selects the event shape.
 ``item.kind`` is constrained to the C6.G5 forward-compatible subset.
+Structured tool events (``tool_call_started/completed/failed``) provide
+first-class tool-execution evidence for the AI verification harness.
 """
 
 from __future__ import annotations
@@ -15,7 +17,7 @@ from typing import Any, Literal, TextIO
 from pydantic import BaseModel, ConfigDict, Field
 
 
-PROTOCOL_VERSION = "0.1.0-c6g5-subset"
+PROTOCOL_VERSION = "0.2.0-harness"
 
 
 class ItemType(str, Enum):
@@ -101,6 +103,130 @@ class ErrorEvent(_EventBase):
     code: str | None = None
 
 
+TOOL_FAMILY_MAP: dict[str, str] = {
+    "read_file": "file_read",
+    "list_files": "file_read",
+    "glob_files": "file_read",
+    "write_file": "file_write",
+    "edit_file": "file_write",
+    "apply_patch": "file_write",
+    "multi_edit": "file_write",
+    "search_text": "search",
+    "grep_content": "search",
+    "search_code": "search",
+    "semantic_search": "search",
+    "find_definition": "lsp",
+    "find_references": "lsp",
+    "get_type_info": "lsp",
+    "list_symbols": "lsp",
+    "run_command": "shell",
+    "git_status": "git",
+    "git_diff": "git",
+    "git_log": "git",
+    "todo_read": "planning",
+    "todo_write": "planning",
+    "create_task": "planning",
+    "update_task": "planning",
+    "list_tasks": "planning",
+    "spawn_subagent": "subagent",
+    "check_subagent": "subagent",
+    "cancel_subagent": "subagent",
+    "list_subagents": "subagent",
+    "ask_user": "user_interaction",
+    "list_tool_results": "cache",
+    "clear_tool_result": "cache",
+    "clear_tool_results": "cache",
+}
+
+
+def tool_family(tool_name: str) -> str:
+    return TOOL_FAMILY_MAP.get(tool_name, "unknown")
+
+
+class ArgsShape(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    args_shape: dict[str, str] = {}
+    args_sha256: str = ""
+    result_bytes: int = 0
+    result_sha256: str = ""
+    result_preview: str = ""
+
+
+class ToolCallStartedEvent(_EventBase):
+    type: Literal["tool_call_started"] = "tool_call_started"
+    thread_id: str = ""
+    turn_id: str = ""
+    item_id: str = ""
+    tool_call_id: str = ""
+    tool_name: str = ""
+    tool_family: str = ""
+    started_at: str = ""
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.tool_name:
+            raise ValueError("tool_call_started requires non-empty tool_name")
+        if not self.tool_call_id:
+            raise ValueError("tool_call_started requires non-empty tool_call_id")
+        if not self.started_at:
+            raise ValueError("tool_call_started requires non-empty started_at")
+
+
+class ToolCallCompletedEvent(_EventBase):
+    type: Literal["tool_call_completed"] = "tool_call_completed"
+    thread_id: str = ""
+    turn_id: str = ""
+    item_id: str = ""
+    tool_call_id: str = ""
+    tool_name: str = ""
+    tool_family: str = ""
+    status: Literal["success", "error"] = "success"
+    started_at: str = ""
+    finished_at: str = ""
+    duration_ms: int = 0
+    args_shape: dict[str, str] = {}
+    args_sha256: str = ""
+    result_bytes: int = 0
+    result_sha256: str = ""
+    result_preview: str = ""
+    error_type: str | None = None
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.tool_name:
+            raise ValueError("tool_call_completed requires non-empty tool_name")
+        if not self.tool_call_id:
+            raise ValueError("tool_call_completed requires non-empty tool_call_id")
+        if not self.started_at:
+            raise ValueError("tool_call_completed requires non-empty started_at")
+        if not self.finished_at:
+            raise ValueError("tool_call_completed requires non-empty finished_at")
+
+
+class ToolCallFailedEvent(_EventBase):
+    type: Literal["tool_call_failed"] = "tool_call_failed"
+    thread_id: str = ""
+    turn_id: str = ""
+    item_id: str = ""
+    tool_call_id: str = ""
+    tool_name: str = ""
+    tool_family: str = ""
+    started_at: str = ""
+    finished_at: str = ""
+    duration_ms: int = 0
+    error_type: str = ""
+    error_message: str = ""
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.tool_name:
+            raise ValueError("tool_call_failed requires non-empty tool_name")
+        if not self.tool_call_id:
+            raise ValueError("tool_call_failed requires non-empty tool_call_id")
+        if not self.started_at:
+            raise ValueError("tool_call_failed requires non-empty started_at")
+        if not self.finished_at:
+            raise ValueError("tool_call_failed requires non-empty finished_at")
+
+
 EventType = (
     ThreadStartedEvent
     | TurnStartedEvent
@@ -109,6 +235,9 @@ EventType = (
     | ItemCompletedEvent
     | TurnCompletedEvent
     | ErrorEvent
+    | ToolCallStartedEvent
+    | ToolCallCompletedEvent
+    | ToolCallFailedEvent
 )
 
 _EVENT_UNION_MAP: dict[str, type[EventType]] = {
@@ -119,6 +248,9 @@ _EVENT_UNION_MAP: dict[str, type[EventType]] = {
     "item_completed": ItemCompletedEvent,
     "turn_completed": TurnCompletedEvent,
     "error": ErrorEvent,
+    "tool_call_started": ToolCallStartedEvent,
+    "tool_call_completed": ToolCallCompletedEvent,
+    "tool_call_failed": ToolCallFailedEvent,
 }
 
 
@@ -163,6 +295,9 @@ SCHEMA_METHODS: dict[str, type[BaseModel]] = {
     "item_completed": ItemCompletedEvent,
     "turn_completed": TurnCompletedEvent,
     "error": ErrorEvent,
+    "tool_call_started": ToolCallStartedEvent,
+    "tool_call_completed": ToolCallCompletedEvent,
+    "tool_call_failed": ToolCallFailedEvent,
     "usage": UsageBlock,
 }
 

@@ -1,7 +1,7 @@
 # Testing & Evaluation Guide
 
 > How to test, evaluate, and interpret results for AutoCode.
-> Last updated: 2026-04-26
+> Last updated: 2026-04-30
 
 > **For TUI testing specifically** (the 4-dimension matrix — runtime invariants, design-target ratchet, self-vs-self PNG regression, live PTY smoke), see `docs/tui-testing/tui-testing-strategy.md` and the enforced checklist at `docs/tui-testing/tui_testing_checklist.md`. This guide's `Rust TUI tests` row below is only the `cargo test` unit-test slice.
 >
@@ -47,6 +47,15 @@
 | Unified benchmark (all lanes) | `bash benchmarks/run_all_benchmarks.sh` | 8-40 hrs |
 | List benchmark lanes | `uv run python benchmarks/benchmark_runner.py --list-lanes` | Instant |
 | TUI benchmark prep | `uv run python benchmarks/prepare_tui_benchmark_run.py --scope full --mode inline --strict` | ~2-4 min |
+| AI verification substrate tests | `uv run pytest benchmarks/tests/test_ai_verification_substrate.py -v` | ~1s |
+| AI verification scenario (single) | `uv run python benchmarks/ai_verification/run_scenario.py --scenario benchmarks/ai_verification/scenarios/01-simple-edit.yaml --validate-fixture` | ~5s |
+| AI verification scenario (with agent) | `uv run python benchmarks/ai_verification/run_scenario.py --scenario benchmarks/ai_verification/scenarios/05-headless-ndjson.yaml --agent autocode` | ~30s-5min |
+| Benchmark timeout boundary slice | `uv run pytest benchmarks/tests/test_benchmark_runner.py::test_task_worker_subprocess_reads_serialized_result benchmarks/tests/test_benchmark_runner.py::test_task_worker_timeout_kills_process_group benchmarks/tests/test_benchmark_runner.py::test_run_lane_timeout_returns_when_adapter_suppresses_cancellation benchmarks/tests/test_benchmark_runner.py::test_run_lane_records_agent_task_timeout benchmarks/tests/test_benchmark_runner.py::test_run_lane_retries_tool_calling_route_infra -q` | ~5s |
+| P1a telemetry unit slice | `uv run pytest autocode/tests/unit/test_telemetry_store.py autocode/tests/unit/test_telemetry_aggregator.py autocode/tests/unit/test_cli.py::TestCLITelemetry -q` | ~1s |
+| P2 prompt-cache unit slice | `uv run pytest autocode/tests/unit/test_prompt_cache_boundary.py autocode/tests/unit/test_token_tracker_cache.py autocode/tests/unit/test_llm.py::TestProviderUsageCapture -q` | ~1s |
+| P2a scratch-store unit slice | `uv run pytest autocode/tests/unit/test_scratch.py autocode/tests/unit/test_agent_loop.py::TestAgentLoop::test_large_tool_result_is_offloaded_to_scratch_and_telemetry_emitted -q` | ~1s |
+| P3 file-memory/session-notes slice | `uv run pytest autocode/tests/unit/test_memory_fs.py autocode/tests/unit/test_session_notes.py -q` | ~1s |
+| P3a drift-detector slice | `uv run pytest autocode/tests/unit/test_drift.py autocode/tests/unit/test_agent_loop.py::TestAgentLoop::test_drift_warning_is_injected_before_next_model_turn autocode/tests/unit/test_telemetry_aggregator.py -q` | ~1s |
 
 ---
 
@@ -638,10 +647,24 @@ Tool approvals are denied by default in headless JSON mode. Pass `--auto-approve
 
 ### Schema versioning
 
-- Every event carries `protocol_version: "0.1.0-c6g5-subset"`.
-- The protocol version will bump to `0.2.0` when Tier 2.1 Item/Turn/Thread lands, with no breaking change for C6.G5 consumers.
+- Every event carries `protocol_version: "0.2.0-harness"`.
+- `tool_call_started`, `tool_call_completed`, and `tool_call_failed` events are emitted alongside legacy tool-execution item events so the AI verification harness can grade tool trajectory without parsing free-form result strings.
 - `item.kind` is constrained to: {`agent_message`, `tool_execution`, `plan_update`, `approval`}.
 - Reserved for future (documented but not emitted): {`reasoning`, `subagent_delegation`, `diff`}.
+
+### Supervised AI verification retry policy
+
+`benchmarks.ai_verification.run_scenario_supervised` retries transient `INFRA_FAIL`
+by default with this infra-recovery schedule:
+
+```text
+5s,30s,1m,2m,3m,4m,5m,6m,7m,8m,9m,10m,20m,30m,1h,2h,3h,4h,5h,6h,7h,8h,9h,10h
+```
+
+At the default 600s attempt timeout, the total recovery window exceeds 57
+hours. Each attempt is independently artifacted and the parent supervised
+directory includes `retry_report.json`. Use `--no-retry-transient-infra` for
+fast local debugging or `--retry-schedule` to provide a shorter schedule.
 
 ### Test files
 
@@ -687,3 +710,62 @@ Layer 4.5 routing (`autocode/src/autocode/layer4_5/router.py`) is deterministic 
 3. **Cache hook**: `billable_input_cost_factor=1.0` preserves default selection; synthetic `0.3` and `1.25` factors can change model ranking within a tier.
 4. **Explainability**: every `ProviderSelection` includes a non-empty `reason`, `estimated_cost`, and `estimated_cost_delta`.
 5. **No behavior surprise by default**: if no `routing.model_rates` are configured, the router preserves the current `config.llm.provider/model` across all tiers.
+
+---
+
+## 13. Local Telemetry Testing
+
+P1a telemetry is local-only and writes JSONL under `~/.autocode/telemetry/`.
+
+### Test commands
+
+```bash
+uv run pytest autocode/tests/unit/test_telemetry_store.py autocode/tests/unit/test_telemetry_aggregator.py autocode/tests/unit/test_cli.py::TestCLITelemetry -q
+uv run pytest autocode/tests/unit/test_agent_loop.py::TestAgentLoop::test_telemetry_emits_turn_and_llm_events autocode/tests/unit/test_agent_loop.py::TestAgentLoop::test_telemetry_emits_tool_success_and_failure -q
+```
+
+### Manual CLI smoke
+
+```bash
+autocode telemetry summary --last 7d
+autocode telemetry drift --last 7d
+autocode telemetry events --kind turn_completed --last 7d
+autocode telemetry export --format csv
+autocode telemetry purge
+```
+
+Set `AUTOCODE_TELEMETRY_DISABLED=true` to make telemetry emission a no-op.
+
+---
+
+## 14. Prompt Cache Testing
+
+P2 prompt-cache coverage is deterministic by default and live-provider opt-in.
+
+### Test commands
+
+```bash
+uv run pytest autocode/tests/unit/test_prompt_cache_boundary.py autocode/tests/unit/test_token_tracker_cache.py autocode/tests/unit/test_llm.py::TestProviderUsageCapture -q
+uv run pytest benchmarks/tests/test_ai_verification_substrate.py -q
+```
+
+### Live provider smoke
+
+```bash
+AUTOCODE_RUN_LIVE_PROMPT_CACHE=1 OPENROUTER_API_KEY=... uv run pytest autocode/tests/integration/test_prompt_cache.py -q
+```
+
+Set `AUTOCODE_DISABLE_PROMPT_CACHE=true` to force non-cached provider requests. Live prompt-cache tests are skipped unless explicitly enabled because they spend provider tokens and depend on OpenRouter/Anthropic cache availability.
+
+---
+
+## 15. Scratch Store Testing
+
+P2a scratch-store coverage verifies large tool-output offload, manifest recording, retention cleanup, context-truncation ordering, telemetry, and harness predicates.
+
+```bash
+uv run pytest autocode/tests/unit/test_scratch.py autocode/tests/unit/test_agent_loop.py::TestAgentLoop::test_large_tool_result_is_offloaded_to_scratch_and_telemetry_emitted autocode/tests/unit/test_agent_loop.py::TestAgentLoop::test_scratch_offload_happens_before_context_truncation -q
+uv run pytest benchmarks/tests/test_ai_verification_substrate.py -q
+```
+
+Set `AUTOCODE_DISABLE_SCRATCH=true` to inline all tool outputs and restore pre-P2a behavior.

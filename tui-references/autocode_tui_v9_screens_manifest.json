@@ -1,0 +1,218 @@
+[
+  {
+    "id": "01_idle",
+    "title": "Ready / idle",
+    "notes": "minimal identity, composer owns focus",
+    "w": 1040,
+    "h": 650,
+    "exact80": false
+  },
+  {
+    "id": "02_active",
+    "title": "Active transcript",
+    "notes": "submitted prompt separated from live input",
+    "w": 1120,
+    "h": 690,
+    "exact80": false
+  },
+  {
+    "id": "03_drawer",
+    "title": "Active with bounded drawer",
+    "notes": "drawer cannot push composer",
+    "w": 1120,
+    "h": 710,
+    "exact80": false
+  },
+  {
+    "id": "04_queue_strip",
+    "title": "Multitasking with one-line queue",
+    "notes": "queue strip is fixed one line",
+    "w": 1120,
+    "h": 690,
+    "exact80": false
+  },
+  {
+    "id": "05_queue_drawer",
+    "title": "Queue drawer",
+    "notes": "queued draft editor is not the live composer",
+    "w": 1120,
+    "h": 760,
+    "exact80": false
+  },
+  {
+    "id": "06_slash_picker",
+    "title": "Composer-attached slash picker",
+    "notes": "no centered palette",
+    "w": 1120,
+    "h": 690,
+    "exact80": false
+  },
+  {
+    "id": "07_file_picker",
+    "title": "Composer-attached file picker",
+    "notes": "filter-first file attach",
+    "w": 1120,
+    "h": 710,
+    "exact80": false
+  },
+  {
+    "id": "08_symbol_picker",
+    "title": "Composer-attached symbol picker",
+    "notes": "symbol attach/jump without sidebar",
+    "w": 1120,
+    "h": 710,
+    "exact80": false
+  },
+  {
+    "id": "09_plan_inline",
+    "title": "Plan inline",
+    "notes": "plan visible only when useful",
+    "w": 1120,
+    "h": 740,
+    "exact80": false
+  },
+  {
+    "id": "10_review_approval",
+    "title": "Review approval",
+    "notes": "evidence-first approval; no hotkeys in composer focus",
+    "w": 1180,
+    "h": 760,
+    "exact80": false
+  },
+  {
+    "id": "11_diff_focus",
+    "title": "Diff focus",
+    "notes": "focus mode replaces middle only",
+    "w": 1180,
+    "h": 760,
+    "exact80": false
+  },
+  {
+    "id": "12_protected_path",
+    "title": "Protected path escalation",
+    "notes": "no broad approve-session action",
+    "w": 1180,
+    "h": 760,
+    "exact80": false
+  },
+  {
+    "id": "13_network_ci_denied",
+    "title": "Remote CI / network denied",
+    "notes": "separate from protected file edit",
+    "w": 1180,
+    "h": 720,
+    "exact80": false
+  },
+  {
+    "id": "14_recovery",
+    "title": "Recovery with preserved draft",
+    "notes": "draft and composer survive failure",
+    "w": 1180,
+    "h": 760,
+    "exact80": false
+  },
+  {
+    "id": "15_restore_focus",
+    "title": "Restore focus mode",
+    "notes": "queue impact visible before restore",
+    "w": 1180,
+    "h": 760,
+    "exact80": false
+  },
+  {
+    "id": "16_sessions",
+    "title": "Session browser focus mode",
+    "notes": "worktree safety signals included",
+    "w": 1180,
+    "h": 760,
+    "exact80": false
+  },
+  {
+    "id": "17_search_focus",
+    "title": "Search focus",
+    "notes": "search results with composer preserved",
+    "w": 1180,
+    "h": 740,
+    "exact80": false
+  },
+  {
+    "id": "18_transcript_review",
+    "title": "Transcript review/search",
+    "notes": "Alt+O review, Ctrl+O copy latest remains distinct",
+    "w": 1180,
+    "h": 740,
+    "exact80": false
+  },
+  {
+    "id": "19_status",
+    "title": "/status effective config",
+    "notes": "effective policy is resolved, not vague",
+    "w": 1180,
+    "h": 720,
+    "exact80": false
+  },
+  {
+    "id": "20_settings",
+    "title": "Settings / effective config",
+    "notes": "precedence and override source shown",
+    "w": 1180,
+    "h": 760,
+    "exact80": false
+  },
+  {
+    "id": "21_large_paste",
+    "title": "Large paste preview",
+    "notes": "bracketed paste, attach-or-send decision",
+    "w": 1180,
+    "h": 720,
+    "exact80": false
+  },
+  {
+    "id": "22_copy_fallback",
+    "title": "Copy/export fallback",
+    "notes": "cross-platform clipboard fallback",
+    "w": 1180,
+    "h": 720,
+    "exact80": false
+  },
+  {
+    "id": "23_mcp_read_approval",
+    "title": "MCP read approval",
+    "notes": "network/read-only tool access with source policy",
+    "w": 1180,
+    "h": 760,
+    "exact80": false
+  },
+  {
+    "id": "24_subagent_trace",
+    "title": "Subagent trace",
+    "notes": "subagents hidden by default but explainable when used",
+    "w": 1180,
+    "h": 720,
+    "exact80": false
+  },
+  {
+    "id": "25_ascii_fallback",
+    "title": "ASCII / no-glyph fallback",
+    "notes": "glyph-free equivalent",
+    "w": 1040,
+    "h": 650,
+    "exact80": false
+  },
+  {
+    "id": "26_exact_80x24",
+    "title": "True 80\u00d724 fallback snapshot",
+    "notes": "24 rows, 80 columns, fixed composer/footer",
+    "w": 860,
+    "h": 560,
+    "exact80": true
+  },
+  {
+    "id": "27_command_center",
+    "title": "Command center power mode",
+    "notes": "explicit opt-in only",
+    "w": 1220,
+    "h": 780,
+    "exact80": false
+  }
+]

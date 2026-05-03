@@ -1825,6 +1825,11 @@ def _get_cost_dashboard(app: AppContext) -> Any:
     return CostDashboard()
 
 
+def _get_token_tracker(app: AppContext) -> Any | None:
+    stats = getattr(app, "_session_stats", None)
+    return getattr(stats, "token_tracker", None) if stats is not None else None
+
+
 def _cost_turn_count(app: AppContext) -> int:
     messages = app.session_store.get_messages(app.session_id)
     return sum(1 for message in messages if message.role == "user")
@@ -1870,6 +1875,29 @@ def _format_cost_lines(app: AppContext, *, detail: bool) -> list[str]:
                 f"{dashboard.total_input_tokens:,} input "
                 f"({dashboard.cache_hit_ratio:.0%} hit) - "
                 f"saved ~${dashboard.estimated_cache_savings_usd:.2f}"
+            )
+        tracker = _get_token_tracker(app)
+        usage = getattr(tracker, "total", None)
+        cache_writes = getattr(usage, "cache_creation_tokens", 0) if usage is not None else 0
+        reasoning_tokens = getattr(usage, "reasoning_tokens", 0) if usage is not None else 0
+        multiplier = (
+            getattr(usage, "billable_input_cost_factor", 1.0)
+            if usage is not None
+            else 1.0
+        )
+        if not isinstance(cache_writes, int | float):
+            cache_writes = 0
+        if not isinstance(reasoning_tokens, int | float):
+            reasoning_tokens = 0
+        if not isinstance(multiplier, int | float):
+            multiplier = 1.0
+        if cache_writes or reasoning_tokens:
+            lines.append(
+                "Cache detail: "
+                f"cache writes: {cache_writes:,.0f} · "
+                f"reasoning: {reasoning_tokens:,.0f} · "
+                "effective input multiplier: "
+                f"{multiplier:.3f}x"
             )
 
     lines.append("")

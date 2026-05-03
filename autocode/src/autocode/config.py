@@ -13,7 +13,7 @@ from typing import Literal
 
 import yaml
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # Load .env EARLY — before any config parsing so env vars participate in precedence
 load_dotenv()
@@ -218,8 +218,16 @@ class AgentConfig(BaseModel):
     memory_decay_factor: float = Field(default=0.95, ge=0.5, le=1.0)  # Sprint 4C
     memory_context_max_tokens: int = Field(default=500, ge=50)  # Sprint 4C
     cost_limit_usd: float | None = Field(default=None, ge=0)
-    verify: "VerifyConfig" = Field(default_factory=lambda: VerifyConfig())
-    cache: "PromptCacheConfig" = Field(default_factory=lambda: PromptCacheConfig())
+    planning_enforcement: bool = Field(
+        default=True,
+        description=(
+            "Require create_task for multi-step requests. "
+            "Set false to disable for benchmark/scripted runs."
+        ),
+    )
+    verify: VerifyConfig = Field(default_factory=lambda: VerifyConfig())
+    cache: PromptCacheConfig = Field(default_factory=lambda: PromptCacheConfig())
+    drift: DriftConfig = Field(default_factory=lambda: DriftConfig())
 
 
 class VerifyConfig(BaseModel):
@@ -236,6 +244,32 @@ class PromptCacheConfig(BaseModel):
 
     keepalive_enabled: bool = True
     keepalive_interval_seconds: int = Field(default=300, ge=30)
+
+
+class DriftDetectorFlagConfig(BaseModel):
+    """Per-detector drift configuration."""
+
+    enabled: bool = True
+
+
+class SchemaDriftConfig(DriftDetectorFlagConfig):
+    """Schema drift detector configuration."""
+
+    sensitivity: Literal["low", "medium", "high"] = "medium"
+
+
+class DriftConfig(BaseModel):
+    """P3a drift detector configuration."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    schema_: SchemaDriftConfig = Field(default_factory=SchemaDriftConfig, alias="schema")
+    staleness: DriftDetectorFlagConfig = Field(default_factory=DriftDetectorFlagConfig)
+    consistency: DriftDetectorFlagConfig = Field(default_factory=DriftDetectorFlagConfig)
+
+    @property
+    def schema(self) -> SchemaDriftConfig:
+        return self.schema_
 
 
 # --- Top-level config ---
@@ -534,7 +568,7 @@ def save_config(config: AutoCodeConfig, path: Path | None = None) -> Path:
         _, target = _resolve_global_config()
     target.parent.mkdir(parents=True, exist_ok=True)
     with open(target, "w") as f:
-        yaml.dump(config.model_dump(), f, default_flow_style=False, sort_keys=False)
+        yaml.dump(config.model_dump(by_alias=True), f, default_flow_style=False, sort_keys=False)
     return target
 
 

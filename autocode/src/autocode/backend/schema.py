@@ -149,6 +149,7 @@ class CostUpdateParams(StrictModel):
     cost: str
     tokens_in: int
     tokens_out: int
+    cached_input_tokens: int = 0
 
 
 class ToolRequestParams(StrictModel):

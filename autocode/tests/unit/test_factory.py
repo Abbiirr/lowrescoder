@@ -76,6 +76,27 @@ def test_create_agent_loop_bootstraps_task_board_when_missing(tmp_path: Path) ->
     session_store.close()
 
 
+def test_create_agent_loop_registers_default_hook_dispatcher(tmp_path: Path) -> None:
+    """Factory creates the internal dispatcher so future hooks plug in centrally."""
+    from autocode.agent.hooks import HookDispatcher
+
+    session_store = SessionStore(tmp_path / "sessions.db")
+    session_id = session_store.create_session(title="Test", model="m", provider="mock")
+    tool_registry = create_default_registry(project_root=str(tmp_path))
+
+    loop, _ = create_agent_loop(
+        provider=AsyncMock(),
+        tool_registry=tool_registry,
+        approval_manager=ApprovalManager(ApprovalMode.AUTO),
+        session_store=session_store,
+        session_id=session_id,
+    )
+
+    assert isinstance(loop._hook_dispatcher, HookDispatcher)
+
+    session_store.close()
+
+
 def test_load_project_memory_content_merges_rules_and_memory(tmp_path: Path) -> None:
     """Always-on rules should be prepended ahead of project memory.
 

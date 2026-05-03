@@ -48,7 +48,7 @@ class TestProtocolVersion:
             assert raw["protocol_version"] == PROTOCOL_VERSION
 
     def test_protocol_version_value(self):
-        assert PROTOCOL_VERSION == "0.1.0-c6g5-subset"
+        assert PROTOCOL_VERSION == "0.2.0-harness"
 
 
 class TestItemTypeConstraint:
@@ -185,6 +185,7 @@ class TestSchemaGeneration:
         expected_keys = {
             "thread_started", "turn_started", "item_started", "item_delta",
             "item_completed", "turn_completed", "error", "usage", "meta",
+            "tool_call_started", "tool_call_completed", "tool_call_failed",
         }
         assert set(schemas.keys()) == expected_keys
 
@@ -198,7 +199,7 @@ class TestSchemaGeneration:
 
     def test_write_schema_files(self, tmp_path):
         written = write_schema_files(str(tmp_path / "out"))
-        assert len(written) == 9
+        assert len(written) == 12
         for path in written:
             data = json.loads((tmp_path / "out" / path.split("/")[-1]).read_text())
             assert isinstance(data, dict)

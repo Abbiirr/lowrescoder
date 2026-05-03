@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 
+from autocode.agent.prompts import CACHE_BOUNDARY_MARKER
 from autocode.config import AutoCodeConfig
 from autocode.layer4.llm import (
     ConversationHistory,
@@ -347,7 +348,10 @@ class TestProviderReasoningFlags:
             extra_body: dict[str, Any],
             on_chunk: Any,
             on_thinking_chunk: Any,
+            *,
+            extra_headers: dict[str, str] | None = None,
         ) -> LLMResponse:
+            assert extra_headers == {}
             captured.append(extra_body)
             return LLMResponse(content="ok")
 
@@ -379,7 +383,10 @@ class TestProviderReasoningFlags:
             extra_body: dict[str, Any],
             on_chunk: Any,
             on_thinking_chunk: Any,
+            *,
+            extra_headers: dict[str, str] | None = None,
         ) -> LLMResponse:
+            assert extra_headers == {}
             captured.append(extra_body)
             return LLMResponse(content="ok")
 
@@ -451,6 +458,8 @@ class TestProviderUsageCapture:
             "prompt_tokens": 0,
             "completion_tokens": 0,
             "cached_input_tokens": 0,
+            "cache_creation_tokens": 0,
+            "reasoning_tokens": 0,
         }
 
     @pytest.mark.asyncio()
@@ -493,6 +502,8 @@ class TestProviderUsageCapture:
             "prompt_tokens": 10_000,
             "completion_tokens": 500,
             "cached_input_tokens": 8_000,
+            "cache_creation_tokens": 0,
+            "reasoning_tokens": 0,
         }
 
     def test_ollama_passes_zero_cached_tokens(self) -> None:
@@ -515,7 +526,101 @@ class TestProviderUsageCapture:
             "prompt_tokens": 1_000,
             "completion_tokens": 250,
             "cached_input_tokens": 0,
+            "cache_creation_tokens": 0,
+            "reasoning_tokens": 0,
         }
+
+    @pytest.mark.asyncio()
+    async def test_openrouter_generate_with_tools_adds_anthropic_cache_header(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        config = AutoCodeConfig()
+        config.llm.provider = "openrouter"
+        config.llm.model = "anthropic/claude-3.7-sonnet"
+        provider = OpenRouterProvider(config)
+        captured: dict[str, Any] = {}
+
+        provider._make_client = lambda: object()  # type: ignore[method-assign]
+
+        async def fake_streaming(
+            client: Any,
+            messages: list[dict[str, Any]],
+            tools: list[dict[str, Any]],
+            extra_body: dict[str, Any],
+            on_chunk: Any,
+            on_thinking_chunk: Any,
+            *,
+            extra_headers: dict[str, str] | None = None,
+        ) -> LLMResponse:
+            captured["messages"] = messages
+            captured["extra_headers"] = extra_headers
+            return LLMResponse(content="ok", usage={})
+
+        monkeypatch.setattr(provider, "_tools_streaming", fake_streaming)
+
+        await provider.generate_with_tools(
+            [
+                {
+                    "role": "system",
+                    "content": f"stable\n{CACHE_BOUNDARY_MARKER}\ndynamic",
+                }
+            ],
+            [],
+        )
+
+        assert captured["extra_headers"] == {
+            "anthropic-beta": "prompt-caching-2024-07-31",
+        }
+        assert captured["messages"][0]["content"][0]["cache_control"] == {
+            "type": "ephemeral",
+            "ttl": "1h",
+        }
+
+    @pytest.mark.asyncio()
+    async def test_openrouter_prompt_cache_disable_env_skips_injection(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        config = AutoCodeConfig()
+        config.llm.provider = "openrouter"
+        config.llm.model = "anthropic/claude-3.7-sonnet"
+        provider = OpenRouterProvider(config)
+        captured: dict[str, Any] = {}
+
+        monkeypatch.setenv("AUTOCODE_DISABLE_PROMPT_CACHE", "true")
+        provider._make_client = lambda: object()  # type: ignore[method-assign]
+
+        async def fake_streaming(
+            client: Any,
+            messages: list[dict[str, Any]],
+            tools: list[dict[str, Any]],
+            extra_body: dict[str, Any],
+            on_chunk: Any,
+            on_thinking_chunk: Any,
+            *,
+            extra_headers: dict[str, str] | None = None,
+        ) -> LLMResponse:
+            captured["messages"] = messages
+            captured["extra_headers"] = extra_headers
+            return LLMResponse(content="ok", usage={})
+
+        monkeypatch.setattr(provider, "_tools_streaming", fake_streaming)
+
+        await provider.generate_with_tools(
+            [
+                {
+                    "role": "system",
+                    "content": f"stable\n{CACHE_BOUNDARY_MARKER}\ndynamic",
+                }
+            ],
+            [],
+        )
+
+        assert captured["extra_headers"] == {}
+        assert captured["messages"][0]["content"] == (
+            f"stable\n{CACHE_BOUNDARY_MARKER}\ndynamic"
+        )
 
 
 class TestProviderStreamingThinkTags:

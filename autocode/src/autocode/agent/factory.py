@@ -15,6 +15,7 @@ from autocode.agent.auto_verify import AutoVerifyConfig
 from autocode.agent.completion import SessionStats
 from autocode.agent.context import ContextEngine
 from autocode.agent.cost_dashboard import CostDashboard
+from autocode.agent.hooks import HookDispatcher
 from autocode.agent.loop import AgentLoop
 from autocode.agent.middleware import create_default_middleware
 from autocode.agent.profiler import Profiler
@@ -40,6 +41,19 @@ def load_project_memory_content(project_root: Path) -> str | None:
     try:
         memory_content = (project_root / ".autocode" / "memory.md").read_text(encoding="utf-8")
     except OSError:
+        pass
+
+    try:
+        from autocode.session.memory_fs import MemoryFS
+
+        memory_index = MemoryFS(project_root=project_root).read_index()
+        if "- memory/" in memory_index:
+            memory_content = (
+                f"{memory_content}\n\n## Durable Memory Index\n{memory_index}"
+                if memory_content
+                else f"## Durable Memory Index\n{memory_index}"
+            )
+    except Exception:
         pass
 
     try:
@@ -103,6 +117,11 @@ def create_agent_loop(
     project_root: Path | None = None,
     verify_config: Any | None = None,
     prompt_cache_keepalive_config: Any | None = None,
+    drift_config: Any | None = None,
+    telemetry_store: Any | None = None,
+    hook_dispatcher: Any | None = None,
+    planning_enforcement: bool = True,
+    session_notes: Any | None = None,
 ) -> tuple[AgentLoop, SessionStats]:
     """Create a fully-wired AgentLoop with all Phase 7 runtime modules.
 
@@ -117,12 +136,27 @@ def create_agent_loop(
     if tool_registry.get("create_task") is None:
         register_task_tools(tool_registry, task_store)
 
+    if telemetry_store is None:
+        try:
+            from autocode.telemetry.store import TelemetryStore, telemetry_disabled
+
+            if not telemetry_disabled():
+                telemetry_store = TelemetryStore()
+        except Exception:
+            telemetry_store = None
+
+    def _emit_compaction(kind: str, payload: dict[str, Any]) -> None:
+        if telemetry_store is not None:
+            telemetry_store.emit(kind, session_id=session_id, data=payload)
+
     # Context compaction
     context_engine = ContextEngine(
         provider=provider,
         session_store=session_store,
         context_length=context_length,
         compaction_threshold=compaction_threshold,
+        session_notes=session_notes,
+        telemetry_emit=_emit_compaction,
     )
 
     # Token tracking
@@ -131,6 +165,10 @@ def create_agent_loop(
         cost_dashboard=cost_dashboard,
         cost_limit_usd=cost_limit_usd,
     )
+    try:
+        token_tracker.load_snapshot(session_store.load_token_usage(session_id))
+    except Exception:
+        pass
     session_stats = SessionStats()
     session_stats.token_tracker = token_tracker
     profiler = Profiler()
@@ -142,6 +180,7 @@ def create_agent_loop(
     # Tool shim for weak models
     tool_names = [t.name for t in tool_registry.get_all()]
     tool_shim = ToolShim(available_tools=tool_names)
+    hook_dispatcher = hook_dispatcher or HookDispatcher()
 
     loop = AgentLoop(
         provider=provider,
@@ -170,6 +209,10 @@ def create_agent_loop(
         prompt_cache_keepalive_config=_normalize_prompt_cache_config(
             prompt_cache_keepalive_config
         ),
+        drift_config=drift_config,
+        telemetry_store=telemetry_store,
+        hook_dispatcher=hook_dispatcher,
+        planning_enforcement=planning_enforcement,
     )
 
     return loop, session_stats
@@ -198,6 +241,11 @@ def create_orchestrator(
     project_root: Path | None = None,
     verify_config: Any | None = None,
     prompt_cache_keepalive_config: Any | None = None,
+    drift_config: Any | None = None,
+    telemetry_store: Any | None = None,
+    hook_dispatcher: Any | None = None,
+    planning_enforcement: bool = True,
+    session_notes: Any | None = None,
 ) -> tuple[Any, SessionStats]:
     """Create a fully-wired Orchestrator wrapping an AgentLoop.
 
@@ -232,6 +280,11 @@ def create_orchestrator(
         project_root=project_root,
         verify_config=verify_config,
         prompt_cache_keepalive_config=prompt_cache_keepalive_config,
+        drift_config=drift_config,
+        telemetry_store=telemetry_store,
+        hook_dispatcher=hook_dispatcher,
+        planning_enforcement=planning_enforcement,
+        session_notes=session_notes,
     )
 
     # Event infrastructure

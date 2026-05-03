@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import inspect
 import json
 import logging
@@ -18,14 +19,32 @@ from typing import Any
 from autocode.agent.approval import ApprovalManager, ApprovalMode
 from autocode.agent.auto_verify import AutoVerifyConfig, verify_after_edit
 from autocode.agent.context import ContextEngine
+from autocode.agent.drift import (
+    ContextStalenessDetector,
+    SchemaDriftDetector,
+    ToolConsistencyDetector,
+)
 from autocode.agent.event_recorder import EventRecorder
-from autocode.agent.git_aware_staging import stage_post_edit
-from autocode.agent.hooks import HookEvent
+from autocode.agent.hooks import (
+    AutoVerifyHook,
+    DriftDetectionHook,
+    GitAwareStagingHook,
+    HookDispatcher,
+    HookEvent,
+    PerToolCheckpointHook,
+    ScratchOffloadHook,
+)
 from autocode.agent.prompt_cache_keepalive import (
     PromptCacheKeepalive,
     PromptCacheKeepaliveConfig,
 )
-from autocode.agent.prompts import build_dynamic_suffix, build_static_prefix
+from autocode.agent.prompts import (
+    CACHE_BOUNDARY_MARKER,
+    assemble_system_prompt,
+    build_dynamic_suffix,
+    build_static_prefix,
+)
+from autocode.agent.scratch import ScratchStore
 from autocode.agent.tool_result_cache import ToolResultCache
 from autocode.agent.tools import CACHE_MANAGEMENT_TOOL_NAMES, ToolRegistry
 from autocode.core.logging import log_debug_prompt, log_event
@@ -152,6 +171,10 @@ class AgentLoop:
         project_root: Path | None = None,
         verify_config: AutoVerifyConfig | None = None,
         prompt_cache_keepalive_config: PromptCacheKeepaliveConfig | None = None,
+        drift_config: Any | None = None,
+        telemetry_store: Any | None = None,
+        hook_dispatcher: HookDispatcher | None = None,
+        planning_enforcement: bool = True,
     ) -> None:
         self.provider = provider
         self.tool_registry = tool_registry
@@ -178,9 +201,19 @@ class AgentLoop:
         self._project_root = project_root
         self._verify_config = verify_config
         self._prompt_cache_keepalive_config = prompt_cache_keepalive_config
+        self._drift_config = drift_config
+        self._telemetry_store = telemetry_store
+        self._hook_dispatcher = hook_dispatcher or HookDispatcher()
+        self._planning_enforcement = planning_enforcement
         self._prompt_cache_keepalive: PromptCacheKeepalive | None = None
-        self._verification_failure_count = 0
+        self._scratch_store: ScratchStore | None = (
+            ScratchStore(self._project_root / ".autocode" / "scratch", thread_id=session_id)
+            if self._project_root is not None else None
+        )
+        self._scratch_turn_count = 0
+        self._scratch_turn_id = "turn-000"
         self._tool_call_idx = 0
+        self._turn_tool_count = 0
         self._hook_session_started = False
         self._current_episode_id: str | None = None
         self._cancelled = False
@@ -189,6 +222,70 @@ class AgentLoop:
         self._static_prefix: str | None = None
         self._cached_tool_schemas: list[dict[str, Any]] | None = None
         self._environment_snapshot: str | None = None
+        if isinstance(self._hook_dispatcher, HookDispatcher):
+            self._hook_dispatcher.register(ScratchOffloadHook(
+                scratch_store=self._scratch_store,
+                telemetry_emit=self._emit_telemetry,
+            ))
+            self._hook_dispatcher.register(GitAwareStagingHook(
+                project_root=self._project_root,
+                extract_touched_files=lambda tc: self._extract_touched_files(
+                    tc.name, tc.arguments
+                ),
+            ))
+            self._hook_dispatcher.register(PerToolCheckpointHook(
+                checkpoint_store=self._checkpoint_store,
+                task_store=self._task_store,
+                project_root=self._project_root,
+                session_id=self.session_id,
+                extract_touched_files=lambda tc: self._extract_touched_files(
+                    tc.name, tc.arguments
+                ),
+            ))
+            self._hook_dispatcher.register(AutoVerifyHook(
+                project_root=self._project_root,
+                config=self._verify_config,
+                verify_after_edit=verify_after_edit,
+                extract_touched_files=lambda tc: self._extract_touched_files(
+                    tc.name, tc.arguments
+                ),
+                pop_cost_limit_warning=self._pop_cost_limit_warning,
+            ))
+            drift_hook = self._build_drift_hook()
+            if drift_hook is not None:
+                self._hook_dispatcher.register(drift_hook)
+
+    def _build_drift_hook(self) -> DriftDetectionHook | None:
+        if self._drift_config is None:
+            return None
+        schema_config = getattr(self._drift_config, "schema", None)
+        staleness_config = getattr(self._drift_config, "staleness", None)
+        consistency_config = getattr(self._drift_config, "consistency", None)
+        schema_enabled = bool(getattr(schema_config, "enabled", True))
+        staleness_enabled = bool(getattr(staleness_config, "enabled", True))
+        consistency_enabled = bool(getattr(consistency_config, "enabled", True))
+        if not (schema_enabled or staleness_enabled or consistency_enabled):
+            return None
+        staleness_detector = None
+        if staleness_enabled and self._project_root is not None:
+            try:
+                from autocode.session.memory_fs import MemoryFS
+
+                staleness_detector = ContextStalenessDetector(
+                    MemoryFS(project_root=self._project_root),
+                    enabled=True,
+                )
+            except Exception:
+                staleness_detector = None
+        return DriftDetectionHook(
+            schema_detector=SchemaDriftDetector(
+                sensitivity=getattr(schema_config, "sensitivity", "medium"),
+                enabled=schema_enabled,
+            ),
+            consistency_detector=ToolConsistencyDetector(enabled=consistency_enabled),
+            staleness_detector=staleness_detector,
+            telemetry_emit=self._emit_telemetry,
+        )
 
     def _ensure_prompt_cache_keepalive(self) -> None:
         """Start provider-gated prompt-cache keepalive for the stable prefix."""
@@ -223,6 +320,79 @@ class AgentLoop:
 
         return f"{provider} / {model}" if model else provider
 
+    def _emit_telemetry(self, kind: str, data: dict[str, Any] | None = None) -> None:
+        """Best-effort local telemetry emission."""
+        if self._telemetry_store is None:
+            return
+        try:
+            self._telemetry_store.emit(kind, session_id=self.session_id, data=data or {})
+        except Exception:  # noqa: BLE001
+            logger.debug("Telemetry emit failed for %s", kind, exc_info=True)
+
+    def _emit_cache_breakpoint_telemetry(self, system_prompt: str) -> None:
+        if CACHE_BOUNDARY_MARKER not in system_prompt:
+            return
+        stable, _dynamic = system_prompt.split(CACHE_BOUNDARY_MARKER, maxsplit=1)
+        self._emit_telemetry(
+            "cache_breakpoint_applied",
+            {
+                "breakpoint_count": 1,
+                "stable_prefix_bytes": len(stable.encode("utf-8", errors="replace")),
+            },
+        )
+
+    @staticmethod
+    def _tool_args_hash(arguments: dict[str, Any]) -> str:
+        encoded = json.dumps(arguments, sort_keys=True, default=str, separators=(",", ":"))
+        return hashlib.sha256(encoded.encode("utf-8")).hexdigest()[:16]
+
+    def _dispatch_pre_turn(self) -> None:
+        if self._hook_dispatcher is not None:
+            self._hook_dispatcher.pre_turn(self._scratch_turn_id)
+
+    def _dispatch_post_turn(self, status: str) -> None:
+        if self._hook_dispatcher is not None:
+            self._hook_dispatcher.post_turn(self._scratch_turn_id, status)
+
+    def _dispatch_token(self, text: str) -> None:
+        if self._hook_dispatcher is not None:
+            self._hook_dispatcher.on_token(text)
+
+    def _dispatch_pre_tool_call(self, tc: ToolCall) -> None:
+        if self._hook_dispatcher is not None:
+            self._hook_dispatcher.pre_tool_call(tc)
+
+    def _dispatch_tool_success(self, tc: ToolCall, result: str) -> str:
+        if self._hook_dispatcher is None:
+            return result
+        return self._hook_dispatcher.post_tool_call_success(tc, result)
+
+    async def _dispatch_tool_success_async(self, tc: ToolCall, result: str) -> str:
+        if self._hook_dispatcher is None:
+            return result
+        return await self._hook_dispatcher.post_tool_call_success_async(tc, result)
+
+    def _dispatch_tool_error(self, tc: ToolCall, exc: BaseException) -> None:
+        if self._hook_dispatcher is not None:
+            self._hook_dispatcher.post_tool_call_error(tc, exc)
+
+    def _drain_hook_warnings(self) -> list[str]:
+        if self._hook_dispatcher is None:
+            return []
+        hooks = getattr(self._hook_dispatcher, "hooks", None)
+        if not callable(hooks):
+            return []
+        warnings: list[str] = []
+        for hook in hooks():
+            drain = getattr(hook, "drain_warnings", None)
+            if not callable(drain):
+                continue
+            try:
+                warnings.extend(str(item) for item in drain())
+            except Exception:
+                logger.debug("Hook warning drain failed", exc_info=True)
+        return warnings
+
     # ----- Hook lifecycle helpers -----
     # All three wrap hook_registry.fire in a try/except so a broken hook
     # cannot crash the agent loop; any exception is swallowed at DEBUG level.
@@ -233,9 +403,12 @@ class AgentLoop:
         The `_hook_session_started` guard prevents re-fires when `run()` is
         called multiple times on the same loop (once per user turn).
         """
-        if self._hook_registry is None or self._hook_session_started:
+        if self._hook_session_started:
             return
         self._hook_session_started = True
+        self._emit_telemetry("session_start", {})
+        if self._hook_registry is None:
+            return
         try:
             self._hook_registry.fire(
                 HookEvent.SESSION_START,
@@ -454,6 +627,7 @@ class AgentLoop:
             "user_message": user_message,
             "has_tasks": has_tasks,
             "has_task_tools": has_task_tools,
+            "planning_enforcement": self._planning_enforcement,
             "plan_mode": self._mode == AgentMode.PLANNING,
             "agent_mode": self._mode.value,
             "read_only_mode": self._mode in {
@@ -507,7 +681,7 @@ class AgentLoop:
             agent_mode=self._mode.value,
             memory_context=self._memory_context,
         )
-        return self._static_prefix + dynamic
+        return assemble_system_prompt(stable=self._static_prefix, dynamic=dynamic)
 
     def cancel(self) -> None:
         """Cancel the current run."""
@@ -548,6 +722,21 @@ class AgentLoop:
         logger.debug("AgentLoop.run start: %s", user_message[:80])
 
         self._fire_session_start()
+        self._turn_tool_count = 0
+        self._scratch_turn_count += 1
+        self._scratch_turn_id = f"turn-{self._scratch_turn_count:03d}"
+        self._dispatch_pre_turn()
+        if self._scratch_store is not None:
+            self._scratch_store.cleanup_after_n_turns(
+                current_turn_count=self._scratch_turn_count,
+                keep_n=10,
+            )
+        self._emit_telemetry("turn_start", {"input_chars": len(user_message)})
+
+        def _on_chunk(text: str) -> None:
+            self._dispatch_token(text)
+            if on_chunk is not None:
+                on_chunk(text)
 
         # Store user message
         self.session_store.add_message(self.session_id, "user", user_message)
@@ -644,6 +833,10 @@ class AgentLoop:
                     messages.append({"role": msg.role, "content": msg.content})
         if injected_context:
             messages.insert(1, {"role": "system", "content": injected_context})
+        for message in messages:
+            if message.get("role") == "system" and isinstance(message.get("content"), str):
+                self._emit_cache_breakpoint_telemetry(str(message["content"]))
+                break
         logger.debug("Loaded %d tool schemas, %d messages", len(tool_schemas), len(messages))
         log_event(
             logger, logging.INFO, "agent_loop_start",
@@ -662,8 +855,14 @@ class AgentLoop:
 
             if self._cancelled:
                 logger.debug("Cancelled at iteration %d", _iteration)
+                _total_ms = int((time.monotonic() - _run_start) * 1000)
+                self._emit_telemetry(
+                    "turn_interrupted",
+                    {"reason": "cancelled", "duration_ms": _total_ms},
+                )
                 if self._event_recorder and _episode_id:
                     self._event_recorder.on_turn_end(_episode_id, "[Cancelled]", "cancelled", {})
+                self._dispatch_post_turn("cancelled")
                 return "[Cancelled]"
 
             # Call LLM with tools
@@ -702,7 +901,7 @@ class AgentLoop:
             try:
                 response: LLMResponse = await self.provider.generate_with_tools(
                     messages, tool_schemas,
-                    on_chunk=on_chunk,
+                    on_chunk=_on_chunk,
                     on_thinking_chunk=on_thinking_chunk,
                     on_retry_notice=on_retry_notice,
                     reasoning_enabled=effective_reasoning_enabled,
@@ -714,6 +913,23 @@ class AgentLoop:
             logger.debug(
                 "LLM response: content=%s, tool_calls=%d, reasoning=%s",
                 bool(response.content), len(response.tool_calls), bool(response.reasoning),
+            )
+            self._emit_telemetry(
+                "llm_call_completed",
+                {
+                    "provider": self._token_provider_label(),
+                    "model": str(getattr(self.provider, "model", "") or ""),
+                    "prompt_tokens": response.usage.get("prompt_tokens", 0)
+                    if response.usage else 0,
+                    "completion_tokens": response.usage.get("completion_tokens", 0)
+                    if response.usage else 0,
+                    "cached_input_tokens": response.usage.get("cached_input_tokens", 0)
+                    if response.usage else 0,
+                    "cache_creation_tokens": response.usage.get("cache_creation_tokens", 0)
+                    if response.usage else 0,
+                    "reasoning_tokens": response.usage.get("reasoning_tokens", 0)
+                    if response.usage else 0,
+                },
             )
             log_event(
                 logger, logging.INFO, "llm_response",
@@ -736,7 +952,10 @@ class AgentLoop:
                     completion_tokens=response.usage.get("completion_tokens", 0),
                     provider=provider_name,
                     cached_input_tokens=response.usage.get("cached_input_tokens", 0),
+                    cache_creation_tokens=response.usage.get("cache_creation_tokens", 0),
+                    reasoning_tokens=response.usage.get("reasoning_tokens", 0),
                 )
+                self._persist_token_usage()
             else:
                 log_debug_prompt(self.session_id, messages, response)
 
@@ -865,6 +1084,17 @@ class AgentLoop:
                         "empty_response" if empty_response else "text_response",
                         {"iterations": _iteration + 1, "total_duration_ms": _total_ms},
                     )
+                self._emit_telemetry(
+                    "turn_completed",
+                    {
+                        "duration_ms": _total_ms,
+                        "tools_called": self._turn_tool_count,
+                        "outcome": "empty_response" if empty_response else "text_response",
+                    },
+                )
+                self._dispatch_post_turn(
+                    "empty_response" if empty_response else "text_response"
+                )
                 return text
 
             # Process tool calls
@@ -900,6 +1130,8 @@ class AgentLoop:
                     "tool_call_id": tc.id,
                     "content": outcome.result,
                 })
+                for warning in self._drain_hook_warnings():
+                    messages.append({"role": "system", "content": warning})
                 if outcome.terminate_final is not None:
                     final_text = outcome.terminate_final
                     self.session_store.add_message(
@@ -918,7 +1150,16 @@ class AgentLoop:
                             _episode_id, final_text, "tool_terminated",
                             {"iterations": _iteration + 1, "total_duration_ms": _total_ms},
                         )
+                    self._emit_telemetry(
+                        "turn_completed",
+                        {
+                            "duration_ms": _total_ms,
+                            "tools_called": self._turn_tool_count,
+                            "outcome": "tool_terminated",
+                        },
+                    )
                     self._fire_stop(final_text, outcome="tool_terminated")
+                    self._dispatch_post_turn("tool_terminated")
                     return final_text
 
             # Nudge: if iteration 2+ and no todo_write yet, inject planning prompt
@@ -959,7 +1200,16 @@ class AgentLoop:
                 _episode_id, final_text, "max_iterations",
                 {"iterations": self.MAX_ITERATIONS, "total_duration_ms": _total_ms},
             )
+        self._emit_telemetry(
+            "turn_completed",
+            {
+                "duration_ms": _total_ms,
+                "tools_called": self._turn_tool_count,
+                "outcome": "max_iterations",
+            },
+        )
         self._fire_stop(final_text, outcome="max_iterations", failure=True)
+        self._dispatch_post_turn("max_iterations")
         return final_text
 
     async def _handle_ask_user(
@@ -1114,6 +1364,13 @@ class AgentLoop:
                 on_tool_call(tc.name, "error", error)
             return ToolExecutionOutcome((error, None))
 
+        args_hash = self._tool_args_hash(tc.arguments)
+        self._turn_tool_count += 1
+        self._emit_telemetry(
+            "tool_call_started",
+            {"tool_name": tc.name, "args_hash": args_hash},
+        )
+
         if tc.name == "spawn_subagent" and self._delegation_policy is not None:
             role = {
                 "explore": "scout",
@@ -1190,8 +1447,21 @@ class AgentLoop:
         # Check approval (merged with shell-enable prompt)
         if self.approval_manager.needs_approval(tool) or shell_needs_enabling:
             if approval_callback:
+                self._emit_telemetry(
+                    "approval_requested",
+                    {
+                        "tool_name": tc.name,
+                        "risk_level": "shell" if shell_needs_enabling else "write",
+                    },
+                )
+                approval_start = time.monotonic()
                 approved = await approval_callback(tc.name, tc.arguments)
+                approval_ms = int((time.monotonic() - approval_start) * 1000)
                 if not approved:
+                    self._emit_telemetry(
+                        "approval_denied",
+                        {"tool_name": tc.name, "decision_ms": approval_ms},
+                    )
                     log_event(
                         logger, logging.WARNING, "tool_denied",
                         session_id=self.session_id, tool_name=tc.name,
@@ -1203,6 +1473,10 @@ class AgentLoop:
                     if on_tool_call:
                         on_tool_call(tc.name, "denied", "User denied")
                     return ToolExecutionOutcome(("Tool call denied by user.", None))
+                self._emit_telemetry(
+                    "approval_granted",
+                    {"tool_name": tc.name, "decision_ms": approval_ms},
+                )
                 if self._event_recorder and self._current_episode_id:
                     self._event_recorder.on_human_feedback(
                         self._current_episode_id, "approval", tc.name,
@@ -1210,8 +1484,27 @@ class AgentLoop:
                 # Enable shell if user approved a shell command
                 if shell_needs_enabling:
                     self.approval_manager.enable_shell()
+                    self._emit_telemetry(
+                        "permission_escalation",
+                        {
+                            "from_profile": "shell-disabled",
+                            "to_profile": "shell-enabled",
+                            "reason": tc.name,
+                        },
+                    )
             else:
                 # No callback, deny by default for safety
+                self._emit_telemetry(
+                    "approval_requested",
+                    {
+                        "tool_name": tc.name,
+                        "risk_level": "shell" if shell_needs_enabling else "write",
+                    },
+                )
+                self._emit_telemetry(
+                    "approval_denied",
+                    {"tool_name": tc.name, "decision_ms": 0},
+                )
                 if on_tool_call:
                     on_tool_call(tc.name, "denied", "No approval callback")
                 return ToolExecutionOutcome((
@@ -1247,33 +1540,7 @@ class AgentLoop:
                 on_tool_call(tc.name, "blocked", result)
             return ToolExecutionOutcome((result, None))
 
-        # Per-tool checkpoint: snapshot files before FS-mutating tools
-        if (
-            tool
-            and tool.mutates_fs
-            and self._checkpoint_store
-            and self._project_root
-            and self._task_store
-        ):
-            try:
-                from autocode.session.file_snapshot import snapshot_files
-                touched = self._extract_touched_files(tc.name, tc.arguments)
-                if touched:
-                    snap_dir = Path.home() / ".autocode" / "snapshots" / self.session_id / tc.id
-                    snap_dir.mkdir(parents=True, exist_ok=True)
-                    snapshot_files(self._project_root, snap_dir, touched)
-                    self._checkpoint_store.save_per_tool_checkpoint(
-                        self._task_store,
-                        tool_call_id=tc.id,
-                        tool_name=tc.name,
-                        tool_call_idx=self._tool_call_idx,
-                        kind="pre_tool",
-                        files_touched=touched,
-                        label=f"pre {tc.name}",
-                    )
-                    self._tool_call_idx += 1
-            except Exception:
-                logger.debug("Per-tool checkpoint failed (non-blocking)", exc_info=True)
+        self._dispatch_pre_tool_call(tc)
 
         # Execute
         start = time.monotonic()
@@ -1285,6 +1552,7 @@ class AgentLoop:
                 tool, tc.arguments,
             )
             result, terminate_final = _decode_tool_termination(raw_result)
+            result = self._dispatch_tool_success(tc, result)
             task_tools = {"create_task", "update_task", "add_task_dependency", "list_tasks"}
             if self._context_engine and tc.name not in task_tools:
                 result = self._context_engine.truncate_tool_result(
@@ -1297,12 +1565,7 @@ class AgentLoop:
                 if tc.name in ("write_file", "edit_file") and "path" in tc.arguments:
                     self._session_stats.record_file_change(tc.arguments["path"])
             if tool and tool.mutates_fs and self._project_root:
-                staging_note = self._stage_successful_edit(tc, result)
-                if staging_note:
-                    result = f"{result}\n\n{staging_note}"
-                verification_note = await self._verify_successful_edit(tc)
-                if verification_note:
-                    result = f"{result}\n\n{verification_note}"
+                result = await self._dispatch_tool_success_async(tc, result)
             duration_ms = int((time.monotonic() - start) * 1000)
             if self._profiler:
                 self._profiler.stop(profile_name, "tool", tool_name=tc.name)
@@ -1325,6 +1588,17 @@ class AgentLoop:
                 session_id=self.session_id, tool_name=tc.name,
                 duration_ms=duration_ms, status="completed",
             )
+            self._emit_telemetry(
+                "tool_call_completed",
+                {
+                    "tool_name": tc.name,
+                    "args_hash": args_hash,
+                    "duration_ms": duration_ms,
+                    "result_bytes": len(result.encode("utf-8", errors="replace")),
+                },
+            )
+            if self._context_engine is not None:
+                self._context_engine.record_tool_call_for_notes()
             if self._event_recorder and self._current_episode_id:
                 self._event_recorder.on_tool_result(
                     self._current_episode_id, tc.name, result, "completed", duration_ms,
@@ -1359,6 +1633,15 @@ class AgentLoop:
                     session_id=self.session_id, tool_name=tc.name,
                     duration_ms=duration_ms, status="cancelled",
                 )
+                self._emit_telemetry(
+                    "tool_call_failed",
+                    {
+                        "tool_name": tc.name,
+                        "args_hash": args_hash,
+                        "duration_ms": duration_ms,
+                        "error_class": "CancelledError",
+                    },
+                )
                 if self._event_recorder and self._current_episode_id:
                     self._event_recorder.on_tool_result(
                         self._current_episode_id, tc.name, result, "cancelled", duration_ms,
@@ -1377,6 +1660,7 @@ class AgentLoop:
             if self._profiler:
                 self._profiler.stop(profile_name, "tool", tool_name=tc.name, error=True)
             error = f"Error: {e}"
+            self._dispatch_tool_error(tc, e)
             # Middleware: on_error
             _err_ctx = self._run_middleware(
                 "on_error",
@@ -1395,6 +1679,15 @@ class AgentLoop:
                 session_id=self.session_id, tool_name=tc.name,
                 duration_ms=duration_ms, status="error",
             )
+            self._emit_telemetry(
+                "tool_call_failed",
+                {
+                    "tool_name": tc.name,
+                    "args_hash": args_hash,
+                    "duration_ms": duration_ms,
+                    "error_class": type(e).__name__,
+                },
+            )
             if self._event_recorder and self._current_episode_id:
                 self._event_recorder.on_tool_result(
                     self._current_episode_id, tc.name, error, "error", duration_ms,
@@ -1408,71 +1701,6 @@ class AgentLoop:
                 duration_ms=duration_ms,
             )
             return ToolExecutionOutcome((error, None))
-
-    def _stage_successful_edit(self, tc: ToolCall, result: str) -> str:
-        """Stage files touched by a successful mutating tool call."""
-        if not self._project_root:
-            return ""
-        touched = self._extract_touched_files(tc.name, tc.arguments)
-        if not touched:
-            return ""
-        try:
-            staging = stage_post_edit(touched, project_root=self._project_root)
-        except Exception:
-            logger.debug("Git-aware staging failed (non-blocking)", exc_info=True)
-            return ""
-        if not staging.staged:
-            return ""
-        return (
-            "Git-aware staging: staged "
-            f"{', '.join(staging.files)}.\n"
-            f"Proposed commit message: {staging.proposed_commit_message}"
-        )
-
-    async def _verify_successful_edit(self, tc: ToolCall) -> str:
-        """Run post-edit verification for files touched by one mutating tool."""
-        if not self._project_root:
-            return ""
-        config = self._verify_config or AutoVerifyConfig()
-        if not config.enabled:
-            return ""
-        touched = self._extract_touched_files(tc.name, tc.arguments)
-        if not touched:
-            return ""
-        try:
-            result = await verify_after_edit(
-                touched,
-                project_root=self._project_root,
-                config=config,
-            )
-        except Exception as exc:
-            logger.debug("Post-edit verification failed (non-blocking)", exc_info=True)
-            return f"Verification unavailable: {type(exc).__name__}: {exc}"
-        if not result.checked_files:
-            return ""
-        if result.ok:
-            self._verification_failure_count = 0
-            return result.to_system_message(project_root=self._project_root)
-
-        self._verification_failure_count += 1
-        note = result.to_system_message(project_root=self._project_root)
-        cost_warning = self._pop_cost_limit_warning()
-        if cost_warning is not None:
-            total, limit = cost_warning
-            return (
-                f"{note}\n"
-                "Verification retry halted: cost limit reached "
-                f"(${total:.2f} used, ${limit:.2f} limit)."
-            )
-        if self._verification_failure_count >= config.max_iterations:
-            plural = "s" if config.max_iterations != 1 else ""
-            return (
-                f"{note}\n"
-                f"Verification failed after {config.max_iterations} iteration{plural}. "
-                "No automatic rollback was performed. Use /rollback to inspect or restore "
-                "a user-confirmed checkpoint."
-            )
-        return note
 
     def _pop_cost_limit_warning(self) -> tuple[float, float] | None:
         if self._token_tracker is None:
@@ -1488,3 +1716,15 @@ class AgentLoop:
             return float(total), float(limit)
         except Exception:
             return None
+
+    def _persist_token_usage(self) -> None:
+        if self._token_tracker is None:
+            return
+        snapshot = getattr(self._token_tracker, "to_snapshot", None)
+        save = getattr(self.session_store, "save_token_usage", None)
+        if not callable(snapshot) or not callable(save):
+            return
+        try:
+            save(self.session_id, snapshot())
+        except Exception:
+            logger.debug("Token usage persistence failed", exc_info=True)

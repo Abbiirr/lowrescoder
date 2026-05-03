@@ -178,6 +178,7 @@ class AutoCodeApp(App[None]):
             cost_limit_usd=self.config.agent.cost_limit_usd,
             project_root=self.project_root,
             verify_config=self.config.agent.verify,
+            drift_config=self.config.agent.drift,
         )
         if self._agent_mode != AgentMode.NORMAL:
             self._agent_loop.set_mode(self._agent_mode)

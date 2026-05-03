@@ -17,6 +17,7 @@ from autocode.agent.hooks import HookEvent
 from autocode.agent.loop import AgentLoop, encode_tool_termination
 from autocode.agent.middleware import MiddlewareStack, create_default_middleware
 from autocode.agent.prompts import (
+    CACHE_BOUNDARY_MARKER,
     SYSTEM_PROMPT,
     build_dynamic_suffix,
     build_static_prefix,
@@ -27,7 +28,7 @@ from autocode.agent.subagent_tools import register_subagent_tools
 from autocode.agent.task_tools import register_task_tools
 from autocode.agent.tool_result_cache import ToolResultCache
 from autocode.agent.tools import ToolDefinition, ToolRegistry, create_default_registry
-from autocode.config import ShellConfig
+from autocode.config import DriftConfig, SchemaDriftConfig, ShellConfig
 from autocode.layer4.llm import LLMResponse, ToolCall
 from autocode.session.store import SessionStore
 from autocode.session.task_store import TaskStore
@@ -68,6 +69,100 @@ def _make_mock_provider(responses: list[LLMResponse]) -> Any:
 
 
 class TestAgentLoop:
+    @pytest.mark.asyncio()
+    async def test_telemetry_emits_turn_and_llm_events(
+        self,
+        store: SessionStore,
+        session_id: str,
+    ) -> None:
+        """Telemetry captures turn lifecycle and model usage without UI coupling."""
+        provider = _make_mock_provider([
+            LLMResponse(
+                content="Hello!",
+                usage={
+                    "prompt_tokens": 12,
+                    "completion_tokens": 4,
+                    "cached_input_tokens": 2,
+                },
+            )
+        ])
+        telemetry = Mock()
+
+        loop = AgentLoop(
+            provider,
+            ToolRegistry(),
+            ApprovalManager(ApprovalMode.SUGGEST),
+            store,
+            session_id,
+            telemetry_store=telemetry,
+        )
+
+        await loop.run("Hi")
+
+        kinds = [call.args[0] for call in telemetry.emit.call_args_list]
+        assert "session_start" in kinds
+        assert "turn_start" in kinds
+        assert "llm_call_completed" in kinds
+        assert "turn_completed" in kinds
+        llm_call = next(
+            call for call in telemetry.emit.call_args_list if call.args[0] == "llm_call_completed"
+        )
+        assert llm_call.kwargs["session_id"] == session_id
+        assert llm_call.kwargs["data"]["prompt_tokens"] == 12
+        assert llm_call.kwargs["data"]["cached_input_tokens"] == 2
+
+    @pytest.mark.asyncio()
+    async def test_telemetry_emits_tool_success_and_failure(
+        self,
+        store: SessionStore,
+        session_id: str,
+    ) -> None:
+        """Telemetry records tool execution start/result events."""
+        provider = _make_mock_provider([
+            LLMResponse(
+                tool_calls=[
+                    ToolCall(id="tc-1", name="ok_tool", arguments={"path": "x.py"}),
+                    ToolCall(id="tc-2", name="bad_tool", arguments={}),
+                ],
+            ),
+            LLMResponse(content="Done"),
+        ])
+        registry = ToolRegistry()
+        registry.register(ToolDefinition(
+            name="ok_tool",
+            description="ok",
+            parameters={},
+            handler=lambda path: f"read {path}",
+        ))
+        registry.register(ToolDefinition(
+            name="bad_tool",
+            description="bad",
+            parameters={},
+            handler=lambda: (_ for _ in ()).throw(RuntimeError("boom")),
+        ))
+        telemetry = Mock()
+
+        loop = AgentLoop(
+            provider,
+            registry,
+            ApprovalManager(ApprovalMode.SUGGEST),
+            store,
+            session_id,
+            telemetry_store=telemetry,
+        )
+
+        await loop.run("Use tools")
+
+        kinds = [call.args[0] for call in telemetry.emit.call_args_list]
+        assert kinds.count("tool_call_started") == 2
+        assert "tool_call_completed" in kinds
+        assert "tool_call_failed" in kinds
+        failed = next(
+            call for call in telemetry.emit.call_args_list if call.args[0] == "tool_call_failed"
+        )
+        assert failed.kwargs["data"]["tool_name"] == "bad_tool"
+        assert failed.kwargs["data"]["error_class"] == "RuntimeError"
+
     @pytest.mark.asyncio()
     async def test_text_only_response(self, store: SessionStore, session_id: str) -> None:
         """A text-only LLM response returns immediately."""
@@ -219,6 +314,125 @@ class TestAgentLoop:
         )
 
     @pytest.mark.asyncio()
+    async def test_hook_dispatcher_wraps_successful_tool_execution(
+        self, store: SessionStore, session_id: str,
+    ) -> None:
+        """Internal hooks receive tool lifecycle and can augment success results."""
+        registry = ToolRegistry()
+        registry.register(ToolDefinition(
+            name="echo_tool",
+            description="Echo a value.",
+            parameters={"type": "object", "properties": {"value": {"type": "string"}}},
+            handler=lambda value: f"echo:{value}",
+        ))
+        dispatcher = Mock()
+        dispatcher.pre_tool_call.return_value = None
+        dispatcher.post_tool_call_success.return_value = "echo:hello\nhook-note"
+
+        loop = AgentLoop(
+            provider=AsyncMock(),
+            tool_registry=registry,
+            approval_manager=ApprovalManager(ApprovalMode.AUTO),
+            session_store=store,
+            session_id=session_id,
+            hook_dispatcher=dispatcher,
+        )
+        msg_id = store.add_message(session_id, "assistant", "")
+
+        result = await loop._execute_tool_call(
+            ToolCall(id="tc1", name="echo_tool", arguments={"value": "hello"}),
+            msg_id=msg_id,
+        )
+
+        assert result[0] == "echo:hello\nhook-note"
+        dispatcher.pre_tool_call.assert_called_once()
+        dispatcher.post_tool_call_success.assert_called_once()
+        dispatcher.post_tool_call_error.assert_not_called()
+
+    @pytest.mark.asyncio()
+    async def test_hook_dispatcher_gets_tool_errors(
+        self, store: SessionStore, session_id: str,
+    ) -> None:
+        """Internal hook failures are isolated from tool-error reporting."""
+        registry = ToolRegistry()
+        registry.register(ToolDefinition(
+            name="bad_tool",
+            description="Fails.",
+            parameters={},
+            handler=lambda: (_ for _ in ()).throw(RuntimeError("boom")),
+        ))
+        dispatcher = Mock()
+
+        loop = AgentLoop(
+            provider=AsyncMock(),
+            tool_registry=registry,
+            approval_manager=ApprovalManager(ApprovalMode.AUTO),
+            session_store=store,
+            session_id=session_id,
+            hook_dispatcher=dispatcher,
+        )
+        msg_id = store.add_message(session_id, "assistant", "")
+
+        result = await loop._execute_tool_call(
+            ToolCall(id="tc1", name="bad_tool", arguments={}),
+            msg_id=msg_id,
+        )
+
+        assert "Error: boom" in result[0]
+        dispatcher.post_tool_call_error.assert_called_once()
+
+    @pytest.mark.asyncio()
+    async def test_drift_warning_is_injected_before_next_model_turn(
+        self, store: SessionStore, session_id: str,
+    ) -> None:
+        """P3a drift hook warnings become system context before the next LLM call."""
+        captured_messages: list[list[dict[str, Any]]] = []
+
+        async def generate_with_tools(
+            messages: list[dict[str, Any]],
+            tools: list[dict[str, Any]],
+            **kwargs: Any,
+        ) -> LLMResponse:
+            captured_messages.append(messages)
+            if len(captured_messages) == 1:
+                return LLMResponse(
+                    tool_calls=[
+                        ToolCall(id="tc1", name="db_rows", arguments={"query": "users"}),
+                        ToolCall(id="tc2", name="db_rows", arguments={"query": "users"}),
+                    ],
+                )
+            return LLMResponse(content="done")
+
+        provider = AsyncMock()
+        provider.generate_with_tools = generate_with_tools
+        responses = iter(['[{"email_certified": true}]', '[{"email_verified": true}]'])
+        registry = ToolRegistry()
+        registry.register(ToolDefinition(
+            name="db_rows",
+            description="Return rows.",
+            parameters={},
+            handler=lambda query: next(responses),
+        ))
+
+        loop = AgentLoop(
+            provider=provider,
+            tool_registry=registry,
+            approval_manager=ApprovalManager(ApprovalMode.AUTO),
+            session_store=store,
+            session_id=session_id,
+            drift_config=DriftConfig(schema=SchemaDriftConfig(sensitivity="medium")),
+        )
+
+        await loop.run("check rows")
+
+        second_turn_system = [
+            message["content"]
+            for message in captured_messages[1]
+            if message.get("role") == "system"
+        ]
+        assert any("[Drift detected — schema_drift" in item for item in second_turn_system)
+
+    @pytest.mark.asyncio()
     async def test_interruptible_async_tool_is_drained_on_cancellation(
         self,
         store: SessionStore,
@@ -296,6 +510,79 @@ class TestAgentLoop:
         assert len(live_entries) == 1
         assert live_entries[0].tool == "large_tool"
         assert live_entries[0].result == "x" * 1500
+
+    @pytest.mark.asyncio()
+    async def test_large_tool_result_is_offloaded_to_scratch_and_telemetry_emitted(
+        self, store: SessionStore, session_id: str, tmp_path: Path,
+    ) -> None:
+        """Large outputs are replaced by scratch stubs before context insertion."""
+        telemetry = Mock()
+        registry = ToolRegistry()
+        registry.register(ToolDefinition(
+            name="large_tool",
+            description="Return a large result.",
+            parameters={"type": "object", "properties": {}},
+            handler=lambda: "\n".join(f"line {i}" for i in range(1000)),
+            output_budget_tokens=10_000,
+        ))
+        loop = AgentLoop(
+            provider=AsyncMock(),
+            tool_registry=registry,
+            approval_manager=ApprovalManager(ApprovalMode.AUTO),
+            session_store=store,
+            session_id=session_id,
+            project_root=tmp_path,
+            telemetry_store=telemetry,
+        )
+        msg_id = store.add_message(session_id, "assistant", "")
+
+        result = await loop._execute_tool_call(
+            ToolCall(id="tc1", name="large_tool", arguments={}),
+            msg_id=msg_id,
+        )
+
+        assert "[Tool output offloaded" in result[0]
+        assert "Use read_file on the path above" in result[0]
+        event = next(
+            call for call in telemetry.emit.call_args_list
+            if call.args[0] == "tool_output_offloaded"
+        )
+        assert event.kwargs["data"]["tool_name"] == "large_tool"
+        assert event.kwargs["data"]["result_bytes"] > 5_000
+        assert ".autocode/scratch" in event.kwargs["data"]["scratch_path"]
+
+    @pytest.mark.asyncio()
+    async def test_scratch_offload_happens_before_context_truncation(
+        self, store: SessionStore, session_id: str, tmp_path: Path,
+    ) -> None:
+        """ContextEngine must preserve scratch stubs instead of truncating first."""
+        registry = ToolRegistry()
+        registry.register(ToolDefinition(
+            name="large_tool",
+            description="Return a large result.",
+            parameters={"type": "object", "properties": {}},
+            handler=lambda: "\n".join(f"line {i}" for i in range(1000)),
+            output_budget_tokens=20,
+        ))
+        loop = AgentLoop(
+            provider=AsyncMock(),
+            tool_registry=registry,
+            approval_manager=ApprovalManager(ApprovalMode.AUTO),
+            session_store=store,
+            session_id=session_id,
+            context_engine=ContextEngine(provider=None, session_store=store),
+            project_root=tmp_path,
+        )
+        msg_id = store.add_message(session_id, "assistant", "")
+
+        result = await loop._execute_tool_call(
+            ToolCall(id="tc1", name="large_tool", arguments={}),
+            msg_id=msg_id,
+        )
+
+        assert "[Tool output offloaded" in result[0]
+        assert "First 5 lines" in result[0]
+        assert "[… " not in result[0]
 
     @pytest.mark.asyncio()
     async def test_cache_management_tool_result_is_not_cached(
@@ -1035,7 +1322,7 @@ class TestApprovalPrompting:
                 proposed_commit_message="Update staged.txt",
             )
 
-        monkeypatch.setattr("autocode.agent.loop.stage_post_edit", fake_stage)
+        monkeypatch.setattr("autocode.agent.hooks.stage_post_edit", fake_stage)
         loop = AgentLoop(
             provider,
             registry,
@@ -1987,7 +2274,7 @@ class TestPromptSplitting:
         assert "Current Environment" in result
 
     def test_build_system_prompt_backward_compatible(self) -> None:
-        """build_system_prompt() returns static + dynamic concatenated."""
+        """build_system_prompt() keeps stable/dynamic regions explicit."""
         full = build_system_prompt(
             memory_content="test memory",
             shell_enabled=True,
@@ -1999,7 +2286,9 @@ class TestPromptSplitting:
             shell_enabled=True,
             approval_mode="auto",
         )
-        assert full == static + dynamic
+        assert static in full
+        assert dynamic.strip() in full
+        assert CACHE_BOUNDARY_MARKER in full
 
     def test_build_dynamic_suffix_includes_all_sections(self) -> None:
         """Dynamic suffix includes all optional sections when provided."""

@@ -60,7 +60,7 @@ Four complementary dimensions: runtime invariants · design-target ratchet · se
 | `docs/` | All documentation |
 | `training-data/` | Training data for models |
 
-Root keeps: `CLAUDE.md`, `AGENTS.md`, `AGENTS_CONVERSATION.MD`, `AGENT_COMMUNICATION_RULES.md`, `PLAN.md`, `EXECUTION_CHECKLIST.md`, `current_directives.md`, `pyproject.toml`, `Makefile`.
+Root keeps only active orientation and project-control files: `CLAUDE.md`, `AGENTS.md`, `AGENTS_CONVERSATION.MD`, `AGENT_COMMUNICATION_RULES.md`, `PLAN.md`, `EXECUTION_CHECKLIST.md`, `current_directives.md`, `next_remaining_plan.md`, `next_remaining_todo.md`, `full_future_roadmap.md`, `north-star.md`, `README.md`, `CHANGELOG.md`, `pyproject.toml`, `Makefile`.
 
 ## Where to Find What (Session Index)
 
@@ -68,6 +68,8 @@ Root keeps: `CLAUDE.md`, `AGENTS.md`, `AGENTS_CONVERSATION.MD`, `AGENT_COMMUNICA
 |---|---|
 | **Active sprint / what to do next** | **`current_directives.md`** |
 | Live open work + exit gates | `EXECUTION_CHECKLIST.md` |
+| Current post-C7 atomic plan/checklist | `next_remaining_plan.md`, `next_remaining_todo.md` |
+| Active AI verification harness fixes | `docs/plan/ai-verification-harness-fixes-plan.md` |
 | Full product roadmap | `PLAN.md` |
 | Fast session startup | `docs/session-onramp.md` |
 | Testing & evaluation overview | `autocode/TESTING.md` |
@@ -78,6 +80,7 @@ Root keeps: `CLAUDE.md`, `AGENTS.md`, `AGENTS_CONVERSATION.MD`, `AGENT_COMMUNICA
 | **TUI live-PTY smoke harnesses** | `autocode/tests/pty/README.md` |
 | MVP acceptance checklist | `PLAN.md` §6.2 |
 | Feature catalog (built vs planned) | `docs/requirements_and_features.md` |
+| Harness feature inventory | `docs/features/inventory.md` |
 | Agent communication protocol | `AGENT_COMMUNICATION_RULES.md` |
 | Agent message log | `AGENTS_CONVERSATION.MD` |
 | Message format examples | `docs/reference/comms-examples.md` |

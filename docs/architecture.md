@@ -138,6 +138,28 @@ Callbacks map to JSON-RPC notifications/requests:
 | `ask_user_callback(question, options)` | `on_ask_user` **request** | Py → Rust (waits for response) |
 | *(loop complete)* | `on_done` notification | Py → Rust |
 
+### Internal Hook Dispatcher
+
+**Location:** `autocode/src/autocode/agent/hooks.py`
+
+The backend has two hook surfaces:
+
+| Surface | Purpose |
+|---|---|
+| `HookRegistry` | External Claude-Code-compatible shell hooks loaded from `.claude/settings.json` |
+| `HookDispatcher` | Internal ordered hook bus for backend features that need lifecycle integration without adding more ad-hoc branches to `AgentLoop` |
+
+`HookDispatcher` is created by the shared factory and injected into `AgentLoop`.
+It dispatches `pre_turn`, `post_turn`, `on_token`, `pre_tool_call`,
+`post_tool_call_success`, `post_tool_call_success_async`, and
+`post_tool_call_error`.
+
+Dispatcher calls are ordered and exception-isolated: one bad hook is skipped
+without breaking the agent loop. Success hooks may return an augmented tool
+result, which is chained through later hooks before the result is stored or
+shown to the frontend. Current internal hook adapters cover scratch offload,
+git-aware staging, per-tool checkpoints, and post-edit auto-verify.
+
 ### LLM Providers
 
 **Location:** `autocode/src/autocode/layer4/llm.py`

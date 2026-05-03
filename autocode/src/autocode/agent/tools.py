@@ -135,6 +135,11 @@ CORE_TOOL_NAMES = frozenset(
         # the AUTO-mode planning nudge can actually succeed.
         "todo_write",
         "todo_read",
+        # Durable memory tools: index must be visible at context pressure,
+        # read/write let the model maintain bounded project memory explicitly.
+        "memory_index_show",
+        "memory_read_topic",
+        "memory_write_topic",
     }
 )
 
@@ -573,6 +578,66 @@ def _handle_list_files(directory: str = ".", pattern: str = "*", project_root: s
         return f"Error listing files: {e}"
 
 
+def _memory_fs(project_root: str = "") -> Any:
+    from autocode.session.memory_fs import MemoryFS
+
+    return MemoryFS(project_root=project_root or Path.cwd())
+
+
+def _handle_memory_read_topic(slug: str, project_root: str = "") -> str:
+    try:
+        return _memory_fs(project_root).read_topic(slug)
+    except FileNotFoundError:
+        return f"Memory topic not found: {slug}"
+    except Exception as e:
+        return f"Error reading memory topic: {e}"
+
+
+def _handle_memory_write_topic(
+    slug: str,
+    content: str,
+    summary: str | None = None,
+    project_root: str = "",
+) -> str:
+    try:
+        result = _memory_fs(project_root).write_topic(slug, content, summary=summary)
+        message = f"Wrote memory topic memory/{result.slug}.md"
+        if result.warning:
+            message += f"\nWarning: {result.warning}"
+        return message
+    except Exception as e:
+        return f"Error writing memory topic: {e}"
+
+
+def _handle_memory_grep_logs(
+    pattern: str,
+    days: int = 30,
+    max_matches: int = 50,
+    project_root: str = "",
+) -> str:
+    try:
+        matches = _memory_fs(project_root).grep_logs(
+            pattern,
+            days=days,
+            max_matches=max_matches,
+        )
+        if not matches:
+            return "No memory log matches found."
+        return "\n".join(
+            f"{match.path}:{match.line_number}: [{match.session_id}] {match.line}"
+            for match in matches
+        )
+    except Exception as e:
+        return f"Error grepping memory logs: {e}"
+
+
+def _handle_memory_index_show(project_root: str = "") -> str:
+    try:
+        return _memory_fs(project_root).read_index()
+    except Exception as e:
+        return f"Error reading memory index: {e}"
+
+
 def _search_with_ripgrep(
     pattern: str,
     directory: str,
@@ -697,6 +762,7 @@ def _handle_search_text(
     directory: str = ".",
     glob_pattern: str = "**/*",
     max_results: int = 50,
+    project_root: str = "",
 ) -> str:
     """Search for text in files. Tries ripgrep > grep > Python fallback.
 
@@ -716,6 +782,10 @@ def _handle_search_text(
         max_results = 50
     if max_results > _SEARCH_TEXT_MAX_RESULTS_CAP:
         max_results = _SEARCH_TEXT_MAX_RESULTS_CAP
+
+    # Use project_root as the search base when the caller passes the default "."
+    if directory == "." and project_root:
+        directory = project_root
 
     # Try ripgrep first (fastest)
     result = _search_with_ripgrep(pattern, directory, glob_pattern, max_results)
@@ -758,6 +828,7 @@ def _safe_shell_env() -> dict[str, str]:
 def _prepare_run_command(
     command: str,
     timeout: int,
+    project_root: str = "",
 ) -> tuple[Any | None, list[str], str | None]:
     from autocode.agent.git_tools import detect_shell_escalation
     from autocode.agent.sandbox import SandboxConfig, SandboxPolicy
@@ -801,7 +872,7 @@ def _prepare_run_command(
 
     config = SandboxConfig(
         policy=SandboxPolicy.WRITABLE_PROJECT,
-        project_root=os.getcwd(),
+        project_root=project_root or os.getcwd(),
         timeout_s=timeout,
         allow_network=True,  # commands may need network
         fail_if_unavailable=fail_closed,
@@ -821,7 +892,7 @@ def _format_run_command_result(sandbox_result: Any, escalation: list[str]) -> st
     return result
 
 
-def _handle_run_command(command: str, timeout: int = 30) -> str:
+def _handle_run_command(command: str, timeout: int = 30, project_root: str = "") -> str:
     """Run a shell command via OS sandbox when available.
 
     Uses sandbox.run_sandboxed() for process isolation (bwrap on Linux,
@@ -839,18 +910,18 @@ def _handle_run_command(command: str, timeout: int = 30) -> str:
     """
     from autocode.agent.sandbox import run_sandboxed
 
-    config, escalation, denied = _prepare_run_command(command, timeout)
+    config, escalation, denied = _prepare_run_command(command, timeout, project_root=project_root)
     if denied:
         return denied
     assert config is not None
     return _format_run_command_result(run_sandboxed(command, config), escalation)
 
 
-async def _handle_run_command_async(command: str, timeout: int = 30) -> str:
+async def _handle_run_command_async(command: str, timeout: int = 30, project_root: str = "") -> str:
     """Run a shell command via the async sandbox path so cancellation can kill it."""
     from autocode.agent.sandbox import run_sandboxed_async
 
-    config, escalation, denied = _prepare_run_command(command, timeout)
+    config, escalation, denied = _prepare_run_command(command, timeout, project_root=project_root)
     if denied:
         return denied
     assert config is not None
@@ -1247,6 +1318,90 @@ def create_default_registry(
 
     registry.register(
         ToolDefinition(
+            name="memory_read_topic",
+            description="Read a durable project memory topic by slug.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "slug": {"type": "string", "description": "Topic slug, e.g. facts"},
+                },
+                "required": ["slug"],
+            },
+            handler=lambda **kwargs: _handle_memory_read_topic(
+                project_root=project_root,
+                **kwargs,
+            ),
+            requires_approval=False,
+        )
+    )
+
+    registry.register(
+        ToolDefinition(
+            name="memory_write_topic",
+            description=(
+                "Write or replace a durable project memory topic. Use only for "
+                "verified project facts, preferences, patterns, and decisions."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "slug": {"type": "string", "description": "Topic slug"},
+                    "content": {"type": "string", "description": "Markdown body"},
+                    "summary": {
+                        "type": "string",
+                        "description": "Short pointer for MEMORY.md",
+                    },
+                },
+                "required": ["slug", "content"],
+            },
+            handler=lambda **kwargs: _handle_memory_write_topic(
+                project_root=project_root,
+                **kwargs,
+            ),
+            requires_approval=True,
+            mutates_fs=True,
+        )
+    )
+
+    registry.register(
+        ToolDefinition(
+            name="memory_grep_logs",
+            description="Search recent append-only memory logs.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "pattern": {"type": "string", "description": "Regex pattern"},
+                    "days": {
+                        "type": "integer",
+                        "description": "Recent day window, default 30",
+                    },
+                    "max_matches": {
+                        "type": "integer",
+                        "description": "Maximum matches, default 50",
+                    },
+                },
+                "required": ["pattern"],
+            },
+            handler=lambda **kwargs: _handle_memory_grep_logs(
+                project_root=project_root,
+                **kwargs,
+            ),
+            requires_approval=False,
+        )
+    )
+
+    registry.register(
+        ToolDefinition(
+            name="memory_index_show",
+            description="Show the bounded MEMORY.md durable memory index.",
+            parameters={"type": "object", "properties": {}, "required": []},
+            handler=lambda **_kwargs: _handle_memory_index_show(project_root=project_root),
+            requires_approval=False,
+        )
+    )
+
+    registry.register(
+        ToolDefinition(
             name="search_text",
             description=(
                 "Search for a regex pattern in files under a directory. "
@@ -1275,7 +1430,7 @@ def create_default_registry(
                 },
                 "required": ["pattern"],
             },
-            handler=_handle_search_text,
+            handler=lambda **kwargs: _handle_search_text(project_root=project_root, **kwargs),
             requires_approval=False,
         )
     )
@@ -1295,7 +1450,7 @@ def create_default_registry(
                 },
                 "required": ["command"],
             },
-            handler=_handle_run_command_async,
+            handler=lambda **kwargs: _handle_run_command_async(project_root=project_root, **kwargs),
             requires_approval=True,
             executes_shell=True,
             interruptible=True,

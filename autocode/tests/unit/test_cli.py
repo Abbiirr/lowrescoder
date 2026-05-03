@@ -91,7 +91,7 @@ class TestCLIExec:
         assert result.exit_code == 1
         event = json.loads(result.stdout.strip())
         assert event["type"] == "error"
-        assert event["protocol_version"] == "0.1.0-c6g5-subset"
+        assert event["protocol_version"] == "0.2.0-harness"
         assert event["message"] == "cannot create session"
 
     def test_json_mode_auto_approve_flag_is_explicit(self) -> None:
@@ -121,6 +121,34 @@ class TestCLIExec:
 
         assert result.exit_code == 0
         assert runner_cls.call_args.kwargs["auto_approve"] is False
+
+
+class TestCLITelemetry:
+    def test_telemetry_summary_uses_aggregator(self) -> None:
+        with patch("autocode.telemetry.aggregator.TelemetryAggregator") as agg_cls:
+            agg = agg_cls.return_value
+            agg.summary.return_value.total_events = 2
+            agg.summary.return_value.by_kind = {"turn_start": 1, "turn_completed": 1}
+            agg.summary.return_value.by_session = {"s1": 2}
+
+            result = runner.invoke(app, ["telemetry", "summary"])
+
+        assert result.exit_code == 0
+        assert "turn_start" in result.output
+        assert "turn_completed" in result.output
+
+    def test_telemetry_purge_deletes_store(self, tmp_path, monkeypatch) -> None:
+        from autocode.telemetry.store import telemetry_root
+
+        monkeypatch.setenv("HOME", str(tmp_path))
+        root = telemetry_root()
+        root.mkdir(parents=True)
+        (root / "events-2026-04-30.jsonl").write_text("{}\n")
+
+        result = runner.invoke(app, ["telemetry", "purge"])
+
+        assert result.exit_code == 0
+        assert not root.exists()
 
 
 class TestCLIHelp:

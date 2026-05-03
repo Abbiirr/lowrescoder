@@ -5,11 +5,13 @@ from __future__ import annotations
 import inspect
 import logging
 import re
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Any
 
+from autocode.agent.scratch import is_scratch_stub
 from autocode.session.consolidation import SessionConsolidator
 from autocode.session.store import SessionStore
 
@@ -96,11 +98,15 @@ class ContextEngine:
         session_store: SessionStore,
         context_length: int = 8192,
         compaction_threshold: float = 0.75,
+        session_notes: Any | None = None,
+        telemetry_emit: Callable[[str, dict[str, Any]], None] | None = None,
     ) -> None:
         self._provider = provider
         self._session_store = session_store
         self._context_length = context_length
         self._compaction_threshold = compaction_threshold
+        self._session_notes = session_notes
+        self._telemetry_emit = telemetry_emit
 
     def count_tokens(self, text: str) -> int:
         """Count tokens with the provider when possible, otherwise estimate."""
@@ -117,6 +123,8 @@ class ContextEngine:
 
     def truncate_tool_result(self, result: str, max_tokens: int = 500) -> str:
         """MicroCompact tool output while preserving high-signal structure."""
+        if is_scratch_stub(result):
+            return result
         token_count = self.count_tokens(result)
         if token_count <= max_tokens:
             return result
@@ -133,6 +141,14 @@ class ContextEngine:
                 return self._truncate_line_output(lines, max_chars)
 
         return self._truncate_middle_chars(result, max_chars)
+
+    def record_tool_call_for_notes(self) -> None:
+        """Notify Session Notes that a tool was used."""
+        if self._session_notes is None:
+            return
+        recorder = getattr(self._session_notes, "record_tool_call", None)
+        if callable(recorder):
+            recorder()
 
     def _truncate_middle_chars(self, result: str, max_chars: int) -> str:
         """Fallback truncation for unstructured text and dense binary-like output."""
@@ -310,6 +326,33 @@ class ContextEngine:
         if len(messages) <= kept_messages:
             return ""
 
+        tokens_before = sum(self.count_tokens(m.content) for m in messages)
+        started = time.perf_counter()
+        notes_summary = ""
+        if self._session_notes is not None:
+            reader = getattr(self._session_notes, "read_for_compaction", None)
+            if callable(reader):
+                notes_summary = str(reader() or "").strip()
+        if notes_summary:
+            self._session_store.compact_session(
+                session_id,
+                summary=notes_summary,
+                kept_messages=kept_messages,
+            )
+            duration_ms = int((time.perf_counter() - started) * 1000)
+            self._emit_compaction_event(
+                path="A",
+                tokens_before=tokens_before,
+                tokens_after=self.count_tokens(notes_summary),
+                duration_ms=duration_ms,
+            )
+            logger.debug(
+                "Auto-compacted session %s via Session Notes Path A, kept %d messages",
+                session_id,
+                kept_messages,
+            )
+            return notes_summary
+
         old_messages = messages[:-kept_messages]
         old_conversation = self._session_store.get_messages_with_tool_calls(
             session_id,
@@ -350,8 +393,32 @@ class ContextEngine:
             summary=summary,
             kept_messages=kept_messages,
         )
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        self._emit_compaction_event(
+            path="B",
+            tokens_before=tokens_before,
+            tokens_after=self.count_tokens(summary),
+            duration_ms=duration_ms,
+        )
         logger.debug("Auto-compacted session %s, kept %d messages", session_id, kept_messages)
         return summary
+
+    def _emit_compaction_event(
+        self,
+        *,
+        path: str,
+        tokens_before: int,
+        tokens_after: int,
+        duration_ms: int,
+    ) -> None:
+        payload = {
+            "path": path,
+            "tokens_before": tokens_before,
+            "tokens_after": tokens_after,
+            "duration_ms": duration_ms,
+        }
+        if self._telemetry_emit is not None:
+            self._telemetry_emit("compaction_event", payload)
 
 
 # --- Four-Plane Context Model ---

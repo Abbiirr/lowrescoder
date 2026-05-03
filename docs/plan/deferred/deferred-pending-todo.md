@@ -167,7 +167,7 @@ docs/reference/gateway-complaint-template.md
 docs/reference/hooks-contract.md
 docs/reference/rules-loader-contract.md
 docs/reference/skills-contract.md
-DEFERRED_PENDING_TODO.md (this file)
+docs/plan/deferred/deferred-pending-todo.md (this file)
 ```
 
 ---

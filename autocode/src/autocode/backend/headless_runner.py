@@ -13,10 +13,11 @@ Hard constraints:
 
 from __future__ import annotations
 
-import asyncio
 import logging
+import os
 import sys
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -185,20 +186,19 @@ class HeadlessRunner:
                 shell_config=self.config.shell,
             )
 
-            from autocode.agent.factory import (
-                create_orchestrator,
-                load_project_memory_content,
-            )
+            from autocode.agent.delegation import DelegationPolicy
+            from autocode.agent.event_recorder import EventRecorder
+            from autocode.agent.factory import create_orchestrator, load_project_memory_content
+            from autocode.agent.memory import MemoryStore
             from autocode.agent.subagent import LLMScheduler, SubagentManager
             from autocode.agent.subagent_tools import register_subagent_tools
             from autocode.agent.task_tools import register_task_tools
             from autocode.core.blob_store import BlobStore
-            from autocode.agent.event_recorder import EventRecorder
-            from autocode.session.episode_store import EpisodeStore
-            from autocode.session.task_store import TaskStore
-            from autocode.agent.memory import MemoryStore
             from autocode.session.checkpoint_store import CheckpointStore
-            from autocode.agent.delegation import DelegationPolicy
+            from autocode.session.episode_store import EpisodeStore
+            from autocode.session.memory_fs import MemoryFS
+            from autocode.session.session_notes import SessionNotes
+            from autocode.session.task_store import TaskStore
 
             memory_content = load_project_memory_content(self.project_root)
 
@@ -210,14 +210,31 @@ class HeadlessRunner:
 
             project_id = str(self.project_root)
             conn = self.session_store.get_connection()
-            self._memory_store = MemoryStore(
-                conn,
-                project_id,
-                max_entries=self.config.agent.memory_max_entries,
-                max_context_tokens=self.config.agent.memory_context_max_tokens,
-            )
+            if os.environ.get("AUTOCODE_USE_LEGACY_MEMORY", "").lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }:
+                self._memory_store = MemoryStore(
+                    conn,
+                    project_id,
+                    max_entries=self.config.agent.memory_max_entries,
+                    max_context_tokens=self.config.agent.memory_context_max_tokens,
+                )
+            else:
+                self._memory_store = MemoryFS(project_root=self.project_root)
             self._memory_store.apply_decay()
             self._checkpoint_store = CheckpointStore(conn, self.session_id)
+            session_notes_base = (
+                self._memory_store.base_dir
+                if isinstance(self._memory_store, MemoryFS)
+                else MemoryFS(project_root=self.project_root).base_dir
+            )
+            session_notes = SessionNotes(
+                session_id=self.session_id,
+                base_dir=session_notes_base,
+            )
 
             try:
                 from autocode.layer3.provider import L3Provider
@@ -294,6 +311,9 @@ class HeadlessRunner:
                 checkpoint_store=self._checkpoint_store,
                 project_root=self.project_root,
                 verify_config=self.config.agent.verify,
+                drift_config=self.config.agent.drift,
+                planning_enforcement=self.config.agent.planning_enforcement,
+                session_notes=session_notes,
             )
 
         return self._agent_loop
@@ -382,6 +402,23 @@ class HeadlessRunner:
         tool_name = params.get("name", "")
         status = params.get("status", "")
         result = params.get("result", "")
+        call_id = params.get("call_id", uuid.uuid4().hex[:12])
+        family = hs.tool_family(tool_name)
+        start_iso = datetime.now(timezone.utc).isoformat()
+        is_error = status in ("error", "failed") or params.get("error") is not None
+
+        hs.emit_event(
+            hs.ToolCallStartedEvent(
+                thread_id=self._thread_id,
+                turn_id=self._turn_id,
+                item_id=item_id,
+                tool_call_id=call_id,
+                tool_name=tool_name,
+                tool_family=family,
+                started_at=start_iso,
+            ),
+            fp=self._output,
+        )
 
         hs.emit_event(
             hs.ItemStartedEvent(
@@ -398,6 +435,41 @@ class HeadlessRunner:
             ),
             fp=self._output,
         )
+
+        end_iso = datetime.now(timezone.utc).isoformat()
+        if is_error:
+            hs.emit_event(
+                hs.ToolCallFailedEvent(
+                    thread_id=self._thread_id,
+                    turn_id=self._turn_id,
+                    item_id=item_id,
+                    tool_call_id=call_id,
+                    tool_name=tool_name,
+                    tool_family=family,
+                    started_at=start_iso,
+                    finished_at=end_iso,
+                    error_type=type(params.get("error", Exception("unknown"))).__name__,
+                    error_message=str(params.get("error", ""))[:500],
+                ),
+                fp=self._output,
+            )
+        else:
+            result_bytes = len(str(result).encode("utf-8")) if result else 0
+            hs.emit_event(
+                hs.ToolCallCompletedEvent(
+                    thread_id=self._thread_id,
+                    turn_id=self._turn_id,
+                    item_id=item_id,
+                    tool_call_id=call_id,
+                    tool_name=tool_name,
+                    tool_family=family,
+                    status="success",
+                    started_at=start_iso,
+                    finished_at=end_iso,
+                    result_bytes=result_bytes,
+                ),
+                fp=self._output,
+            )
 
     def _emit_approval(self, params: dict[str, Any], *, approved: bool) -> None:
         item_id = self._next_item_id()

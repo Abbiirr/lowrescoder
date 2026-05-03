@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import signal
 import shutil
 import sys
+import textwrap
+import time
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -16,6 +20,7 @@ from benchmarks.adapters.base import AgentResult, BenchmarkTask, BudgetProfile  
 
 from benchmarks.benchmark_runner import (  # noqa: E402  # isort: skip
     LANE_CONFIGS,
+    _run_task_worker_subprocess,
     _build_host_setup_env,
     build_run_contract,
     get_adapter,
@@ -61,8 +66,10 @@ def test_b7_b30_sweep_uses_tool_capable_alias_for_loop_lanes() -> None:
         encoding="utf-8",
     )
 
-    assert '*)          echo "tools" ;;' in script
-    assert 'B30-TBENCH) echo "terminal_bench" ;;' in script
+    assert 'BENCHMARK_LOOP_MODEL="${BENCHMARK_LOOP_MODEL:-coding}"' in script
+    assert 'B30_TBENCH_MODEL="${B30_TBENCH_MODEL:-terminal_bench}"' in script
+    assert '*)          echo "$BENCHMARK_LOOP_MODEL" ;;' in script
+    assert 'B30-TBENCH) echo "$B30_TBENCH_MODEL" ;;' in script
 
 
 def test_b7_b30_sweep_has_bounded_lane_timeout() -> None:
@@ -207,6 +214,226 @@ def test_run_lane_records_agent_task_timeout(tmp_path: Path):
     assert result["artifacts"]["failure_type"] == "INFRA_FAIL"
     assert result["artifacts"]["failure_evidence"]["timeout_source"] == "agent_task"
     assert run_data["aggregate"]["infra_fails"] == 1
+
+
+def test_run_lane_timeout_returns_when_adapter_suppresses_cancellation(tmp_path: Path):
+    """Task timeout should not depend on cooperative adapter cancellation."""
+    agent = _make_agent(resolved=True)
+    task = _make_task()
+    budget = BudgetProfile(wall_time_s=60, token_cap=1000, max_tool_calls=10)
+
+    async def cancellation_suppressing_solve(
+        task: BenchmarkTask,
+        sandbox: Path,
+        budget: BudgetProfile,
+    ) -> AgentResult:
+        try:
+            await asyncio.sleep(60)
+        except asyncio.CancelledError:
+            await asyncio.sleep(60)
+        return AgentResult(task_id=task.task_id, resolved=True)
+
+    agent.solve_task = AsyncMock(side_effect=cancellation_suppressing_solve)
+
+    async def _run_with_outer_guard():
+        with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox:
+            mock_sandbox.return_value = tmp_path
+            return await run_lane(
+                agent,
+                "B7",
+                [task],
+                budget,
+                None,
+                task_timeout_s=1,
+            )
+
+    run_data = asyncio.run(asyncio.wait_for(_run_with_outer_guard(), timeout=2))
+
+    result = run_data["results"][0]
+    assert result["resolved"] is False
+    assert result["error"] == "Task timed out after 1s"
+    assert result["artifacts"]["failure_type"] == "INFRA_FAIL"
+    assert result["artifacts"]["failure_evidence"]["timeout_source"] == "agent_task"
+
+
+def test_task_worker_subprocess_reads_serialized_result(tmp_path: Path):
+    task = _make_task()
+    result_path = tmp_path / "worker-result.json"
+    script = textwrap.dedent(f"""\
+        import json
+        from pathlib import Path
+
+        Path({str(result_path)!r}).write_text(json.dumps({{
+            "task_id": "test-task",
+            "resolved": True,
+            "score": 1.0,
+            "wall_time_s": 0.5,
+            "tool_calls": 2,
+            "tokens_in": 3,
+            "tokens_out": 4,
+            "artifacts": {{"grade_attempts": [{{"attempt": 1}}]}},
+        }}))
+    """)
+
+    result = asyncio.run(_run_task_worker_subprocess(
+        [sys.executable, "-c", script],
+        result_path,
+        task,
+        task_timeout_s=5,
+        container_name=None,
+    ))
+
+    assert result.resolved is True
+    assert result.score == 1.0
+    assert result.tool_calls == 2
+    assert result.artifacts["grade_attempts"][0]["attempt"] == 1
+
+
+def test_task_worker_timeout_kills_process_group(tmp_path: Path):
+    task = _make_task()
+    result_path = tmp_path / "missing-result.json"
+    child_pid_path = tmp_path / "child.pid"
+    script = textwrap.dedent(f"""\
+        import signal
+        import subprocess
+        import sys
+        import time
+        from pathlib import Path
+
+        child = subprocess.Popen([
+            sys.executable,
+            "-c",
+            "import signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(60)",
+        ])
+        Path({str(child_pid_path)!r}).write_text(str(child.pid))
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        time.sleep(60)
+    """)
+
+    result = asyncio.run(_run_task_worker_subprocess(
+        [sys.executable, "-c", script],
+        result_path,
+        task,
+        task_timeout_s=1,
+        container_name=None,
+    ))
+
+    assert result.resolved is False
+    assert result.error == "Task timed out after 1s"
+    assert result.artifacts["failure_type"] == "INFRA_FAIL"
+    assert result.artifacts["failure_evidence"]["timeout_source"] == "agent_task"
+
+    deadline = time.monotonic() + 3
+    child_pid = int(child_pid_path.read_text())
+    while time.monotonic() < deadline:
+        try:
+            os.kill(child_pid, 0)
+        except ProcessLookupError:
+            break
+        time.sleep(0.1)
+    else:
+        try:
+            os.kill(child_pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        raise AssertionError(f"worker child process still alive: {child_pid}")
+
+
+def test_run_lane_retries_tool_calling_route_infra(tmp_path: Path):
+    """Intermittent gateway routes that reject tools should get one retry."""
+    agent = _make_agent(resolved=True)
+    task = _make_task()
+    budget = BudgetProfile(wall_time_s=60, token_cap=1000, max_tool_calls=10)
+
+    first = AgentResult(
+        task_id=task.task_id,
+        resolved=False,
+        error=(
+            "RuntimeError: Model alias 'coding' resolved, but the routed "
+            "provider does not support tool/function calling."
+        ),
+        artifacts={"failure_type": "INFRA_FAIL"},
+    )
+    second = AgentResult(task_id=task.task_id, resolved=True, wall_time_s=1.0)
+    agent.solve_task = AsyncMock(side_effect=[first, second])
+
+    with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox, \
+         patch("asyncio.sleep", new=AsyncMock()):
+        mock_sandbox.return_value = tmp_path
+        run_data = asyncio.run(
+            run_lane(agent, "B7", [task], budget, None, task_timeout_s=10),
+        )
+
+    result = run_data["results"][0]
+    assert result["resolved"] is True
+    assert result["artifacts"]["infra_retry_attempted"] is True
+    assert result["artifacts"]["infra_retry_resolved"] is True
+    assert run_data["aggregate"]["infra_fails"] == 0
+
+
+def test_run_lane_retries_structured_transient_infra(tmp_path: Path):
+    """Structured transient_class should drive retry even without keyword text."""
+    agent = _make_agent(resolved=True)
+    task = _make_task()
+    budget = BudgetProfile(wall_time_s=60, token_cap=1000, max_tool_calls=10)
+
+    first = AgentResult(
+        task_id=task.task_id,
+        resolved=False,
+        error="provider selected an incompatible route",
+        artifacts={
+            "failure_type": "INFRA_FAIL",
+            "failure_evidence": {
+                "transient_class": "gateway_route_rejection",
+            },
+        },
+    )
+    second = AgentResult(task_id=task.task_id, resolved=True, wall_time_s=1.0)
+    agent.solve_task = AsyncMock(side_effect=[first, second])
+
+    with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox, \
+         patch("asyncio.sleep", new=AsyncMock()):
+        mock_sandbox.return_value = tmp_path
+        run_data = asyncio.run(
+            run_lane(agent, "B7", [task], budget, None, task_timeout_s=10),
+        )
+
+    result = run_data["results"][0]
+    assert result["resolved"] is True
+    assert result["artifacts"]["infra_retry_attempted"] is True
+    assert result["artifacts"]["infra_retry_reason_class"] == "gateway_route_rejection"
+
+
+def test_run_lane_does_not_retry_structured_non_transient_infra(tmp_path: Path):
+    """A structured non-transient class should override broad legacy keywords."""
+    agent = _make_agent(resolved=True)
+    task = _make_task()
+    budget = BudgetProfile(wall_time_s=60, token_cap=1000, max_tool_calls=10)
+
+    first = AgentResult(
+        task_id=task.task_id,
+        resolved=False,
+        error="ConnectionRefusedError: sandbox service is intentionally absent",
+        artifacts={
+            "failure_type": "INFRA_FAIL",
+            "failure_evidence": {
+                "transient_class": "agent_task_error",
+            },
+        },
+    )
+    agent.solve_task = AsyncMock(return_value=first)
+
+    with patch("benchmarks.benchmark_runner.create_task_sandbox") as mock_sandbox, \
+         patch("asyncio.sleep", new=AsyncMock()):
+        mock_sandbox.return_value = tmp_path
+        run_data = asyncio.run(
+            run_lane(agent, "B7", [task], budget, None, task_timeout_s=10),
+        )
+
+    result = run_data["results"][0]
+    assert result["resolved"] is False
+    assert "infra_retry_attempted" not in result["artifacts"]
+    assert agent.solve_task.await_count == 1
 
 
 # --- Tool restriction injection ---

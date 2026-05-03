@@ -1137,6 +1137,36 @@ class TestHandleCost:
         assert "Cache: 8,512 cached / 10,734 input (79% hit) - saved ~$0.02" in output
 
     @pytest.mark.asyncio()
+    async def test_handle_cost_detail_mode_renders_cache_writes_and_reasoning(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Tier 1.3 /cost detail surfaces cache writes and reasoning tokens."""
+        from autocode.agent.cost_dashboard import CostDashboard
+        from autocode.agent.token_tracker import TokenTracker
+        from autocode.app.commands import _handle_cost
+
+        app = _make_mock_app(tmp_path)
+        dashboard = CostDashboard()
+        tracker = TokenTracker(cost_dashboard=dashboard)
+        tracker.record(
+            prompt_tokens=10_000,
+            completion_tokens=2_000,
+            provider="openrouter / anthropic/claude",
+            cached_input_tokens=6_000,
+            cache_creation_tokens=1_000,
+            reasoning_tokens=500,
+        )
+        app._session_stats.token_tracker = tracker
+
+        await _handle_cost(app, "--detail")
+
+        output = app._messages[-1]
+        assert "cache writes: 1,000" in output
+        assert "reasoning: 500" in output
+        assert "effective input multiplier: 0.585x" in output
+
+    @pytest.mark.asyncio()
     async def test_handle_cost_renders_threshold_when_set(self, tmp_path: Path) -> None:
         """Cost limit display is shown only when configured."""
         from autocode.agent.cost_dashboard import CostDashboard

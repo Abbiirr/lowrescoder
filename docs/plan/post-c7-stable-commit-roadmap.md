@@ -1,15 +1,15 @@
 # Post-C7.GATE Stable-Commit Roadmap
 
-> **Status:** LOCKED FOR POST-COMMIT — Tranche 4 is agent-closed and Claude-approved in `AGENTS_CONVERSATION.MD` Entry 1694.
-> **Activation:** no phase starts until the user lands the stable commit and signals the six user-decision defaults or overrides.
-> **Authoritative source-of-truth:** this document is the master post-commit reference. Per-tier deep specs live in the root-level roadmap files (`00-INDEX.md` through `05-cross-cutting-concerns.md`).
+> **Status:** LOCKED FOR POST-COMMIT — Tranche 4 is agent-closed, Claude-approved in `AGENTS_CONVERSATION.MD` Entry 1694, and committed as `386ef04 Implements till c7`.
+> **Activation:** no phase starts until the user signals the six user-decision defaults or overrides and prompts the builder.
+> **Historical reference:** active execution now flows through `next_remaining_plan.md`, `next_remaining_todo.md`, and the HFIX plan. Per-tier deep specs live under `docs/plan/roadmaps/2026-04-30-tier-roadmap/`.
 > **Builder handoff:** `docs/plan/post-c7-builder-handoff.md`.
 
 ---
 
 ## Why this document exists
 
-After C7.GATE closes and the user lands the stable commit, AutoCode enters a new program: a 4-tier roadmap drafted 2026-04-30 covering prompt cache, app-server protocol, file-system memory, and proactive/future tracks. The roadmap files at repo root contain ~2000 lines of tier specs. This document distills that into the **sequenced execution order** the team agreed on, with file targets, contracts, acceptance gates, and dependencies — enough to start work without re-reading the source roadmap files for routine reference.
+After C7.GATE closes and the user lands the stable commit, AutoCode enters a new program: a 4-tier roadmap drafted 2026-04-30 covering prompt cache, app-server protocol, file-system memory, and proactive/future tracks. The roadmap files under `docs/plan/roadmaps/2026-04-30-tier-roadmap/` contain ~2000 lines of tier specs. This document distills that into the **sequenced execution order** the team agreed on, with file targets, contracts, acceptance gates, and dependencies — enough to start work without re-reading the source roadmap files for routine reference.
 
 When a phase activates, spawn a per-phase atomic checklist following the `docs/plan/backend-robustness-tranche-4-checklist.md` pattern. Until then this document is the plan.
 
@@ -19,16 +19,16 @@ When a phase activates, spawn a per-phase atomic checklist following the `docs/p
 
 | File | Topic |
 |---|---|
-| `00-INDEX.md` | Roadmap overview + execution order + dependency graph (covers Tiers 1-4) |
-| `01-tier1-prompt-cache.md` | Tier 1 prompt cache breakpoint injection, stable/dynamic boundary, reasoning-token capture |
-| `02-tier2-app-server-protocol.md` | Tier 2 Item/Turn/Thread refactor, transports, `turn/steer` |
-| `03-tier3-memory-architecture.md` | Tier 3 file-system 3-layer memory, Session Notes, verify-before-use |
-| `04-tier4-future-tracks.md` | Tier 4 KAIROS, ephemeral forks, sticky envs, headless `--json` |
-| `05-cross-cutting-concerns.md` | Testing strategy, telemetry, migration safety, rollback, performance budgets, sequencing risks |
-| `07-tier5-harness-reliability.md` | Tier 5 drift detectors + PEV loop + Ralph Loop (added 2026-04-30) |
-| `08-tier6-minimal-tui.md` | Tier 6 minimal lightweight TUI rewrite (or refactor) (added 2026-04-30) |
-| `09-tier7-context-engineering.md` | Tier 7 filesystem-as-context scratch store + entropy management + verify-tightening (added 2026-04-30) |
-| `10-tier8-observability-evals.md` | Tier 8 telemetry plumbing + eval suite + regression discipline (added 2026-04-30) |
+| `docs/plan/roadmaps/2026-04-30-tier-roadmap/00-INDEX.md` | Roadmap overview + execution order + dependency graph (covers Tiers 1-4) |
+| `docs/plan/roadmaps/2026-04-30-tier-roadmap/01-tier1-prompt-cache.md` | Tier 1 prompt cache breakpoint injection, stable/dynamic boundary, reasoning-token capture |
+| `docs/plan/roadmaps/2026-04-30-tier-roadmap/02-tier2-app-server-protocol.md` | Tier 2 Item/Turn/Thread refactor, transports, `turn/steer` |
+| `docs/plan/roadmaps/2026-04-30-tier-roadmap/03-tier3-memory-architecture.md` | Tier 3 file-system 3-layer memory, Session Notes, verify-before-use |
+| `docs/plan/roadmaps/2026-04-30-tier-roadmap/04-tier4-future-tracks.md` | Tier 4 KAIROS, ephemeral forks, sticky envs, headless `--json` |
+| `docs/plan/roadmaps/2026-04-30-tier-roadmap/05-cross-cutting-concerns.md` | Testing strategy, telemetry, migration safety, rollback, performance budgets, sequencing risks |
+| `docs/plan/roadmaps/2026-04-30-tier-roadmap/07-tier5-harness-reliability.md` | Tier 5 drift detectors + PEV loop + Ralph Loop (added 2026-04-30) |
+| `docs/plan/roadmaps/2026-04-30-tier-roadmap/08-tier6-minimal-tui.md` | Tier 6 minimal lightweight TUI rewrite (or refactor) (added 2026-04-30) |
+| `docs/plan/roadmaps/2026-04-30-tier-roadmap/09-tier7-context-engineering.md` | Tier 7 filesystem-as-context scratch store + entropy management + verify-tightening (added 2026-04-30) |
+| `docs/plan/roadmaps/2026-04-30-tier-roadmap/10-tier8-observability-evals.md` | Tier 8 telemetry plumbing + eval suite + regression discipline (added 2026-04-30) |
 
 ---
 
@@ -37,7 +37,7 @@ When a phase activates, spawn a per-phase atomic checklist following the `docs/p
 The roadmap's own "best-bang-for-buck" order is `1.1 → 1.2 → 1.3 → 3.3 → 2.1 → 2.3 → 2.2 → 3.1 → 3.2 → 4.4 → 4.2 → 4.3 → 4.1`. We deviate on three axes:
 
 1. **AI verification harness narrow substrate goes FIRST.** It de-risks every downstream tier. Claude proposed it in Entry 1662 as Phase 3 candidate; Codex pushed it to Phase 1 in Entry 1663; Claude ratified in Entry 1664. Substrate-only scope, not the full 7-milestone plan in `docs/plan/ai-verification-harness-plan.md`.
-2. **Tier 3 (memory) comes BEFORE Tier 2 (app-server protocol).** The roadmap itself acknowledges this in `05-cross-cutting-concerns.md` §"Things I'd do differently": "Memory before App Server. Tier 3 doesn't depend on Tier 2 and the 3-layer memory delivers immediately visible quality." Given no concrete 2nd-client surface signal from the user, the Tier 2.1 ROI is purely speculative.
+2. **Tier 3 (memory) comes BEFORE Tier 2 (app-server protocol).** The roadmap itself acknowledges this in `docs/plan/roadmaps/2026-04-30-tier-roadmap/05-cross-cutting-concerns.md` §"Things I'd do differently": "Memory before App Server. Tier 3 doesn't depend on Tier 2 and the 3-layer memory delivers immediately visible quality." Given no concrete 2nd-client surface signal from the user, the Tier 2.1 ROI is purely speculative.
 3. **Sensors-first doctrine for Tiers 5-8.** Tier 8 explicitly argues "If the team wants to ship one thing from Tiers 5-8, ship Tier 8 first" because evals/telemetry are how you know if other tiers actually help. We honor this by interleaving small sensor phases (P1a telemetry, P3a drift detectors) BEFORE the big optimizations (P3 memory, P5 file-system). Each small sensor phase fits between two large existing phases without disrupting them.
 
 ### Final phase order (P1 → P5 unchanged; P-letter interleaves added)
@@ -163,7 +163,7 @@ Session lifecycle (`session_start`, `thread_start`, `turn_start`, etc.); tool ex
 | Capture `cache_creation_input_tokens` + `cache_read_input_tokens` from response | same file | (in same delta) |
 | OllamaProvider no-op guard | `autocode/src/autocode/layer4/llm.py` (line 639+) | minimal |
 
-**Detection rules** per `01-tier1-prompt-cache.md` §"Detection rules":
+**Detection rules** per `docs/plan/roadmaps/2026-04-30-tier-roadmap/01-tier1-prompt-cache.md` §"Detection rules":
 - Anthropic direct → all current models support explicit cache_control
 - OpenRouter → only `anthropic/*` and `google/gemini-*` (passes cache_control through)
 - OpenAI → automatic prefix caching, no markup needed
@@ -206,7 +206,7 @@ Session lifecycle (`session_start`, `thread_start`, `turn_start`, etc.); tool ex
 - LLM-eval test (best-effort): model re-reads file before relying on stale memory
 - P1 harness scenario: cache-hit ratio > 0.5 measured deterministically across simulated 5-min session restart
 
-### Hard constraints (per `01-tier1-prompt-cache.md` §"Risk & mitigation")
+### Hard constraints (per `docs/plan/roadmaps/2026-04-30-tier-roadmap/01-tier1-prompt-cache.md` §"Risk & mitigation")
 
 - Do NOT manually override `provider.order` on OpenRouter — that disables sticky routing
 - Cache_control breakpoints have a hard limit of 4 per request — reserve them: system / tool defs / RulesLoader / optional CLAUDE.md
@@ -283,7 +283,7 @@ Agent organically learns to use narrower queries because broad ones produce stub
 | Deprecate (don't drop) `agent/memory.py` — leave for one minor version | rename + re-export | minimal |
 | Re-target `consolidation.py` (autoDream) writes from SQLite to topic files | `autocode/src/autocode/session/consolidation.py` | ~120 delta |
 
-**Hard rules** from `03-tier3-memory-architecture.md`:
+**Hard rules** from `docs/plan/roadmaps/2026-04-30-tier-roadmap/03-tier3-memory-architecture.md`:
 - `MEMORY.md` ≤ 200 lines, ~150 chars per pointer line, pointers only (no content)
 - Topic files: soft limit 1000 lines, then split into `<topic>-<sub>.md`
 - Daily logs: append-only (`logs/YYYY/MM/YYYY-MM-DD.md`), never auto-loaded
@@ -500,7 +500,7 @@ Per Tier 8 file: **without evals, every later tier is a guess about whether thin
 
 ### Why deferred
 
-Per `05-cross-cutting-concerns.md` §"Things I'd do differently" #3: "If no second client is on the horizon, you're paying ~2 weeks of refactor for purely speculative future value. Defer if no concrete client surface is planned within 6 months."
+Per `docs/plan/roadmaps/2026-04-30-tier-roadmap/05-cross-cutting-concerns.md` §"Things I'd do differently" #3: "If no second client is on the horizon, you're paying ~2 weeks of refactor for purely speculative future value. Defer if no concrete client surface is planned within 6 months."
 
 ### Hold-release triggers — ship Tier 2.x only when ≥ 1 of these is true
 
@@ -596,7 +596,7 @@ If P4 stays DEFERRED indefinitely, ship Path A refactor at any P-letter slot. If
 ### Tier 4.1 — KAIROS proactive mode
 
 - **Flag:** `AUTOCODE_FEATURE_KAIROS=true`
-- **Hard prerequisite:** ≥ 4 weeks of P2 Tier-1.3 telemetry baseline + observability story per `05-cross-cutting-concerns.md` §"KAIROS won't ship cleanly without a strong observability story first"
+- **Hard prerequisite:** ≥ 4 weeks of P2 Tier-1.3 telemetry baseline + observability story per `docs/plan/roadmaps/2026-04-30-tier-roadmap/05-cross-cutting-concerns.md` §"KAIROS won't ship cleanly without a strong observability story first"
 - **Files:** `autocode/src/autocode/agent/proactive.py` (NEW, ~400 LOC) + SleepTool in `agent/tools.py` + 15-second blocking-budget enforcement in `agent/loop.py`
 - **Telemetry:** tick_count / sleep_call_ratio / anti_narration_violations / blast_radius (files changed during proactive runs)
 
@@ -619,7 +619,7 @@ If P4 stays DEFERRED indefinitely, ship Path A refactor at any P-letter slot. If
 
 ## Cross-cutting concerns (apply to every phase)
 
-These are inherited unchanged from `05-cross-cutting-concerns.md` — no deviations proposed.
+These are inherited unchanged from `docs/plan/roadmaps/2026-04-30-tier-roadmap/05-cross-cutting-concerns.md` — no deviations proposed.
 
 ### Testing budget per phase
 
@@ -718,7 +718,7 @@ The original 3 questions from Entry 1662 + 3 new questions raised by Tiers 5-8 i
 
 ## What this roadmap deliberately omits
 
-Per `00-INDEX.md` §"What this roadmap deliberately omits":
+Per `docs/plan/roadmaps/2026-04-30-tier-roadmap/00-INDEX.md` §"What this roadmap deliberately omits":
 
 - 5-tier compaction parity — current 3-tier covers ~90% of value
 - Anti-distillation tooling — irrelevant for non-distilled product
@@ -734,7 +734,7 @@ Per `00-INDEX.md` §"What this roadmap deliberately omits":
 ## Activation runbook (when C7.GATE closes and stable commit lands)
 
 1. Confirm C7.GATE artifact stored, full regression sweep green, Claude Entry 1694 APPROVE present, and user committed stable
-2. Re-read this document + `00-INDEX.md` + Tier 5-8 source docs
+2. Re-read this document + `docs/plan/roadmaps/2026-04-30-tier-roadmap/00-INDEX.md` + Tier 5-8 source docs
 3. Answer the 6 open user-decisions (or note that defaults stand)
 4. Spawn `docs/plan/post-c7-phase-1-checklist.md` from `docs/plan/backend-robustness-tranche-4-checklist.md` template (each P-letter phase gets its own checklist when activated)
 5. Open `AGENTS_CONVERSATION.MD` pre-task intent for P1 substrate
@@ -754,11 +754,11 @@ Until step 1 happens, no post-commit work begins. Tranche 4 has priority.
 | Cache-multiplier hook in C6.G6 | Entry 1664 (Claude) + Entry 1665 (Codex hardening: 1.25 cache-write-premium test) |
 | Verify-before-use folded into P2 (not Tranche 4) | Entry 1664 (Claude) |
 | AI verification harness as P1 (narrow substrate) | Entry 1663 (Codex) + Entry 1664 (Claude ratify) + Entry 1665 (Codex confirm) |
-| Tier 3 before Tier 2 sequencing | Entry 1664 (Claude) + `05-cross-cutting-concerns.md` §"Things I'd do differently" |
+| Tier 3 before Tier 2 sequencing | Entry 1664 (Claude) + `docs/plan/roadmaps/2026-04-30-tier-roadmap/05-cross-cutting-concerns.md` §"Things I'd do differently" |
 | P4 Tier 2.1 deferred conditional | Entry 1664 (Claude hold-release triggers) |
-| KAIROS gated on 4-week telemetry baseline | `04-tier4-future-tracks.md` + Entry 1664 |
+| KAIROS gated on 4-week telemetry baseline | `docs/plan/roadmaps/2026-04-30-tier-roadmap/04-tier4-future-tracks.md` + Entry 1664 |
 | Tier 5-8 integration (P1a, P2a, P3a-d, P4a phases) | Entry 1684 (Claude); Tiers 5-8 source files added 2026-04-30 |
-| Sensors-first doctrine (P1a + P3a interleave before big optimizations) | `10-tier8-observability-evals.md` §"Why this is last but not optional" + `07-tier5-harness-reliability.md` §"Why this matters now" |
-| TUI Path A (refactor) recommended default; Path B (rewrite) gated on P4 | `08-tier6-minimal-tui.md` §"Counterargument: don't rewrite, refactor" + Entry 1684 (Claude) |
+| Sensors-first doctrine (P1a + P3a interleave before big optimizations) | `docs/plan/roadmaps/2026-04-30-tier-roadmap/10-tier8-observability-evals.md` §"Why this is last but not optional" + `docs/plan/roadmaps/2026-04-30-tier-roadmap/07-tier5-harness-reliability.md` §"Why this matters now" |
+| TUI Path A (refactor) recommended default; Path B (rewrite) gated on P4 | `docs/plan/roadmaps/2026-04-30-tier-roadmap/08-tier6-minimal-tui.md` §"Counterargument: don't rewrite, refactor" + Entry 1684 (Claude) |
 | `agent/loop.py` hook-architecture refactor required between P3 and P3a | Entry 1684 (Claude) — preventive, no source-doc mandate |
-| Mitchell Hashimoto rule (every mistake → eval) operationalized in P3d Tier 8.3 | `10-tier8-observability-evals.md` §"Tier 8.3 — Regression discipline" |
+| Mitchell Hashimoto rule (every mistake → eval) operationalized in P3d Tier 8.3 | `docs/plan/roadmaps/2026-04-30-tier-roadmap/10-tier8-observability-evals.md` §"Tier 8.3 — Regression discipline" |

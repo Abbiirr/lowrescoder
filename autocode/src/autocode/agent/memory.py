@@ -1,5 +1,13 @@
 """Episodic memory store: learned patterns that persist across sessions.
 
+.. deprecated::
+    This SQLite-backed MemoryStore is deprecated as of P3 (2026-05-01).
+    Use ``autocode.session.memory_fs.MemoryFS`` instead, which provides
+    file-system 3-layer memory (index, topics, daily logs).  The legacy
+    SQLite path remains available via ``AUTOCODE_USE_LEGACY_MEMORY=true``
+    for one minor version.  See ``docs/reference/memory-migration-v1.md``
+    for the migration guide.
+
 Memories are scoped to a project_id (not session_id) so they span sessions
 within the same project. Categories: tool_pattern, user_preference,
 project_fact, error_resolution.
@@ -11,8 +19,15 @@ import json
 import logging
 import sqlite3
 import uuid
+import warnings
 from datetime import UTC, datetime
 from typing import Any
+
+warnings.warn(
+    "autocode.agent.memory is deprecated — use autocode.session.memory_fs.MemoryFS",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 logger = logging.getLogger(__name__)
 

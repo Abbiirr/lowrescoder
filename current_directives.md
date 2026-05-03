@@ -1,16 +1,16 @@
 # Current Directives
 
-> Last updated: 2026-04-30
+> Last updated: 2026-05-03
 
 ## Active Phase
 
-**Backend Robustness Tranche 4 — CLOSED from agent side; awaiting user-owned stable commit.** Canonical plan: `docs/plan/backend-robustness-tranche-4-plan.md`. Sub-plan: `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md`. Master atomic checklist: `docs/plan/backend-robustness-tranche-4-checklist.md`. C4 + C5 + C6 + C7 SB1/SB2/SB3 + C7.GATE are builder-complete and Claude-approved through Entry 1694 as `COMPLETE_WITH_DEFERRED_LIVE_SWEEP`. C7.GATE verification artifact: `autocode/docs/qa/test-results/20260430-194659-c7-gate-final-release-and-benchmark.md`. Live B7-B29/B7-B30 clean sweep remains deferred behind gateway/provider stabilization per `DEFERRED_PENDING_TODO.md` §6.6 (pre-documented infra deferral, not a code regression).
+**Backend Robustness Tranche 4 — CLOSED. Stable commit `386ef04 Implements till c7` landed (2026-04-30).** Canonical plan: `docs/plan/backend-robustness-tranche-4-plan.md`. Sub-plan: `docs/plan/backend-robustness-tranche-4-G3-multi-language-lsp.md`. Master atomic checklist: `docs/plan/backend-robustness-tranche-4-checklist.md`. C4 + C5 + C6 + C7 SB1/SB2/SB3 + C7.GATE were builder-complete and Claude-approved through Entry 1694 as `COMPLETE_WITH_DEFERRED_LIVE_SWEEP`. C7.GATE verification artifact: `autocode/docs/qa/test-results/20260430-194659-c7-gate-final-release-and-benchmark.md`. Live B7-B29/B7-B30 clean sweep remains deferred behind gateway/provider stabilization per `docs/plan/deferred/deferred-pending-todo.md` §6.6 (pre-documented infra deferral, not a code regression).
 
-**Fast-forward batch authorization (Entry 1675):** spent. Codex carried C6.G6 → C6.GATE → C7 SB1/SB2/SB3 → C7.GATE under the user redirect and Claude approved the final gate in Entry 1694. Post-commit work returns to standard per-slice workflow unless the user explicitly re-authorizes batch mode.
+**Fast-forward batch authorization:** Entry 1675 is spent for Tranche 4. Entry 1718 authorized the post-C7 reliability/eval batch, and Entry 1743 locks User Option C: one stable commit at P5 close, not at intermediate boundaries. Codex is the current builder under user redirect; Claude remains reviewer/architect. No agent may commit, push, tag, reset, checkout, or otherwise mutate git history.
 
-**Next step:** user-owned stable commit. Latest full unit is `2159 passed, 12 skipped`; benchmark harness `204 passed`; all 8 LSP PTY smokes passed; auto-verify PTY passed; cost-routing canary passed; real-gateway PTY canary passed; `git diff --check` clean. Active comms thread = Entry 1685 (post-C7 roadmap pointer), Entry 1694 (final C7.GATE APPROVE), and Entry 1695 (post-commit routing/reset). Resolved C5-C7 fast-forward entries were archived to `docs/communication/old/2026-04-30-tranche-4-c5-c7-fast-forward-1664-1693.md`.
+**Current post-C7 status:** P0 hardening/reconciliation, P1 AI verification substrate, P1a telemetry plumbing, P2 prompt cache + verify-before-use, P2a Scratch Store, P3 File-System Memory, HR hook architecture, and P3a Drift Detectors are builder-complete. Claude approved HR close and P3a in Entry 1743. Current green baselines at P3a close: full unit `2244 passed, 12 skipped, 1 warning`; benchmark substrate `29 passed`; P3a drift scenario PASS run ID `20260501-135410-25b47728`; `git diff --check` clean. User cleanup direction on 2026-05-02 promotes **HFIX AI verification harness fixes** ahead of P3b. Active HFIX scope is `docs/plan/ai-verification-harness-fixes-plan.md`; deterministic HFIX is builder-complete and Codex-reviewed, with Claude review requested in `AGENTS_CONVERSATION.MD` Entry 1821. Live gateway-dependent canaries remain deferred/queued under the new long supervised retry policy. P3b/P3c/P3d/P5 resume after Claude/User accepts the HFIX residual-risk state.
 
-**Post-C7.GATE roadmap reference:** `docs/plan/post-c7-stable-commit-roadmap.md`; builder handoff: `docs/plan/post-c7-builder-handoff.md`. Phase order is P1 AI verification harness narrow substrate → P1a telemetry plumbing → P2 prompt cache + verify-before-use → P2a scratch store → P3 file-system memory → P3a-d reliability/eval phases → P4 conditional Item/Turn/Thread → P4a TUI refactor/rewrite → P5 feature-flag tracks. Tier deep specs live at repo root in `00-INDEX.md` through `05-cross-cutting-concerns.md` and `07-tier5-harness-reliability.md` through `10-tier8-observability-evals.md`. No post-C7 phase starts until the user lands the stable commit and signals the user-decision defaults/overrides.
+**Post-C7.GATE roadmap reference:** `next_remaining_plan.md` + `next_remaining_todo.md` are the authoritative active execution pair; `docs/plan/ai-verification-harness-fixes-plan.md` is the active HFIX plan; `full_future_roadmap.md` is a strategic projection, not the atomic checklist; historical reference: `docs/plan/post-c7-stable-commit-roadmap.md`; builder handoff: `docs/plan/post-c7-builder-handoff.md`. Active phase order is HFIX → P3b → P3c → P3d → P5. P4a TUI Path A and HR-EXT-{1,2,3} remain follow-up tranche items after the P5 stable commit unless the user explicitly redirects; HARNESS-EXT-{4,5,6} has been promoted into HFIX where applicable. Tier deep specs live under `docs/plan/roadmaps/2026-04-30-tier-roadmap/`.
 
 **Completed Tranche 4 checkpoints:** Packet 3 feature contracts, C4.G1 per-tool checkpoints + `/rollback`, C4.G2 ranked repo-map + `/repomap`, C4.G7' git-aware staging + forbidden-git enforcement, C4.GATE, C5.G3.0 LSP framework, all 8 language adapters, C5.G4 auto-verify loop, C5.GATE, C6.G5 headless NDJSON mode, C6.G6 Layer 4.5 cost router, C6.GATE, C7 SB1/SB2/SB3, and C7.GATE.
 
@@ -129,8 +129,8 @@ All non-tree-mutating git ops only per `AGENTS.md`. Per-slice docs+artifact-befo
 
 This track now runs alongside HR-5; it does not pause the HR-5 product queue unless the user explicitly says to pause it.
 
-- Canonical plan: `modular_migration_plan.md`
-- Todo / execution checklist: `modular_migration_todo.md`
+- Canonical plan: `docs/plan/deferred/modular_migration_plan.md`
+- Todo / execution checklist: `docs/plan/deferred/modular_migration_todo.md`
 - Current verification note: `autocode/docs/qa/test-results/20260423-210037-modular-phase5-closeout.md`
 - Current build slice: Tranches B, C, D, and Phase 5 are now COMPLETE.
   - Phase 2: `autocode.backend.chat` owns chat-turn execution, callback wiring, and turn-result shaping instead of `BackendServer`
@@ -141,7 +141,7 @@ This track now runs alongside HR-5; it does not pause the HR-5 product queue unl
   - The benchmark-owned TUI harness now supports the split attach/TCP shape via `--autocode-tui-connection attach`, with backend-host artifact capture and pyte-backed screen reconstruction
   - Phase 5 swapability proof is now closed via the attach-path artifact `docs/qa/test-results/20260423-145703-B13-PROXY-autocode.json` plus the same-window spawn-managed comparator `docs/qa/test-results/20260423-150833-B13-PROXY-autocode.json`
   - The attach-vs-spawn comparison matched closely enough to treat the live retry storm as attach-unrelated: both runs ended as `INFRA_FAIL` at ~`181s`, both reached `ready -> streaming`, and `first_streaming_s` was within ~`1.1s` (`90.527s` attach vs `91.638s` spawn)
-  - Remaining follow-through on this architecture track: the Phase 2-4 follow-through items plus Phase 6 cleanup recorded in `modular_migration_todo.md`
+  - Remaining follow-through on this architecture track: the Phase 2-4 follow-through items plus Phase 6 cleanup recorded in `docs/plan/deferred/modular_migration_todo.md`
 - Keep the HR-5 benchmark-owned canary convention (`B13-PROXY`) for backend-host or frontend-transport changes that touch the user path
 - User-directed 2026-04-24 refinement order before more frontend work: `docs/plan/backend-tightening-refinement-plan.md`
 
@@ -210,7 +210,7 @@ This track now runs alongside HR-5; it does not pause the HR-5 product queue unl
 
 - VHS baseline refreshed on 2026-04-21 after Track 4 chrome/recovery promotion; MVP Track 4 scenes now run as hard gates.
 - Slice 2 (themed parallel renderer) — deferred.
-- Remaining pre-session cruft files (`DEFERRED_PENDING_TODO.md`, `benchmarks/run_b7_b30_sweep.sh`) — disposition pending. The root `deep-research-report.md` draft has been moved to `docs/archive/deep-research-report.md`.
+- Remaining pre-session cruft files (`docs/plan/deferred/deferred-pending-todo.md`, `benchmarks/run_b7_b30_sweep.sh`) — disposition pending. The root `deep-research-report.md` draft has been moved to `docs/archive/deep-research-report.md`.
 
 ## Next-Sprint Candidate: Stabilization + Parity (PROPOSED 2026-04-20)
 
