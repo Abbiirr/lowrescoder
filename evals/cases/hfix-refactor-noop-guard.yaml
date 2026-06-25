@@ -1,0 +1,33 @@
+id: hfix-refactor-noop-guard
+name: HFIX refactor no-op guard
+provenance:
+  source: hfix
+  bug_id: refactor-noop-guard
+  recorded_at: "2026-05-04"
+setup:
+  fixture_repo: ""
+  initial_files:
+    src/example.py: "def add(a, b):\n    return a + b\n"
+input:
+  user_message: "Refactor without changing behavior and verify the tests."
+expected_outcomes:
+  must_have:
+    - "tool_call_completed"
+    - "turn_completed"
+  must_not_have:
+    - "no_tests_collected"
+  judge_criteria:
+    - correctness
+    - minimality
+config:
+  model: coding
+  max_turns: 4
+  timeout_sec: 180
+  temperature: 0.0
+  seed: 0
+baseline:
+  correctness_score: 0.90
+  minimality_score: 0.85
+  test_quality_score: 0.80
+  cost_usd_p50: 0.25
+archived: false

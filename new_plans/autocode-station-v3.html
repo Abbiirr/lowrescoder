@@ -1,0 +1,1430 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>AutoCode Station — Operator IDE (v3)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;650&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   AutoCode Station v3 — attention-first coding-agent control station
+   that becomes a minimal native IDE on demand, with collaboration.
+   Visual language kept from v2: paper panels, hairline borders, one solid
+   primary, status colors only when meaningful, Inter + JetBrains Mono.
+   New in v3: corrected IA (Inbox-first), native Editor (Zed/Cursor-style),
+   live collaboration (presence + remote cursors + follow), review merge-gate.
+   ========================================================================== */
+:root{
+  --bg:#FAFAF8; --panel:#FFFFFF; --side:#F4F4F2; --inset:#F7F7F5; --inset2:#F1F1EF;
+  --line:#E7E7E4; --line2:#EFEFEC;
+  --text:#1B1B1E; --muted:#6F6F77; --faint:#A4A4AC;
+  --primary:#1B1B1E; --primary-tx:#FFFFFF;
+  --green:#178457; --green-bg:#E9F5EF;
+  --amber:#B26B0B; --amber-bg:#FCF2E0;
+  --red:#C53B35;   --red-bg:#FBEEED;
+  --blue:#3D5BDB;  --blue-bg:#EDF0FD;
+  --violet:#7A4DD6; --teal:#0E8C8C; --rose:#C24A78;
+  --diff-add:#E9F6EF; --diff-add-tx:#11704E; --diff-add-gutter:#CFEBDD;
+  --diff-del:#FBEFEE; --diff-del-tx:#A33834; --diff-del-gutter:#F2D4D2;
+  --kw:#9A4DB0; --str:#178457; --num:#B26B0B; --com:#9A9AA3; --fn:#3D5BDB; --typ:#0E8C8C;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 12px 34px rgba(0,0,0,.07);
+  --sans:'Inter',ui-sans-serif,system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+[data-theme="dark"]{
+  --bg:#161618; --panel:#1C1C1F; --side:#131315; --inset:#202023; --inset2:#26262A;
+  --line:#2B2B30; --line2:#242428;
+  --text:#ECECEF; --muted:#9A9AA3; --faint:#64646E;
+  --primary:#ECECEF; --primary-tx:#161618;
+  --green:#3CC58E; --green-bg:#16322665;
+  --amber:#E0A23E; --amber-bg:#37281780;
+  --red:#EC6E69;   --red-bg:#3B1D1D80;
+  --blue:#90A4FF;  --blue-bg:#1D244780;
+  --violet:#B79BF0; --teal:#4FC7C7; --rose:#E58BB0;
+  --diff-add:rgba(60,197,142,.10); --diff-add-tx:#7FD6B2; --diff-add-gutter:rgba(60,197,142,.3);
+  --diff-del:rgba(236,110,105,.10); --diff-del-tx:#E9A09C; --diff-del-gutter:rgba(236,110,105,.3);
+  --kw:#C792EA; --str:#7FD6B2; --num:#E0A23E; --com:#64646E; --fn:#90A4FF; --typ:#4FC7C7;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 34px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font:13.5px/1.5 var(--sans);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+.mono{font-family:var(--mono)}
+.muted{color:var(--muted)} .faint{color:var(--faint)}
+.green{color:var(--green)} .red{color:var(--red)} .amber{color:var(--amber)} .blue{color:var(--blue)}
+::selection{background:rgba(61,91,219,.16)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:1px;border-radius:6px}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--faint)}
+
+/* primitives */
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);
+  border-radius:9px;padding:6px 12px;font-weight:500;transition:.12s;white-space:nowrap}
+.btn:hover{background:var(--side)}
+.btn.primary{background:var(--primary);color:var(--primary-tx);border-color:var(--primary)}
+.btn.primary:hover{opacity:.88}
+.btn.danger{color:var(--red)}
+.btn.sm{padding:4px 9px;font-size:12.5px;border-radius:8px}
+.btn:disabled{opacity:.42;cursor:default}
+.iconbtn{width:32px;height:32px;display:grid;place-items:center;border-radius:8px;color:var(--muted);font-size:15px}
+.iconbtn:hover{background:var(--side);color:var(--text)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);
+  border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:var(--panel);white-space:nowrap}
+.chip.ok{color:var(--green);background:var(--green-bg);border-color:transparent}
+.chip.warn{color:var(--amber);background:var(--amber-bg);border-color:transparent}
+.chip.bad{color:var(--red);background:var(--red-bg);border-color:transparent}
+.chip.info{color:var(--blue);background:var(--blue-bg);border-color:transparent}
+.chip.solid{background:var(--primary);color:var(--primary-tx);border-color:var(--primary)}
+.dot{width:8px;height:8px;border-radius:99px;background:var(--faint);flex:0 0 8px}
+.dot.run{background:var(--green);animation:pulse 1.6s ease-in-out infinite}
+.dot.warn{background:var(--amber);animation:pulse 1.2s ease-in-out infinite}
+.dot.fail{background:var(--red)} .dot.done{background:var(--faint)} .dot.ok{background:var(--green)}
+@keyframes pulse{50%{opacity:.3}}
+.kbd{font:11px var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;
+  padding:1px 5px;background:var(--inset);color:var(--muted)}
+.tag{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+
+/* ===== top bar ===== */
+.top{height:48px;display:flex;align-items:center;gap:14px;padding:0 14px;border-bottom:1px solid var(--line);
+  background:var(--panel);position:relative;z-index:30}
+.brand{display:flex;align-items:center;gap:9px;font-weight:650;font-size:14px}
+.mark{width:24px;height:24px;border-radius:7px;background:var(--primary);color:var(--primary-tx);
+  display:grid;place-items:center;font-size:11px;font-weight:700}
+.ctx{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);
+  border-left:1px solid var(--line);padding-left:14px}
+.ctx b{color:var(--text);font-weight:600}
+.metrics{display:flex;align-items:center;gap:6px}
+.metric{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);
+  padding:3px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel)}
+.metric b{color:var(--text)}
+.metric.attn{color:var(--amber);background:var(--amber-bg);border-color:transparent;cursor:pointer}
+.metric.run b{color:var(--green)}
+.spacer{flex:1}
+.cmdk{display:flex;align-items:center;gap:8px;width:240px;height:32px;padding:0 11px;border-radius:9px;
+  border:1px solid var(--line);background:var(--inset);color:var(--faint);font-size:12.5px;cursor:text}
+.cmdk:hover{background:var(--side)}
+/* presence */
+.presence{display:flex;align-items:center}
+.av{width:26px;height:26px;border-radius:99px;display:grid;place-items:center;font-size:11px;font-weight:650;
+  color:#fff;margin-left:-7px;border:2px solid var(--panel);position:relative;cursor:pointer}
+.av:first-child{margin-left:0}
+.av .on{position:absolute;right:-1px;bottom:-1px;width:8px;height:8px;border-radius:99px;background:var(--green);border:2px solid var(--panel)}
+.collabBtn{margin-left:10px}
+.collabBtn.live{background:var(--green-bg);color:var(--green);border-color:transparent}
+
+/* ===== shell: activity rail + content ===== */
+.body{height:calc(100% - 48px);display:grid;grid-template-columns:54px 1fr}
+.rail{background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;
+  align-items:center;padding:10px 0;gap:3px}
+.railBtn{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:var(--muted);position:relative}
+.railBtn:hover{background:var(--panel);color:var(--text)}
+.railBtn.on{background:var(--panel);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+.railBtn.on::before{content:"";position:absolute;left:-10px;top:9px;bottom:9px;width:3px;border-radius:99px;background:var(--primary)}
+.railBtn svg{width:19px;height:19px}
+.railBtn .rb{position:absolute;top:5px;right:5px;min-width:15px;height:15px;border-radius:99px;background:var(--amber);
+  color:#fff;font-size:9.5px;font-weight:700;display:grid;place-items:center;padding:0 3px}
+.railBtn .rb.blue{background:var(--blue)}
+.railTip{position:absolute;left:48px;top:50%;transform:translateY(-50%);background:var(--primary);color:var(--primary-tx);
+  font-size:12px;padding:4px 9px;border-radius:7px;white-space:nowrap;opacity:0;pointer-events:none;transition:.12s;z-index:60}
+.railBtn:hover .railTip{opacity:1}
+.railSep{width:24px;height:1px;background:var(--line);margin:6px 0}
+
+.content{position:relative;overflow:hidden}
+.view{position:absolute;inset:0;display:none;flex-direction:column}
+.view.on{display:flex}
+.head{height:50px;display:flex;align-items:center;gap:11px;padding:0 18px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.head h1{font-size:15px;font-weight:600}
+.scroll{flex:1;overflow:auto}
+
+/* ===== INBOX ===== */
+.inbox{max-width:920px;margin:0 auto;padding:22px 24px 80px;width:100%}
+.inGroup{margin-bottom:26px}
+.inGroup h2{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);font-weight:600;
+  display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.inGroup h2 .ct{color:var(--muted);background:var(--inset);border-radius:99px;padding:1px 8px;font-size:11px;letter-spacing:0}
+.inCard{display:flex;align-items:center;gap:14px;padding:13px 15px;border:1px solid var(--line);border-radius:12px;
+  background:var(--panel);margin-bottom:8px;cursor:pointer;transition:.12s;position:relative}
+.inCard:hover{border-color:var(--faint);transform:translateY(-1px)}
+.inCard .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:0 0 30px;font-size:14px}
+.inCard.attn{border-left:3px solid var(--amber)}
+.inCard.fail{border-left:3px solid var(--red)}
+.inCard.ready{border-left:3px solid var(--green)}
+.inCard .icon-attn{background:var(--amber-bg);color:var(--amber)}
+.inCard .icon-fail{background:var(--red-bg);color:var(--red)}
+.inCard .icon-ready{background:var(--green-bg);color:var(--green)}
+.inCard .icon-run{background:var(--inset)}
+.inBody{flex:1;min-width:0}
+.inBody .t{font-weight:600;font-size:13.5px}
+.inBody .s{font-size:12.5px;color:var(--muted);margin-top:1px}
+.inMeta{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.inActs{display:flex;gap:6px}
+.miniAv{width:20px;height:20px;border-radius:99px;display:grid;place-items:center;font-size:9.5px;font-weight:650;color:#fff;border:1.5px solid var(--panel)}
+.healthGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:9px}
+.hCell{border:1px solid var(--line);border-radius:11px;padding:11px 13px;background:var(--panel)}
+.hCell .hn{font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:space-between}
+.hCell .hd{font-size:11.5px;color:var(--muted);margin-top:3px}
+
+/* ===== WORKBENCH (3-pane) ===== */
+.work{position:absolute;inset:0;display:grid;grid-template-columns:262px 1fr 332px;grid-template-rows:1fr;min-height:0}
+.work.term{grid-template-rows:1fr 232px}
+.work.norail{grid-template-columns:262px 1fr 0}
+.work.norail .wRail{display:none}
+.wList{grid-column:1;grid-row:1/-1;border-right:1px solid var(--line);background:var(--side);display:flex;flex-direction:column;min-height:0}
+.wListH{height:42px;display:flex;align-items:center;gap:8px;padding:0 13px;border-bottom:1px solid var(--line);font-weight:600;font-size:12.5px}
+.wListBody{flex:1;overflow:auto;padding:8px}
+.gTitle{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:600;
+  padding:9px 6px 5px;display:flex;align-items:center;gap:6px}
+.task{border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:var(--panel);margin-bottom:6px;cursor:pointer;transition:.1s}
+.task:hover{border-color:var(--faint)}
+.task.on{border-color:var(--primary);box-shadow:inset 0 0 0 1px var(--primary)}
+.task.attn{border-left:3px solid var(--amber)}
+.tTop{display:flex;align-items:center;gap:7px}
+.tTitle{font-weight:600;font-size:12.8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tMeta{font-size:11.5px;color:var(--muted);margin-top:3px}
+.tStat{display:flex;gap:9px;font-size:11px;margin-top:6px;color:var(--muted)}
+.tPres{position:absolute}
+
+.wCenter{grid-column:2;grid-row:1;display:flex;flex-direction:column;min-height:0;min-width:0;border-right:1px solid var(--line)}
+.wHead{height:50px;display:flex;align-items:center;gap:9px;padding:0 16px;border-bottom:1px solid var(--line);flex:0 0 auto;flex-wrap:nowrap;overflow:hidden}
+.wHead h2{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.streamWrap{flex:1;overflow:auto;padding:18px 20px}
+.stream{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:13px}
+.userMsg{align-self:flex-end;max-width:80%;background:var(--inset2);border:1px solid var(--line);border-radius:13px 13px 4px 13px;padding:9px 13px;font-size:13px}
+.agentNote{font-size:13px;color:var(--text);line-height:1.55}
+.block{border:1px solid var(--line);border-radius:11px;background:var(--panel);overflow:hidden}
+.blockH{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;font-size:12.5px;font-weight:600;border-bottom:1px solid var(--line2)}
+.steps{padding:6px 12px 10px}
+.step{display:flex;align-items:center;gap:9px;font-size:12.8px;color:var(--muted);padding:3px 0}
+.step.done{color:var(--text)} .step.now{color:var(--text);font-weight:550}
+.step .check{width:15px;height:15px;border-radius:99px;border:1.5px solid var(--line);display:grid;place-items:center;font-size:9px;flex:0 0 15px}
+.step.done .check{background:var(--green);border-color:var(--green);color:#fff}
+.step.now .check{border-color:var(--amber)}
+.evRow{display:flex;align-items:center;gap:10px;padding:8px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:12.8px;cursor:pointer}
+.evRow:hover{border-color:var(--faint)}
+.evGlyph{width:20px;height:20px;border-radius:6px;background:var(--inset);display:grid;place-items:center;font-size:11px;flex:0 0 20px;color:var(--muted)}
+.evMain{flex:1;display:flex;align-items:center;gap:8px;min-width:0}
+.evMain b{font-weight:600} .evMain span{color:var(--muted)}
+.evRight{font-size:12px}
+.evDet{display:none;padding:10px 12px;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;margin-top:-1px}
+.evRow.open + .evDet{display:block}
+.code{font-family:var(--mono);font-size:12px;white-space:pre-wrap;background:var(--inset);border-radius:8px;padding:9px 11px;color:var(--text);line-height:1.55;overflow:auto}
+.evActs{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
+
+/* approval card */
+.appr{border:1px solid var(--amber);border-radius:12px;background:var(--panel);overflow:hidden;box-shadow:0 0 0 3px var(--amber-bg)}
+.apprH{display:flex;align-items:center;gap:8px;padding:11px 13px;background:var(--amber-bg);color:var(--amber);font-weight:650;font-size:13px}
+.apprBody{padding:13px}
+.apprCmd{font-family:var(--mono);font-size:12.5px;background:var(--inset);border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:11px}
+.scopeGrid{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:12.3px;margin-bottom:12px}
+.scopeGrid .k{color:var(--faint)}
+.scopeGrid .v{color:var(--text)}
+.apprActs{display:flex;gap:8px;flex-wrap:wrap}
+
+/* composer (reserved, never overlay) */
+.composer{flex:0 0 auto;border-top:1px solid var(--line);padding:11px 16px;background:var(--panel)}
+.composeBox{max-width:760px;margin:0 auto;border:1px solid var(--line);border-radius:13px;background:var(--panel);overflow:hidden}
+.chipsRow{display:flex;flex-wrap:wrap;gap:6px;padding:9px 11px 0}
+.composeBox textarea{width:100%;border:0;resize:none;padding:9px 12px;background:transparent;min-height:42px;font-size:13px;outline:none}
+.composeBar{display:flex;align-items:center;gap:6px;padding:7px 10px;border-top:1px solid var(--line2)}
+.send{margin-left:auto;width:30px;height:30px;border-radius:8px;background:var(--primary);color:var(--primary-tx);display:grid;place-items:center;font-size:14px}
+
+/* right rail: review/context */
+.wRail{grid-column:3;grid-row:1;display:flex;flex-direction:column;min-height:0;background:var(--panel)}
+.railTabs{display:flex;border-bottom:1px solid var(--line);flex:0 0 auto}
+.railTab{flex:1;padding:10px 0;text-align:center;font-size:12.3px;font-weight:550;color:var(--muted);border-bottom:2px solid transparent}
+.railTab.on{color:var(--text);border-bottom-color:var(--primary)}
+.railBody{flex:1;overflow:auto;padding:13px}
+.fileRow{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;font-size:12.5px;cursor:pointer}
+.fileRow:hover{background:var(--inset)}
+.fileRow .fn{flex:1;font-family:var(--mono);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.diffStat{font-size:11.5px}
+.gateList{display:flex;flex-direction:column;gap:7px}
+.gate{display:flex;align-items:center;gap:9px;font-size:12.5px;padding:8px 10px;border:1px solid var(--line);border-radius:9px}
+.gate .gi{width:18px;height:18px;border-radius:6px;display:grid;place-items:center;font-size:10px;flex:0 0 18px}
+.gate.pass .gi{background:var(--green-bg);color:var(--green)}
+.gate.fail .gi{background:var(--red-bg);color:var(--red)}
+.gate.wait .gi{background:var(--amber-bg);color:var(--amber)}
+
+/* terminal drawer */
+.wTerm{grid-column:2/4;grid-row:2;border-top:1px solid var(--line);background:var(--inset);display:none;flex-direction:column;min-height:0}
+.work.term .wTerm{display:flex}
+.termH{height:36px;display:flex;align-items:center;gap:4px;padding:0 10px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.termTab{padding:4px 11px;border-radius:8px 8px 0 0;font-size:12px;color:var(--muted);border:1px solid transparent}
+.termTab.on{background:var(--panel);color:var(--text);border-color:var(--line);border-bottom-color:var(--panel)}
+.termBody{flex:1;overflow:auto;font-family:var(--mono);font-size:12.3px;padding:11px 13px;line-height:1.6;white-space:pre-wrap}
+.termIn{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--line);background:var(--panel)}
+.termIn .p{color:var(--green);font-family:var(--mono)}
+.termIn input{flex:1;border:0;background:transparent;outline:none;font-family:var(--mono);font-size:12.3px}
+
+/* ===== EDITOR / IDE ===== */
+.ide{position:absolute;inset:0;display:grid;grid-template-columns:236px 1fr 300px;min-height:0}
+.ide.nopanel{grid-template-columns:236px 1fr 0}
+.ide.nopanel .idePanel{display:none}
+.ideTree{grid-column:1;border-right:1px solid var(--line);background:var(--side);display:flex;flex-direction:column;min-height:0}
+.treeH{height:42px;display:flex;align-items:center;justify-content:space-between;padding:0 13px;border-bottom:1px solid var(--line);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;color:var(--faint)}
+.treeBody{flex:1;overflow:auto;padding:6px 8px}
+.trow{display:flex;align-items:center;gap:7px;padding:4px 8px;border-radius:7px;font-size:12.7px;cursor:pointer;position:relative}
+.trow:hover{background:var(--inset)}
+.trow.on{background:var(--inset2)}
+.trow .tg{width:14px;color:var(--faint);font-size:11px;text-align:center;flex:0 0 14px}
+.trow .tn{flex:1;font-family:var(--mono);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trow.dir .tn{font-family:var(--sans);font-size:12.5px;font-weight:550}
+.trow .gs{font-size:10px;font-weight:700;width:14px;text-align:center}
+.gs.M{color:var(--amber)} .gs.A{color:var(--green)} .gs.U{color:var(--blue)}
+.trow .pres{width:8px;height:8px;border-radius:99px;margin-left:2px}
+
+.ideMain{grid-column:2;display:flex;flex-direction:column;min-height:0;min-width:0;border-right:1px solid var(--line)}
+.tabBar{height:38px;display:flex;align-items:stretch;border-bottom:1px solid var(--line);background:var(--side);overflow-x:auto;flex:0 0 auto}
+.etab{display:flex;align-items:center;gap:8px;padding:0 12px;font-size:12.5px;border-right:1px solid var(--line);color:var(--muted);white-space:nowrap;cursor:pointer;position:relative}
+.etab.on{background:var(--panel);color:var(--text)}
+.etab.on::after{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--primary)}
+.etab .fn{font-family:var(--mono);font-size:12px}
+.etab .x{opacity:.4;font-size:13px} .etab:hover .x{opacity:1}
+.etab .ddot{width:7px;height:7px;border-radius:99px;background:var(--amber)}
+.editorWrap{flex:1;overflow:auto;position:relative;background:var(--panel)}
+.editorBar{display:flex;align-items:center;gap:9px;padding:7px 14px;border-bottom:1px solid var(--line2);font-size:12px;color:var(--muted);background:var(--panel);position:sticky;top:0;z-index:5}
+.editorBar .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.editorBar .seg button{padding:3px 10px;font-size:12px;color:var(--muted)}
+.editorBar .seg button.on{background:var(--inset2);color:var(--text)}
+.codeArea{position:relative;font-family:var(--mono);font-size:12.7px;line-height:1.62;padding-bottom:60px}
+.ln{display:flex;min-height:21px}
+.ln .num{width:46px;flex:0 0 46px;text-align:right;padding-right:14px;color:var(--faint);user-select:none;font-size:11.5px}
+.ln .txt{flex:1;white-space:pre;padding-right:18px}
+.ln.add{background:var(--diff-add)} .ln.add .num{background:var(--diff-add-gutter);color:var(--diff-add-tx)}
+.ln.del{background:var(--diff-del)} .ln.del .num{background:var(--diff-del-gutter);color:var(--diff-del-tx)}
+.ln.cur{background:rgba(61,91,219,.06)}
+.tk-kw{color:var(--kw)} .tk-str{color:var(--str)} .tk-num{color:var(--num)} .tk-com{color:var(--com);font-style:italic} .tk-fn{color:var(--fn)} .tk-typ{color:var(--typ)}
+/* pending-edit hunk (agent or inline AI) */
+.hunk{border:1px solid var(--blue);border-radius:9px;margin:8px 14px 8px 46px;overflow:hidden;box-shadow:0 0 0 3px var(--blue-bg)}
+.hunkH{display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--blue-bg);color:var(--blue);font-size:12px;font-weight:600}
+.hunkH .src{margin-left:auto;font-weight:500;opacity:.85}
+.hunkActs{display:flex;gap:6px;padding:8px 11px;border-top:1px solid var(--line2)}
+/* inline AI prompt (Cmd-K style) */
+.aiInline{margin:6px 14px 6px 46px;border:1px solid var(--violet);border-radius:10px;background:var(--panel);box-shadow:0 0 0 3px rgba(122,77,214,.08);overflow:hidden}
+.aiInline .aih{display:flex;align-items:center;gap:7px;padding:7px 11px;font-size:12px;color:var(--violet);font-weight:600}
+.aiInline input{width:100%;border:0;border-top:1px solid var(--line2);padding:9px 12px;outline:none;font-size:13px;background:transparent}
+.aiInline .aib{display:flex;gap:6px;padding:8px 11px;border-top:1px solid var(--line2)}
+/* remote cursor */
+.rcursor{position:absolute;width:2px;height:19px;z-index:8;transition:top .5s ease,left .5s ease}
+.rcursor .lbl{position:absolute;top:-17px;left:-1px;font-size:10px;font-weight:650;color:#fff;padding:1px 5px;border-radius:5px 5px 5px 0;white-space:nowrap}
+.idePanel{grid-column:3;display:flex;flex-direction:column;min-height:0;background:var(--panel)}
+.ipH{height:38px;display:flex;align-items:center;gap:8px;padding:0 13px;border-bottom:1px solid var(--line);font-weight:600;font-size:12.5px}
+.ipBody{flex:1;overflow:auto;padding:13px;display:flex;flex-direction:column;gap:11px}
+.agentMsg{font-size:12.8px;line-height:1.55}
+.agentMsg.me{background:var(--inset2);border:1px solid var(--line);border-radius:11px;padding:8px 11px;align-self:flex-end;max-width:88%}
+.ipFoot{border-top:1px solid var(--line);padding:10px 11px}
+.ipFoot .box{border:1px solid var(--line);border-radius:11px;overflow:hidden}
+.ipFoot textarea{width:100%;border:0;resize:none;padding:9px 11px;min-height:38px;outline:none;font-size:12.8px;background:transparent}
+.ipFoot .br{display:flex;align-items:center;gap:6px;padding:6px 9px;border-top:1px solid var(--line2)}
+
+/* status bar (bottom of editor) */
+.statusBar{height:26px;display:flex;align-items:center;gap:14px;padding:0 14px;border-top:1px solid var(--line);
+  background:var(--side);font-size:11.5px;color:var(--muted);flex:0 0 auto}
+.statusBar .s{display:flex;align-items:center;gap:5px}
+
+/* ===== BROWSER QA ===== */
+.bqa{position:absolute;inset:0;display:flex;flex-direction:column;min-height:0}
+.bqaModes{display:flex;gap:4px;padding:9px 16px;border-bottom:1px solid var(--line);align-items:center}
+.modePill{padding:5px 13px;border-radius:8px;font-size:12.5px;color:var(--muted);border:1px solid transparent}
+.modePill.on{background:var(--inset2);color:var(--text);border-color:var(--line)}
+.bbar{display:flex;align-items:center;gap:8px;padding:9px 16px;border-bottom:1px solid var(--line)}
+.url{flex:1;border:1px solid var(--line);border-radius:9px;padding:7px 12px;font-family:var(--mono);font-size:12.5px;background:var(--inset)}
+.bmain{flex:1;display:grid;grid-template-columns:1fr 320px;min-height:0}
+.bcanvasWrap{overflow:auto;padding:18px;display:grid;place-items:start center;background:var(--inset)}
+.bcanvas{width:100%;max-width:880px;background:var(--panel);border:1px solid var(--line);border-radius:12px;min-height:420px;position:relative;overflow:hidden}
+.demoPage{padding:38px}
+.demoPage h2{font-size:24px;font-weight:650;letter-spacing:-.01em}
+.pcards{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-top:22px}
+.pcard{border:1px solid var(--line);border-radius:12px;padding:16px}
+.pcard b{font-size:14px} .pcard p{font-size:12.5px;color:var(--muted);margin:6px 0 12px}
+.cta{width:100%;justify-content:center}
+.bside{border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.bsideH{height:42px;display:flex;align-items:center;justify-content:space-between;padding:0 13px;border-bottom:1px solid var(--line);font-weight:600;font-size:12.5px}
+.bsideBody{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:9px}
+.bcmt{border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12.3px}
+.bcmt .bh{display:flex;align-items:center;gap:7px;font-weight:600;margin-bottom:5px}
+.statusBoxes{display:flex;gap:9px;padding:10px 16px;border-top:1px solid var(--line);font-size:12px}
+.sbox{border:1px solid var(--line);border-radius:9px;padding:6px 11px}
+.untrusted{margin:0 16px 12px;border:1px dashed var(--amber);border-radius:9px;padding:8px 11px;font-size:11.7px;color:var(--amber);background:var(--amber-bg)}
+
+/* ===== COMPARE ===== */
+.cmpWrap{padding:18px 20px;overflow:auto}
+.cmpPrompt{max-width:none;margin-bottom:16px}
+.cmpCols{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+.cmpCol{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:var(--panel)}
+.cmpCol.win{border-color:var(--green);box-shadow:0 0 0 3px var(--green-bg)}
+.cmpH{padding:11px 13px;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:8px;font-weight:600}
+.cmpRows{padding:5px 13px 11px}
+.cmpR{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:12.5px;border-bottom:1px solid var(--line2)}
+.cmpR:last-child{border:0} .cmpR .k{color:var(--muted)}
+.cmpFoot{display:flex;gap:7px;padding:11px 13px;border-top:1px solid var(--line2)}
+
+/* ===== AUTOMATIONS ===== */
+.autoWrap{max-width:860px;margin:0 auto;padding:22px 24px;width:100%}
+.autoCard{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--panel);margin-bottom:11px;display:flex;align-items:center;gap:14px}
+.autoCard .ai{width:34px;height:34px;border-radius:10px;background:var(--inset);display:grid;place-items:center;font-size:15px;flex:0 0 34px}
+.toggle{width:38px;height:22px;border-radius:99px;background:var(--line);position:relative;flex:0 0 38px;cursor:pointer;transition:.15s}
+.toggle.on{background:var(--green)}
+.toggle::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:99px;background:#fff;transition:.15s}
+.toggle.on::after{left:18px}
+
+/* ===== SETTINGS ===== */
+.setWrap{max-width:980px;margin:0 auto;padding:22px 24px 70px;width:100%}
+.setSec{margin-bottom:30px}
+.setSec h2{font-size:13px;font-weight:650;margin-bottom:4px}
+.setSec .sd{font-size:12.5px;color:var(--muted);margin-bottom:13px}
+.matrix{width:100%;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:12.3px;border-collapse:collapse}
+.matrix th{text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);padding:9px 11px;background:var(--side);border-bottom:1px solid var(--line)}
+.matrix td{padding:9px 11px;border-bottom:1px solid var(--line2);white-space:nowrap}
+.matrix tr:last-child td{border-bottom:0}
+.matrix .yes{color:var(--green)} .matrix .no{color:var(--faint)}
+.setRow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;border:1px solid var(--line);border-radius:11px;margin-bottom:8px;background:var(--panel)}
+.setRow .l b{font-size:13px} .setRow .l div{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* ===== overlays ===== */
+.scrim{position:fixed;inset:0;background:rgba(20,20,22,.32);z-index:90;display:none;align-items:flex-start;justify-content:center;padding-top:90px;backdrop-filter:blur(2px)}
+.scrim.on{display:flex}
+.palette{width:560px;max-width:92vw;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.palInput{width:100%;border:0;border-bottom:1px solid var(--line);padding:14px 16px;font-size:15px;outline:none;background:transparent}
+.palList{max-height:340px;overflow:auto;padding:6px}
+.palItem{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;font-size:13px;cursor:pointer}
+.palItem.on,.palItem:hover{background:var(--inset)}
+.palItem .pg{width:24px;text-align:center;color:var(--muted)}
+.palItem .pk{margin-left:auto;color:var(--faint);font-size:11.5px}
+.palItem .pcat{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em}
+
+.modal{width:620px;max-width:94vw;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;max-height:84vh;display:flex;flex-direction:column}
+.modalH{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px}
+.modalH h2{font-size:15px;font-weight:600;flex:1}
+.modalBody{padding:18px 20px;overflow:auto}
+.modalFoot{padding:13px 20px;border-top:1px solid var(--line);display:flex;align-items:center;gap:9px}
+.intentGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:16px}
+.intent{border:1px solid var(--line);border-radius:11px;padding:13px;cursor:pointer;transition:.1s}
+.intent:hover{border-color:var(--faint)}
+.intent.on{border-color:var(--primary);box-shadow:inset 0 0 0 1px var(--primary)}
+.intent .ig{font-size:18px} .intent b{display:block;font-size:13px;margin-top:6px} .intent span{font-size:11.5px;color:var(--muted)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:600;margin-bottom:6px;color:var(--muted)}
+.field textarea,.field input,.field select{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:var(--inset);outline:none;font-size:13px}
+.field textarea{resize:vertical;min-height:64px;font-family:var(--sans)}
+.detected{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.previewBox{border:1px solid var(--line);border-radius:10px;padding:11px 13px;background:var(--inset);font-size:12.3px;display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+.previewBox .k{color:var(--faint)}
+
+/* collaboration popover */
+.collabPop{position:fixed;top:54px;right:14px;width:300px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);z-index:95;display:none;overflow:hidden}
+.collabPop.on{display:block}
+.cpH{padding:13px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.cpH b{font-size:13.5px}
+.cpBody{padding:8px;max-height:340px;overflow:auto}
+.peep{display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:9px}
+.peep:hover{background:var(--inset)}
+.peep .pi{font-size:11.5px;color:var(--muted)}
+.cpFoot{padding:11px 15px;border-top:1px solid var(--line);font-size:11.7px;color:var(--muted)}
+
+/* toasts top-right (per review #18) */
+.toasts{position:fixed;top:56px;right:14px;display:grid;gap:8px;z-index:120;width:300px}
+.toast{background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);color:var(--text);border-radius:11px;padding:10px 13px;font-size:12.7px;display:flex;align-items:center;gap:9px;animation:tIn .18s ease}
+.toast .td{width:8px;height:8px;border-radius:99px;background:var(--blue);flex:0 0 8px}
+@keyframes tIn{from{opacity:0;transform:translateX(12px)}}
+
+.empty{color:var(--faint);font-size:12.5px;padding:14px;text-align:center}
+
+@media(max-width:1180px){.work{grid-template-columns:240px 1fr 0}.work .wRail{display:none}.ide{grid-template-columns:210px 1fr 0}.ide .idePanel{display:none}}
+@media(max-width:820px){.metrics,.ctx{display:none}.cmdk{width:150px}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ===================== TOP BAR ===================== -->
+<header class="top">
+  <div class="brand"><span class="mark">AS</span>AutoCode Station</div>
+  <div class="ctx">
+    <span>project <b>lowrescoder</b></span>
+    <span class="mono" id="ctxWorktree">agent/booking-timezone-fix</span>
+    <span class="amber">2 dirty</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="metrics">
+    <span class="metric run" title="running agents">● <b id="mRun">2</b> running</span>
+    <span class="metric attn" id="mAttn" title="Jump to next approval">▲ <b id="mWait">1</b> needs you</span>
+    <span class="metric" title="ready to review">✓ <b id="mReady">2</b> ready</span>
+  </div>
+  <div class="cmdk" id="cmdkBtn"><span>⌘</span><span style="flex:1">Search or run a command</span><span class="kbd">Ctrl K</span></div>
+  <button class="btn primary" id="btnNewTask">New task <span class="kbd" style="border-color:rgba(255,255,255,.3);background:transparent;color:inherit">Ctrl N</span></button>
+  <div class="presence" id="presence"></div>
+  <button class="btn sm collabBtn" id="collabBtn">Collaborate</button>
+  <button class="iconbtn" id="btnTheme" title="Toggle theme">◐</button>
+</header>
+
+<div class="body">
+  <!-- ============ ACTIVITY RAIL ============ -->
+  <nav class="rail" id="rail"></nav>
+
+  <!-- ============ CONTENT ============ -->
+  <div class="content" id="content">
+
+    <!-- ===== INBOX ===== -->
+    <section class="view on" id="view-inbox">
+      <div class="head"><h1>Inbox</h1><span class="chip info" id="inboxStamp">live</span><div class="spacer"></div>
+        <button class="btn sm" id="btnTriage">Triage all ready</button></div>
+      <div class="scroll"><div class="inbox" id="inboxBody"></div></div>
+    </section>
+
+    <!-- ===== WORKSTREAMS / WORKBENCH ===== -->
+    <section class="view" id="view-work">
+      <div class="work norail" id="workGrid">
+        <!-- task list -->
+        <aside class="wList">
+          <div class="wListH"><span>Workstreams</span><div class="spacer"></div><button class="iconbtn" style="width:24px;height:24px" id="wNew" title="New task">+</button></div>
+          <div class="wListBody" id="wListBody"></div>
+        </aside>
+        <!-- center timeline -->
+        <main class="wCenter">
+          <div class="wHead" id="wHead"></div>
+          <div class="streamWrap" id="streamWrap"><div class="stream" id="stream"></div></div>
+          <div class="composer"><div class="composeBox">
+            <div class="chipsRow" id="ctxChips"></div>
+            <textarea id="composerText" placeholder="Reply to the agent, or attach @file / @terminal / @browser-comment context…"></textarea>
+            <div class="composeBar">
+              <span class="chip" id="chipHarness">Claude Code ▾</span>
+              <span class="chip">Worktree ▾</span>
+              <span class="chip">Workspace write ▾</span>
+              <button class="send" id="btnSend" title="Send (Ctrl+Enter)">↑</button>
+            </div>
+          </div></div>
+        </main>
+        <!-- review/context rail -->
+        <aside class="wRail">
+          <div class="railTabs">
+            <button class="railTab on" data-rt="review">Review</button>
+            <button class="railTab" data-rt="files">Files</button>
+            <button class="railTab" data-rt="checks">Checks</button>
+          </div>
+          <div class="railBody" id="railBody"></div>
+        </aside>
+        <!-- terminal -->
+        <section class="wTerm" id="wTerm">
+          <div class="termH">
+            <button class="termTab on">test</button>
+            <button class="termTab">dev server</button>
+            <button class="termTab">raw harness</button>
+            <div class="spacer"></div>
+            <button class="iconbtn" style="width:24px;height:24px" onclick="toggleTerm()" title="Close (Ctrl+J)">✕</button>
+          </div>
+          <div class="termBody mono" id="termBody"></div>
+          <div class="termIn"><span class="p">~/.worktrees/booking-timezone-fix ❯</span><input id="termInput" placeholder="run a command…"/></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ===== EDITOR / IDE ===== -->
+    <section class="view" id="view-editor">
+      <div class="ide nopanel" id="ideGrid">
+        <!-- file tree -->
+        <aside class="ideTree">
+          <div class="treeH"><span id="treeProj">worktree · booking-timezone-fix</span><button class="iconbtn" style="width:22px;height:22px" id="treeRefresh">⟳</button></div>
+          <div class="treeBody" id="treeBody"></div>
+        </aside>
+        <!-- editor -->
+        <main class="ideMain">
+          <div class="tabBar" id="tabBar"></div>
+          <div class="editorWrap">
+            <div class="editorBar">
+              <span id="edPath" class="mono">src/booking/time.ts</span>
+              <div class="spacer" style="flex:1"></div>
+              <span class="muted" id="edLang">TypeScript</span>
+              <div class="seg" id="edViewSeg">
+                <button class="on" data-ev="code">Code</button>
+                <button data-ev="diff">Diff</button>
+              </div>
+              <button class="btn sm" id="btnAiInline" title="Inline edit (Ctrl+I)">✦ Edit</button>
+            </div>
+            <div class="codeArea" id="codeArea"></div>
+            <div id="rcursors"></div>
+          </div>
+          <div class="statusBar">
+            <span class="s">⎇ agent/booking-timezone-fix</span>
+            <span class="s"><span class="dot warn"></span>1 pending approval</span>
+            <span class="s green">✦ Claude Code proposed 1 edit</span>
+            <div class="spacer" style="flex:1"></div>
+            <span class="s" id="sbCursor">Ln 14, Col 8</span>
+            <span class="s">UTF-8</span><span class="s">LF</span><span class="s">TS</span>
+          </div>
+        </main>
+        <!-- agent / collab side panel -->
+        <aside class="idePanel">
+          <div class="ipH"><span>Agent</span><div class="spacer" style="flex:1"></div>
+            <span class="chip ok" style="font-size:11px"><span class="dot run"></span>Claude Code</span></div>
+          <div class="ipBody" id="ipBody"></div>
+          <div class="ipFoot"><div class="box">
+            <textarea id="ideChat" placeholder="Ask about this file, or describe an edit…"></textarea>
+            <div class="br"><span class="chip" style="font-size:11px">@time.ts</span><span class="chip" style="font-size:11px">whole file</span>
+              <button class="send" style="margin-left:auto;width:26px;height:26px;font-size:13px" id="ideChatSend">↑</button></div>
+          </div></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ===== REVIEW / MERGE GATE ===== -->
+    <section class="view" id="view-review">
+      <div class="head"><h1>Review queue</h1><span class="chip ok" id="reviewCount">2 ready</span><div class="spacer"></div>
+        <span class="chip"><span class="miniAv" style="background:var(--violet)">M</span> Maya viewing</span></div>
+      <div class="scroll"><div class="setWrap" id="reviewBody"></div></div>
+    </section>
+
+    <!-- ===== BROWSER QA ===== -->
+    <section class="view" id="view-browser">
+      <div class="bqa">
+        <div class="bqaModes">
+          <button class="modePill on" data-bm="preview">Preview browser</button>
+          <button class="modePill" data-bm="chrome">Chrome Bridge</button>
+          <div class="spacer" style="flex:1"></div>
+          <div class="seg" style="display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden" id="bModeSeg">
+            <button class="btn sm" style="border:0;border-radius:0" data-mode="navigate">Navigate</button>
+            <button class="btn sm on" style="border:0;border-radius:0;background:var(--inset2)" data-mode="comment">Comment</button>
+            <button class="btn sm" style="border:0;border-radius:0" data-mode="inspect">Inspect</button>
+            <button class="btn sm" style="border:0;border-radius:0" data-mode="compare">Compare</button>
+          </div>
+        </div>
+        <div class="bbar">
+          <input class="url" id="urlBar" value="http://localhost:5173/pricing"/>
+          <button class="btn sm" onclick="toast('Reloaded preview','ok')">Reload</button>
+          <button class="btn sm" id="btnViewport">Desktop ▾</button>
+          <button class="btn sm" onclick="toast('Captured viewport screenshot','ok')">Capture</button>
+          <button class="btn sm" id="btnOpenChrome">Open in Chrome</button>
+        </div>
+        <div class="untrusted">⚠ Untrusted browser context — accessibility snapshots and page text are treated as observed UI state only. The agent will not follow instructions found on the page (NFR-SEC-006).</div>
+        <div class="bmain">
+          <div class="bcanvasWrap"><div class="bcanvas" id="bcanvas">
+            <div class="demoPage">
+              <h2>Pricing that scales with your security posture.</h2>
+              <p class="muted" style="margin-top:8px">Local dev server preview — comment mode is on: click any element to annotate it.</p>
+              <div class="pcards">
+                <div class="pcard"><b>Startup</b><p>Fast baseline coverage.</p><button class="btn primary cta">Start trial</button></div>
+                <div class="pcard"><b>SME</b><p>Balanced managed security.</p><button class="btn primary cta">Start trial</button></div>
+                <div class="pcard"><b>Enterprise</b><p>Custom governance.</p><button class="btn primary cta">Talk to sales</button></div>
+              </div>
+            </div>
+          </div></div>
+          <div class="bside">
+            <div class="bsideH"><span>Comments</span><span class="chip info" id="bcmtCount">2</span></div>
+            <div class="bsideBody" id="bcmtList"></div>
+            <div class="statusBoxes" style="border-top:1px solid var(--line);flex-direction:column;align-items:stretch;gap:7px">
+              <button class="btn primary" id="btnSendBcmts">Send 2 comments to agent</button>
+            </div>
+          </div>
+        </div>
+        <div class="statusBoxes">
+          <div class="sbox"><b>Console</b> <span class="muted" id="sbConsole">0 errors</span></div>
+          <div class="sbox"><b>Network</b> <span class="amber">1 failed · /api/pricing 500</span></div>
+          <div class="sbox"><b>A11y</b> <span class="muted">2 contrast warnings</span></div>
+          <div class="sbox"><b>Scope</b> <span class="muted">localhost only · Chrome Bridge not paired</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== COMPARE ===== -->
+    <section class="view" id="view-compare">
+      <div class="head"><h1>Compare runs</h1><span class="chip info">same prompt · 3 worktrees · same tests</span><div class="spacer"></div>
+        <button class="btn sm" onclick="toast('Opened side-by-side diff')">Side-by-side diff</button>
+        <button class="btn sm" onclick="toast('Re-ran booking tests on all runs','ok')">Run tests on all</button></div>
+      <div class="scroll"><div class="cmpWrap">
+        <div class="userMsg cmpPrompt">Fix the booking timezone bug. Keep the patch minimal and run the booking tests.</div>
+        <div class="cmpCols" id="cmpCols"></div>
+        <div class="muted" style="font-size:12.3px;margin-top:13px" id="cmpHint">Open each diff before choosing. Losing worktrees are archived, not deleted. You can cherry-pick hunks from a non-winner.</div>
+      </div></div>
+    </section>
+
+    <!-- ===== AUTOMATIONS ===== -->
+    <section class="view" id="view-automations">
+      <div class="head"><h1>Automations</h1><div class="spacer"></div><button class="btn sm" onclick="toast('New automation builder is P3')">New automation</button></div>
+      <div class="scroll"><div class="autoWrap" id="autoBody"></div></div>
+    </section>
+
+    <!-- ===== SETTINGS ===== -->
+    <section class="view" id="view-settings">
+      <div class="head"><h1>Settings</h1></div>
+      <div class="scroll"><div class="setWrap">
+        <div class="setSec">
+          <h2>Harness control center</h2>
+          <div class="sd">Capability varies per agent even when all are "supported". The adapter ladder is: native → ACP → structured CLI parser → heuristic → raw PTY.</div>
+          <table class="matrix" id="matrix"></table>
+        </div>
+        <div class="setSec">
+          <h2>Collaboration</h2>
+          <div class="sd">Live presence, shared review, and maker/checker approvals for the workspace.</div>
+          <div class="setRow"><div class="l"><b>Live share session</b><div>Teammates see your cursor and timeline in real time. Editing requires their own write permission.</div></div><span class="chip ok" id="lsState">On · 3 present</span></div>
+          <div class="setRow"><div class="l"><b>Maker / checker on commit</b><div>A second teammate must approve before a task with write access can commit to a protected branch.</div></div><div class="toggle on" data-toggle></div></div>
+          <div class="setRow"><div class="l"><b>Approval delegation</b><div>Who can approve agent commands besides you.</div></div><span class="chip">Maya, Arif</span></div>
+        </div>
+        <div class="setSec">
+          <h2>Security &amp; policy</h2>
+          <div class="setRow"><div class="l"><b>Default permission profile</b><div>Workspace write · ask for all commands · network blocked</div></div><span class="chip">Edit profiles…</span></div>
+          <div class="setRow"><div class="l"><b>Blocked command patterns</b><div class="mono" style="font-family:var(--mono)">rm -rf /, sudo, curl|sh, git push --force (protected)</div></div><span class="chip ok">Active</span></div>
+          <div class="setRow"><div class="l"><b>Chrome Bridge</b><div>Extension + native messaging host. Per-domain approval. Never exports cookies or passwords.</div></div><button class="btn sm" onclick="toast('Chrome Bridge pairing is P2')">Pair…</button></div>
+          <div class="setRow"><div class="l"><b>Remote access</b><div>Binds to 127.0.0.1. LAN mode requires token auth.</div></div><span class="chip">Off</span></div>
+          <div class="setRow"><div class="l"><b>Audit log</b><div>Immutable JSONL of every approval, command, edit, and commit.</div></div><button class="btn sm" onclick="toast('Exported audit-log.jsonl','ok')">Export</button></div>
+        </div>
+        <div class="setSec">
+          <h2>Project instructions</h2>
+          <div class="sd">Detected instruction stack, in priority order. The agent merges these before every task.</div>
+          <div class="previewBox" style="grid-template-columns:1fr">
+            <div>1 · User prompt &amp; task policy</div>
+            <div>2 · nearest <b class="mono">AGENTS.md</b> <span class="green">found</span></div>
+            <div>3 · project <b class="mono">CLAUDE.md</b> <span class="green">found</span></div>
+            <div>4 · <b class="mono">.codex/config</b> <span class="green">found</span> · <b class="mono">package.json</b> scripts <span class="green">found</span></div>
+            <div>5 · harness-native instructions</div>
+            <div>6 · global AutoCode rules</div>
+          </div>
+        </div>
+      </div></div>
+    </section>
+
+  </div>
+</div>
+
+<!-- ===== overlays ===== -->
+<div class="scrim" id="palScrim"><div class="palette">
+  <input class="palInput" id="palInput" placeholder="Search tasks, files, commands…"/>
+  <div class="palList" id="palList"></div>
+</div></div>
+
+<div class="scrim" id="taskScrim"><div class="modal">
+  <div class="modalH"><h2>New agent task</h2><div class="spacer" style="flex:1"></div><button class="iconbtn" onclick="closeAll()">✕</button></div>
+  <div class="modalBody">
+    <div class="tag" style="margin-bottom:8px">What do you want to do?</div>
+    <div class="intentGrid" id="intentGrid"></div>
+    <div class="field"><label>Task prompt</label><textarea id="ntPrompt" placeholder="Describe the change. The agent will read AGENTS.md and project scripts before starting.">Fix the booking timezone bug. Keep the patch minimal and run the booking tests.</textarea></div>
+    <div class="field"><label>Context detected</label>
+      <div class="detected">
+        <span class="chip ok">✓ AGENTS.md</span><span class="chip ok">✓ CLAUDE.md</span>
+        <span class="chip ok">✓ package.json scripts</span><span class="chip">+ Attach file</span>
+        <span class="chip">+ Browser comment</span><span class="chip">+ Terminal output</span>
+      </div>
+    </div>
+    <div class="field"><label>Execution</label>
+      <div class="previewBox">
+        <span class="k">Harness</span><span>Claude Code <span class="muted">(last successful for this project)</span></span>
+        <span class="k">Mode</span><span>Worktree → <span class="mono">.worktrees/booking-timezone-fix</span></span>
+        <span class="k">Base branch</span><span class="mono">main</span>
+        <span class="k">Permission</span><span>Workspace write · ask for commands · network blocked</span>
+        <span class="k">Est. approvals</span><span>1–2 (test command)</span>
+      </div>
+    </div>
+  </div>
+  <div class="modalFoot"><div class="spacer" style="flex:1"></div>
+    <button class="btn" onclick="closeAll()">Cancel</button>
+    <button class="btn primary" id="ntStart">Start task</button></div>
+</div></div>
+
+<div class="collabPop" id="collabPop">
+  <div class="cpH"><b>In this workspace</b><span class="chip ok" style="font-size:11px"><span class="dot run"></span>Live</span></div>
+  <div class="cpBody" id="cpBody"></div>
+  <div class="cpFoot">Live share lets teammates watch your timeline and follow your cursor. They need their own write permission to edit.</div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ===================== people / collaboration ===================== */
+const PEOPLE={
+  you :{name:'You',short:'F',color:'var(--blue)',where:'Editor · time.ts'},
+  maya:{name:'Maya Rahman',short:'M',color:'var(--violet)',role:'reviewer',where:'Review · light editor save guard'},
+  arif:{name:'Arif Hossain',short:'A',color:'var(--teal)',role:'eng',where:'Workstreams · api-client-types'},
+  sana:{name:'Sana K.',short:'S',color:'var(--rose)',role:'pm',where:'Inbox',idle:true},
+};
+
+/* ===================== status model (review #7) ===================== */
+const STATUS={
+  waiting:'Waiting approval', running_edit:'Editing', running_read:'Reading', running_test:'Testing',
+  failed:'Test failed', review:'Ready for review', committed:'Committed', archived:'Archived',
+};
+const SECTION_OF={waiting:'attn',failed:'attn',running_edit:'running',running_read:'running',
+  running_test:'running',review:'ready',committed:'done',archived:'done'};
+
+/* ===================== task data (continues lowrescoder demo) ===================== */
+const state={
+  view:'inbox', activeId:'t1', railTab:'review', editorView:'code',
+  termOpen:false, liveShare:true, follow:null,
+  tasks:{}, order:[], bcomments:[],
+};
+function T(o){state.tasks[o.id]=o; state.order.push(o.id); return o;}
+
+T({id:'t1',title:'booking timezone fix',harness:'Claude Code',mode:'Worktree',branch:'agent/booking-timezone-fix',
+  status:'waiting',add:6,del:4,elapsed:'4m',tests:'1 failed',presence:['maya'],
+  pending:{cmd:'npm test -- --grep booking',reason:'Validate the booking timezone patch after editing src/booking/time.ts.',
+    cwd:'.worktrees/booking-timezone-fix',fs:'project write',net:'blocked',secrets:'unavailable',origin:'agent request',
+    policy:'ask for all commands',risk:'low',repeat:false},
+  events:[
+    {k:'prompt',text:'Fix the booking timezone bug. Keep the patch minimal and run the booking tests.'},
+    {k:'plan'},
+    {k:'read',files:['src/booking/time.ts','src/booking/slots.ts','tests/booking.spec.ts']},
+    {k:'edit',files:[['src/booking/time.ts','+6 −4']],add:6,del:4},
+    {k:'approval'},
+  ],
+  plan:{steps:['Reproduce timezone offset in tests','Normalize to UTC in time.ts','Run booking tests','Confirm slots render in local tz'],doneUpto:2}});
+
+T({id:'t2',title:'api-client-types',harness:'Codex',mode:'Worktree',branch:'agent/api-client-types',
+  status:'failed',add:31,del:8,elapsed:'12m',tests:'2 failed',presence:['arif'],
+  events:[
+    {k:'prompt',text:'Generate typed API client from the OpenAPI spec and replace the hand-written fetch wrappers.'},
+    {k:'edit',files:[['src/api/client.ts','+24 −6'],['src/api/types.ts','+7 −2']],add:31,del:8},
+    {k:'test',ok:false,cmd:'npm test -- api',out:'2 failing · type mismatch on PaymentIntent',detail:'expected string, got string|null at PaymentIntent.captured_at\nexpected number, got bigint at Amount.minor'},
+    {k:'note',text:'The OpenAPI spec marks captured_at nullable but the old client assumed string. I need to know whether downstream code can handle null, or if I should default to "".'},
+  ]});
+
+T({id:'t3',title:'pricing page',harness:'AutoCode',mode:'Worktree',branch:'agent/pricing-page',
+  status:'running_edit',add:14,del:3,elapsed:'2m',tests:'—',presence:[],
+  events:[
+    {k:'prompt',text:'Apply the two browser comments on the pricing page: CTA contrast and card spacing.'},
+    {k:'bcomment',where:'Enterprise card · desktop',vp:'1440×900',sel:'.pcard:nth-child(3) .cta',text:'CTA contrast fails AA on hover.'},
+    {k:'edit',files:[['src/pricing/Card.tsx','+14 −3']],add:14,del:3},
+  ]});
+
+T({id:'t4',title:'light editor save guard',harness:'Claude Code',mode:'Worktree',branch:'agent/save-guard',
+  status:'review',add:18,del:5,elapsed:'8m',tests:'pass',presence:['maya'],
+  events:[
+    {k:'prompt',text:'Add a dirty-file guard so the lightweight editor warns before discarding unsaved manual edits.'},
+    {k:'edit',files:[['src/editor/guard.ts','+18 −5']],add:18,del:5},
+    {k:'test',ok:true,cmd:'npm test -- editor',out:'7 passed'},
+    {k:'diffsum',text:'1 file · +18 −5 · tests pass · no network · no new deps'},
+    {k:'rcomment',file:'src/editor/guard.ts',line:22,text:'Use the existing useBeforeUnload hook instead of a raw listener.',status:'open',by:'maya'},
+  ]});
+
+T({id:'t5',title:'cockpit board UI',harness:'Claude Code',mode:'Worktree',branch:'agent/board-ui',
+  status:'review',add:42,del:11,elapsed:'21m',tests:'pass',presence:[],
+  events:[
+    {k:'prompt',text:'Rebuild the operations board as an attention inbox per the IA review.'},
+    {k:'edit',files:[['src/inbox/Inbox.tsx','+42 −11']],add:42,del:11},
+    {k:'test',ok:true,cmd:'npm test -- inbox',out:'12 passed'},
+    {k:'diffsum',text:'3 files · +42 −11 · tests pass'},
+  ]});
+
+T({id:'t6',title:'docs cleanup',harness:'OpenCode',mode:'Worktree',branch:'agent/docs',
+  status:'running_read',add:0,del:0,elapsed:'2m',tests:'—',presence:[],
+  events:[{k:'prompt',text:'Clean up the README and align command names with the new IA.'},{k:'read',files:['README.md','docs/IA.md']}]});
+
+/* ===================== activity rail ===================== */
+const NAV=[
+  ['inbox','Inbox','M3 4h18v4H3zM3 10h18v4H3zM3 16h11v4H3z'],
+  ['work','Workstreams','M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'],
+  ['editor','Editor','M9 4 4 12l5 8M15 4l5 8-5 8'],
+  ['review','Review','M20 6 9 17l-5-5'],
+  ['browser','Browser QA','M12 2a10 10 0 100 20 10 10 0 000-20zM2 12h20M12 2c3 3 3 17 0 20M12 2c-3 3-3 17 0 20'],
+  ['compare','Compare','M9 3v18M15 3v18M3 9h6M15 9h6M3 15h6M15 15h6'],
+  ['automations','Automations','M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3'],
+  ['settings','Settings','M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2'],
+];
+function renderRail(){
+  const counts=buckets();
+  $('#rail').innerHTML=NAV.map(([id,label,d])=>{
+    let badge='';
+    if(id==='inbox'&&counts.attn) badge=`<span class="rb">${counts.attn}</span>`;
+    if(id==='review'&&counts.ready) badge=`<span class="rb blue">${counts.ready}</span>`;
+    return `<button class="railBtn ${state.view===id?'on':''}" data-nav="${id}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>
+      ${badge}<span class="railTip">${label}</span></button>`;
+  }).join('') + `<div style="flex:1"></div>`;
+  $$('#rail [data-nav]').forEach(b=>b.onclick=()=>go(b.dataset.nav));
+}
+function buckets(){
+  const o=Object.values(state.tasks);
+  return{
+    attn:o.filter(t=>SECTION_OF[t.status]==='attn').length,
+    ready:o.filter(t=>SECTION_OF[t.status]==='ready').length,
+    running:o.filter(t=>SECTION_OF[t.status]==='running').length,
+  };
+}
+function go(view){
+  state.view=view;
+  $$('.view').forEach(v=>v.classList.toggle('on',v.id==='view-'+view));
+  renderRail();
+  if(view==='inbox')renderInbox();
+  if(view==='work'){renderWList();openTask(state.activeId);}
+  if(view==='editor')renderEditor();
+  if(view==='review')renderReview();
+  if(view==='compare')renderCompare();
+  if(view==='automations')renderAuto();
+  if(view==='settings')renderMatrix();
+}
+
+/* ===================== top bar metrics + presence ===================== */
+function renderMetrics(){
+  const b=buckets();
+  $('#mRun').textContent=b.running; $('#mWait').textContent=b.attn; $('#mReady').textContent=b.ready;
+  $('#mAttn').style.display=b.attn?'inline-flex':'none';
+}
+function renderPresence(){
+  const order=['you','maya','arif','sana'];
+  $('#presence').innerHTML=order.map(k=>{const p=PEOPLE[k];
+    return `<div class="av" style="background:${p.color}" title="${esc(p.name)} · ${esc(p.where)}" data-peep="${k}">${p.short}${p.idle?'':'<span class="on"></span>'}</div>`;}).join('');
+  $('#cpBody').innerHTML=order.map(k=>{const p=PEOPLE[k];
+    return `<div class="peep"><div class="av" style="background:${p.color};margin:0">${p.short}</div>
+      <div style="flex:1"><div style="font-weight:600;font-size:12.7px">${esc(p.name)}${k==='you'?' <span class="faint" style="font-weight:400">(you)</span>':''}</div>
+      <div class="pi">${p.idle?'idle':esc(p.where)}</div></div>
+      ${k==='you'?'':`<button class="btn sm" data-follow="${k}">${state.follow===k?'Following':'Follow'}</button>`}</div>`;}).join('');
+  $$('#cpBody [data-follow]').forEach(b=>b.onclick=()=>{
+    state.follow=state.follow===b.dataset.follow?null:b.dataset.follow;
+    const p=PEOPLE[b.dataset.follow];
+    if(state.follow){toast(`Following ${p.name}`,'ok'); if(p.where.startsWith('Review'))go('review'); else if(p.where.startsWith('Editor'))go('editor'); else if(p.where.startsWith('Workstreams'))go('work');}
+    renderPresence();
+  });
+}
+
+/* ===================== INBOX ===================== */
+function renderInbox(){
+  const groups=[
+    ['Needs your attention','attn',t=>t.status==='waiting'||t.status==='failed'],
+    ['Ready to review','ready',t=>t.status==='review'],
+    ['Running in background','running',t=>SECTION_OF[t.status]==='running'],
+  ];
+  let html='';
+  for(const [label,cls,fn] of groups){
+    const ts=state.order.map(id=>state.tasks[id]).filter(fn);
+    if(!ts.length)continue;
+    html+=`<div class="inGroup"><h2>${label}<span class="ct">${ts.length}</span></h2>${ts.map(t=>inCard(t,cls)).join('')}</div>`;
+  }
+  // harness health
+  html+=`<div class="inGroup"><h2>Harness health</h2><div class="healthGrid">
+    ${hCell('AutoCode native','JSON-RPC over PTY · v0.9.2','ok','Connected')}
+    ${hCell('Claude Code','structured adapter · plan/diff/tool events','ok','Ready')}
+    ${hCell('Codex','ACP adapter · auth OK','ok','Ready')}
+    ${hCell('OpenCode','not found on PATH','','Install')}
+  </div></div>`;
+  $('#inboxBody').innerHTML=html;
+  $$('#inboxBody [data-open]').forEach(el=>el.onclick=()=>{openTask(el.dataset.open);go('work');});
+  $$('#inboxBody [data-act]').forEach(b=>b.onclick=e=>{e.stopPropagation();inAct(b.dataset.act,b.dataset.open);});
+}
+function inCard(t,cls){
+  const icon={attn:t.status==='failed'?'✕':'▲',ready:'✓',running:'●'}[cls];
+  const iconCls={attn:t.status==='failed'?'icon-fail':'icon-attn',ready:'icon-ready',running:'icon-run'}[cls];
+  const cardCls=t.status==='failed'?'fail':(cls==='attn'?'attn':(cls==='ready'?'ready':''));
+  let sub='', acts='';
+  if(t.status==='waiting'){sub=`wants to run <span class="mono">${esc(t.pending.cmd)}</span>`;acts=`<button class="btn sm primary" data-act="approve" data-open="${t.id}">Approve</button><button class="btn sm" data-act="deny" data-open="${t.id}">Deny…</button>`;}
+  else if(t.status==='failed'){sub=`${esc(t.tests)} · the agent is asking a question`;acts=`<button class="btn sm primary" data-act="open" data-open="${t.id}">Answer</button>`;}
+  else if(t.status==='review'){const open=t.events.filter(e=>e.k==='rcomment'&&e.status==='open').length;sub=`${t.events.filter(e=>e.k==='edit').reduce((a,e)=>a+e.files.length,0)} files · tests pass${open?` · ${open} review comment`:''}`;acts=`<button class="btn sm primary" data-act="open" data-open="${t.id}">Review</button>`;}
+  else{sub=`${esc(STATUS[t.status]).toLowerCase()} · ${esc(t.elapsed)}`;}
+  const pres=(t.presence||[]).map(k=>`<span class="miniAv" style="background:${PEOPLE[k].color}" title="${esc(PEOPLE[k].name)} here">${PEOPLE[k].short}</span>`).join('');
+  return `<div class="inCard ${cardCls}" data-open="${t.id}">
+    <div class="ic ${iconCls}">${icon}</div>
+    <div class="inBody"><div class="t">${esc(t.title)}</div><div class="s">${sub}</div></div>
+    <div class="inMeta">${pres}<span class="chip" style="font-size:11px">${esc(t.harness)}</span><div class="inActs">${acts}</div></div>
+  </div>`;
+}
+function hCell(n,d,st,label){
+  return `<div class="hCell"><div class="hn">${esc(n)}<span class="chip ${st}" style="font-size:11px">${label}</span></div><div class="hd">${esc(d)}</div></div>`;
+}
+function inAct(act,id){
+  if(act==='approve'){approveTask(id);}
+  else if(act==='deny'){openTask(id);go('work');toast('Add a note, then deny',);}
+  else{openTask(id);go('work');}
+}
+
+/* ===================== WORKBENCH ===================== */
+function renderWList(){
+  const SECTIONS=[['attn','Needs attention'],['running','Running'],['ready','Ready to review'],['done','Done']];
+  let html='';
+  for(const [key,label] of SECTIONS){
+    const ts=state.order.map(id=>state.tasks[id]).filter(t=>SECTION_OF[t.status]===key);
+    if(!ts.length)continue;
+    html+=`<div class="gTitle">${key==='attn'?'<span class="dot warn"></span>':''}${label}</div>`+ts.map(taskCard).join('');
+  }
+  $('#wListBody').innerHTML=html;
+  $$('#wListBody [data-open]').forEach(el=>el.onclick=()=>openTask(el.dataset.open));
+}
+function taskCard(t){
+  const dot=t.status==='waiting'?'warn':(SECTION_OF[t.status]==='running'?'run':(t.status==='failed'?'fail':(t.status==='committed'?'ok':'done')));
+  const pres=(t.presence||[]).map(k=>`<span class="miniAv" style="background:${PEOPLE[k].color};width:16px;height:16px;font-size:8px">${PEOPLE[k].short}</span>`).join('');
+  return `<div class="task ${state.activeId===t.id?'on':''} ${t.status==='waiting'?'attn':''}" data-open="${t.id}">
+    <div class="tTop"><span class="dot ${dot}"></span><span class="tTitle">${esc(t.title)}</span>${pres}</div>
+    <div class="tMeta">${esc(t.harness)} · ${esc(STATUS[t.status])}</div>
+    <div class="tStat"><span class="green">+${t.add}</span><span class="red">−${t.del}</span><span>${esc(t.elapsed)}</span><span>${esc(t.tests)}</span></div>
+  </div>`;
+}
+function openTask(id){
+  state.activeId=id; const t=state.tasks[id]; if(!t)return;
+  $('#workGrid').classList.toggle('norail',false);
+  renderWList(); renderWHead(); renderStream(); renderRail();
+}
+function renderWHead(){
+  const t=state.tasks[state.activeId];if(!t)return;
+  const dot=t.status==='waiting'?'warn':(SECTION_OF[t.status]==='running'?'run':(t.status==='failed'?'fail':'ok'));
+  const pres=(t.presence||[]).map(k=>`<span class="miniAv" style="background:${PEOPLE[k].color}" title="${esc(PEOPLE[k].name)} viewing">${PEOPLE[k].short}</span>`).join('');
+  $('#wHead').innerHTML=`<span class="dot ${dot}"></span><h2>${esc(t.title)}</h2>
+    <span class="chip ${t.status==='waiting'?'warn':(t.status==='failed'?'bad':'')}">${STATUS[t.status]}</span>
+    <span class="chip mono" title="worktree path">${esc(t.branch)}</span>
+    ${pres}<div class="spacer" style="flex:1"></div>
+    <button class="btn sm" onclick="go('editor')">Open in editor</button>
+    <button class="btn sm" onclick="toggleTerm()">Terminal <span class="kbd">Ctrl J</span></button>`;
+}
+function renderStream(keep){
+  const t=state.tasks[state.activeId];if(!t)return;
+  const wrap=$('#streamWrap');const near=wrap.scrollHeight-wrap.scrollTop-wrap.clientHeight<160;
+  $('#stream').innerHTML=t.events.map(e=>evHTML(t,e)).join('');
+  $$('#stream .evRow').forEach(r=>r.onclick=()=>{r.classList.toggle('open');});
+  if(!keep||near)wrap.scrollTop=wrap.scrollHeight;
+  $('#composerText').value=t.draft||'';
+  $('#chipHarness').textContent=t.harness+' ▾';
+  renderRail(); renderRailBody();
+}
+function evHTML(t,e){
+  switch(e.k){
+    case 'prompt':return `<div class="userMsg">${esc(e.text)}</div>`;
+    case 'note':return `<div class="agentNote">${esc(e.text)}</div>`;
+    case 'plan':{const p=t.plan;if(!p)return '';
+      return `<div class="block"><div class="blockH"><span>Plan</span><span class="muted">${p.doneUpto} of ${p.steps.length}</span></div>
+        <div class="steps">${p.steps.map((s,i)=>`<div class="step ${i<p.doneUpto?'done':(i===p.doneUpto?'now':'')}"><span class="check">${i<p.doneUpto?'✓':''}</span><span>${esc(s)}</span></div>`).join('')}</div></div>`;}
+    case 'read':return evRow(e,'▸',`<b>Read</b><span>${e.files.length} files</span>`,'',`<div class="code">${e.files.map(esc).join('\n')}</div>`);
+    case 'edit':return evRow(e,'✎',`<b>Edited</b><span>${e.files.length} file${e.files.length>1?'s':''}</span>`,
+      `<span class="green">+${e.add}</span> <span class="red">−${e.del}</span>`,
+      `<div class="code">${e.files.map(f=>esc(f[0])+'   '+esc(f[1])).join('\n')}</div>
+       <div class="evActs"><button class="btn sm" onclick="go('editor')">Open in editor</button>
+       <button class="btn sm" onclick="setRailTab('files')">Open diff</button></div>`);
+    case 'command':return evRow(e,'▸',`<b>Ran</b><span class="mono">${esc(e.cmd)}</span>`,e.ok?`<span class="green">exit 0</span>`:`<span class="red">exit 1</span>`,`<div class="code">${esc(e.out)}</div>`);
+    case 'test':return evRow(e,e.ok?'✓':'✕',`<b>Tests</b><span class="mono">${esc(e.cmd)}</span>`,e.ok?`<span class="green">${esc(e.out)}</span>`:`<span class="red">${esc(e.out)}</span>`,`<div class="code">${esc(e.detail||e.out)}</div>`);
+    case 'diffsum':return evRow(e,'▣',`<b>Diff summary</b>`,esc(e.text),`<div class="evActs"><button class="btn sm primary" onclick="go('review')">Open review</button></div>`);
+    case 'bcomment':return evRow(e,'●',`<b>Browser comment</b><span>${esc(e.where)}</span>`,esc(e.vp),
+      `<div class="code">target: ${esc(e.sel)}\ncomment: ${esc(e.text)}</div>
+       <div class="evActs"><button class="btn sm" onclick="go('browser')">Open snapshot</button></div>`);
+    case 'rcomment':return evRow(e,'◆',`<b>Review comment</b><span class="mono">${esc(e.file)}:${e.line}</span>`,
+      `<span class="${e.status==='open'?'amber':'green'}">${e.status}</span>`+(e.by?` <span class="miniAv" style="width:15px;height:15px;font-size:8px;background:${PEOPLE[e.by].color}">${PEOPLE[e.by].short}</span>`:''),
+      `<div class="code">${esc(e.text)}</div>`);
+    case 'commit':return evRow(e,'⌗',`<b>Committed</b><span class="mono">${esc(e.sha)}</span>`,esc(e.stat),`<div class="code">${esc(e.msg)}</div>`);
+    case 'denial':return evRow(e,'⊘',`<b>Denied</b><span class="mono">${esc(e.cmd)}</span>`,'sent to agent',`<div class="code">user note: ${esc(e.note||'(no note)')}</div>`);
+    case 'approval':return approvalHTML(t);
+  }
+  return '';
+}
+function evRow(e,g,label,right,det){
+  return `<div class="evRow"><span class="evGlyph">${g}</span><div class="evMain">${label}</div><span class="evRight">${right}</span></div><div class="evDet">${det}</div>`;
+}
+function approvalHTML(t){const p=t.pending;
+  return `<div class="appr"><div class="apprH">▲ Approval needed — run ${esc(p.cmd.split(' ')[0])}</div>
+    <div class="apprBody">
+      <div class="apprCmd">${esc(p.cmd)}</div>
+      <div style="font-size:12.5px;margin-bottom:11px"><b>Why</b> · ${esc(p.reason)}</div>
+      <div class="scopeGrid">
+        <span class="k">cwd</span><span class="v mono">${esc(p.cwd)}</span>
+        <span class="k">filesystem</span><span class="v">${esc(p.fs)}</span>
+        <span class="k">network</span><span class="v">${esc(p.net)}</span>
+        <span class="k">secrets</span><span class="v">${esc(p.secrets)}</span>
+        <span class="k">origin</span><span class="v">${esc(p.origin)}</span>
+        <span class="k">policy</span><span class="v">${esc(p.policy)}</span>
+        <span class="k">risk</span><span class="v"><span class="chip ${p.risk==='low'?'ok':'warn'}" style="font-size:11px">${esc(p.risk)}</span></span>
+      </div>
+      <div class="apprActs">
+        <button class="btn primary" onclick="approveTask('${t.id}')">Approve once</button>
+        <button class="btn" onclick="approveTask('${t.id}',true)">Approve test commands for this task</button>
+        <button class="btn danger" onclick="denyTask('${t.id}')">Deny with note</button>
+      </div>
+    </div></div>`;
+}
+function approveTask(id){
+  const t=state.tasks[id];if(!t||t.status!=='waiting')return;
+  t.events=t.events.filter(e=>e.k!=='approval');
+  t.events.push({k:'command',cmd:t.pending.cmd,ok:false,out:'1 failing · expected UTC offset 0, got -360'});
+  t.status='running_edit'; t.tests='1 failed';
+  toast('Approved · running tests…','ok');
+  refresh();
+  setTimeout(()=>{ // agent fixes, asks again (only approved once)
+    t.events.push({k:'note',text:'The test still expected the old local offset. I updated the assertion fixture and want to re-run the booking tests to confirm.'});
+    t.events.push({k:'approval'}); t.status='waiting';
+    t.pending={...t.pending,reason:'Re-run booking tests after correcting the timezone fixture.',repeat:true};
+    refresh(); if(state.view==='work')renderStream();
+    toast('Agent asks to re-run tests','warn');
+  },1400);
+  if(state.view==='work')renderStream();
+}
+function denyTask(id){
+  const t=state.tasks[id];if(!t)return;
+  t.events=t.events.filter(e=>e.k!=='approval');
+  t.events.push({k:'denial',cmd:t.pending.cmd,note:'Skip live tests — run static type-check instead.'});
+  t.events.push({k:'note',text:'Understood. Skipping the test run and falling back to tsc --noEmit for verification.'});
+  t.status='running_read'; toast('Denied · sent note to agent');
+  refresh(); if(state.view==='work')renderStream();
+}
+
+/* review/context rail */
+function setRailTab(rt){state.railTab=rt;$$('.railTab').forEach(b=>b.classList.toggle('on',b.dataset.rt===rt));renderRailBody();}
+function renderRailBody(){
+  const t=state.tasks[state.activeId];if(!t)return;const body=$('#railBody');
+  if(state.railTab==='review'){
+    const hasDiff=t.events.some(e=>e.k==='edit');
+    if(!hasDiff){body.innerHTML=`<div class="empty">No file writes yet — the agent is still planning. A diff appears as soon as files change.</div>`;return;}
+    const passed=t.events.some(e=>e.k==='test'&&e.ok);
+    const failed=t.events.some(e=>e.k==='test'&&!e.ok);
+    body.innerHTML=`
+      <div class="chip ${passed?'ok':(failed?'bad':'warn')}" style="margin-bottom:11px">${passed?'Verified — tests pass':(failed?'Unverified — tests failed':'Draft diff — tests not run yet')}</div>
+      <div style="font-size:12.5px;margin-bottom:8px"><b>Proposed change</b></div>
+      <div class="code" style="font-size:11.5px">@@ src/booking/time.ts\n<span style="color:var(--diff-del-tx)">- return new Date(ts);</span>\n<span style="color:var(--diff-add-tx)">+ return new Date(ts).toISOString();</span>\n<span style="color:var(--diff-del-tx)">- const local = d.getHours();</span>\n<span style="color:var(--diff-add-tx)">+ const utc = d.getUTCHours();</span></div>
+      <div class="evActs"><button class="btn sm" onclick="go('editor')">Open in editor</button><button class="btn sm" onclick="go('review')">Review &amp; commit</button></div>`;
+  } else if(state.railTab==='files'){
+    const files=[].concat(...t.events.filter(e=>e.k==='edit').map(e=>e.files));
+    body.innerHTML=files.length?files.map(f=>`<div class="fileRow"><span class="gs M">M</span><span class="fn">${esc(f[0])}</span><span class="diffStat mono">${esc(f[1])}</span></div>`).join(''):`<div class="empty">No changed files.</div>`;
+  } else {
+    const passed=t.events.some(e=>e.k==='test'&&e.ok);const failed=t.events.some(e=>e.k==='test'&&!e.ok);
+    const openCmts=t.events.filter(e=>e.k==='rcomment'&&e.status==='open').length;
+    body.innerHTML=`<div class="gateList">
+      ${gate(passed?'pass':(failed?'fail':'wait'),'Tests',passed?'7 passed':(failed?'failing':'not run yet'))}
+      ${gate('pass','Lint','clean')}
+      ${gate('pass','No new deps','verified')}
+      ${gate('pass','Network','blocked during run')}
+      ${gate(openCmts?'wait':'pass','Review comments',openCmts?`${openCmts} unresolved`:'all resolved')}
+      ${gate('wait','Maker / checker',state.liveShare?'awaiting Maya':'self-approve')}
+    </div>`;
+  }
+}
+function gate(s,k,v){const g={pass:'✓',fail:'✕',wait:'…'}[s];return `<div class="gate ${s}"><span class="gi">${g}</span><span style="flex:1">${k}</span><span class="muted">${v}</span></div>`;}
+
+/* context chips on composer */
+function attachCtx(label){const t=state.tasks[state.activeId];t.ctx=t.ctx||[];t.ctx.push(label);renderStream(true);toast('Attached to prompt');}
+
+/* terminal */
+function toggleTerm(open){state.termOpen=open===undefined?!state.termOpen:open;$('#workGrid').classList.toggle('term',state.termOpen);
+  if(state.termOpen)$('#termBody').innerHTML=`<span class="muted">$ npm test -- --grep booking</span>\n\nFAIL tests/booking.spec.ts\n  ● booking · normalizes to UTC\n    expected offset 0, received -360\n\nTests: <span class="red">1 failed</span>, 6 passed\n\n<span class="muted"># detected dev server at</span> http://localhost:5173  <button class="btn sm" onclick="go('browser')">Open preview</button>`;}
+
+/* ===================== EDITOR / IDE ===================== */
+const FILES={
+  'src/booking/time.ts':{git:'M',lang:'TypeScript',lines:[
+    '// booking/time.ts — timezone-safe helpers',
+    'import { z } from "zod";',
+    '',
+    'export function parseSlot(ts: number): Date {',
+    '  return new Date(ts);',
+    '}',
+    '',
+    'export function hourOf(d: Date): number {',
+    '  const local = d.getHours();',
+    '  return local;',
+    '}',
+    '',
+    'export function toBookingTime(ts: number) {',
+    '  const d = parseSlot(ts);',
+    '  return { hour: hourOf(d), iso: d.toString() };',
+    '}',
+  ],
+  hunk:{at:4,src:'Claude Code',del:['  return new Date(ts);'],add:['  // normalize: store/compare in UTC','  return new Date(ts).toISOString() as unknown as Date;']}},
+  'src/booking/slots.ts':{git:'',lang:'TypeScript',lines:['// slots.ts','export const SLOTS = 48;']},
+  'tests/booking.spec.ts':{git:'',lang:'TypeScript',lines:['// booking.spec.ts','import { toBookingTime } from "../src/booking/time";']},
+  'AGENTS.md':{git:'',lang:'Markdown',lines:['# AGENTS.md','test: npm test','style: prettier, no default exports']},
+};
+const TREE=[
+  {n:'src',dir:1,open:1,depth:0},
+  {n:'booking',dir:1,open:1,depth:1},
+  {n:'src/booking/time.ts',depth:2,git:'M'},
+  {n:'src/booking/slots.ts',depth:2},
+  {n:'tests',dir:1,open:1,depth:0},
+  {n:'tests/booking.spec.ts',depth:1},
+  {n:'AGENTS.md',depth:0},
+];
+let openTabs=['src/booking/time.ts','tests/booking.spec.ts'], curFile='src/booking/time.ts', aiInlineOpen=false, pendingHunk=true;
+function renderEditor(){renderTree();renderTabs();renderCode();renderRemoteCursors();renderIdePanel();}
+function renderTree(){
+  $('#treeBody').innerHTML=TREE.map((f,i)=>{
+    const isFile=!f.dir; const name=isFile?f.n.split('/').pop():f.n;
+    const pres = f.n==='src/booking/time.ts' && state.liveShare ? `<span class="pres" style="background:${PEOPLE.you.color}"></span>` : (f.n==='src/editor' ? '' : '');
+    return `<div class="trow ${f.dir?'dir':''} ${curFile===f.n?'on':''}" style="padding-left:${8+f.depth*13}px" data-file="${isFile?f.n:''}" data-dir="${f.dir?i:''}">
+      <span class="tg">${f.dir?(f.open?'▾':'▸'):'·'}</span>
+      <span class="tn">${esc(name)}</span>
+      ${f.git?`<span class="gs ${f.git}">${f.git}</span>`:'<span class="gs"></span>'}${pres}
+    </div>`;
+  }).join('');
+  $$('#treeBody [data-file]').forEach(el=>{if(el.dataset.file)el.onclick=()=>openFile(el.dataset.file);});
+}
+function openFile(f){if(!openTabs.includes(f))openTabs.push(f);curFile=f;renderEditor();}
+function renderTabs(){
+  $('#tabBar').innerHTML=openTabs.map(f=>{
+    const dirty=f==='src/booking/time.ts';
+    return `<div class="etab ${curFile===f?'on':''}" data-tab="${f}"><span class="fn">${esc(f.split('/').pop())}</span>${dirty?'<span class="ddot"></span>':'<span class="x" data-close="'+f+'">✕</span>'}</div>`;}).join('');
+  $$('#tabBar [data-tab]').forEach(el=>el.onclick=()=>{curFile=el.dataset.tab;renderEditor();});
+  $$('#tabBar [data-close]').forEach(el=>el.onclick=e=>{e.stopPropagation();openTabs=openTabs.filter(t=>t!==el.dataset.close);if(curFile===el.dataset.close)curFile=openTabs[0];renderEditor();});
+  $('#edPath').textContent=curFile;$('#edLang').textContent=(FILES[curFile]||{}).lang||'Text';
+}
+// Single-pass tokenizer: escape first, then ONE regex with alternation so
+// markup inserted for an earlier token is never reprocessed by a later rule.
+function hl(raw){
+  return esc(raw).replace(
+    /(\/\/[^<]*$)|(&quot;[^&]*?&quot;|'[^']*')|(\b(?:import|from|export|function|const|let|return|as|unknown|number|string|boolean|interface|type|class|new|if|else|for|while|await|async)\b)|(\b\d+\b)/g,
+    (m,com,str,kw,num)=>{
+      if(com) return '<span class="tk-com">'+com+'</span>';
+      if(str) return '<span class="tk-str">'+str+'</span>';
+      if(kw)  return '<span class="tk-kw">'+kw+'</span>';
+      if(num) return '<span class="tk-num">'+num+'</span>';
+      return m;
+    });
+}
+function renderCode(){
+  const f=FILES[curFile]||{lines:[]};const diff=state.editorView==='diff';
+  let n=0,html='';
+  f.lines.forEach((ln,i)=>{
+    n++;const cur=i===8?' cur':'';
+    html+=`<div class="ln${cur}"><span class="num">${n}</span><span class="txt">${hl(ln)}</span></div>`;
+    // inject pending hunk after target line in time.ts
+    if(curFile==='src/booking/time.ts'&&f.hunk&&i===f.hunk.at&&pendingHunk&&!diff){
+      html+=hunkHTML(f.hunk);
+    }
+    if(curFile==='src/booking/time.ts'&&aiInlineOpen&&i===8){
+      html+=`<div class="aiInline"><div class="aih">✦ Inline edit · ${PEOPLE.you.name}</div>
+        <input id="aiInlineInput" placeholder="Describe the edit (e.g. return UTC hour)…" value="use getUTCHours() and document why"/>
+        <div class="aib"><button class="btn sm primary" onclick="acceptAiInline()">Generate</button><button class="btn sm" onclick="closeAiInline()">Cancel <span class="kbd">Esc</span></button></div></div>`;
+    }
+  });
+  if(diff&&curFile==='src/booking/time.ts'){
+    html=`<div class="ln del"><span class="num">5</span><span class="txt">${hl('  return new Date(ts);')}</span></div>
+      <div class="ln add"><span class="num">5</span><span class="txt">${hl('  // normalize: store/compare in UTC')}</span></div>
+      <div class="ln add"><span class="num">6</span><span class="txt">${hl('  return new Date(ts).toISOString() as unknown as Date;')}</span></div>
+      <div class="ln del"><span class="num">9</span><span class="txt">${hl('  const local = d.getHours();')}</span></div>
+      <div class="ln add"><span class="num">10</span><span class="txt">${hl('  const utc = d.getUTCHours();')}</span></div>`+html;
+  }
+  $('#codeArea').innerHTML=html;
+  if(aiInlineOpen)setTimeout(()=>$('#aiInlineInput')&&$('#aiInlineInput').focus(),0);
+}
+function hunkHTML(h){
+  return `<div class="hunk"><div class="hunkH">✦ Pending edit<span class="src">proposed by ${esc(h.src)}</span></div>
+    <div class="codeArea" style="padding:0">
+      ${h.del.map(l=>`<div class="ln del"><span class="num">−</span><span class="txt">${hl(l)}</span></div>`).join('')}
+      ${h.add.map(l=>`<div class="ln add"><span class="num">+</span><span class="txt">${hl(l)}</span></div>`).join('')}
+    </div>
+    <div class="hunkActs"><button class="btn sm primary" onclick="acceptHunk()">Accept <span class="kbd">⌘↵</span></button>
+      <button class="btn sm" onclick="rejectHunk()">Reject</button>
+      <button class="btn sm" onclick="toast('Sent to agent: explain this change')">Ask why</button></div></div>`;
+}
+function acceptHunk(){pendingHunk=false;FILES['src/booking/time.ts'].lines.splice(4,1,'  // normalize: store/compare in UTC','  return new Date(ts).toISOString() as unknown as Date;');delete FILES['src/booking/time.ts'].hunk;renderCode();toast('Accepted edit · staged','ok');}
+function rejectHunk(){pendingHunk=false;renderCode();toast('Rejected edit · agent notified');}
+function openAiInline(){aiInlineOpen=true;state.editorView='code';$$('#edViewSeg button').forEach(b=>b.classList.toggle('on',b.dataset.ev==='code'));renderCode();}
+function closeAiInline(){aiInlineOpen=false;renderCode();}
+function acceptAiInline(){aiInlineOpen=false;pendingHunk=true;FILES['src/booking/time.ts'].hunk={at:8,src:'Inline edit (you)',del:['  const local = d.getHours();'],add:['  // UTC avoids DST drift across regions','  const utc = d.getUTCHours();']};renderCode();toast('Generated edit — review below','ok');}
+function renderRemoteCursors(){
+  const wrap=$('#rcursors');
+  if(!state.liveShare||curFile!=='src/booking/time.ts'){wrap.innerHTML='';return;}
+  // Maya's cursor on the editor (live collaboration)
+  wrap.innerHTML=`<div class="rcursor" style="top:${46+13*20.2}px;left:120px;background:${PEOPLE.maya.color}"><span class="lbl" style="background:${PEOPLE.maya.color}">Maya</span></div>`;
+}
+function renderIdePanel(){
+  $('#ipBody').innerHTML=`
+    <div class="agentMsg">I edited <span class="mono">time.ts</span> to normalize booking times to UTC. There's one pending edit in the gutter — accept it to stage, or ask me to explain.</div>
+    <div class="agentMsg me">Why ISO string instead of a Date?</div>
+    <div class="agentMsg">Storing the ISO string makes equality checks timezone-stable across the API boundary. If you prefer a Date, I can wrap it at the call site instead — say the word and I'll revise the hunk.</div>
+    <div class="block"><div class="blockH"><span>Pending edits</span><span class="muted">1 file</span></div>
+      <div class="steps"><div class="step now"><span class="check"></span><span class="mono" style="font-size:12px">src/booking/time.ts · +2 −1</span></div></div>
+      <div class="hunkActs" style="border-top:1px solid var(--line2)"><button class="btn sm primary" onclick="acceptHunk()">Accept all</button><button class="btn sm" onclick="rejectHunk()">Reject all</button></div>
+    </div>`;
+}
+
+/* ===================== REVIEW ===================== */
+function renderReview(){
+  const ready=state.order.map(id=>state.tasks[id]).filter(t=>t.status==='review');
+  $('#reviewCount').textContent=ready.length+' ready';
+  $('#reviewBody').innerHTML=ready.map(t=>{
+    const open=t.events.filter(e=>e.k==='rcomment'&&e.status==='open').length;
+    const blocked=open>0;
+    return `<div class="setSec"><div class="setRow" style="align-items:flex-start;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px;width:100%">
+        <span class="dot ok"></span><b style="font-size:14px">${esc(t.title)}</b>
+        <span class="chip ok">tests pass</span><span class="chip mono">${esc(t.branch)}</span>
+        ${(t.presence||[]).map(k=>`<span class="miniAv" style="background:${PEOPLE[k].color}" title="${esc(PEOPLE[k].name)} reviewing">${PEOPLE[k].short}</span>`).join('')}
+        <div class="spacer" style="flex:1"></div>
+        <span class="muted" style="font-size:12px">${t.add} additions · ${t.del} deletions</span>
+      </div>
+      <div class="gateList" style="width:100%">
+        ${gate('pass','Tests','passing')}${gate('pass','Lint','clean')}${gate('pass','No new deps','verified')}
+        ${gate(blocked?'wait':'pass','Review comments',blocked?`${open} unresolved`:'resolved')}
+        ${gate('wait','Maker / checker','awaiting Maya')}
+      </div>
+      ${open?`<div class="bcmt" style="width:100%"><div class="bh"><span class="miniAv" style="background:${PEOPLE.maya.color}">M</span> Maya · <span class="mono">guard.ts:22</span></div>Use the existing useBeforeUnload hook instead of a raw listener. <button class="btn sm" style="margin-top:7px" onclick="toast('Sent comment to agent')">Send to agent</button></div>`:''}
+      <div style="display:flex;gap:8px;width:100%">
+        <button class="btn sm" onclick="go('editor')">Open diff</button>
+        <button class="btn sm primary" ${blocked?'disabled':''} title="${blocked?'Resolve review comments first':''}">Commit ${blocked?'— blocked':''}</button>
+        <button class="btn sm" ${blocked?'disabled':''}>Open PR</button>
+        ${blocked?'<span class="chip warn" style="margin-left:auto">Commit blocked — 1 comment unresolved (override available)</span>':'<span class="chip ok" style="margin-left:auto">Ready to ship</span>'}
+      </div>
+    </div></div>`;}).join('')||`<div class="empty">Nothing ready to review. That's a good sign.</div>`;
+}
+
+/* ===================== COMPARE ===================== */
+function renderCompare(){
+  const runs=[
+    {h:'Claude Code',color:'ok',plan:'4 steps',diff:'+6 −4',files:'1 file',tests:'7/7',lint:'clean',risk:'low',cost:'4m · 1 appr',conf:'0.86',win:true},
+    {h:'Codex',color:'',plan:'5 steps',diff:'+14 −9',files:'2 files',tests:'7/7',lint:'1 warn',risk:'low',cost:'6m · 2 appr',conf:'0.79'},
+    {h:'AutoCode',color:'',plan:'3 steps',diff:'+22 −11',files:'3 files',tests:'5/7',lint:'clean',risk:'med',cost:'5m · 1 appr',conf:'0.61'},
+  ];
+  $('#cmpCols').innerHTML=runs.map(r=>`<div class="cmpCol ${r.win?'win':''}">
+    <div class="cmpH"><span class="dot ${r.color==='ok'?'ok':'done'}"></span>${esc(r.h)}${r.win?'<span class="chip ok" style="margin-left:auto;font-size:11px">leading</span>':''}</div>
+    <div class="cmpRows">
+      <div class="cmpR"><span class="k">Diff</span><span class="mono">${r.diff} · ${r.files}</span></div>
+      <div class="cmpR"><span class="k">Tests</span><span class="${r.tests==='7/7'?'green':'red'}">${r.tests}</span></div>
+      <div class="cmpR"><span class="k">Lint</span><span>${r.lint}</span></div>
+      <div class="cmpR"><span class="k">Risk</span><span class="${r.risk==='low'?'green':'amber'}">${r.risk}</span></div>
+      <div class="cmpR"><span class="k">Cost</span><span>${r.cost}</span></div>
+      <div class="cmpR"><span class="k">Confidence</span><span>${r.conf}</span></div>
+    </div>
+    <div class="cmpFoot"><button class="btn sm" onclick="toast('Opened ${esc(r.h)} diff')">Open diff</button>
+      <button class="btn sm primary" onclick="pickWinner('${esc(r.h)}')">${r.win?'Pick winner':'Pick'}</button>
+      <button class="btn sm" onclick="toast('Cherry-pick from ${esc(r.h)}')">Cherry-pick</button></div>
+  </div>`).join('');
+}
+function pickWinner(h){toast(`${h} selected · losing worktrees archived`,'ok');$('#cmpHint').textContent=`${h} committed. Other worktrees archived to .worktrees/archive/ (recoverable).`;}
+
+/* ===================== AUTOMATIONS ===================== */
+function renderAuto(){
+  const items=[
+    ['⟳','Nightly dependency audit','Runs npm audit + opens a task for each high-severity finding','daily 02:00',true],
+    ['◷','PR review pass','When a teammate opens a PR, run a Claude Code review and post inline comments','on pull_request',true],
+    ['◆','Flaky test triage','Re-run any test that failed once; open a task only if it fails twice','on test failure',false],
+    ['▣','Browser regression','Capture pricing-page screenshots and diff against baseline','weekly Mon 09:00',true],
+  ];
+  $('#autoBody').innerHTML=items.map(([g,t,d,when,on])=>`<div class="autoCard">
+    <div class="ai">${g}</div><div style="flex:1"><b style="font-size:13.5px">${esc(t)}</b><div class="muted" style="font-size:12.3px;margin-top:2px">${esc(d)}</div>
+    <div class="chip" style="margin-top:8px;font-size:11px">${esc(when)}</div></div>
+    <div class="toggle ${on?'on':''}" data-auto></div></div>`).join('');
+  $$('#autoBody [data-auto]').forEach(t=>t.onclick=()=>{t.classList.toggle('on');toast('Automation '+(t.classList.contains('on')?'enabled':'paused'));});
+}
+
+/* ===================== SETTINGS matrix ===================== */
+function renderMatrix(){
+  const rows=[
+    ['Claude Code','Ready','structured','OK','yes','yes','via MCP','yes','yes'],
+    ['Codex','Ready','ACP','OK','yes','config','yes','yes','yes'],
+    ['AutoCode native','Connected','native','n/a','yes','yes','yes','yes','yes'],
+    ['OpenCode','Missing','—','—','—','—','—','—','—'],
+    ['Gemini CLI','Ready','structured','OK','yes','no','no','yes','yes'],
+    ['Custom CLI','Ready','raw PTY','n/a','no','no','no','yes','yes'],
+  ];
+  const yn=v=>v==='yes'?'<span class="yes">yes</span>':(v==='—'?'<span class="no">—</span>':v);
+  $('#matrix').innerHTML=`<thead><tr><th>Harness</th><th>Status</th><th>Adapter</th><th>Auth</th>
+    <th>Review comments</th><th>Notifications</th><th>Browser</th><th>Terminal</th><th>Worktrees</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td><b>${r[0]}</b></td>
+      <td><span class="chip ${r[1]==='Missing'?'':( 'ok')}" style="font-size:11px">${r[1]}</span></td>
+      <td class="mono" style="font-size:11.5px">${r[2]}</td><td>${r[3]}</td>
+      <td>${yn(r[4])}</td><td>${yn(r[5])}</td><td>${yn(r[6])}</td><td>${yn(r[7])}</td><td>${yn(r[8])}</td></tr>`).join('')}</tbody>`;
+}
+
+/* ===================== browser comments ===================== */
+state.bcomments=[
+  {where:'Enterprise card CTA · desktop',vp:'1440×900',sel:'.pcard:nth-child(3) .cta',scope:'color',text:'Contrast fails AA on hover — needs a darker primary or lighter text.'},
+  {where:'Pricing grid · mobile',vp:'390×844',sel:'.pcards',scope:'layout',text:'Cards overflow horizontally below 420px; should stack.'},
+];
+function renderBcmts(){
+  $('#bcmtList').innerHTML=state.bcomments.map(c=>`<div class="bcmt">
+    <div class="bh"><span class="dot warn" style="width:7px;height:7px"></span>${esc(c.where)}</div>
+    <div class="mono" style="font-size:11px;color:var(--muted)">${esc(c.sel)} · ${esc(c.vp)} · ${esc(c.scope)}</div>
+    <div style="margin-top:6px">${esc(c.text)}</div></div>`).join('');
+  $('#bcmtCount').textContent=state.bcomments.length;
+}
+
+/* ===================== command palette ===================== */
+const COMMANDS=[
+  ['Go to Inbox','nav','▤','Ctrl 1',()=>go('inbox')],
+  ['Go to Workstreams','nav','▦','Ctrl 2',()=>go('work')],
+  ['Open Editor','nav','‹›','Ctrl 3',()=>go('editor')],
+  ['Open Review queue','nav','✓','Ctrl 4',()=>go('review')],
+  ['Open Browser QA','nav','◐','',()=>go('browser')],
+  ['Compare runs','nav','▥','',()=>go('compare')],
+  ['New agent task','action','+','Ctrl N',()=>openModal('task')],
+  ['Toggle terminal','action','▸','Ctrl J',()=>{go('work');toggleTerm();}],
+  ['Start live share','action','◉','',()=>{state.liveShare=true;renderPresence();toast('Live share on · 3 present','ok');}],
+  ['Approve next request','action','▲','',()=>{const t=Object.values(state.tasks).find(t=>t.status==='waiting');if(t){openTask(t.id);go('work');}}],
+  ['Toggle theme','action','◐','',()=>toggleTheme()],
+];
+function openPalette(){$('#palScrim').classList.add('on');$('#palInput').value='';$('#palInput').focus();renderPal('');}
+function renderPal(q){
+  const items=COMMANDS.filter(c=>c[0].toLowerCase().includes(q.toLowerCase()))
+    .concat(state.order.map(id=>state.tasks[id]).filter(t=>t.title.toLowerCase().includes(q.toLowerCase())).map(t=>[t.title,'task','◆','',()=>{openTask(t.id);go('work');}]));
+  $('#palList').innerHTML=items.map((c,i)=>`<div class="palItem ${i===0?'on':''}" data-i="${i}">
+    <span class="pg">${c[2]}</span><span style="flex:1">${esc(c[0])}</span><span class="pcat">${c[1]}</span><span class="pk">${c[3]||''}</span></div>`).join('');
+  $('#palList').dataset.items=items.length;
+  window._palItems=items;
+  $$('#palList .palItem').forEach(el=>el.onclick=()=>{window._palItems[+el.dataset.i][4]();closeAll();});
+}
+
+/* ===================== modals + misc ===================== */
+function openModal(which){closeAll();$('#'+(which==='task'?'taskScrim':'')).classList.add('on');}
+function closeAll(){$$('.scrim').forEach(s=>s.classList.remove('on'));$('#collabPop').classList.remove('on');}
+function toggleTheme(){const r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark';}
+let toastN=0;
+function toast(msg,kind){const id='t'+(toastN++);const el=document.createElement('div');el.className='toast';el.id=id;
+  el.innerHTML=`<span class="td" style="background:${kind==='ok'?'var(--green)':kind==='warn'?'var(--amber)':'var(--blue)'}"></span><span>${esc(msg)}</span>`;
+  $('#toasts').appendChild(el);setTimeout(()=>{el.style.opacity='0';el.style.transform='translateX(12px)';setTimeout(()=>el.remove(),200);},2600);}
+
+function refresh(){renderRail();renderMetrics();if(state.view==='inbox')renderInbox();if(state.view==='work')renderWList();}
+
+/* ===================== intents (new task) ===================== */
+const INTENTS=[['🐞','Fix a bug',1],['✦','Build a feature',0],['◷','Run tests & repair',0],['◐','Browser UI fix',0],['▥','Compare agents',0],['▸','Raw terminal',0]];
+function renderIntents(){$('#intentGrid').innerHTML=INTENTS.map((it,i)=>`<div class="intent ${it[2]?'on':''}" data-int="${i}"><div class="ig">${it[0]}</div><b>${it[1]}</b></div>`).join('');
+  $$('#intentGrid [data-int]').forEach(el=>el.onclick=()=>{$$('#intentGrid .intent').forEach(x=>x.classList.remove('on'));el.classList.add('on');});}
+
+/* ===================== events ===================== */
+function bind(){
+  renderRail();renderMetrics();renderPresence();renderInbox();renderBcmts();renderIntents();
+  // rail tabs
+  $$('.railTab').forEach(b=>b.onclick=()=>setRailTab(b.dataset.rt));
+  // editor view seg
+  $$('#edViewSeg button').forEach(b=>b.onclick=()=>{state.editorView=b.dataset.ev;$$('#edViewSeg button').forEach(x=>x.classList.toggle('on',x===b));renderCode();});
+  $('#btnAiInline').onclick=openAiInline;
+  $('#treeRefresh').onclick=()=>toast('Re-scanned worktree');
+  $('#ideChatSend').onclick=()=>{const v=$('#ideChat').value.trim();if(!v)return;$('#ideChat').value='';toast('Sent to Claude Code');};
+  // browser modes
+  $$('[data-bm]').forEach(b=>b.onclick=()=>{$$('[data-bm]').forEach(x=>x.classList.toggle('on',x===b));toast(b.dataset.bm==='chrome'?'Chrome Bridge — pairing required (P2)':'Preview browser');});
+  $$('#bModeSeg [data-mode]').forEach(b=>b.onclick=()=>{$$('#bModeSeg [data-mode]').forEach(x=>{x.classList.remove('on');x.style.background='';});b.classList.add('on');b.style.background='var(--inset2)';});
+  $('#btnViewport').onclick=()=>{const o=['Desktop ▾','Tablet ▾','Mobile ▾'];const i=(o.indexOf($('#btnViewport').textContent)+1)%3;$('#btnViewport').textContent=o[i];};
+  $('#btnSendBcmts').onclick=()=>{toast('Sent 2 comments to pricing-page agent','ok');go('work');openTask('t3');};
+  $('#btnOpenChrome').onclick=()=>toast('Chrome Bridge not paired — see Settings');
+  // top bar
+  $('#cmdkBtn').onclick=openPalette;
+  $('#btnNewTask').onclick=()=>openModal('task');
+  $('#wNew').onclick=()=>openModal('task');
+  $('#btnTheme').onclick=toggleTheme;
+  $('#btnTriage').onclick=()=>{go('review');toast('Jumped to review queue');};
+  $('#mAttn').onclick=()=>{const t=Object.values(state.tasks).find(t=>t.status==='waiting');if(t){openTask(t.id);go('work');}};
+  $('#collabBtn').onclick=()=>$('#collabPop').classList.toggle('on');
+  // presence avatars
+  $('#presence').onclick=e=>{const a=e.target.closest('[data-peep]');if(a)$('#collabPop').classList.toggle('on');};
+  // toggles in settings
+  $$('[data-toggle]').forEach(t=>t.onclick=()=>t.classList.toggle('on'));
+  // composer
+  $('#composerText').oninput=e=>{const t=state.tasks[state.activeId];if(t)t.draft=e.target.value;};
+  $('#btnSend').onclick=sendComposer;
+  $('#composerText').onkeydown=e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();sendComposer();}};
+  $('#termInput').onkeydown=e=>{if(e.key==='Enter'){$('#termBody').innerHTML+=`\n<span class="muted">$ ${esc(e.target.value)}</span>\n(running…)`;e.target.value='';}};
+  // new task modal
+  $('#ntStart').onclick=()=>{closeAll();go('work');openTask('t1');toast('Task started · Claude Code in worktree','ok');};
+  // palette
+  $('#palInput').oninput=e=>renderPal(e.target.value);
+  // global keys
+  document.addEventListener('keydown',keys);
+  // scrim click-out
+  $$('.scrim').forEach(s=>s.onclick=e=>{if(e.target===s)closeAll();});
+}
+function sendComposer(){const t=state.tasks[state.activeId];const v=$('#composerText').value.trim();if(!v)return;
+  t.events.push({k:'prompt',text:v});t.draft='';$('#composerText').value='';t.ctx=[];renderStream();toast('Sent to '+t.harness);}
+function keys(e){
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openPalette();return;}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){e.preventDefault();openModal('task');return;}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='i'&&state.view==='editor'){e.preventDefault();openAiInline();return;}
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'&&pendingHunk&&state.view==='editor'){e.preventDefault();acceptHunk();return;}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='j'){e.preventDefault();go('work');toggleTerm();return;}
+  if((e.ctrlKey||e.metaKey)&&/^[1-4]$/.test(e.key)){e.preventDefault();go(['inbox','work','editor','review'][+e.key-1]);return;}
+  if(e.key==='Escape'){if(aiInlineOpen){closeAiInline();return;}closeAll();}
+  // palette nav
+  if($('#palScrim').classList.contains('on')){
+    const items=$$('#palList .palItem');let idx=items.findIndex(i=>i.classList.contains('on'));
+    if(e.key==='ArrowDown'){e.preventDefault();idx=Math.min(idx+1,items.length-1);}
+    else if(e.key==='ArrowUp'){e.preventDefault();idx=Math.max(idx-1,0);}
+    else if(e.key==='Enter'){e.preventDefault();window._palItems[idx][4]();closeAll();return;}
+    else return;
+    items.forEach((it,i)=>it.classList.toggle('on',i===idx));items[idx].scrollIntoView({block:'nearest'});
+  }
+}
+bind();
+</script>
+</body>
+</html>

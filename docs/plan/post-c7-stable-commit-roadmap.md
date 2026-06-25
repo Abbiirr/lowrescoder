@@ -460,7 +460,7 @@ without flagging the reversal.
 | Eval execution engine — fixture setup, autocode session launch, telemetry collection, judge invocation | `evals/runner.py` (NEW) | ~300 |
 | LLM judge — structured-output scoring with stronger model than agent | `evals/judge.py` (NEW) | ~150 |
 | CI workflow gate — score within 10% of baseline | `.github/workflows/evals.yml` (NEW) | small |
-| Drift-derived eval generator — weekly script proposing eval cases from production drift events (consumes P3a) | `scripts/generate_evals_from_drift.py` (NEW) | ~100 |
+| Drift-derived eval generator — weekly script proposing eval cases from production drift events (consumes P3a) | `evals/scripts/generate_evals_from_drift.py` (NEW) | ~100 |
 | Optional: public-safe stats export | `autocode telemetry public-report` | small |
 
 ### Eval case anatomy (from Tier 8.2)

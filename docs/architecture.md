@@ -34,7 +34,7 @@ The Go Bubble Tea TUI and the Python prompt-toolkit inline frontend were previou
 
 **Location:** `autocode/rtui/`
 **Binary:** `autocode/rtui/target/release/autocode-tui` (~2.4 MB stripped)
-**Stack:** `crossterm` 0.28 + `ratatui` 0.29 + `tokio` 1.x + `portable-pty` 0.8 + `serde_json` + `anyhow` + `tracing`
+**Stack:** `crossterm` 0.28 + `ratatui` 0.29 + `tokio` 1.x + `serde_json` + `anyhow` + `tracing`
 
 The Rust frontend handles terminal interaction using ratatui widgets over crossterm. It runs in **inline mode by default** to preserve native terminal scrollback; `autocode --mode altscreen` opts into the alternate-screen Rust TUI. `autocode --attach HOST:PORT` connects the same frontend to an already-running TCP backend. (The earlier `autocode chat --rust-altscreen` flag is no longer canonical; prefer `autocode --mode altscreen`.)
 
@@ -57,8 +57,8 @@ The Rust frontend handles terminal interaction using ratatui widgets over crosst
 |------|---------|
 | `src/main.rs` | Entry point: launch-mode parsing, connection-mode resolution, raw-mode guard, event/effect loop |
 | `src/backend/connection.rs` | Spawn-managed vs attach/TCP connection abstraction |
-| `src/backend/pty.rs` | Spawn-managed backend subprocess over piped stdio |
-| `src/backend/process.rs` | Child lifecycle and kill-on-drop cleanup |
+| `src/backend/stdio.rs` | Spawn-managed backend subprocess over piped stdio; backend stderr is preserved in `~/.autocode/tui.log` |
+| `src/backend/process.rs` | Backend child lifecycle, exit status normalization, and kill-on-drop cleanup |
 | `src/rpc/codec.rs` | JSON-RPC line encode/decode |
 | `src/rpc/protocol.rs` | Rust wire structs for backend notifications/requests |
 | `src/rpc/schema.rs` | Canonical method classification for reducer dispatch |
@@ -96,7 +96,7 @@ Idle ──(Enter/chat)──► Streaming ──(tool call)──► ToolCall
 
 **Location:** `autocode/src/autocode/backend/`
 
-The Python backend exposes the agent loop, tools, LLM providers, session management, slash commands, tasks, subagents, memory, checkpoints, and config over JSON-RPC 2.0. It is launched automatically by the Rust TUI in spawn-managed stdio mode, or independently with `autocode serve --transport stdio|tcp`.
+The Python backend exposes the agent loop, tools, LLM providers, session management, slash commands, tasks, subagents, memory, checkpoints, and config over JSON-RPC 2.0. It is launched automatically by the Rust TUI in spawn-managed stdio mode, or independently with `autocode serve --transport stdio|tcp`. The TCP host is a local attach adapter, not a remote server: it refuses non-loopback bind hosts by default, serves one active frontend client at a time, and serializes outbound writes behind one drain loop.
 
 External agent clients use a separate read-only MCP surface exposed by
 `autocode mcp-serve --transport stdio`. Generated Claude Code, Codex, and
@@ -109,9 +109,9 @@ JSONL with `--audit-log-path` or `AUTOCODE_MCP_AUDIT_LOG`.
 | Module | Responsibility |
 |--------|----------------|
 | `autocode/src/autocode/backend/server.py` | Backend application state, request dispatch surface, frontend notification helpers |
-| `autocode/src/autocode/backend/chat.py` | Chat-turn execution, callback wiring, layer selection, `on_done` shaping |
+| `autocode/src/autocode/backend/chat.py` | Chat-turn execution, callback wiring, layer selection, `on_done` shaping through a public host-service surface |
 | `autocode/src/autocode/backend/services.py` | Non-transport command/session/model/provider/task service helpers |
-| `autocode/src/autocode/backend/transport.py` | `BackendTransport`, JSON encode/decode, pending frontend-request broker |
+| `autocode/src/autocode/backend/transport.py` | Public `RpcApplication` host protocol, `BackendTransport`, JSON encode/decode, pending frontend-request broker |
 | `autocode/src/autocode/backend/stdio_host.py` | Stdio line framing/threading host adapter |
 | `autocode/src/autocode/backend/tcp_host.py` | Localhost TCP JSON-RPC host adapter |
 | `autocode/src/autocode/backend/schema.py` | Canonical JSON-RPC method names, params, and result models |
@@ -201,6 +201,10 @@ SQLite-backed (WAL mode) conversation persistence. Stores messages, metadata, an
 
 29 backend-visible commands are handled by `CommandRouter` and exposed to the Rust TUI through `command.list`:
 
+The same command runtime is also used by the Textual fallback and the Rich
+legacy REPL. `autocode.tui.commands` is a compatibility alias, not a separate
+command implementation.
+
 | Command | Description |
 |---------|-------------|
 | `/help` | Show available commands |
@@ -230,7 +234,7 @@ The Rust TUI owns local UI-only surfaces such as palette/pickers and recovery di
 
 ## JSON-RPC Protocol
 
-Wire format: newline-delimited JSON (one JSON object per line) over either stdio pipes or localhost TCP.
+Wire format: newline-delimited JSON (one JSON object per line) over either stdio pipes or localhost TCP. TCP attach is single-active-client and local-loopback only by default.
 
 ### Rust → Python Requests
 
@@ -333,14 +337,14 @@ The agent runtime consumes that LSP substrate through post-edit auto-verify. Aft
 ```
 autocode/
 ├── rtui/                          # Rust TUI frontend
-│   ├── Cargo.toml                 # crossterm + ratatui + tokio + portable-pty
+│   ├── Cargo.toml                 # crossterm + ratatui + tokio
 │   ├── Cargo.lock
 │   ├── src/
 │   │   ├── main.rs                # Entry, arg parsing, raw-mode guard, effect dispatch
 │   │   ├── backend/
 │   │   │   ├── connection.rs      # spawn-managed vs attach/TCP backend selection
-│   │   │   ├── pty.rs             # spawn-managed stdio backend process
-│   │   │   └── process.rs         # Child lifecycle + kill-on-drop
+│   │   │   ├── stdio.rs           # spawn-managed stdio backend process + stderr log pipe
+│   │   │   └── process.rs         # Backend process lifecycle + kill-on-drop
 │   │   ├── rpc/
 │   │   │   ├── codec.rs           # encode/decode JSON lines
 │   │   │   ├── protocol.rs        # serde structs for protocol payloads

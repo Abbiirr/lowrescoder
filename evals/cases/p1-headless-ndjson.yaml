@@ -1,0 +1,34 @@
+id: p1-headless-ndjson
+name: P1 headless NDJSON protocol invariant
+provenance:
+  source: p1
+  bug_id: headless-ndjson
+  recorded_at: "2026-04-30"
+setup:
+  fixture_repo: ""
+  initial_files: {}
+input:
+  user_message: |
+    Say "protocol test passed" and nothing else.
+expected_outcomes:
+  must_have:
+    - "thread_started"
+    - "turn_started"
+    - "turn_completed"
+  must_not_have:
+    - "error"
+  judge_criteria:
+    - correctness
+    - minimality
+config:
+  model: coding
+  max_turns: 2
+  timeout_sec: 120
+  temperature: 0.0
+  seed: 0
+baseline:
+  correctness_score: 0.95
+  minimality_score: 0.90
+  test_quality_score: 0.75
+  cost_usd_p50: 0.10
+archived: false

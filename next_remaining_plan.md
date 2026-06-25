@@ -1,7 +1,7 @@
 # Next Remaining Plan — Post-C7 Pass
 
 > **Status:** AUTHORITATIVE master plan. Consolidates `docs/plan/post-c7-stable-commit-roadmap.md`, `docs/plan/post-c7-pass-atomic-checklist.md`, `docs/plan/post-c7-builder-handoff.md`, `docs/plan/post-c7-telemetry-spec.md`, and the 9 gap categories from the 2026-04-30 audit. Use this file + `next_remaining_todo.md` (atomic checklist) as the single pair of references for builders.
-> **Date:** 2026-05-02. Updated for user-directed HFIX priority before P3b.
+> **Date:** 2026-05-06. Updated for backend-harness-first redirect after the TUI v9 plan was locked. `docs/plan/backend-harness-solidification-plan.md` B1-B6 are builder-complete; B7 modular follow-through remains. `TUI_PLAN.md` is locked and unblocked by B6 closure, but not started unless user directs it.
 > **Stable commit:** `386ef04 Implements till c7` (Tranche 4 closed).
 > **Tier source docs:** `docs/plan/roadmaps/2026-04-30-tier-roadmap/00-INDEX.md` through `docs/plan/roadmaps/2026-04-30-tier-roadmap/10-tier8-observability-evals.md`.
 
@@ -32,29 +32,31 @@
 
 **Test surface at `386ef04`:** `2159 passed, 12 skipped` unit; `220 passed` benchmark (= `204` C7.GATE + `16` P1; new test count after subsequent P0 hardening is `20` for P1/P0 substrate coverage).
 
-### Active override — HFIX before P3b (2026-05-02)
+### Active override — backend harness solidification (2026-05-06)
 
-User direction on 2026-05-02 promotes AI verification harness fixes ahead of P3b. Treat `docs/plan/ai-verification-harness-fixes-plan.md` as the active detail plan and `next_remaining_todo.md` §HFIX as the atomic checklist. P3b/P3c/P3d/P5 resume after HFIX closes unless the user redirects again.
+User direction has advanced the post-C7 pass through HFIX, P3b, P3c, P3d, and P5, then redirected the next work to backend harness solidity before TUI implementation. Treat `docs/plan/backend-harness-solidification-plan.md` as the active backend closeout plan and `next_remaining_todo.md` as the atomic checklist context. P5 remains builder-complete and Claude-approved with default-off daemon ticks, dedicated `kairos.tick`, backend-enforced read-only ticks, anti-narration telemetry alerts, `/kairos pulse`, deterministic eval evidence, and public telemetry snapshot evidence. The active sequence is B1 audit/gap map → B2 deterministic verdict truthfulness → B3 scenario contract hardening → B4 structured artifacts/batch reporting → B5 infra classifier/retry validation → B6 backend feature surface coverage.
 
 ### Active blockers and loose ends
 
-- **HFIX — AI verification harness fixes:** active priority. Close structured trace contracts, per-turn/run summaries, required-tool/non-empty-diff guards, spawn/ask-user canaries, semantic canaries, and harness self-validation before P3b.
-- **Comms/doc cleanup:** active comms entries 1698-1752 are archived to `docs/communication/old/2026-05-02-post-c7-harness-cleanup-1698-1752.md`; active log is reset to the HFIX cleanup thread.
+- **Claude final review:** P5 final gate review is closed by Claude Entry 1934 (`FINAL APPROVE`); post-pass-exit closeout is closed by Claude Entry 1942 (`APPROVE`).
+- **Live gates:** PTY/canary, Track 1/Track 4/VHS, and broad live product-path gates remain open because they require the supported live gateway/TUI environment.
+- **Promotion gates:** the four-week telemetry baseline, initial dry-run rollout policy, and any default-on KAIROS promotion decision remain future-scoped.
+- **Parked TUI work:** P4a/TUI v9 work is locked in `TUI_PLAN.md` but parked until Backend Harness Solidification B6 closes or the user explicitly overrides.
 
 ### Tier coverage (audit 2026-04-30)
 
 | Source doc | Status |
 |---|---|
-| `docs/plan/roadmaps/2026-04-30-tier-roadmap/01-tier1-prompt-cache.md` (Tier 1.1+1.2+1.3) | Builder-complete as P2; awaiting Claude review. |
+| `docs/plan/roadmaps/2026-04-30-tier-roadmap/01-tier1-prompt-cache.md` (Tier 1.1+1.2+1.3) | Builder-complete as P2. |
 | `docs/plan/roadmaps/2026-04-30-tier-roadmap/02-tier2-app-server-protocol.md` (Tier 2.1+2.2+2.3) | DEFERRED as P4 + P4-dependents per User decision #2. Not done. |
-| `docs/plan/roadmaps/2026-04-30-tier-roadmap/03-tier3-memory-architecture.md` (Tier 3.1+3.2+3.3) | Tier 3.3 builder-complete as P2; Tier 3.1+3.2 planned as P3. |
-| `docs/plan/roadmaps/2026-04-30-tier-roadmap/04-tier4-future-tracks.md` (Tier 4.1+4.2+4.3+4.4) | 4.4 DONE (C6.G5); 4.1 planned as P5; 4.2/4.3 DEFERRED with P4. |
+| `docs/plan/roadmaps/2026-04-30-tier-roadmap/03-tier3-memory-architecture.md` (Tier 3.1+3.2+3.3) | Builder-complete as P2/P3. |
+| `docs/plan/roadmaps/2026-04-30-tier-roadmap/04-tier4-future-tracks.md` (Tier 4.1+4.2+4.3+4.4) | 4.4 DONE (C6.G5); 4.1 builder-complete as P5 default-off KAIROS; 4.2/4.3 DEFERRED with P4. |
 | `docs/plan/roadmaps/2026-04-30-tier-roadmap/05-cross-cutting-concerns.md` | Accounted for as per-phase gates. Not fully executed (each phase enforces as it lands). |
 | `docs/plan/roadmaps/2026-04-30-tier-roadmap/06-INDEX-part2.md` | Accounted for (sequencing index for Tiers 5-8). Not itself implementation. |
-| `docs/plan/roadmaps/2026-04-30-tier-roadmap/07-tier5-harness-reliability.md` (5.1+5.2+5.3) | Tier 5.1 builder-complete as P3a; Tier 5.2+5.3 planned as P3b after HFIX. |
+| `docs/plan/roadmaps/2026-04-30-tier-roadmap/07-tier5-harness-reliability.md` (5.1+5.2+5.3) | Builder-complete as P3a/P3b after HFIX. |
 | `docs/plan/roadmaps/2026-04-30-tier-roadmap/08-tier6-minimal-tui.md` | Path A refactor planned as P4a; Path B rewrite OUT (decision #4). Not done. |
-| `docs/plan/roadmaps/2026-04-30-tier-roadmap/09-tier7-context-engineering.md` (7.1+7.2+7.3) | Tier 7.1 builder-complete as P2a; Tier 7.2+7.3 planned as P3c. |
-| `docs/plan/roadmaps/2026-04-30-tier-roadmap/10-tier8-observability-evals.md` (8.1+8.2+8.3+8.4+8.5) | Tier 8.1 builder-complete as P1a; P3d remains planned for 8.2+8.3+8.4+8.5. |
+| `docs/plan/roadmaps/2026-04-30-tier-roadmap/09-tier7-context-engineering.md` (7.1+7.2+7.3) | Builder-complete as P2a/P3c. |
+| `docs/plan/roadmaps/2026-04-30-tier-roadmap/10-tier8-observability-evals.md` (8.1+8.2+8.3+8.4+8.5) | Builder-complete as P1a/P3d, with public-report snapshot evidence captured at pass exit. |
 
 ---
 
@@ -76,25 +78,25 @@ User direction on 2026-05-02 promotes AI verification harness fixes ahead of P3b
 ```
 P0   Hardening / reconciliation                            (~1-2 days)
 P1   AI verification harness narrow substrate              [DONE — 20 substrate tests green; reconciled in P0]
-P1a  Telemetry plumbing (Tier 8.1)                         [BUILDER-COMPLETE — awaiting Claude review]
-P2   Tier 1 prompt cache + verify-before-use (atomic)      [BUILDER-COMPLETE — awaiting Claude review]
-P2a  Scratch store (Tier 7.1)                              [BUILDER-COMPLETE — awaiting Claude review]
-P3   Tier 3 file-system memory (Tier 3.1+3.2)              (~3 weeks, ~1100 LOC)
-HR   Hook architecture refactor                            (~2-3 days, ~150 LOC)
-P3a  Drift detectors (Tier 5.1)                            (~2 weeks, ~400 LOC)
-HFIX AI verification harness fixes                         [ACTIVE PRIORITY before P3b]
-P3b  PEV + Ralph reliability loops (Tier 5.2+5.3)          (~2 weeks, ~600 LOC)
-P3c  Entropy + verify tightening (Tier 7.2+7.3)            (~1 week, ~200 LOC)
-P3d  Eval suite expansion (Tier 8.2-8.5)                   (~2 weeks, ~450 LOC)
-P5   Tier 4.1 KAIROS feature-flag track                    (~1 week, ~400 LOC, default off)
+P1a  Telemetry plumbing (Tier 8.1)                         [BUILDER-COMPLETE]
+P2   Tier 1 prompt cache + verify-before-use (atomic)      [BUILDER-COMPLETE]
+P2a  Scratch store (Tier 7.1)                              [BUILDER-COMPLETE]
+P3   Tier 3 file-system memory (Tier 3.1+3.2)              [BUILDER-COMPLETE]
+HR   Hook architecture refactor                            [BUILDER-COMPLETE]
+P3a  Drift detectors (Tier 5.1)                            [BUILDER-COMPLETE]
+HFIX AI verification harness fixes                         [CLOSED under gateway-deferral policy]
+P3b  PEV + Ralph reliability loops (Tier 5.2+5.3)          [BUILDER-COMPLETE; Claude approved Entry 1880]
+P3c  Entropy + verify tightening (Tier 7.2+7.3)            [BUILDER-COMPLETE; Claude approved-with-followup Entry 1888]
+P3d  Eval suite expansion (Tier 8.2-8.5)                   [BUILDER-COMPLETE]
+P5   Tier 4.1 KAIROS feature-flag track                    [BUILDER-COMPLETE; Claude approved Entry 1934; post-pass-exit approved Entry 1942]
 ```
 
 **Total estimated post-commit cost:** ~9-12 weeks, NET +1700 to +2700 LOC (P4a refactor deferred — TUI work explicitly out per User Entry 1736 direction).
 
-**Deferred (out of this pass):**
-- P4a TUI Path A refactor (Tier 6 refactor) — User direction "no TUI now, that is for later" (Entry 1736). To be picked up in a follow-up tranche.
+**Parked behind backend harness closeout:**
+- P4a/TUI v9 Path A refactor — canonical plan: `TUI_PLAN.md`. Do not start TUI implementation until Backend Harness Solidification B6 closes or the user explicitly overrides.
 
-**Stable-codebase commit point (LOCKED):** **Option C** — User pick per Entry 1743. Single commit at full pass close (post-P5 KAIROS). No intermediate commits at HR / P3a / P3d boundaries. Estimated 3-5 calendar days at current Codex pace.
+**Stable-codebase commit point (LOCKED):** **Option C** — User pick per Entry 1743. Single commit at full pass close (post-P5 KAIROS). No intermediate commits at HR / P3a / P3d boundaries. The full pass is now closed deterministically; user stable commit is the next action.
 
 ---
 
@@ -256,7 +258,7 @@ P5   Tier 4.1 KAIROS feature-flag track                    (~1 week, ~400 LOC, d
 
 **Telemetry:** `tool_drift_detected` events with `tool_name`, `drift_kind`, `severity`. CLI: `autocode telemetry drift --last 7d`.
 
-### HFIX — AI verification harness fixes [ACTIVE PRIORITY]
+### HFIX — AI verification harness fixes [CLOSED]
 
 **Goal:** make harness verdicts explainable, replayable, and resistant to false PASS outcomes before reliability-loop work depends on them.
 
@@ -270,7 +272,7 @@ P5   Tier 4.1 KAIROS feature-flag track                    (~1 week, ~400 LOC, d
 - HFIX-5 semantic/tool-use canaries for feature-inventory coverage, especially search and multi-file behavior.
 - HFIX-6 harness self-validation: meta-tests that prove bad scenarios fail for the right reason instead of passing through infrastructure gaps.
 
-**Acceptance:** HFIX tests green, at least one fresh multi-turn run produces the new artifacts, and active docs/comms point to HFIX before P3b.
+**Acceptance:** HFIX closed under the gateway-deferral policy via Claude Entry 1825. Deterministic substrate and benchmark tests are green; live `ask-user-scripted` and `multi-turn-regression` canaries remained gateway-bound `INFRA_FAIL` and are not code blockers.
 
 ### P3b — PEV + Ralph reliability loops (Tier 5.2 + 5.3)
 
@@ -315,7 +317,7 @@ P5   Tier 4.1 KAIROS feature-flag track                    (~1 week, ~400 LOC, d
 - `evals/runner.py` (~300 LOC) — fixture setup, autocode session launch, telemetry collection, judge invocation
 - `evals/judge.py` (~150 LOC) — LLM-as-judge with structured JSON output (judge model > agent model)
 - `.github/workflows/evals.yml` — CI gate, `--baseline-tolerance 0.10`, `--max-budget-usd 5.00`, **stratified sample** (not all 200 cases)
-- `scripts/generate_evals_from_drift.py` — weekly drift-derived eval generation (consumes P3a events; ≥ 3 occurrences proposes case)
+- `evals/scripts/generate_evals_from_drift.py` — weekly drift-derived eval generation (consumes P3a events; ≥ 3 occurrences proposes case)
 - (optional) `autocode telemetry public-report --output public-stats.json`
 
 **Tier 8.3 — 5 regression-discipline rules:**

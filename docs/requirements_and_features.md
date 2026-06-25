@@ -186,7 +186,7 @@ Use `autocode chat --tui` only as a fallback path. New frontend behavior should 
 | Native scrollback preservation | DONE | Inline launch mode preserves terminal scrollback |
 | Launch-mode preference | DONE | `/tui` / `/screen` command and CLI `--mode` |
 
-### 2.10 Slash Commands (40 Commands)
+### 2.10 Slash Commands (41 Commands)
 
 | Command | Aliases | Description |
 |---------|---------|-------------|
@@ -211,7 +211,7 @@ Use `autocode chat --tui` only as a fallback path. New frontend behavior should 
 | `/index` | — | Build or rebuild the code search index |
 | `/repomap` | `/map` | Build and display the ranked repository map |
 | `/tasks` | `/t` | Show task board |
-| `/plan` | — | Plan mode: `/plan on`, `/plan approve`, `/plan off`, `/plan export`, `/plan sync` |
+| `/plan` | — | Plan mode: `/plan on`, `/plan approve`, `/plan off`, `/plan export`, `/plan sync`, `/plan run <goal>` |
 | `/research` | `/comprehend` | Research mode: `/research on`, `/research off`, `/research status` |
 | `/build` | — | Build mode: `/build on` (verification required), `/build off` |
 | `/review` | — | Review mode: `/review on` (read-only review), `/review off` |
@@ -223,6 +223,7 @@ Use `autocode chat --tui` only as a fallback path. New frontend behavior should 
 | `/recipe` | `/recipes` | List or run workflow recipes |
 | `/watch` | — | Watch mode: `/watch on`, `/watch off`, `/watch status` |
 | `/marketplace` | `/market` | List or inspect static marketplace registry items |
+| `/kairos` | — | KAIROS proactive-mode status: `/kairos pulse` |
 | `/memory` | `/mem` | Show learned patterns |
 | `/checkpoint` | `/ckpt` | List or save checkpoints |
 | `/undo` | — | Undo by restoring the most recent checkpoint |
@@ -523,7 +524,7 @@ See `docs/archive/plan/go-bubble-tea-migration.md` for the full migration plan.
 | CLI Framework | Typer + Rich | Active |
 | TUI Frontend | **Rust + Ratatui 0.29** | Active |
 | TUI Terminal Layer | crossterm 0.28 (`event-stream`) | Active |
-| TUI PTY Layer | portable-pty 0.8 | Active |
+| TUI Backend Transport | JSON-RPC over stdio spawn-managed mode or localhost TCP attach mode | Active |
 | TUI Async Runtime | tokio 1.x (`full`) | Active |
 | TUI Serialization | serde 1.x + serde_json 1.x | Active |
 | TUI Logging | tracing 0.1 + tracing-subscriber 0.3 (`env-filter`) | Active |

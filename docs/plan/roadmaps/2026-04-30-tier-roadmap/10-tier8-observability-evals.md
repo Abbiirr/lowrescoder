@@ -461,7 +461,7 @@ If you can't get the same score twice in a row, the eval is broken, not the mode
 A specific automation: take production drift detection events and turn them into eval cases automatically.
 
 ```python
-# scripts/generate_evals_from_drift.py
+# evals/scripts/generate_evals_from_drift.py
 
 def generate_evals_from_drift(days: int = 30) -> list[EvalCase]:
     """Read recent drift events, propose eval cases that would catch them."""

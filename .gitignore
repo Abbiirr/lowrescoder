@@ -59,7 +59,8 @@ benchmark_*.log
 
 # Stale legacy paths (root-level only — not inside autocode/ or other dirs)
 /src/
-/scripts/
+/scripts/*
+!/scripts/02-run-hfix-live-acceptance.sh
 /tests/
 /training_data/
 
@@ -80,9 +81,21 @@ wiki/
 .autocode/sessions/
 .autocode/telemetry/
 .autocode/projects/
-benchmarks/__pycache__/
-benchmarks/.pytest_cache/
 benchmarks/sandboxes/
+benchmarks/*
+!benchmarks/__init__.py
+!benchmarks/ai_verification/
+benchmarks/ai_verification/*
+!benchmarks/ai_verification/*.py
+!benchmarks/ai_verification/*.md
+!benchmarks/ai_verification/scenarios/
+!benchmarks/ai_verification/scenarios/**
+!benchmarks/tests/
+benchmarks/tests/*
+!benchmarks/tests/test_ai_verification_substrate.py
+!benchmarks/tests/test_hfix_structured_trace.py
+benchmarks/ai_verification/generated/
 benchmarks/**/__pycache__/
 benchmarks/**/.pytest_cache/
-benchmarks/
+
+autocode/docs/qa/test-results/

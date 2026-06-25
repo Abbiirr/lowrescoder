@@ -1,0 +1,32 @@
+id: p1-compaction-path-a
+name: Compaction Path A deterministic canary
+provenance:
+  source: p1
+  bug_id: compaction-path-a
+  recorded_at: "2026-05-04"
+setup:
+  fixture_repo: ""
+  initial_files:
+    notes.txt: "important context\n"
+input:
+  user_message: "Summarize the retained context without losing the key fact."
+expected_outcomes:
+  must_have:
+    - "compaction_event"
+    - "turn_completed"
+  must_not_have:
+    - "INFRA_FAIL"
+  judge_criteria:
+    - correctness
+config:
+  model: coding
+  max_turns: 2
+  timeout_sec: 120
+  temperature: 0.0
+  seed: 0
+baseline:
+  correctness_score: 0.90
+  minimality_score: 0.80
+  test_quality_score: 0.75
+  cost_usd_p50: 0.10
+archived: false

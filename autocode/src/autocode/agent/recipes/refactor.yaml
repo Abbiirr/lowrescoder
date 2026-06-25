@@ -1,5 +1,0 @@
-name: refactor
-goal: Refactor code while preserving behavior.
-steps:
-  - task: Identify the smallest safe refactor plan
-  - prompt: Implement the refactor and run focused verification

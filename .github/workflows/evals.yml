@@ -1,0 +1,33 @@
+name: AutoCode Evals
+
+on:
+  pull_request:
+    paths:
+      - 'evals/**'
+      - 'autocode/src/**'
+      - 'autocode/tests/**'
+      - '.github/workflows/evals.yml'
+  workflow_dispatch:
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    continue-on-error: true # P3d v1 soft gate for first two weeks; promote to hard after stability window.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run stratified eval sample
+        run: >
+          uv run python -m evals.runner
+          --cases evals/cases
+          --stratified-sample
+          --sample-size 20
+          --baseline-tolerance 0.10
+          --max-budget-usd 5.00
+          --soft-gate

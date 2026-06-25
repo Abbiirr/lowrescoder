@@ -38,6 +38,7 @@ Stage 0A source of truth for the Rust TUI <-> Python backend JSON-RPC contract.
 ## Canonical TUI -> backend requests
 
 - `chat`
+- `kairos.tick`
 - `cancel`
 - `command`
 - `command.list`
@@ -67,6 +68,21 @@ Stage 0A source of truth for the Rust TUI <-> Python backend JSON-RPC contract.
 The method inventory above is only half the contract. The following
 runtime behaviors are also part of schema v1.
 
+### Transport hosts
+
+- Stdio and TCP carry the same newline-delimited JSON-RPC envelope.
+- Host adapters target the public `RpcApplication` protocol:
+  `dispatch_rpc_request`, `route_rpc_response`, and `emit_response`.
+  Private `BackendServer` methods are not part of the adapter contract.
+- TCP attach mode is local-loopback only by default. Non-loopback bind hosts
+  are refused by the CLI and host adapter unless a future explicit remote mode
+  is added.
+- The TCP host supports one active frontend client at a time. Additional
+  connections wait behind the active connection rather than sharing backend
+  state concurrently.
+- TCP outbound messages are serialized through one writer/drain path so slow
+  clients apply back-pressure without spawning concurrent drain tasks.
+
 ### Chat liveness
 
 - A backend that accepts a `chat` request must emit `on_chat_ack` quickly,
@@ -84,6 +100,20 @@ runtime behaviors are also part of schema v1.
 - `on_warning` is a non-fatal visibility channel: it must never replace
   `on_error`, but it may be emitted during long retries or degraded upstream
   states so the frontend does not look silently hung.
+
+### KAIROS tick semantics
+
+- `kairos.tick` accepts `message`, optional `session_id`, `tick_id`, and
+  `read_only` params. It is the dedicated proactive-tick entrypoint used by
+  `autocode daemon --watch` when KAIROS is enabled.
+- `read_only=true` is backend-enforced by temporarily running the tick turn in
+  `AgentMode.REVIEW`, which blocks tools marked as filesystem-mutating or
+  shell-executing, then restoring the prior session mode after the turn.
+- `read_only=false` preserves the current session mode and is exposed through
+  the daemon as `--allow-mutations`.
+- A KAIROS tick follows the same liveness contract as `chat`: accepted requests
+  must emit `on_chat_ack`, stream visible output when available, and eventually
+  emit `on_done`.
 
 ### Thinking mode
 

@@ -164,14 +164,19 @@ P3d's drift-derived eval generator (Tier 8.4) groups `tool_drift_detected` event
 
 ---
 
-## CI gate strictness — DEFERRED until this spec is fleshed
+## CI gate strictness — FINALIZED for P3d v1
 
-Per User decision #5: telemetry CI gate strictness for P3d is **TBD**. The eval suite (P3d) will:
+P3d eval-suite strictness is finalized as a staged rollout:
 
-- **v1 default:** soft gate (warn-only) for first 2 weeks of stability
-- **v2:** promote to hard gate (merge-blocking) on baseline drift > 10%
+- **v1 default:** soft gate (warn-only) for the first 2 weeks of stability.
+- **v2 promotion:** hard gate (merge-blocking) on baseline drift > 10% after the stability window.
+- **PR sample:** run a deterministic stratified sample, not the full case library.
+- **Budget:** `--max-budget-usd 5.00`.
+- **Tolerance:** `--baseline-tolerance 0.10`.
 
-Final strictness will be locked when P1a + P3d are about to ship. Until then, this spec stays in skeleton form.
+The initial workflow is `.github/workflows/evals.yml` and uses `continue-on-error: true`
+to enforce the soft-gate period. Promotion to hard gate requires removing that flag
+after the two-week stability window.
 
 ---
 

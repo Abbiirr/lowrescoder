@@ -1,0 +1,33 @@
+id: p1-usage-reporting
+name: P1 turn completion with usage reporting
+provenance:
+  source: p1
+  bug_id: usage-reporting
+  recorded_at: "2026-04-30"
+setup:
+  fixture_repo: ""
+  initial_files: {}
+input:
+  user_message: |
+    Say "usage check passed" and nothing else.
+expected_outcomes:
+  must_have:
+    - "turn_completed"
+    - "thread_started"
+  must_not_have:
+    - "error"
+  judge_criteria:
+    - correctness
+    - minimality
+config:
+  model: coding
+  max_turns: 2
+  timeout_sec: 120
+  temperature: 0.0
+  seed: 0
+baseline:
+  correctness_score: 0.95
+  minimality_score: 0.90
+  test_quality_score: 0.75
+  cost_usd_p50: 0.10
+archived: false

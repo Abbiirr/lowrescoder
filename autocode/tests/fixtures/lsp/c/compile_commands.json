@@ -1,7 +1,0 @@
-[
-  {
-    "directory": ".",
-    "command": "cc -std=c11 -I. -c hello.c",
-    "file": "hello.c"
-  }
-]

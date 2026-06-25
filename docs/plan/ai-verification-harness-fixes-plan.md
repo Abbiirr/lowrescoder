@@ -1,9 +1,9 @@
 # AI Verification Harness Fixes Plan
 
-Date: 2026-05-03
+Date: 2026-05-04
 Owner: Codex as current builder unless user redirects
 Scope: AI verification harness quality, observability, and coverage
-Status: Builder-complete. Deterministic tests green (39 substrate, 343 benchmark, 2244 unit). Default long supervised retry policy is implemented for transient `INFRA_FAIL`. Live `ask-user-scripted` and fresh multi-turn canaries remain gateway-deferred/queued. Awaiting Claude review APPROVE or User acceptance of residual gateway-deferred risk.
+Status: REOPENED for narrow post-run hardening on 2026-05-04 and extended on 2026-05-05 for false-pass hardening after live validation showed rewritten visible tests masking Redis and multi-turn failures. Deterministic substrate stayed green, but the latest full live checks found specific harness/scenario-contract gaps: brittle `edit_file` trajectory requirements for scenarios that only need file-mutation evidence, missing/implicit test-file preservation, missing hidden immutable grading tests, missing persisted artifact assertion details, weak no-passing-turn semantics, zero-test collection ambiguity, current-batch summary filtering, missing dependency/import infra classification, generated artifact noise in changed-file extraction, and mixed infra+agent failures needing explicit summary fields. Default long supervised retry policy remains implemented for transient `INFRA_FAIL`.
 
 ## Purpose
 
@@ -199,7 +199,11 @@ Extend scenario schema with typed assertions. Keep legacy `expected_outcomes` fo
     "must_remove_text": ["NotImplementedError"],
     "must_contain_text": {
       "config.py": ["DEFAULT_NORMALIZE = True"]
-    }
+    },
+    "hidden_test_files": {
+      "test_hidden_api.py": "from app import public_api\n..."
+    },
+    "hidden_test_command": "python -m pytest .autocode_hidden_tests -q"
   },
   "turn_assertions": {
     "min_turns": 3,
@@ -216,6 +220,30 @@ Trajectory matching modes:
 - in-order: predicted sequence contains reference tools in order, allowing extra calls
 - any-order: predicted sequence contains all required tools regardless of order
 - family: predicted sequence contains at least one tool in each required family
+- file-mutation equivalent: `must_use_tools: ["edit_file"]` accepts any successful `file_write` family event (`write_file`, `edit_file`, `apply_patch`, `multi_edit`) when the scenario is validating mutation behavior rather than the literal edit tool.
+
+Hidden immutable tests:
+
+- `artifact_assertions.hidden_test_files` writes files under `.autocode_hidden_tests/` after the agent run and before deterministic grading.
+- `artifact_assertions.hidden_test_command` defaults to `python -m pytest .autocode_hidden_tests -v`.
+- Hidden tests are not present while the agent is editing, so visible test rewrites cannot fake a pass.
+- Hidden-test failures force `FAIL`, not `PARTIAL`, even when rewritten visible tests pass.
+
+Post-run hardening notes (2026-05-04):
+
+- Missing grading dependencies/import failures are infra setup failures, not agent logic failures. The infra classifier now recognizes `ModuleNotFoundError`, `ImportError: No module named ...`, and pytest import-collection failures as `missing_dependency` signals.
+- Generated Python bytecode noise (`*.pyc`, `*.pyo`, `__pycache__/`) is ignored by `extract_changed_files()` so artifact assertions focus on source/test/product changes.
+- The tracked harness already accepts `must_use_tools: ["edit_file"]` via successful `file_write` family events; external scenarios/scripts that still require literal `edit_file` need the same semantic contract or must use `must_use_tool_families: ["file_write"]`.
+- Root-level scripts named in live reports (`scripts/00-preflight.sh`, `scripts/12-run-autocode-live-smokes.sh`, `scripts/06-run-discord-clone.sh`, `scripts/13-run-redis-cache-service.sh`) are not tracked in this checkout. Patch them in their owning tooling checkout or add them here before claiming preflight-loop fixes in this repo.
+- `scripts/02-run-hfix-live-acceptance.sh` is now tracked in this checkout and runs all present pinned HFIX scenarios with failure aggregation instead of stopping at the first failure.
+
+Live-eval stabilization notes (2026-05-07):
+
+- `benchmarks/ai_verification/run_scenario_supervised.py` now supports supervised directory batches in addition to single scenario files. Directory mode discovers `*.yaml`, `*.yml`, and `*.json` scenarios in stable sorted order, supports `--tag` filtering, runs each scenario under the existing supervised timeout/retry wrapper, and continues after individual `FAIL` or `INFRA_FAIL` outcomes.
+- Supervised batch runs write `batch_manifest.json` and `batch_report.*` under the supervised report base. The manifest records scenario hashes, git SHA, environment fingerprint, run IDs, artifact dirs, verdict counts, and exit code so summaries can target the current batch instead of scanning historical runs.
+- `benchmarks/ai_verification/summarize_runs.py` now accepts `--batch-manifest` and exposes `summarize_batch_manifest()` for current-batch-only reporting.
+- `.gitignore` has been narrowed so the core `benchmarks/ai_verification` harness source/docs/scenarios and the two harness regression test files can be versioned, while fixture virtualenvs, generated corpora, and runtime-heavy benchmark artifacts remain ignored.
+- Mixed infra/agent verdict hygiene is now explicit in `run_summary.json`: final `verdict` may remain `INFRA_FAIL`, while `primary_verdict`, `infra_signals`, `infra_blocks_verdict`, and `agent_fail_signals` expose the underlying deterministic/trajectory/artifact failures separately. The summarizer carries these fields forward so infra-dominated runs do not hide product or harness recording failures.
 
 ## Per-Turn Artifact
 
@@ -228,6 +256,7 @@ Write `turns.json` for every real-agent run:
     "prompt_kind": "initial",
     "prompt_sha256": "hash",
     "grading": "FAIL",
+    "scope_changed_after_pass": false,
     "check_results": [
       {"check": "run_tests", "passed": false}
     ],
@@ -243,6 +272,11 @@ Write `turns.json` for every real-agent run:
 ```
 
 This makes multi-turn regressions first-class. Example: the git-dirty run passed on turn 1 and final-failed after follow-ups. The harness should show that as a structured regression, not just stdout.
+
+When a scripted follow-up intentionally expands scope after an already passing
+turn, the runner marks the next turn with `scope_changed_after_pass: true`.
+`no_regression_after_pass` ignores that transitional failure so the harness
+does not confuse new requested work with regression of completed work.
 
 ## Run Summary Artifact
 
@@ -302,7 +336,7 @@ Add dedicated scenarios:
 3. `ask-user-scripted.yaml`
    - Ambiguous requirement.
    - Headless runner provides scripted response through `ask_user_callback`.
-   - Requires `ask_user` and verifies selected branch.
+   - Requires `ask_user`, verifies selected branch, and forbids changing `test_processor.py` so an agent cannot pass by overwriting the grader tests.
 
 4. `refactor-noop-guard.yaml`
    - Seed tests pass.
@@ -526,9 +560,14 @@ TODO:
 Tests:
 
 - [x] Summary command handles old runs without new artifacts.
-- [x] Summary command flags missing `turns.json`, `tool_calls.jsonl`, `trajectory_report.json`, or `run_summary.json` for new-format runs.
+- [x] Summary command flags missing `turns.json`, `tool_calls.jsonl`, `trajectory_report.json`, `artifact_report.json`, or `run_summary.json` for new-format runs.
 - [x] Summary command reports tool coverage matrix from typed events.
 - [x] Summary command reports structured assertion failures from trajectory, turn, and artifact reports.
+- [x] Summary command can filter to current validation batches via `--run-id` / `--run-ids`.
+- [x] Artifact reports are persisted as `artifact_report.json` and embedded in `grading_report.json`.
+- [x] `no_regression_after_pass` fails when no turn ever passed; `require_at_least_one_passing_turn` is available for explicit contracts.
+- [x] `pytest` zero-test collection is classified as `zero_tests_collected`.
+- [x] Optional `max_tool_calls_by_name` trajectory assertion catches repeated per-tool loops.
 - [x] Malformed `cache_hit_ratio>=` predicates fail gracefully and report a `WARN: malformed predicate ...` warning.
 - [x] Docs mention all new artifacts and verdict composition.
 
@@ -543,7 +582,7 @@ Exit gate:
 - `uv run pytest benchmarks/tests/test_ai_verification_substrate.py -q` passes.
 - Any new focused HFIX tests pass.
 - `git diff --check` passes.
-- A fresh multi-turn run writes `tool_calls.jsonl`, `turns.json`, `trajectory_report.json`, `run_summary.json`, `grading_report.json`, and `meta.json`.
+- A fresh multi-turn run writes `tool_calls.jsonl`, `turns.json`, `trajectory_report.json`, `artifact_report.json`, `run_summary.json`, `grading_report.json`, and `meta.json`.
 - Claude reviews and APPROVEs, or User explicitly accepts remaining risk.
 
 ## Verification Matrix
@@ -562,18 +601,18 @@ Exit gate:
 
 ## Final HFIX Exit Gate
 
-HFIX closes only when all of these are true:
+HFIX closed on 2026-05-04 via Claude Entry 1825. Final gate state:
 
 - [x] All HFIX test gates above pass — 39 substrate, 343 benchmark, 2244 unit GREEN
-- [~] A fresh multi-turn run produces the new artifacts — gateway-deferred; next live attempt should use the default long supervised retry policy
+- [~] A fresh multi-turn run produces the new artifacts — closed under gateway-deferral policy; fresh `multi-turn-regression` long-retry attempt remained `INFRA_FAIL`, deterministic/simulated artifact coverage is binding
 - [x] `grading_report.json` verdicts trace to structured check/tool/turn evidence
 - [x] No-op refactor PASS is blocked
 - [x] Explicit required-tool failure cannot PASS
 - [x] Missing grading command/module/file cannot PASS
-- [~] `semantic_search`, `spawn_subagent`, and `ask_user` have canaries or an explicit documented unsupported marker with User acceptance — canaries exist; live enforcement gateway-deferred
+- [~] `semantic_search`, `spawn_subagent`, and `ask_user` have canaries or an explicit documented unsupported marker with User acceptance — canaries exist; live enforcement gateway-deferred via Claude Entry 1825
 - [x] `docs/features/inventory.md`, `HARNESS_RUNNER_INSTRUCTIONS.md`, and `MULTITURN_GUIDE.md` are updated
 - [x] Closeout artifact is stored under `autocode/docs/qa/test-results/` — `20260503-105128-hfix-ai-verification-harness.md`
-- [ ] Claude posts APPROVE, or User explicitly accepts a listed residual risk
+- [x] Claude posts APPROVE, or User explicitly accepts a listed residual risk — Claude Entry 1825 `APPROVE — HFIX-6 CLOSED under gateway-deferral policy`
 
 ## Compatibility
 

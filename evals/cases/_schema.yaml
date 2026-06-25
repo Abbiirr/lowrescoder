@@ -1,0 +1,46 @@
+# AutoCode production eval case schema reference.
+#
+# Required fields:
+# - id: stable append-only case id
+# - name: human readable name
+# - provenance: {source, bug_id, recorded_at}
+# - setup: {fixture_repo, initial_files}
+# - input: {user_message}
+# - expected_outcomes: {must_have, must_not_have, judge_criteria}
+# - config: {model, max_turns, timeout_sec, temperature, seed}
+# - baseline: {correctness_score, minimality_score, test_quality_score, cost_usd_p50}
+# - archived: optional bool; old cases are archived, never deleted
+
+id: example-case
+name: Example eval case
+provenance:
+  source: example
+  bug_id: ""
+  recorded_at: "2026-05-04"
+setup:
+  fixture_repo: ""
+  initial_files:
+    README.md: "# fixture\n"
+input:
+  user_message: "Make the fixture pass."
+expected_outcomes:
+  must_have:
+    - "turn_completed"
+  must_not_have:
+    - "error"
+  judge_criteria:
+    - correctness
+    - minimality
+    - test_quality
+config:
+  model: coding
+  max_turns: 3
+  timeout_sec: 120
+  temperature: 0.0
+  seed: 0
+baseline:
+  correctness_score: 1.0
+  minimality_score: 1.0
+  test_quality_score: 1.0
+  cost_usd_p50: 0.0
+archived: false

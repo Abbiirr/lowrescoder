@@ -1,5 +1,0 @@
-# Decision
-
-Selected Proposal:
-
-Rationale:

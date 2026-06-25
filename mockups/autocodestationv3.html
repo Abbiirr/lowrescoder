@@ -1,0 +1,1840 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>AutoCode Station — Operator Cockpit v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   AutoCode Station v3 — attention-first operator cockpit
+   Changes vs v2 (per design review):
+   · Inbox is the default screen; board demoted.
+   · Workbench: left task list | CENTER timeline | RIGHT review rail —
+     explicit grid placement, composer and terminal get RESERVED space.
+   · Approval cards: origin / policy / repeat / files-touched / last-similar.
+   · Diff rail never lies: draft diffs shown with "unverified" banner.
+   · Review Queue with merge gate (commit hidden behind explicit override).
+   · Browser QA split: Preview Browser vs Chrome Bridge; untrusted labeling.
+   · Compare: winner gated behind opening the diff; cherry-pick after.
+   · Settings: harness capability matrix; instruction stack viewer.
+   · Toasts top-right; guide removed → shortcuts modal + palette.
+   ========================================================================== */
+:root{
+  --bg:#FAFAF8; --panel:#FFFFFF; --side:#F4F4F2; --inset:#F7F7F5;
+  --line:#E7E7E4; --line2:#EFEFEC;
+  --text:#1B1B1E; --muted:#6F6F77; --faint:#A4A4AC;
+  --primary:#1B1B1E; --primary-tx:#FFFFFF;
+  --green:#178457; --green-bg:#E9F5EF;
+  --amber:#B26B0B; --amber-bg:#FCF2E0;
+  --red:#C53B35;   --red-bg:#FBEEED;
+  --blue:#3D5BDB;  --blue-bg:#EDF0FD;
+  --diff-add:#E9F6EF; --diff-add-tx:#11704E;
+  --diff-del:#FBEFEE; --diff-del-tx:#A33834;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 10px 30px rgba(0,0,0,.06);
+  --sans:'Inter',ui-sans-serif,system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+[data-theme="dark"]{
+  --bg:#161618; --panel:#1C1C1F; --side:#131315; --inset:#202023;
+  --line:#2B2B30; --line2:#242428;
+  --text:#ECECEF; --muted:#9A9AA3; --faint:#64646E;
+  --primary:#ECECEF; --primary-tx:#161618;
+  --green:#3CC58E; --green-bg:#16322665;
+  --amber:#E0A23E; --amber-bg:#37281780;
+  --red:#EC6E69;   --red-bg:#3B1D1D80;
+  --blue:#90A4FF;  --blue-bg:#1D244780;
+  --diff-add:rgba(60,197,142,.10); --diff-add-tx:#7FD6B2;
+  --diff-del:rgba(236,110,105,.10); --diff-del-tx:#E9A09C;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font:13.5px/1.5 var(--sans);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+.mono{font-family:var(--mono)}
+.muted{color:var(--muted)} .faint{color:var(--faint)}
+.green{color:var(--green)} .red{color:var(--red)} .amber{color:var(--amber)} .blue{color:var(--blue)}
+::selection{background:rgba(61,91,219,.16)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:1px;border-radius:6px}
+
+/* primitives */
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);
+  border-radius:9px;padding:6px 12px;font-weight:520;transition:.12s;white-space:nowrap}
+.btn:hover{background:var(--side)}
+.btn.primary{background:var(--primary);color:var(--primary-tx);border-color:var(--primary)}
+.btn.primary:hover{opacity:.88}
+.btn.danger{color:var(--red)}
+.btn.sm{padding:4px 9px;font-size:12.5px;border-radius:8px}
+.btn:disabled{opacity:.45;cursor:default}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);
+  border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:var(--panel);white-space:nowrap}
+.chip.ok{color:var(--green);background:var(--green-bg);border-color:transparent}
+.chip.warn{color:var(--amber);background:var(--amber-bg);border-color:transparent}
+.chip.bad{color:var(--red);background:var(--red-bg);border-color:transparent}
+.chip.info{color:var(--blue);background:var(--blue-bg);border-color:transparent}
+.chip button{color:inherit;font-weight:600;opacity:.6}
+.chip button:hover{opacity:1}
+.dot{width:8px;height:8px;border-radius:99px;background:var(--faint);flex:0 0 8px}
+.dot.run{background:var(--green);animation:pulse 1.6s ease-in-out infinite}
+.dot.warn{background:var(--amber);animation:pulse 1.2s ease-in-out infinite}
+.dot.fail{background:var(--red)}
+.dot.done{background:var(--faint)}
+.dot.ok{background:var(--green)}
+@keyframes pulse{50%{opacity:.3}}
+.kbd{font:11px var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;
+  padding:1px 5px;background:var(--inset);color:var(--muted)}
+.code{font:12px/1.7 var(--mono);background:var(--inset);border:1px solid var(--line2);border-radius:9px;
+  padding:9px 12px;white-space:pre-wrap;overflow:auto;color:var(--muted);max-height:240px}
+.bEmpty{padding:14px;color:var(--faint);font-size:12.5px}
+
+/* ============================== top bar ============================== */
+.top{height:56px;border-bottom:1px solid var(--line2);background:var(--panel);
+  display:flex;align-items:center;gap:12px;padding:0 14px;position:relative;z-index:30}
+.brand{display:flex;align-items:center;gap:9px;font-weight:650;flex:0 0 auto}
+.mark{width:24px;height:24px;border-radius:7px;background:var(--primary);color:var(--primary-tx);
+  display:grid;place-items:center;font-size:11px;font-weight:700}
+.crumbs{display:flex;gap:14px;font-size:12.5px;color:var(--muted);min-width:0;overflow:hidden}
+.crumbs .ci{white-space:nowrap}
+.crumbs b{color:var(--text);font-weight:550}
+.crumbs .mono{font-size:11.5px}
+.top .spacer{flex:1}
+.counters{display:flex;gap:6px}
+.counters .chip{cursor:pointer}
+.iconbtn{width:31px;height:31px;border-radius:9px;border:1px solid var(--line);
+  display:grid;place-items:center;color:var(--muted);flex:0 0 auto}
+.iconbtn:hover{background:var(--side);color:var(--text)}
+
+/* ============================== app shell ============================== */
+.app{height:calc(100vh - 56px);display:flex;min-height:0}
+.navRail{width:200px;flex:0 0 200px;border-right:1px solid var(--line2);background:var(--side);
+  display:flex;flex-direction:column;padding:10px;gap:2px}
+.navRail .newTask{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--primary);
+  color:var(--primary-tx);border-radius:10px;padding:8px;font-weight:600;margin-bottom:10px}
+.nitem{display:flex;align-items:center;justify-content:space-between;border-radius:9px;
+  padding:7px 10px;color:var(--muted);font-weight:530;font-size:13px;text-align:left}
+.nitem:hover{background:var(--panel);color:var(--text)}
+.nitem.on{background:var(--panel);color:var(--text);box-shadow:0 1px 1.5px rgba(0,0,0,.04)}
+.nitem .badge{font-size:11.5px;color:var(--faint)}
+.nitem .badge.warn{color:var(--amber);font-weight:650}
+.navFoot{margin-top:auto;padding-top:10px;border-top:1px solid var(--line2);display:grid;gap:2px}
+main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+.view{display:none;flex:1;min-height:0;flex-direction:column}
+.view.on{display:flex}
+.head{min-height:54px;border-bottom:1px solid var(--line2);background:var(--panel);
+  display:flex;align-items:center;gap:9px;padding:8px 16px;flex-wrap:wrap}
+.head h1{font-size:15px;font-weight:650;margin-right:2px}
+.head .spacer{flex:1}
+
+/* ============================== inbox ============================== */
+.inboxWrap{flex:1;overflow:auto;padding:20px}
+.inboxInner{max-width:860px;margin:0 auto;display:grid;gap:16px}
+.ibSection{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.ibTitle{padding:10px 15px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--faint);border-bottom:1px solid var(--line2);display:flex;justify-content:space-between;align-items:center}
+.ibTitle.attn{color:var(--amber)}
+.ibRow{display:flex;align-items:center;gap:12px;padding:11px 15px;border-bottom:1px solid var(--line2);cursor:pointer}
+.ibRow:last-child{border-bottom:0}
+.ibRow:hover{background:var(--inset)}
+.ibRow .g{width:20px;text-align:center;font-size:13px;flex:0 0 20px}
+.ibRow .ibMain{flex:1;min-width:0}
+.ibRow .ibMain b{font-weight:600;font-size:13.5px}
+.ibRow .ibMain .why{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ibRow .meta{font:11.5px var(--mono);color:var(--faint);white-space:nowrap}
+.healthRow{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:10px 15px;border-bottom:1px solid var(--line2)}
+.healthRow:last-child{border:0}
+
+/* ============================== workbench grid ==============================
+   Explicit placement per review §1:
+   left list = col 1 · timeline = col 2 · review rail = col 3 · drawer = col 2/4.
+   Composer is a normal flex child of the center column (reserved, never overlaps). */
+.work{flex:1;display:grid;grid-template-columns:264px minmax(0,1fr) 400px;
+  grid-template-rows:minmax(0,1fr) auto;min-height:0}
+.wLeft{grid-column:1;grid-row:1/3;border-right:1px solid var(--line2);background:var(--side);
+  overflow:auto;padding:10px 8px;min-height:0}
+.wCenter{grid-column:2;grid-row:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+.wRail{grid-column:3;grid-row:1;border-left:1px solid var(--line2);background:var(--panel);
+  display:flex;flex-direction:column;min-width:0;min-height:0}
+.wDrawer{grid-column:2/4;grid-row:2;height:0;overflow:hidden;border-top:1px solid var(--line2);
+  background:var(--panel);display:flex;flex-direction:column;transition:height .18s ease}
+.wDrawer.on{height:30vh}
+
+.gTitle{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--faint);padding:12px 8px 6px;display:flex;align-items:center;gap:7px}
+.task{background:var(--panel);border:1px solid var(--line2);border-radius:11px;padding:9px 10px;
+  display:grid;gap:4px;margin-bottom:6px;cursor:pointer;transition:.12s}
+.task:hover{border-color:var(--line)}
+.task.on{border-color:var(--faint);box-shadow:var(--shadow)}
+.task.attn{border-color:var(--amber)}
+.tTop{display:flex;align-items:center;gap:8px;min-width:0}
+.tTitle{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tMeta{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tStat{display:flex;gap:9px;font-size:11.5px;color:var(--faint);font-family:var(--mono)}
+
+/* timeline */
+.taskHead{min-height:50px;border-bottom:1px solid var(--line2);background:var(--panel);
+  display:flex;align-items:center;gap:8px;padding:8px 16px;flex-wrap:wrap;flex:0 0 auto}
+.taskHead h1{font-size:14.5px;font-weight:650}
+.taskHead .spacer{flex:1}
+.streamWrap{flex:1;min-height:0;overflow:auto}
+.stream{max-width:780px;margin:0 auto;padding:22px 22px 24px;display:grid;gap:14px}
+.userMsg{justify-self:end;max-width:82%;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:10px 13px}
+.agentNote{padding:2px 2px}
+.block{border:1px solid var(--line);border-radius:13px;background:var(--panel);overflow:hidden}
+.blockH{background:var(--inset);border-bottom:1px solid var(--line2);padding:8px 13px;
+  display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-weight:600;font-size:12.5px}
+.steps{display:grid;gap:7px;padding:11px 13px}
+.step{display:flex;gap:9px;color:var(--muted);align-items:flex-start}
+.step.done{color:var(--faint)}
+.step.now{color:var(--text);font-weight:550}
+.check{width:14px;height:14px;border-radius:99px;border:1.5px solid var(--line);margin-top:2.5px;flex:0 0 14px;
+  display:grid;place-items:center;font-size:9px;color:#fff}
+.done .check{background:var(--green);border-color:var(--green)}
+.now .check{border-color:var(--green)}
+.evRow>button{width:100%;display:flex;align-items:center;gap:9px;padding:8px 2px;text-align:left;color:var(--muted);font-size:13px}
+.evRow>button .g{width:16px;text-align:center;flex:0 0 16px;font-size:11px;color:var(--faint)}
+.evRow>button b{color:var(--text);font-weight:600}
+.evRow>button .r{margin-left:auto;color:var(--faint);font-size:12px;font-family:var(--mono);white-space:nowrap}
+.evRow .det{display:none;padding:2px 0 12px 27px}
+.evRow.open .det{display:block}
+.evRow.open>button .g{transform:rotate(90deg)}
+.evActs{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+
+/* approval card */
+.approval{border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:13px;
+  background:var(--panel);padding:13px 14px;display:grid;gap:9px}
+.approval.decided{border-left-color:var(--line);opacity:.92}
+.approval h3{font-size:13px;display:flex;align-items:center;gap:8px}
+.scopeGrid{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:12px;color:var(--muted)}
+.scopeGrid b{color:var(--text);font-weight:550;font-family:var(--mono);font-size:11.5px}
+.scopeGrid b.plain{font-family:var(--sans);font-weight:450;color:var(--muted)}
+.row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.denyNote{display:none;gap:7px}
+.denyNote.on{display:flex}
+.denyNote input{flex:1;border:1px solid var(--line);border-radius:9px;padding:6px 10px;background:var(--bg)}
+.decision{font-size:12.5px;display:flex;align-items:center;gap:7px}
+
+/* composer — reserved space, never overlays content */
+.composer{flex:0 0 auto;border-top:1px solid var(--line2);background:var(--panel);padding:10px 16px 12px}
+.composeBox{max-width:780px;margin:0 auto;background:var(--bg);border:1px solid var(--line);
+  border-radius:14px;overflow:hidden}
+.composeBox textarea{width:100%;border:0;outline:0;background:transparent;resize:none;
+  padding:10px 13px 4px;min-height:40px;max-height:120px}
+.chipsRow{display:flex;gap:6px;padding:8px 10px 0;flex-wrap:wrap}
+.chipsRow:empty{padding:0}
+.composeBar{display:flex;gap:6px;align-items:center;padding:7px 9px 9px;flex-wrap:wrap}
+.send{margin-left:auto;width:30px;height:30px;background:var(--primary);color:var(--primary-tx);border-radius:99px;font-weight:700}
+
+/* review rail */
+.railHead{height:44px;border-bottom:1px solid var(--line2);display:flex;align-items:center;
+  justify-content:space-between;padding:0 13px;font-weight:650;flex:0 0 44px}
+.railTabs{display:flex;gap:3px;padding:7px 8px;border-bottom:1px solid var(--line2);flex:0 0 auto}
+.railTabs button{padding:5px 9px;border-radius:8px;color:var(--muted);font-size:12.5px;font-weight:530}
+.railTabs button.on,.railTabs button:hover{background:var(--side);color:var(--text)}
+.railBody{flex:1;min-height:0;overflow:auto}
+.railFoot{border-top:1px solid var(--line2);padding:11px;display:grid;gap:8px;flex:0 0 auto}
+.railFoot input{border:1px solid var(--line);border-radius:9px;padding:7px 10px;background:var(--bg);font-family:var(--mono);font-size:12px;width:100%}
+.diffBanner{margin:10px;border:1px solid var(--amber);background:var(--amber-bg);color:var(--amber);
+  border-radius:10px;padding:8px 11px;font-size:12.5px}
+.diffBanner.bad{border-color:var(--red);background:var(--red-bg);color:var(--red)}
+.fileRow{font:12px var(--mono);display:flex;gap:8px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line2)}
+.fileRow .fname{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hunk{border-bottom:1px solid var(--line2)}
+.hunkH{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--inset);
+  font:11px var(--mono);color:var(--faint);position:sticky;top:0;z-index:2}
+.hunkH .fp{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+.hunk.unstaged{opacity:.55}
+.dl{display:flex;font:11.5px/1.75 var(--mono);cursor:pointer}
+.dl:hover .tx{box-shadow:inset 2px 0 0 var(--blue)}
+.dl .ln{width:38px;text-align:right;padding-right:9px;color:var(--faint);user-select:none;flex:0 0 38px}
+.dl .tx{flex:1;padding:0 8px;color:var(--muted);white-space:pre-wrap}
+.dl.add{background:var(--diff-add)} .dl.add .tx{color:var(--diff-add-tx)}
+.dl.del{background:var(--diff-del)} .dl.del .tx{color:var(--diff-del-tx)}
+.cmt{margin:6px 10px;border:1px solid var(--line);border-radius:10px;background:var(--side);padding:8px 10px;font-size:12.5px}
+.cmt .cs{font-size:11px;color:var(--faint);display:flex;gap:8px;align-items:center;margin-bottom:3px;font-family:var(--mono);flex-wrap:wrap}
+.cmt.outdated{border-style:dashed}
+.cmtForm{margin:6px 10px;display:grid;gap:6px}
+.cmtForm textarea{border:1px solid var(--line);border-radius:9px;padding:7px 9px;background:var(--bg);resize:vertical;min-height:54px}
+.testRow{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line2);font-size:12.5px}
+.auditRow{padding:8px 12px;border-bottom:1px solid var(--line2);font-size:12px;display:grid;gap:2px}
+.auditRow .when{font:10.5px var(--mono);color:var(--faint)}
+
+/* terminal */
+.drawerBar{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--line2);flex:0 0 auto;flex-wrap:wrap}
+.term{flex:1;overflow:auto;background:#101114;color:#cfd2d6;font:12px/1.7 var(--mono);padding:12px 16px}
+[data-theme="dark"] .term{background:#0C0C0E}
+.term .cmdline{color:#8BC9A3}
+.term .errline{color:#E9A09C}
+.term .okline{color:#7FD6B2}
+.term .urlline{color:#9DB1FF;text-decoration:underline;cursor:pointer}
+.termBlock{border-left:2px solid #2c2f36;padding-left:10px;margin:8px 0}
+.termBlock .tba{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.termBlock .tba button{font:11px var(--sans);border:1px solid #34373e;border-radius:7px;padding:3px 8px;color:#aeb3bb}
+.termBlock .tba button:hover{background:#1b1d22;color:#e8eaee}
+.termInput{display:flex;gap:8px;align-items:center;background:#101114;padding:0 16px 12px}
+[data-theme="dark"] .termInput{background:#0C0C0E}
+.termInput span{color:#8BC9A3;font:12px var(--mono)}
+.termInput input{flex:1;background:transparent;border:0;outline:0;color:#e8eaee;font:12px var(--mono)}
+
+/* ============================== review queue ============================== */
+.rqGrid{flex:1;display:grid;grid-template-columns:300px minmax(0,1fr);min-height:0}
+.rqList{grid-column:1;border-right:1px solid var(--line2);background:var(--side);overflow:auto;padding:10px 8px}
+.rqGate{grid-column:2;overflow:auto;padding:20px}
+.gateInner{max-width:680px;margin:0 auto;display:grid;gap:14px}
+.gateCard{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.gateCard .gh{padding:11px 15px;border-bottom:1px solid var(--line2);font-weight:650;display:flex;justify-content:space-between;align-items:center}
+.gateRow{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:10px 15px;border-bottom:1px solid var(--line2);font-size:12.5px}
+.gateRow:last-child{border:0}
+.gateRow .gl{display:flex;gap:9px;align-items:center}
+.gateActions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:13px 15px}
+.blockers{padding:0 15px 12px;display:grid;gap:5px;font-size:12.5px;color:var(--muted)}
+
+/* ============================== browser QA ============================== */
+.bTabs{display:flex;gap:3px;padding:8px 14px 0;background:var(--panel)}
+.bTabs button{padding:7px 13px;border-radius:9px 9px 0 0;color:var(--muted);font-weight:550;font-size:13px;border:1px solid transparent;border-bottom:0}
+.bTabs button.on{background:var(--bg);border-color:var(--line2);color:var(--text)}
+.bwrap{flex:1;display:flex;flex-direction:column;min-height:0}
+.bbar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line2);background:var(--panel);flex-wrap:wrap}
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{padding:5px 11px;font-size:12.5px;color:var(--muted);border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--primary);color:var(--primary-tx)}
+.url{flex:1;min-width:160px;border:1px solid var(--line);border-radius:10px;padding:6px 10px;
+  background:var(--bg);font:12px var(--mono);color:var(--muted)}
+.bmain{flex:1;min-height:0;display:flex}
+.bcanvasWrap{flex:1;overflow:auto;display:grid;place-items:start center;padding:18px}
+.bcanvas{border:1px solid var(--line);background:var(--panel);border-radius:16px;width:880px;max-width:100%;
+  min-height:460px;box-shadow:var(--shadow);position:relative;overflow:hidden;transition:width .2s}
+.bcanvas.vw390{width:390px}
+.bcanvas.annotating{cursor:crosshair}
+.bcanvas.annotating .demoPage *{pointer-events:none}
+.demoPage{padding:38px}
+.demoPage h2{font-size:30px;letter-spacing:-.035em;line-height:1.08}
+.vw390 .demoPage{padding:22px} .vw390 .demoPage h2{font-size:22px}
+.pcards{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-top:26px}
+.vw390 .pcards{grid-template-columns:1fr}
+.pcard{border:1px solid var(--line);border-radius:14px;padding:16px 16px 0 16px;background:var(--bg);display:flex;flex-direction:column}
+.pcard p{color:var(--muted);font-size:12.5px;margin-top:4px}
+.pcard .cta{margin-top:18px;margin-bottom:0;align-self:stretch}
+.bcanvas.fixed .pcard{padding-bottom:16px}
+.bcanvas:not(.fixed) .pcard .cta{margin-bottom:-1px;border-bottom-left-radius:0;border-bottom-right-radius:0}
+.pin{position:absolute;background:var(--amber);color:#fff;border-radius:99px;width:23px;height:23px;
+  display:grid;place-items:center;font-weight:700;font-size:11px;transform:translate(-50%,-50%);box-shadow:var(--shadow);z-index:5}
+.pin.resolved{background:var(--green)}
+.regionBox{position:absolute;border:2px dashed var(--amber);background:rgba(178,107,11,.07);border-radius:6px;z-index:4}
+.annPop{position:absolute;width:262px;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:9px;box-shadow:var(--shadow);z-index:10;display:grid;gap:7px}
+.annPop textarea,.annPop input,.annPop select{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--bg);font-size:12.5px;width:100%}
+.annPop textarea{resize:none;min-height:48px}
+.bside{width:300px;border-left:1px solid var(--line2);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.bsideH{padding:10px 12px;font-weight:650;font-size:12.5px;border-bottom:1px solid var(--line2);display:flex;justify-content:space-between;align-items:center}
+.bsideList{flex:1;overflow:auto}
+.bcmt{padding:9px 12px;border-bottom:1px solid var(--line2);font-size:12.5px;display:grid;gap:3px}
+.bcmt .src{font:10.5px var(--mono);color:var(--faint)}
+.bfoot{border-top:1px solid var(--line2);padding:10px;display:grid;gap:7px}
+.trustBox{border:1px solid var(--amber);background:var(--amber-bg);border-radius:10px;padding:8px 10px;font-size:11.5px;color:var(--amber)}
+.trustBox b{display:block;letter-spacing:.04em}
+.bsidePanel{border-bottom:1px solid var(--line2)}
+.bsidePanel .ph{padding:8px 12px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.bsidePanel .pr{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 12px 9px;font-size:12.5px}
+/* chrome bridge */
+.bridgeWrap{flex:1;overflow:auto;padding:22px}
+.bridgeInner{max-width:680px;margin:0 auto;display:grid;gap:14px}
+.setGroup{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.setRow{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 15px;border-bottom:1px solid var(--line2)}
+.setRow:last-child{border:0}
+
+/* ============================== compare ============================== */
+.cmpWrap{flex:1;overflow:auto;padding:18px;display:grid;gap:14px;align-content:start}
+.cmpCols{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.cmpCol{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.cmpCol.winner{border-color:var(--green)}
+.cmpCol.archived{opacity:.55}
+.cmpH{padding:11px 13px;border-bottom:1px solid var(--line2);display:flex;justify-content:space-between;font-weight:650;gap:8px;align-items:center}
+.metrics{padding:11px 13px;display:grid;gap:7px}
+.metric{display:flex;justify-content:space-between;color:var(--muted);font-size:12.5px;gap:10px}
+.metric b{color:var(--text);font-weight:560;font-family:var(--mono);font-size:11.5px;text-align:right}
+.cmpF{padding:10px 13px;border-top:1px solid var(--line2);display:flex;gap:6px;flex-wrap:wrap}
+
+/* ============================== automations / settings ============================== */
+.setWrap{flex:1;overflow:auto;padding:22px}
+.setInner{max-width:820px;margin:0 auto;display:grid;gap:14px}
+.matrix{width:100%;border-collapse:collapse;font-size:12.5px}
+.matrix th{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);
+  text-align:left;padding:9px 12px;border-bottom:1px solid var(--line2);white-space:nowrap}
+.matrix td{padding:9px 12px;border-bottom:1px solid var(--line2);color:var(--muted);white-space:nowrap}
+.matrix tr:last-child td{border:0}
+.matrix td b{color:var(--text);font-weight:600}
+.stack{display:none;padding:4px 15px 13px}
+.stack.on{display:block}
+.stack ol{margin-left:18px;color:var(--muted);display:grid;gap:3px;font-size:12.5px}
+
+/* ============================== modals / palette / toasts ============================== */
+.overlay{position:fixed;inset:0;background:rgba(15,15,18,.38);display:none;place-items:center;z-index:50;padding:20px}
+.overlay.on{display:grid}
+.modal{width:min(640px,100%);max-height:88vh;overflow:auto;background:var(--panel);border:1px solid var(--line);
+  border-radius:16px;box-shadow:var(--shadow)}
+.modal.wide{width:min(980px,100%)}
+.modalH{padding:14px 18px;border-bottom:1px solid var(--line2);display:flex;justify-content:space-between;align-items:center;font-weight:650;position:sticky;top:0;background:var(--panel);z-index:2}
+.modalB{padding:16px 18px;display:grid;gap:13px}
+.field{display:grid;gap:5px}
+.field label{font-size:12px;font-weight:600;color:var(--muted)}
+.field input,.field select,.field textarea{border:1px solid var(--line);border-radius:10px;padding:8px 11px;background:var(--bg);width:100%}
+.field textarea{resize:vertical;min-height:74px}
+.fRow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.intents{display:flex;gap:7px;flex-wrap:wrap}
+.intent{border:1px solid var(--line);border-radius:10px;padding:7px 12px;font-size:12.5px;color:var(--muted)}
+.intent.on{border-color:var(--primary);color:var(--text);background:var(--side);font-weight:600}
+.previewBox{border:1px solid var(--line);border-radius:11px;background:var(--inset);padding:10px 12px;font-size:12.5px;display:grid;gap:5px}
+.previewBox .mono{font-size:11.5px}
+.warnBox{border:1px solid var(--amber);background:var(--amber-bg);color:var(--amber);border-radius:11px;padding:9px 12px;font-size:12.5px;display:none}
+.warnBox.on{display:block}
+.modalF{padding:13px 18px;border-top:1px solid var(--line2);display:flex;justify-content:flex-end;gap:8px}
+.exec{display:none;gap:12px}
+.exec.on{display:grid}
+.palette{width:min(540px,100%);background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;align-self:start;margin-top:8vh}
+.palette input{width:100%;border:0;outline:0;background:transparent;padding:13px 16px;border-bottom:1px solid var(--line2);font-size:14px}
+.palList{max-height:320px;overflow:auto;padding:6px}
+.palItem{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:8px 11px;border-radius:9px;color:var(--text);font-size:13px}
+.palItem:hover,.palItem.sel{background:var(--side)}
+.palItem .k{color:var(--faint);font-size:11px}
+.sxs{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px 18px}
+.sxs h4{font-size:12.5px;margin-bottom:6px;display:flex;justify-content:space-between}
+
+/* toasts — TOP RIGHT, never over composer/terminal/approvals (review §18) */
+.toasts{position:fixed;top:64px;right:16px;display:grid;gap:7px;z-index:80;pointer-events:none;justify-items:end}
+.toast{background:var(--primary);color:var(--primary-tx);border-radius:10px;padding:8px 14px;font-size:12.5px;
+  box-shadow:var(--shadow);animation:tIn .18s ease;max-width:360px}
+@keyframes tIn{from{opacity:0;transform:translateY(-8px)}}
+
+/* ============================== narrow mode ==============================
+   ≤880px: approval-first remote mode — inbox, task detail, approve/deny.
+   No attempt to squeeze the full cockpit in (review §17). */
+@media(max-width:1280px){.work{grid-template-columns:240px minmax(0,1fr) 360px}}
+@media(max-width:1080px){.work{grid-template-columns:minmax(0,1fr) 360px}
+  .wLeft{display:none}.wCenter{grid-column:1}.wRail{grid-column:2}.wDrawer{grid-column:1/3}}
+@media(max-width:880px){
+  .navRail{display:none}.crumbs .ci.opt{display:none}.counters{display:none}
+  .work{grid-template-columns:minmax(0,1fr)}
+  .wRail{display:none}.wCenter{grid-column:1}.wDrawer{grid-column:1/2}
+  .rqGrid{grid-template-columns:minmax(0,1fr)}.rqList{display:none}
+  .bside{display:none}
+  .narrowNav{display:flex!important}
+}
+.narrowNav{display:none;border-top:1px solid var(--line2);background:var(--panel);padding:6px;gap:4px;justify-content:space-around}
+.narrowNav button{flex:1;padding:7px 4px;border-radius:8px;color:var(--muted);font-size:12px;font-weight:550}
+.narrowNav button.on{background:var(--side);color:var(--text)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand"><span class="mark">AS</span>AutoCode Station</div>
+  <div class="crumbs">
+    <span class="ci">Project <b>lowrescoder</b></span>
+    <span class="ci opt">Worktree <b class="mono" id="crumbWt">—</b></span>
+    <span class="ci opt amber">2 dirty local files</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="counters" id="counters"></div>
+  <button class="iconbtn" id="btnPalette" title="Command palette (Ctrl+K)">⌘</button>
+  <button class="btn primary" id="btnNewTask">New task</button>
+</header>
+
+<div class="app">
+
+  <!-- NAV RAIL — intentions, not features (review §4, IA section) -->
+  <nav class="navRail">
+    <button class="newTask" id="btnNewTask2">+ New agent task</button>
+    <button class="nitem on" data-view="inbox"><span>Inbox</span><span class="badge" id="bdgInbox"></span></button>
+    <button class="nitem" data-view="work"><span>Workstreams</span><span class="badge" id="bdgWork"></span></button>
+    <button class="nitem" data-view="review"><span>Review Queue</span><span class="badge" id="bdgReview"></span></button>
+    <button class="nitem" data-view="browser"><span>Browser QA</span><span class="badge" id="bdgBrowser"></span></button>
+    <button class="nitem" data-view="compare"><span>Compare</span><span class="badge">3</span></button>
+    <button class="nitem" data-view="automations"><span>Automations</span><span class="badge">2</span></button>
+    <div class="navFoot">
+      <button class="nitem" data-view="settings"><span>Settings</span></button>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ============ INBOX (default) ============ -->
+    <section class="view on" id="view-inbox">
+      <div class="head"><h1>Inbox</h1>
+        <span class="muted" style="font-size:12.5px">What needs you, what's ready, what's running.</span>
+        <div class="spacer"></div>
+        <button class="btn sm" onclick="toast('Board view kept as secondary surface — open via palette')">Board view</button>
+      </div>
+      <div class="inboxWrap"><div class="inboxInner" id="inboxInner"></div></div>
+    </section>
+
+    <!-- ============ WORKSTREAMS ============ -->
+    <section class="view" id="view-work">
+      <div class="work">
+        <aside class="wLeft" id="workList"></aside>
+
+        <div class="wCenter">
+          <div class="taskHead" id="taskHead"></div>
+          <div class="streamWrap" id="streamWrap"><div class="stream" id="stream"></div></div>
+          <!-- composer is in normal flow: reserved space, cannot cover approvals -->
+          <div class="composer"><div class="composeBox">
+            <div class="chipsRow" id="ctxChips"></div>
+            <textarea id="composerText" placeholder="Reply to the agent, or attach @file / @terminal / @browser-comment context…"></textarea>
+            <div class="composeBar">
+              <span class="chip" id="chipHarness">Claude Code ▾</span>
+              <span class="chip" id="chipMode">Worktree ▾</span>
+              <span class="chip">Workspace write ▾</span>
+              <button class="send" id="btnSend" title="Send (Ctrl+Enter)">↑</button>
+            </div>
+          </div></div>
+        </div>
+
+        <aside class="wRail">
+          <div class="railHead"><span>Review &amp; context</span><span class="mono" style="font-size:12px" id="railStat"></span></div>
+          <div class="railTabs" id="railTabs">
+            <button class="on" data-rtab="diff">Diff</button>
+            <button data-rtab="comments">Comments <span id="rCmtN"></span></button>
+            <button data-rtab="tests">Tests</button>
+            <button data-rtab="audit">Audit</button>
+          </div>
+          <div class="railBody" id="railBody"></div>
+          <div class="railFoot" id="railFoot">
+            <input id="commitMsg" placeholder="Commit message"/>
+            <div class="row">
+              <button class="btn sm" id="btnStageAll">Stage all</button>
+              <button class="btn sm" id="btnOpenGate">Open merge gate →</button>
+            </div>
+          </div>
+        </aside>
+
+        <div class="wDrawer" id="drawer">
+          <div class="drawerBar">
+            <b style="font-size:12.5px">Terminal</b>
+            <span class="chip" id="termCwd">~/repo</span>
+            <span class="muted" style="font-size:12px">task PTY · scrollback preserved</span>
+            <div style="flex:1"></div>
+            <button class="btn sm" id="btnRunTest">Run npm test</button>
+            <button class="btn sm" id="btnRunDev">Run dev server</button>
+            <button class="btn sm" onclick="toast('Process killed')">Kill</button>
+            <button class="btn sm" onclick="toggleDrawer(false)">✕</button>
+          </div>
+          <div class="term" id="term"></div>
+          <div class="termInput"><span>$</span><input id="termIn" placeholder="Type a command and press Enter (try: npm test)"/></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ REVIEW QUEUE / MERGE GATE ============ -->
+    <section class="view" id="view-review">
+      <div class="head"><h1>Review Queue</h1>
+        <span class="muted" style="font-size:12.5px">Ship gate: tests, comments and browser checks must clear — overrides are explicit.</span>
+      </div>
+      <div class="rqGrid">
+        <aside class="rqList" id="rqList"></aside>
+        <div class="rqGate" id="rqGate"></div>
+      </div>
+    </section>
+
+    <!-- ============ BROWSER QA ============ -->
+    <section class="view" id="view-browser">
+      <div class="bTabs">
+        <button class="on" data-btab="preview">Preview Browser</button>
+        <button data-btab="bridge">Chrome Bridge <span class="chip" style="margin-left:5px">not paired</span></button>
+      </div>
+
+      <div class="bwrap" id="bPreview">
+        <div class="bbar">
+          <div class="seg" id="bMode">
+            <button class="on" data-m="navigate">Navigate</button>
+            <button data-m="inspect">Inspect</button>
+            <button data-m="comment">Comment</button>
+            <button data-m="compare">Compare</button>
+          </div>
+          <input class="url" id="urlBar" value="http://localhost:5173/pricing"/>
+          <button class="btn sm" onclick="toast('Reloaded preview')">⟳</button>
+          <button class="btn sm" id="btnViewport">Desktop</button>
+          <select class="btn sm" id="pageState" title="Page state">
+            <option>State: success</option><option>State: empty</option><option>State: loading</option><option>State: error</option>
+          </select>
+          <span style="flex-basis:100%;height:0"></span>
+          <span class="muted" style="font-size:11.5px">Capture:</span>
+          <button class="btn sm" data-cap="Screenshot">Screenshot</button>
+          <button class="btn sm" data-cap="DOM">DOM</button>
+          <button class="btn sm" data-cap="A11y tree">A11y</button>
+          <button class="btn sm" data-cap="Console">Console</button>
+          <button class="btn sm" data-cap="Network">Network</button>
+          <div style="flex:1"></div>
+          <button class="btn sm" onclick="toast('Requires Chrome Bridge pairing — see the Chrome Bridge tab')">Open in Chrome</button>
+        </div>
+        <div class="bmain">
+          <div class="bcanvasWrap"><div class="bcanvas" id="bcanvas">
+            <div class="demoPage">
+              <h2>Pricing that scales with your security posture.</h2>
+              <p class="muted" style="margin-top:8px">Local dev server preview — Comment mode: click an element or shift-drag a region.</p>
+              <div class="pcards">
+                <div class="pcard"><b>Startup</b><p>Fast baseline coverage.</p><button class="btn primary cta">Start trial</button></div>
+                <div class="pcard"><b>SME</b><p>Balanced managed security.</p><button class="btn primary cta">Start trial</button></div>
+                <div class="pcard"><b>Enterprise</b><p>Custom governance.</p><button class="btn primary cta">Talk to sales</button></div>
+              </div>
+            </div>
+          </div></div>
+          <div class="bside">
+            <div class="bsidePanel">
+              <div class="ph">Unresolved comments <span id="bcmtCount"></span></div>
+              <div class="bsideList" id="bcmtList" style="max-height:220px"></div>
+            </div>
+            <div class="bsidePanel">
+              <div class="ph">Console</div>
+              <div class="pr"><span class="muted">0 errors · 1 warning</span><button class="btn sm" data-cap="Console">Attach</button></div>
+            </div>
+            <div class="bsidePanel">
+              <div class="ph">Network</div>
+              <div class="pr"><span class="amber mono" style="font-size:11.5px">500 · /api/pricing</span>
+                <button class="btn sm" id="btnAskFixNet">Ask agent to fix</button></div>
+            </div>
+            <div class="bsidePanel">
+              <div class="ph">Snapshots</div>
+              <div class="pr"><span class="muted" id="snapLabel">No before/after yet</span><button class="btn sm" id="btnSnapshot" disabled>Compare</button></div>
+            </div>
+            <div class="bfoot">
+              <button class="btn primary" id="btnSendBcmts" disabled>Send comments to agent</button>
+              <div class="trustBox"><b>UNTRUSTED BROWSER CONTEXT</b>
+                Page text and a11y snapshots are never treated as instructions. Packets are labeled, redacted, and quarantined before reaching the agent.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bridgeWrap" id="bBridge" style="display:none"><div class="bridgeInner">
+        <div class="setGroup">
+          <div class="setRow"><div><b>Chrome Bridge</b><div class="muted" style="font-size:12px">Extension ↔ native messaging host (stdio, allowed_origins pinned). For signed-in apps — GitHub, Linear, internal dashboards. Cookies and passwords are never exported.</div></div>
+            <button class="btn sm primary" onclick="toast('Pairing: install extension → approve host → confirm code (P2 flow)')">Pair…</button></div>
+          <div class="setRow"><div><b>Native messaging host</b><div class="muted" style="font-size:12px">com.autocode.bridge · not installed</div></div><span class="chip">Missing</span></div>
+        </div>
+        <div class="setGroup">
+          <div class="setRow"><b style="font-size:12.5px">Per-domain permissions</b><span class="chip">deny by default</span></div>
+          <div class="setRow"><span class="mono" style="font-size:12px">github.com</span><span class="chip ok">Allowed · read DOM</span></div>
+          <div class="setRow"><span class="mono" style="font-size:12px">linear.app</span><span class="chip warn">Ask each time</span></div>
+          <div class="setRow"><span class="mono" style="font-size:12px">*.internal.corp</span><span class="chip bad">Blocked</span></div>
+        </div>
+        <div class="trustBox" style="font-size:12px"><b>SCOPE</b>
+          The Preview Browser handles localhost, static HTML and public pages. Chrome Bridge exists only for pages that need your real session — it never runs without per-domain approval.</div>
+      </div></div>
+    </section>
+
+    <!-- ============ COMPARE ============ -->
+    <section class="view" id="view-compare">
+      <div class="head"><h1>Compare runs</h1>
+        <span class="chip info">same prompt · same base · same profile · 3 worktrees</span>
+        <div class="spacer"></div>
+        <button class="btn sm" onclick="toast('Re-running npm test in all 3 worktrees (simulated)')">Run same tests on all</button>
+      </div>
+      <div class="cmpWrap">
+        <div class="userMsg" style="justify-self:stretch;max-width:none">Fix booking timezone bug, keep patch minimal, run booking tests.</div>
+        <div class="cmpCols" id="cmpCols"></div>
+        <div class="muted" style="font-size:12.5px" id="cmpHint">Open a run's diff before you can pick it as winner. Losing worktrees are archived, not deleted — cherry-pick hunks from them afterwards.</div>
+      </div>
+    </section>
+
+    <!-- ============ AUTOMATIONS ============ -->
+    <section class="view" id="view-automations">
+      <div class="head"><h1>Automations</h1><div class="spacer"></div>
+        <button class="btn sm primary" onclick="toast('New automation editor (P3)')">New automation</button></div>
+      <div class="setWrap"><div class="setInner">
+        <div class="setGroup">
+          <div class="setRow"><div><b>Nightly: run tests and repair</b><div class="muted" style="font-size:12px">02:00 · lowrescoder · profile: workspace write, safe-command allowlist · opens a task on failure</div></div>
+            <span class="chip ok">Last run ✓ 02:00</span></div>
+          <div class="setRow"><div><b>Watch PR comments → draft replies</b><div class="muted" style="font-size:12px">polls every 10m · drafts land in Inbox, never auto-posted</div></div>
+            <span class="chip">Paused</span></div>
+        </div>
+        <div class="muted" style="font-size:12.5px">Automation output always lands in the Inbox as attention items — nothing ships without the gate.</div>
+      </div></div>
+    </section>
+
+    <!-- ============ SETTINGS / CONTROL CENTER ============ -->
+    <section class="view" id="view-settings">
+      <div class="head"><h1>Control Center</h1></div>
+      <div class="setWrap"><div class="setInner">
+
+        <div class="setGroup">
+          <div class="setRow" style="border-bottom:1px solid var(--line2)"><b>Harness capability matrix</b>
+            <span class="muted" style="font-size:12px">adapter order: native → ACP → structured → heuristic → raw PTY</span></div>
+          <div style="overflow:auto"><table class="matrix">
+            <tr><th>Harness</th><th>Status</th><th>Adapter</th><th>Auth</th><th>Review cmts</th><th>Notify</th><th>Browser</th><th>Raw PTY</th></tr>
+            <tr><td><b>Claude Code</b></td><td><span class="chip ok">Ready</span></td><td>structured</td><td class="green">OK</td><td>yes</td><td>yes</td><td>via MCP</td><td>yes</td></tr>
+            <tr><td><b>Codex</b></td><td><span class="chip ok">Ready</span></td><td>ACP</td><td class="green">OK</td><td>yes</td><td>config</td><td>yes</td><td>yes</td></tr>
+            <tr><td><b>OpenCode</b></td><td><span class="chip">Missing</span></td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td><b>AutoCode native</b></td><td><span class="chip ok">Connected</span></td><td>native</td><td>n/a</td><td>yes</td><td>yes</td><td>yes</td><td>yes</td></tr>
+            <tr><td><b>Custom CLI</b></td><td><span class="chip ok">Ready</span></td><td>raw PTY</td><td>n/a</td><td>no</td><td>no</td><td>no</td><td>yes</td></tr>
+          </table></div>
+        </div>
+
+        <div class="setGroup">
+          <div class="setRow"><div><b>Project instruction stack</b><div class="muted" style="font-size:12px">AGENTS.md ✓ · CLAUDE.md ✓ · package.json scripts ✓ · Makefile ✗</div></div>
+            <button class="btn sm" id="btnStack">View stack</button></div>
+          <div class="stack" id="stackView"><ol>
+            <li>1. User prompt (this task)</li><li>2. Task policy / permission profile</li>
+            <li>3. nearest AGENTS.md (src/booking/AGENTS.md)</li><li>4. project AGENTS.md</li>
+            <li>5. harness-native instructions (CLAUDE.md)</li><li>6. global AutoCode rules</li>
+          </ol></div>
+        </div>
+
+        <div class="setGroup">
+          <div class="setRow"><div><b>Default permission profile</b><div class="muted" style="font-size:12px">Workspace write · ask for commands · network blocked · secrets unavailable</div></div><span class="chip">Ask for commands</span></div>
+          <div class="setRow"><div><b>Blocked command classes</b><div class="muted" style="font-size:12px">recursive root delete · privilege escalation · download-piped-to-shell · force-push to protected · unknown deploy</div></div><span class="chip ok">Active</span></div>
+          <div class="setRow"><div><b>Default task mode</b><div class="muted" style="font-size:12px">Worktree for Git repos</div></div><span class="chip">Worktree</span></div>
+        </div>
+
+        <div class="setGroup">
+          <div class="setRow"><div><b>Remote access</b><div class="muted" style="font-12px">Binds 127.0.0.1 · LAN mode requires token auth · narrow approval-only UI on phones</div></div><span class="chip">Off</span></div>
+          <div class="setRow"><div><b>MCP servers</b><div class="muted" style="font-size:12px">playwright (browser) · filesystem · none remote</div></div><button class="btn sm" onclick="toast('MCP registry manager (P3)')">Manage</button></div>
+          <div class="setRow"><div><b>Audit export</b><div class="muted" style="font-size:12px">JSONL · secrets redacted · payload hashes included</div></div><button class="btn sm" id="btnExportAudit">Export JSONL</button></div>
+          <div class="setRow"><div><b>Theme</b><div class="muted" style="font-size:12px">also in the command palette</div></div><button class="btn sm" onclick="toggleTheme()">Toggle</button></div>
+        </div>
+      </div></div>
+    </section>
+
+    <nav class="narrowNav" id="narrowNav">
+      <button class="on" data-view="inbox">Inbox</button>
+      <button data-view="work">Task</button>
+      <button data-view="review">Review</button>
+    </nav>
+  </main>
+</div>
+
+<!-- NEW TASK — intent first (review §20) -->
+<div class="overlay" id="ovlNewTask">
+  <div class="modal">
+    <div class="modalH"><span>New agent task</span><button class="iconbtn" data-close>✕</button></div>
+    <div class="modalB">
+      <div class="field"><label>What do you want to do?</label>
+        <div class="intents" id="ntIntents">
+          <button class="intent on" data-i="bug">Fix a bug</button>
+          <button class="intent" data-i="feature">Build a feature</button>
+          <button class="intent" data-i="review">Review current changes</button>
+          <button class="intent" data-i="repair">Run tests &amp; repair</button>
+          <button class="intent" data-i="browser">Browser UI fix</button>
+          <button class="intent" data-i="compare">Compare agents</button>
+          <button class="intent" data-i="raw">Raw terminal</button>
+        </div>
+      </div>
+      <div class="field"><label>Task prompt</label>
+        <textarea id="ntPrompt" placeholder="What should the agent do? Keep scope explicit."></textarea></div>
+      <div class="field"><label>Context</label>
+        <div class="row">
+          <span class="chip ok">AGENTS.md ✓</span><span class="chip ok">CLAUDE.md ✓</span><span class="chip ok">package.json scripts ✓</span>
+          <button class="btn sm" onclick="toast('Attach: files / browser comment / terminal output / GitHub issue / diff')">+ Attach…</button>
+          <button class="btn sm" onclick="toast('Instruction stack: prompt → policy → nearest AGENTS.md → project AGENTS.md → harness → global')">View instruction stack</button>
+        </div></div>
+      <div class="field"><label>Execution</label>
+        <div class="row" style="justify-content:space-between">
+          <span class="muted" style="font-size:12.5px" id="ntExecSummary">Claude Code · worktree ← main · workspace write, ask for commands, network blocked</span>
+          <button class="btn sm" id="ntExecToggle">Change ▾</button>
+        </div>
+        <div class="exec" id="ntExec">
+          <div class="fRow">
+            <div class="field"><label>Harness</label><select id="ntHarness"><option>Claude Code</option><option>Codex</option><option>AutoCode native</option><option>Raw PTY (custom CLI)</option></select></div>
+            <div class="field"><label>Mode</label><select id="ntMode"><option>Worktree (default)</option><option>Local</option><option>Raw terminal</option><option disabled>Container (P2)</option></select></div>
+          </div>
+          <div class="fRow">
+            <div class="field"><label>Base branch</label><select id="ntBase"><option>main</option><option>master</option><option>develop</option></select></div>
+            <div class="field"><label>Permission profile</label><select id="ntPerm"><option>Workspace write · ask for commands · network blocked</option><option>Read only · ask for everything</option><option>Workspace write · safe-command allowlist</option></select></div>
+          </div>
+          <div class="field"><label>Title (branch name)</label><input id="ntTitle" placeholder="auto-derived from prompt if empty" maxlength="72"/></div>
+        </div>
+      </div>
+      <div class="warnBox" id="ntWarn">Local mode on a dirty repo: 2 uncommitted files may conflict with agent edits. Worktree mode is recommended.</div>
+      <div class="previewBox">
+        <div><b>Preview</b></div>
+        <div class="mono" id="ntBranch">agent/untitled-task</div>
+        <div class="mono muted" id="ntPath">.worktrees/untitled-task ← main</div>
+        <div class="muted">Estimated approvals under this profile: ~1 command run (tests)</div>
+        <div class="muted">Scope: read/write project · commands need approval · network blocked · secrets unavailable</div>
+      </div>
+    </div>
+    <div class="modalF"><button class="btn" data-close>Cancel</button><button class="btn primary" id="ntStart">Start task</button></div>
+  </div>
+</div>
+
+<!-- COMMAND PALETTE -->
+<div class="overlay" id="ovlPalette" style="align-items:start">
+  <div class="palette">
+    <input id="palIn" placeholder="Type a command or task name…"/>
+    <div class="palList" id="palList"></div>
+  </div>
+</div>
+
+<!-- SHORTCUTS (replaces the guide panel — review §16) -->
+<div class="overlay" id="ovlKeys">
+  <div class="modal" style="width:min(420px,100%)">
+    <div class="modalH"><span>Shortcuts</span><button class="iconbtn" data-close>✕</button></div>
+    <div class="modalB" id="keysBody"></div>
+  </div>
+</div>
+
+<!-- SIDE-BY-SIDE DIFF (compare) -->
+<div class="overlay" id="ovlSxs">
+  <div class="modal wide">
+    <div class="modalH"><span id="sxsTitle">Side-by-side diff</span><button class="iconbtn" data-close>✕</button></div>
+    <div class="sxs" id="sxsBody"></div>
+    <div class="modalF"><button class="btn" data-close>Close</button></div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+/* ============================ helpers ============================ */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'').slice(0,40)||'untitled-task';
+const now=()=>new Date().toTimeString().slice(0,8);
+let _id=0; const uid=p=>p+(++_id);
+function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;
+  $('#toasts').append(t);setTimeout(()=>t.remove(),2800);}
+function toggleTheme(){const h=document.documentElement;h.dataset.theme=h.dataset.theme==='light'?'dark':'light';}
+
+/* ============================ status model ============================
+   Review §7: every status maps to exactly ONE inbox bucket. */
+const STATUS={
+  queued:'Queued',starting:'Starting',planning:'Planning',reading:'Reading',editing:'Editing',
+  running:'Running command',testing:'Testing',
+  waiting:'Waiting approval',waitingBrowser:'Browser comments open',needsauth:'Needs auth',
+  conflict:'Merge conflict',testfailed:'Test failed — asks for input',
+  review:'Ready for review',readycommit:'Ready to commit',
+  buildfailed:'Build failed',failed:'Failed',stopped:'Stopped',crashed:'Crashed',
+  committed:'Committed',pushed:'Pushed',propen:'PR opened',archived:'Archived',
+  harnessmissing:'Harness missing',orphan:'Orphaned worktree'};
+const BUCKET_OF={
+  queued:'running',starting:'running',planning:'running',reading:'running',editing:'running',
+  running:'running',testing:'running',
+  waiting:'attention',waitingBrowser:'attention',needsauth:'attention',conflict:'attention',testfailed:'attention',
+  review:'review',readycommit:'review',
+  buildfailed:'failed',failed:'failed',stopped:'failed',crashed:'failed',harnessmissing:'failed',orphan:'failed',
+  committed:'done',pushed:'done',propen:'done',archived:'done'};
+const BUCKETS=[['attention','Needs your attention'],['review','Ready to review'],
+  ['running','Running in background'],['failed','Failed'],['done','Done']];
+
+/* ============================ state ============================ */
+const state={
+  view:'inbox',activeId:null,reviewSel:null,tasks:{},order:[],audit:[],railTab:'diff',
+  bMode:'navigate',bTab:'preview',viewport:'desktop',bcomments:[],pageFixed:false,snapshot:'after',
+  cmp:{winner:null,viewed:[false,false,false],archived:false},
+};
+window.state=state;
+function audit(taskId,action,target){state.audit.push({at:now(),taskId,action,target:target||''});
+  if(state.railTab==='audit'&&state.view==='work')renderRail();}
+
+function mkTask(o){const t=Object.assign({
+  id:uid('t'),title:'task',project:'lowrescoder',harness:'Claude Code',mode:'Worktree',
+  base:'main',status:'queued',elapsed:'0m',add:0,del:0,tests:'—',
+  events:[],draft:'',ctx:[],approvalPolicy:'ask',pending:null,plan:null,
+  hunks:[],comments:[],testRuns:[],branch:'agent/task'},o);
+  state.tasks[t.id]=t;state.order.unshift(t.id);return t;}
+function addEvent(t,ev){ev.id=uid('e');ev.at=now();t.events.push(ev);
+  if(state.activeId===t.id&&state.view==='work')renderStream(true);
+  renderChrome();renderWorkList();if(state.view==='inbox')renderInbox();return ev;}
+function filesOf(t){const m={};t.events.filter(e=>e.k==='edit').forEach(e=>e.files.forEach(f=>m[f[0]]=f[1]));return m;}
+
+/* ============================ seed data ============================ */
+let T1,T4,T5;
+function seed(){
+  /* t6 — quiet background reader */
+  const t6=mkTask({title:'docs cleanup',harness:'Codex',status:'reading',elapsed:'2m',branch:'agent/docs-cleanup'});
+  addEvent(t6,{k:'prompt',text:'Tidy the README and module docs. No code changes.'});
+  addEvent(t6,{k:'read',files:['README.md','docs/architecture.md']});
+
+  /* t5 — browser comments unresolved */
+  T5=mkTask({title:'pricing page CTA spacing',harness:'Claude Code',status:'waitingBrowser',
+    elapsed:'18m',add:0,del:0,branch:'agent/pricing-cta-spacing'});
+  addEvent(T5,{k:'prompt',text:'Fix the pricing page CTA spacing flagged in browser QA.'});
+  addEvent(T5,{k:'note',text:'Waiting on your browser comments from the /pricing preview.'});
+  state.bcomments=[
+    {id:uid('b'),n:1,kind:'element',sel:'.pricing-card .cta',text:'CTA sits flush with the card bottom edge.',
+     expected:'Even padding below the button',scope:'layout only',vp:'1280×800',sent:false,resolved:false,x:0.27,y:0.78},
+    {id:uid('b'),n:2,kind:'element',sel:'.pricing-card .cta',text:'Button corners clipped by card radius.',
+     expected:'Button fully inside the card',scope:'layout only',vp:'1280×800',sent:false,resolved:false,x:0.62,y:0.78},
+  ];
+
+  /* t4 — test failed, agent asks for context */
+  T4=mkTask({title:'api-client-types',harness:'Codex',status:'testfailed',
+    elapsed:'31m',add:58,del:12,tests:'3 failed',branch:'agent/api-client-types'});
+  addEvent(T4,{k:'prompt',text:'Generate typed client from the OpenAPI spec and migrate callers.'});
+  addEvent(T4,{k:'edit',files:[['src/api/client.ts','+44 −8'],['src/api/types.gen.ts','+14 −4']],add:58,del:12});
+  addEvent(T4,{k:'test',cmd:'npm test -- --grep api',ok:false,out:'3 failed · 51 passed',
+    detail:'✕ pagination cursor type mismatch (v2 vs v3 schema)\n✕ enum casing differs from spec\n✕ nullable user.avatar'});
+  addEvent(T4,{k:'note',text:'I need a decision: the spec mixes v2 and v3 pagination. Should the client target API v3 only, or keep v2 compatibility?'});
+  audit(T4.id,'tests.failed','npm test -- --grep api');
+
+  /* t3 — ready for review, tests pass */
+  const t3=mkTask({title:'light editor save guard',harness:'Codex',status:'review',
+    elapsed:'done',add:44,del:9,tests:'42 passed',branch:'agent/light-editor-save-guard'});
+  t3.hunks=[
+   {id:uid('h'),file:'station_ui/src/editor/SaveGuard.tsx',header:'@@ -41,7 +41,12 @@ export function SaveGuard()',staged:true,lines:[
+    {t:'ctx',n:41,text:'export function SaveGuard({file}: Props) {'},
+    {t:'del',n:42,text:'  const dirty = file.changed;'},
+    {t:'add',n:42,text:'  const dirty = useExternalChange(file);'},
+    {t:'add',n:43,text:'  if (dirty.external) return <ReloadOrMerge file={file}/>;'},
+    {t:'ctx',n:44,text:'  return <Editor file={file} onSave={guardedSave}/>;'}]},
+   {id:uid('h'),file:'station_ui/src/editor/__tests__/saveguard.test.tsx',header:'@@ -1,3 +1,14 @@',staged:true,lines:[
+    {t:'add',n:1,text:"test('prompts reload when file changed on disk', async () => {"},
+    {t:'add',n:2,text:'  const f = mockFile({externalChange:true});'},
+    {t:'add',n:3,text:'  expect(render(<SaveGuard file={f}/>)).toShow(/Reload or merge/);'},
+    {t:'add',n:4,text:'});'}]},
+  ];
+  t3.testRuns=[{cmd:'npm test -- --grep saveguard',res:'42 passed · 1 skipped',ok:true,at:'12:40:11'}];
+  addEvent(t3,{k:'prompt',text:'Detect external file changes in the light editor and prompt reload/merge before save.'});
+  addEvent(t3,{k:'edit',files:[['station_ui/src/editor/SaveGuard.tsx','+31 −9'],['station_ui/src/editor/__tests__/saveguard.test.tsx','+13 −0']],add:44,del:9});
+  addEvent(t3,{k:'test',cmd:'npm test -- --grep saveguard',ok:true,out:'42 passed · 1 skipped · 6.2s'});
+  audit(t3.id,'task.ready_for_review','tests green');
+
+  /* t2 — running */
+  const t2=mkTask({title:'agent cockpit board UI',harness:'AutoCode native',status:'editing',
+    elapsed:'24m',add:412,del:238,tests:'running',branch:'agent/cockpit-board-ui'});
+  addEvent(t2,{k:'prompt',text:'Build the operations board view with status grouping and attention badges.'});
+  t2.plan={steps:['Define board sections and status mapping','Render grouped task cards','Wire attention propagation','Add filters'],doneUpto:2};
+  addEvent(t2,{k:'plan'});
+  addEvent(t2,{k:'edit',files:[['station_ui/src/screens/OperationsBoard.tsx','+118 −42'],['station_ui/src/state/sections.ts','+36 −0']],add:154,del:42});
+
+  /* t1 — the scripted approval journey. DRAFT DIFF EXISTS BEFORE TESTS (review §3). */
+  T1=mkTask({title:'booking timezone fix',harness:'Claude Code',status:'waiting',
+    elapsed:'11m',add:6,del:4,tests:'—',branch:'agent/booking-timezone-fix'});
+  addEvent(T1,{k:'prompt',text:'Fix booking page timezone bug and run tests. Keep the patch minimal.'});
+  addEvent(T1,{k:'note',text:'I’ll locate where booking times are parsed, fix the offset handling, then validate with the booking test suite.'});
+  T1.plan={steps:['Locate timezone parsing in booking flow','Fix offset conversion','Run booking tests','Summarize diff for review'],doneUpto:2};
+  addEvent(T1,{k:'plan'});
+  addEvent(T1,{k:'search',q:'parseBookingTime | tzOffset',hits:'3 matches in 2 files'});
+  addEvent(T1,{k:'edit',files:[['src/booking/time.ts','+5 −4'],['src/booking/__tests__/time.test.ts','+1 −0']],add:6,del:4});
+  seedT1Hunks(T1); /* draft diff is reviewable immediately */
+  T1.pending=addEvent(T1,{k:'approval',script:'t1',cmd:'npm test -- --grep booking',
+    cwd:'.worktrees/booking-timezone-fix',risk:'low',
+    reason:'Validate the booking timezone patch after editing src/booking/time.ts.',
+    origin:'agent request',policy:'ask for all commands',repeat:'first request for this command',
+    touch:'node_modules/.cache, test output',last:'never run in this task',decided:null});
+  audit(T1.id,'task.created','claude-code · worktree agent/booking-timezone-fix');
+  audit(T1.id,'approval.requested','npm test -- --grep booking');
+  state.activeId=T1.id;
+  state.reviewSel=t3.id;
+}
+function seedT1Hunks(t){
+  if(t.hunks.length)return;
+  t.hunks=[
+   {id:uid('h'),file:'src/booking/time.ts',header:'@@ -17,6 +17,7 @@ export function parseBookingTime',staged:true,lines:[
+    {t:'ctx',n:17,text:'export function parseBookingTime(iso: string, tz: string) {'},
+    {t:'del',n:18,text:'  return toLocal(toLocal(iso, tz), tz); // double conversion'},
+    {t:'add',n:18,text:'  return toLocal(iso, tz);'},
+    {t:'ctx',n:19,text:'}'}]},
+   {id:uid('h'),file:'src/booking/__tests__/time.test.ts',header:'@@ -8,2 +8,6 @@',staged:true,lines:[
+    {t:'add',n:8,text:"it('renders local time for UTC+6 guest', () => {"},
+    {t:'add',n:9,text:"  expect(parseBookingTime(iso, 'Asia/Dhaka')).toBe('09:00');"},
+    {t:'add',n:10,text:'});'}]},
+  ];
+}
+
+/* ============================ chrome: top bar + nav badges ============================ */
+function counts(){
+  const ts=Object.values(state.tasks);
+  return {attn:ts.filter(t=>BUCKET_OF[t.status]==='attention').length,
+    run:ts.filter(t=>BUCKET_OF[t.status]==='running').length,
+    ready:ts.filter(t=>BUCKET_OF[t.status]==='review').length,
+    failed:ts.filter(t=>BUCKET_OF[t.status]==='failed').length};
+}
+function renderChrome(){
+  const c=counts();
+  $('#counters').innerHTML=
+    (c.run?`<span class="chip ok" data-go="inbox">● ${c.run} running</span>`:'')+
+    (c.attn?`<span class="chip warn" data-go="inbox">▲ ${c.attn} need${c.attn>1?'':'s'} you</span>`:'')+
+    (c.ready?`<span class="chip info" data-go="review">✓ ${c.ready} ready</span>`:'')+
+    (c.failed?`<span class="chip bad" data-go="inbox">✕ ${c.failed} failed</span>`:'');
+  $$('#counters [data-go]').forEach(el=>el.onclick=()=>switchView(el.dataset.go));
+  const t=state.tasks[state.activeId];
+  $('#crumbWt').textContent=t?t.branch:'master';
+  $('#bdgInbox').textContent=c.attn||'';$('#bdgInbox').className='badge'+(c.attn?' warn':'');
+  $('#bdgWork').textContent=Object.keys(state.tasks).length;
+  $('#bdgReview').textContent=c.ready||'';
+  $('#bdgBrowser').textContent=state.bcomments.filter(x=>!x.resolved).length||'';
+}
+
+/* ============================ inbox ============================ */
+function attnRow(t){
+  if(t.status==='waiting'&&t.pending)return{g:'▲',cls:'amber',why:'Approve: '+t.pending.cmd,act:'Review approval',fn:()=>openTask(t.id)};
+  if(t.status==='waitingBrowser')return{g:'◆',cls:'blue',why:state.bcomments.filter(c=>!c.resolved).length+' browser comments unresolved',act:'Open Browser QA',fn:()=>switchView('browser')};
+  if(t.status==='testfailed')return{g:'✕',cls:'red',why:'Test failed — agent asks for context',act:'Open task',fn:()=>openTask(t.id)};
+  if(t.status==='conflict')return{g:'⇆',cls:'red',why:'Merge conflict with base',act:'Open task',fn:()=>openTask(t.id)};
+  return{g:'▲',cls:'amber',why:STATUS[t.status],act:'Open',fn:()=>openTask(t.id)};
+}
+function renderInbox(){
+  const ts=state.order.map(id=>state.tasks[id]);
+  /* approvals outrank other attention items — the user acts top-down */
+  const ATTN_RANK={waiting:0,testfailed:1,conflict:2,needsauth:3,waitingBrowser:4};
+  const by=b=>{const r=ts.filter(t=>BUCKET_OF[t.status]===b);
+    if(b==='attention')r.sort((a,c)=>(ATTN_RANK[a.status]??9)-(ATTN_RANK[c.status]??9));
+    return r;};
+  const sec=(title,rows,attn)=>rows.length?`<div class="ibSection">
+    <div class="ibTitle ${attn?'attn':''}"><span>${title}</span><span>${rows.length}</span></div>${rows.join('')}</div>`:'';
+  const attRows=by('attention').map(t=>{const a=attnRow(t);
+    return `<div class="ibRow" data-open="${t.id}"><span class="g ${a.cls}">${a.g}</span>
+      <div class="ibMain"><b>${esc(t.title)}</b><div class="why">${esc(a.why)}</div></div>
+      <span class="meta">${esc(t.harness)} · ${esc(t.elapsed)}</span>
+      <button class="btn sm primary" data-act="${t.id}">${esc(a.act)}</button></div>`;});
+  const rdyRows=by('review').map(t=>`<div class="ibRow" data-open="${t.id}"><span class="g green">✓</span>
+      <div class="ibMain"><b>${esc(t.title)}</b><div class="why">${Object.keys(filesOf(t)).length||t.hunks.length} files · ${esc(t.tests)}${t.tests==='not run'?' — unverified':''}</div></div>
+      <span class="meta">+${t.add} −${t.del}</span>
+      <button class="btn sm" data-gate="${t.id}">Open review</button></div>`);
+  const runRows=by('running').map(t=>`<div class="ibRow" data-open="${t.id}"><span class="g"><span class="dot run"></span></span>
+      <div class="ibMain"><b>${esc(t.title)}</b><div class="why">${esc(STATUS[t.status]).toLowerCase()} · ${esc(t.elapsed)}</div></div>
+      <span class="meta">${esc(t.harness)}</span></div>`);
+  const failRows=by('failed').map(t=>`<div class="ibRow" data-open="${t.id}"><span class="g red">✕</span>
+      <div class="ibMain"><b>${esc(t.title)}</b><div class="why">${esc(STATUS[t.status])} — worktree preserved</div></div>
+      <button class="btn sm" data-act="${t.id}">Open</button></div>`);
+  const doneRows=by('done').map(t=>`<div class="ibRow" data-open="${t.id}"><span class="g faint">⌗</span>
+      <div class="ibMain"><b>${esc(t.title)}</b><div class="why">${esc(STATUS[t.status])} · ${esc(t.branch)}</div></div>
+      <button class="btn sm" onclick="event.stopPropagation();toast('Worktree archived — recoverable from Settings')">Archive worktree</button></div>`);
+  $('#inboxInner').innerHTML=
+    (attRows.length?sec('Needs your attention',attRows,true):`<div class="ibSection"><div class="ibTitle">Needs your attention</div><div class="bEmpty">Nothing needs you right now — a healthy state, not an empty one.</div></div>`)+
+    sec('Ready to review',rdyRows)+sec('Running in background',runRows)+sec('Failed',failRows)+sec('Done',doneRows)+
+    `<div class="ibSection"><div class="ibTitle">Harness health</div>
+      <div class="healthRow"><div><b>Claude Code</b><div class="muted" style="font-size:12px">structured adapter · plan/diff/tool events</div></div><span class="chip ok">Ready</span></div>
+      <div class="healthRow"><div><b>Codex</b><div class="muted" style="font-size:12px">ACP adapter</div></div><span class="chip ok">Ready</span></div>
+      <div class="healthRow"><div><b>AutoCode native</b><div class="muted" style="font-size:12px">JSON-RPC over PTY · v0.9.2</div></div><span class="chip ok">Connected</span></div>
+      <div class="healthRow"><div><b>OpenCode</b><div class="muted" style="font-size:12px">not found on PATH</div></div><span class="chip">Install</span></div>
+    </div>`;
+  $$('#inboxInner [data-open]').forEach(el=>el.onclick=()=>openTask(el.dataset.open));
+  $$('#inboxInner [data-act]').forEach(b=>b.onclick=e=>{e.stopPropagation();
+    const t=state.tasks[b.dataset.act];const a=attnRow(t);a.fn();});
+  $$('#inboxInner [data-gate]').forEach(b=>b.onclick=e=>{e.stopPropagation();
+    state.reviewSel=b.dataset.gate;switchView('review');});
+}
+
+/* ============================ workstreams: task list ============================ */
+function taskCard(t){
+  const b=BUCKET_OF[t.status];
+  const dot=b==='attention'?'warn':b==='running'?'run':b==='failed'?'fail':b==='done'?'ok':'done';
+  return `<div class="task ${state.activeId===t.id?'on':''} ${b==='attention'?'attn':''}" data-open="${t.id}">
+    <div class="tTop"><span class="dot ${dot}"></span><span class="tTitle">${esc(t.title)}</span></div>
+    <div class="tMeta">${esc(t.harness)} · ${esc(STATUS[t.status])}</div>
+    <div class="tStat"><span class="green">+${t.add}</span><span class="red">−${t.del}</span><span>${esc(t.elapsed)}</span><span>${esc(t.tests)}</span></div>
+  </div>`;
+}
+function renderWorkList(){
+  let html='';
+  for(const [key,label] of BUCKETS){
+    const ts=state.order.map(id=>state.tasks[id]).filter(t=>BUCKET_OF[t.status]===key);
+    if(!ts.length)continue;
+    html+=`<div class="gTitle">${key==='attention'?'<span class="dot warn"></span>':''}${label}</div>`+ts.map(taskCard).join('');
+  }
+  $('#workList').innerHTML=html;
+  $$('#workList [data-open]').forEach(el=>el.onclick=()=>openTask(el.dataset.open));
+}
+
+/* ============================ timeline ============================ */
+function renderHead(){
+  const t=state.tasks[state.activeId];if(!t){$('#taskHead').innerHTML='';return;}
+  const b=BUCKET_OF[t.status];
+  const dot=b==='attention'?'warn':b==='running'?'run':b==='failed'?'fail':'ok';
+  $('#taskHead').innerHTML=`<h1>${esc(t.title)}</h1>
+    <span class="chip ${b==='attention'?'warn':b==='failed'?'bad':'ok'}"><span class="dot ${dot}"></span>${STATUS[t.status]}</span>
+    <span class="chip">${esc(t.harness)}</span>
+    <span class="chip mono" title=".worktrees/${esc(t.branch.replace('agent/',''))}">${esc(t.branch)}</span>
+    <div class="spacer"></div>
+    <button class="btn sm" onclick="toggleDrawer()">Terminal <span class="kbd">Ctrl J</span></button>
+    <button class="btn sm" onclick="switchView('browser')">Browser QA</button>
+    <button class="btn sm danger" onclick="stopTask('${t.id}')">Stop</button>`;
+}
+function renderStream(keepScroll){
+  const t=state.tasks[state.activeId];if(!t){$('#stream').innerHTML='';return;}
+  const wrap=$('#streamWrap');const nearBottom=wrap.scrollHeight-wrap.scrollTop-wrap.clientHeight<160;
+  $('#stream').innerHTML=t.events.map(e=>evHTML(t,e)).join('');
+  bindStream(t);
+  if(!keepScroll||nearBottom)wrap.scrollTop=wrap.scrollHeight;
+  const ta=$('#composerText');if(ta.value!==t.draft)ta.value=t.draft;
+  $('#chipHarness').textContent=t.harness+' ▾';$('#chipMode').textContent=t.mode+' ▾';
+  renderCtxChips(t);
+}
+function evHTML(t,e){
+  switch(e.k){
+    case 'prompt':return `<div class="userMsg">${esc(e.text)}</div>`;
+    case 'note':return `<div class="agentNote">${esc(e.text)}</div>`;
+    case 'plan':{const p=t.plan;if(!p)return '';
+      return `<div class="block"><div class="blockH"><span>Plan</span><span>${p.doneUpto} of ${p.steps.length}</span></div>
+        <div class="steps">${p.steps.map((s,i)=>`<div class="step ${i<p.doneUpto?'done':(i===p.doneUpto?'now':'')}"><span class="check">${i<p.doneUpto?'✓':''}</span><span>${esc(s)}</span></div>`).join('')}</div></div>`;}
+    case 'search':return evRow(e,'▸',`<b>Searched</b><span class="mono">${esc(e.q)}</span>`,esc(e.hits),
+      `<div class="code">${esc(e.q)}\n→ ${esc(e.hits)}</div>`);
+    case 'read':return evRow(e,'▸',`<b>Read</b><span>${e.files.length} files</span>`,'',
+      `<div class="code">${e.files.map(esc).join('\n')}</div>`);
+    case 'edit':return evRow(e,'▸',`<b>Edited</b><span>${e.files.length} file${e.files.length>1?'s':''}</span>`,
+      `<span class="green">+${e.add}</span> <span class="red">−${e.del}</span>`,
+      `<div class="code">${e.files.map(f=>esc(f[0])+'  '+esc(f[1])).join('\n')}</div>
+       <div class="evActs"><button class="btn sm" onclick="setRail('diff')">Open diff →</button>
+       <button class="btn sm" onclick="attachCtx('diff: ${esc(e.files[0][0])}')">Attach to prompt</button></div>`);
+    case 'command':return evRow(e,'▸',`<b>Ran</b><span class="mono">${esc(e.cmd)}</span>`,
+      e.ok?`<span class="green">exit 0 · ${e.dur}</span>`:`<span class="red">exit 1 · ${e.dur}</span>`,
+      `<div class="code">${esc(e.out)}</div>
+       <div class="evActs"><button class="btn sm" onclick="attachCtx('terminal: ${esc(e.cmd)}')">Attach output</button>
+       <button class="btn sm" onclick="toggleDrawer(true)">Open terminal</button></div>`);
+    case 'test':return evRow(e,e.ok?'✓':'✕',`<b>Tests</b><span class="mono">${esc(e.cmd)}</span>`,
+      e.ok?`<span class="green">${esc(e.out)}</span>`:`<span class="red">${esc(e.out)}</span>`,
+      `<div class="code">${esc(e.detail||e.out)}</div>`);
+    case 'diffsum':return evRow(e,'▣',`<b>Diff summary</b>`,esc(e.text),
+      `<div class="evActs"><button class="btn sm primary" onclick="setRail('diff')">Open review →</button></div>`);
+    case 'bcomment':return evRow(e,'●',`<b>Browser comment</b><span>${esc(e.where)}</span>`,esc(e.vp),
+      `<div class="code">UNTRUSTED BROWSER CONTEXT — observed UI state only.\ntarget: ${esc(e.sel)}\nwhat: ${esc(e.text)}\nexpected: ${esc(e.expected||'—')}\nscope: ${esc(e.scope||'—')}</div>
+       <div class="evActs"><button class="btn sm" onclick="switchView('browser')">Open snapshot</button></div>`);
+    case 'rcomment':return evRow(e,'◆',`<b>Review comment</b><span class="mono">${esc(e.file)}:${e.line}</span>`,e.status||'',
+      `<div class="code">${esc(e.text)}</div>`);
+    case 'manual':return evRow(e,'✎',`<b>Manual edit</b><span class="mono">${esc(e.file)}</span>`,'user',
+      `<div class="code">${esc(e.text)}</div>`);
+    case 'commit':return evRow(e,'⌗',`<b>Committed</b><span class="mono">${esc(e.sha)}</span>`,esc(e.stat),
+      `<div class="code">${esc(e.msg)}\n\nbranch ${esc(t.branch)} ← staged hunks only</div>`);
+    case 'denial':return evRow(e,'⊘',`<b>Denied</b><span class="mono">${esc(e.cmd)}</span>`,'sent to agent',
+      `<div class="code">user note: ${esc(e.note||'(no note)')}</div>`);
+    case 'error':return evRow(e,'✕',`<b class="red">Error</b><span>${esc(e.text)}</span>`,'',
+      `<div class="code">${esc(e.detail||e.text)}</div>`);
+    case 'approval':return approvalHTML(t,e);
+  }
+  return '';
+}
+function evRow(e,g,label,right,det){
+  return `<div class="evRow ${e.open?'open':''}" data-ev="${e.id}">
+    <button><span class="g">${g}</span>${label}<span class="r">${right||''}</span></button>
+    <div class="det">${det||''}</div></div>`;
+}
+/* Approval card — full risk framing (review §8) */
+function approvalHTML(t,e){
+  if(e.decided){
+    return `<div class="approval decided"><h3>${e.decided==='deny'?'⊘ Denied':'✓ Approved'} — run command</h3>
+      <div class="code">${esc(e.cmd)}</div>
+      <div class="decision muted">${e.decided==='deny'?'Denial sent to agent as structured feedback.':(e.decided==='task'?'Test commands auto-approved for this task (rule recorded, audited).':'Approved once — the agent must ask again.')} · in audit log</div></div>`;
+  }
+  return `<div class="approval" data-appr="${e.id}">
+    <h3><span class="dot warn"></span>Approval needed — run tests</h3>
+    <div class="code">${esc(e.cmd)}</div>
+    <div class="scopeGrid">
+      <span>reason</span><b class="plain">${esc(e.reason)}</b>
+      <span>cwd</span><b>${esc(e.cwd)}</b>
+      <span>filesystem</span><b>project write</b>
+      <span>network</span><b>blocked</b>
+      <span>secrets</span><b>unavailable</b>
+      <span>may touch</span><b>${esc(e.touch||'—')}</b>
+      <span>origin</span><b class="plain">${esc(e.origin||'agent request')}</b>
+      <span>policy</span><b class="plain">${esc(e.policy||'ask for all commands')}</b>
+      <span>repeat</span><b class="plain">${esc(e.repeat||'first request')}</b>
+      <span>last similar</span><b class="plain">${esc(e.last||'—')}</b>
+      <span>risk</span><b class="${e.risk==='low'?'green':'amber'}">${esc(e.risk)}</b>
+    </div>
+    <div class="row">
+      <button class="btn sm primary" data-act="once">Approve once</button>
+      <button class="btn sm" data-act="task">Approve test commands for this task</button>
+      <button class="btn sm" data-act="denytoggle">Deny with note…</button>
+    </div>
+    <div class="denyNote" data-deny><input placeholder="Tell the agent what to do instead (sent as structured feedback)"/>
+      <button class="btn sm danger" data-act="deny">Send denial</button></div>
+  </div>`;
+}
+function bindStream(t){
+  $$('#stream .evRow>button').forEach(b=>b.onclick=()=>{const id=b.parentElement.dataset.ev;
+    const e=t.events.find(x=>x.id===id);e.open=!e.open;b.parentElement.classList.toggle('open');});
+  $$('#stream [data-appr]').forEach(card=>{
+    const e=t.events.find(x=>x.id===card.dataset.appr);
+    card.querySelectorAll('[data-act]').forEach(btn=>btn.onclick=()=>{
+      const act=btn.dataset.act;
+      if(act==='denytoggle'){card.querySelector('[data-deny]').classList.toggle('on');return;}
+      if(act==='deny'){decide(t,e,'deny',card.querySelector('[data-deny] input').value.trim());return;}
+      decide(t,e,act);
+    });
+  });
+}
+
+/* ============================ approval decisions ============================ */
+function decide(t,e,how,note){
+  e.decided=how;t.pending=null;
+  audit(t.id,'approval.'+(how==='deny'?'denied':'approved'+(how==='task'?' (task rule)':'')),e.cmd);
+  if(how==='task')t.approvalPolicy='task';
+  if(how==='deny'){
+    addEvent(t,{k:'denial',cmd:e.cmd,note});
+    t.status='editing';renderAll();
+    setTimeout(()=>addEvent(t,{k:'note',text:note?`Understood — ${note}. I’ll verify with static analysis instead of running tests.`:'Understood. I’ll verify the change with static analysis instead of running tests.'}),700);
+    setTimeout(()=>addEvent(t,{k:'search',q:'callers of parseBookingTime',hits:'4 call sites verified'}),1800);
+    setTimeout(()=>{t.status='review';t.tests='not run';
+      addEvent(t,{k:'diffsum',text:'2 files changed · +'+t.add+' −'+t.del+' · tests not run (denied)'});
+      audit(t.id,'task.ready_for_review','tests skipped by user decision');
+      toast('Ready for review — tests skipped, diff stays marked unverified');renderAll();},3000);
+    renderAll();return;
+  }
+  /* approve */
+  t.status='running';renderAll();
+  if(e.script==='t1'){ /* first approval: test fails → fix → re-ask or auto */
+    runCommandSim(t,e.cmd,()=>{
+      addEvent(t,{k:'test',cmd:e.cmd,ok:false,out:'1 failed · 41 passed · 12s',
+        detail:'✕ booking renders local time for UTC+6 guest\n  expected 09:00, received 03:00\n✓ 41 others passed'});
+      t.tests='1 failed';t.status='editing';renderAll();
+      setTimeout(()=>addEvent(t,{k:'note',text:'The failing case is a double offset: the API value is already localized. Removing the second conversion.'}),900);
+      setTimeout(()=>{addEvent(t,{k:'edit',files:[['src/booking/time.ts','+2 −3']],add:2,del:3});t.add=8;t.del=7;},1900);
+      setTimeout(()=>{
+        if(t.approvalPolicy==='task'){
+          addEvent(t,{k:'note',text:'Re-running tests (auto-approved by your task rule).'});
+          audit(t.id,'approval.auto',e.cmd+' · rule: test commands for this task');
+          t.status='running';renderAll();
+          runCommandSim(t,e.cmd,()=>finishT1(t,e.cmd));
+        }else{
+          t.status='waiting';
+          t.pending=addEvent(t,{k:'approval',script:'t1rerun',cmd:e.cmd,cwd:e.cwd,risk:'low',
+            reason:'Re-validate after fixing the double offset.',origin:'agent request',
+            policy:'ask for all commands',repeat:'2nd request — you approved once, not for the task',
+            touch:e.touch,last:'12s ago · exit 1 (1 failed)',decided:null});
+          audit(t.id,'approval.requested',e.cmd+' (rerun)');
+          toast('Agent asks again — you approved once, not for the task');renderAll();
+        }
+      },3100);
+    });
+  }else if(e.script==='t1rerun'){
+    runCommandSim(t,e.cmd,()=>finishT1(t,e.cmd));
+  }else{ /* generic */
+    runCommandSim(t,e.cmd,()=>genericFinish(t,e.cmd));
+  }
+  renderAll();
+}
+function finishT1(t,cmd){
+  addEvent(t,{k:'test',cmd,ok:true,out:'42 passed · 11s',detail:'✓ booking renders local time for UTC+6 guest\n✓ 41 others passed'});
+  t.tests='42 passed';t.status='review';t.elapsed='16m';
+  t.testRuns.push({cmd,res:'42 passed',ok:true,at:now()});
+  addEvent(t,{k:'diffsum',text:'2 files changed · +'+t.add+' −'+t.del+' · all tests passing'});
+  audit(t.id,'task.ready_for_review','tests green');
+  toast('booking timezone fix is ready to review');renderAll();
+}
+
+/* ============================ terminal ============================ */
+function termLine(html,cls){const d=document.createElement('div');if(cls)d.className=cls;d.innerHTML=html;$('#term').append(d);$('#term').scrollTop=1e9;}
+function runCommandSim(t,cmd,after){
+  toggleDrawer(true);
+  termLine(`<span class="cmdline">${esc('~/repo/.worktrees/'+t.branch.replace('agent/',''))}$ ${esc(cmd)}</span>`);
+  addEvent(t,{k:'command',cmd,ok:true,dur:'12s',out:'(streamed to task terminal — open the drawer)'});
+  audit(t.id,'command.run',cmd);
+  let i=0;const lines=['> booking@1.4.2 test','RUN  src/booking/__tests__/time.test.ts','…'];
+  const iv=setInterval(()=>{if(i<lines.length){termLine(esc(lines[i++]));}else{clearInterval(iv);after&&after();}},420);
+}
+function manualTest(){
+  const t=state.tasks[state.activeId]||Object.values(state.tasks)[0];
+  termLine(`<span class="cmdline">$ npm test</span>`);
+  setTimeout(()=>{
+    const fail=t&&!/pass/.test(t.tests);
+    const block=document.createElement('div');block.className='termBlock';
+    block.innerHTML=fail?
+      `<div class="errline">✕ booking renders local time for UTC+6 guest — expected 09:00, received 03:00</div><div>41 passed · 1 failed · exit 1</div>
+       <div class="tba"><button data-t="attach">Attach output to prompt</button><button data-t="ask">Ask agent to fix</button><button onclick="toast('Copied')">Copy</button><button onclick="toast('Marked as: test command')">Mark as test ▾</button></div>`:
+      `<div class="okline">✓ 42 passed · exit 0</div>
+       <div class="tba"><button data-t="attach">Attach output to prompt</button><button onclick="toast('Copied')">Copy</button></div>`;
+    $('#term').append(block);$('#term').scrollTop=1e9;
+    block.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{
+      attachCtx('terminal: npm test (exit '+(fail?1:0)+')');
+      if(b.dataset.t==='ask'){switchView('work');const tt=state.tasks[state.activeId];
+        if(tt){tt.draft='Fix this failure only.';renderStream(true);}$('#composerText').focus();}
+      toast('Terminal block attached — agent sees only this selection');
+    });
+  },650);
+}
+function runDev(){
+  termLine(`<span class="cmdline">$ npm run dev</span>`);
+  setTimeout(()=>{termLine('VITE v6.0  ready in 412 ms');
+    const u=document.createElement('div');
+    u.innerHTML=`➜ Local: <span class="urlline">http://localhost:5173/</span> <button class="btn sm" style="margin-left:8px;font-family:var(--sans)" onclick="switchView('browser');toast('Preview opened from detected localhost URL')">Open preview</button>`;
+    $('#term').append(u);$('#term').scrollTop=1e9;
+    toast('localhost URL detected in terminal output');},700);
+}
+function toggleDrawer(force){
+  const d=$('#drawer');const on=force===undefined?!d.classList.contains('on'):force;
+  d.classList.toggle('on',on);
+  const t=state.tasks[state.activeId];
+  $('#termCwd').textContent=t?'~/repo/.worktrees/'+t.branch.replace('agent/',''):'~/repo';
+}
+
+/* ============================ review rail ============================ */
+function setRail(tab){state.railTab=tab;
+  $$('#railTabs button').forEach(x=>x.classList.toggle('on',x.dataset.rtab===tab));
+  if(state.view!=='work')switchView('work');renderRail();}
+function diffBanner(t){
+  if(!t.hunks.length)return '';
+  if(/pass/.test(t.tests))return '';
+  if(/fail/.test(t.tests))return `<div class="diffBanner bad">Tests failing — this diff may still change. Review carefully.</div>`;
+  if(t.tests==='not run')return `<div class="diffBanner">Unverified diff — tests were skipped by your denial.</div>`;
+  return `<div class="diffBanner">Unverified diff — tests not run yet. You can still read it.</div>`;
+}
+function renderRail(){
+  const t=state.tasks[state.activeId];
+  $('#railStat').innerHTML=t?`<span class="green">+${t.add}</span> <span class="red">−${t.del}</span>`:'';
+  $('#rCmtN').textContent=t&&t.comments.length?t.comments.length:'';
+  const body=$('#railBody');if(!t){body.innerHTML='<div class="bEmpty">Open a task to review it.</div>';return;}
+  if(state.railTab==='diff'){
+    /* Review §3: never say "no diff" when changed files exist */
+    if(!t.hunks.length){
+      const nFiles=Object.keys(filesOf(t)).length;
+      body.innerHTML=nFiles
+        ?`<div class="diffBanner">${nFiles} changed file(s) reported, but hunks aren’t parsed yet (raw harness output). Showing as soon as the worktree diff lands.</div>`
+        :'<div class="bEmpty">No file writes yet — the agent hasn’t changed anything. This panel fills in as soon as it does.</div>';
+      return;
+    }
+    const files={};t.hunks.forEach(h=>{(files[h.file]=files[h.file]||[]).push(h);});
+    body.innerHTML=diffBanner(t)+Object.entries(files).map(([f,hs])=>`
+      <div class="fileRow"><input type="checkbox" ${hs.every(h=>h.staged)?'checked':''} data-fstage="${esc(f)}"/>
+        <span class="fname" title="${esc(f)}">${esc(f)}</span>
+        <span class="green">+${hs.reduce((a,h)=>a+h.lines.filter(l=>l.t==='add').length,0)}</span>
+        <span class="red">−${hs.reduce((a,h)=>a+h.lines.filter(l=>l.t==='del').length,0)}</span>
+        <button class="btn sm" data-fopen="${esc(f)}" title="Open in light editor">✎</button></div>
+      ${hs.map(h=>hunkHTML(t,h)).join('')}`).join('');
+    bindDiff(t,body);
+  }else if(state.railTab==='comments'){
+    body.innerHTML=(t.comments.length?t.comments.map(c=>`
+      <div class="cmt ${c.outdated?'outdated':''}">
+        <div class="cs">${esc(c.file)}:${c.line} ${c.outdated?'· <span class="amber">outdated — hunk changed</span>':''} ${c.resolved?'· <span class="green">resolved</span>':''}</div>
+        ${esc(c.text)}
+        <div class="row" style="margin-top:6px">${c.resolved?'':`<button class="btn sm" data-resolve="${c.id}">Resolve</button>`}</div>
+      </div>`).join(''):'<div class="bEmpty">No review comments. Click any diff line to add one.</div>')+
+      (t.comments.some(c=>!c.sent)?`<div style="padding:10px"><button class="btn primary" id="btnSendCmts" style="width:100%">Send ${t.comments.filter(c=>!c.sent).length} comment(s) to agent</button></div>`:'');
+    body.querySelectorAll('[data-resolve]').forEach(b=>b.onclick=()=>{
+      const c=t.comments.find(x=>x.id===b.dataset.resolve);c.resolved=true;c.outdated=false;renderRail();
+      audit(t.id,'review.comment_resolved',c.file+':'+c.line);});
+    const send=$('#btnSendCmts');if(send)send.onclick=()=>sendComments(t);
+  }else if(state.railTab==='tests'){
+    body.innerHTML=t.testRuns.length?t.testRuns.map(r=>`
+      <div class="testRow"><div><div class="mono" style="font-size:11.5px">${esc(r.cmd)}</div><div class="faint" style="font-size:11px">${r.at}</div></div>
+      <span class="${r.ok?'green':'red'}">${esc(r.res)}</span></div>`).join('')
+      +`<div style="padding:10px"><button class="btn sm" onclick="manualTest();toggleDrawer(true)">Run tests in terminal</button></div>`
+      :'<div class="bEmpty">No test runs recorded.'+(t.tests==='not run'?' Tests were skipped after your denial.':'')+'</div>';
+  }else{
+    const rows=state.audit.filter(a=>a.taskId===t.id);
+    body.innerHTML=(rows.length?rows.map(a=>`<div class="auditRow"><span class="when">${a.at}</span><b style="font-weight:600">${esc(a.action)}</b><span class="muted mono" style="font-size:11px">${esc(a.target)}</span></div>`).join(''):'<div class="bEmpty">No audit events.</div>')
+      +`<div style="padding:10px"><button class="btn sm" onclick="exportAudit('${t.id}')">Export task audit (JSONL)</button></div>`;
+  }
+}
+function hunkHTML(t,h){
+  return `<div class="hunk ${h.staged?'':'unstaged'}" data-hunk="${h.id}">
+    <div class="hunkH"><span class="fp">${esc(h.header)}</span>
+      <button class="btn sm" data-hstage="${h.id}">${h.staged?'Unstage':'Stage'}</button>
+      <button class="btn sm danger" data-hrevert="${h.id}">Revert</button></div>
+    ${h.lines.map((l,i)=>`<div class="dl ${l.t==='add'?'add':l.t==='del'?'del':''}" data-line="${h.id}:${i}" title="Click to comment on this line">
+      <span class="ln">${l.n}</span><span class="tx">${l.t==='add'?'+':l.t==='del'?'−':' '} ${esc(l.text)}</span></div>
+      ${t.comments.filter(c=>c.hunk===h.id&&c.lineIdx===i).map(c=>`<div class="cmt ${c.outdated?'outdated':''}"><div class="cs">you · ${c.file}:${c.line}${c.outdated?' · <span class="amber">outdated</span>':''}${c.resolved?' · <span class="green">resolved</span>':''}</div>${esc(c.text)}</div>`).join('')}`).join('')}
+  </div>`;
+}
+function bindDiff(t,root){
+  root.querySelectorAll('[data-hstage]').forEach(b=>b.onclick=e=>{e.stopPropagation();
+    const h=t.hunks.find(x=>x.id===b.dataset.hstage);h.staged=!h.staged;
+    audit(t.id,h.staged?'review.hunk_staged':'review.hunk_unstaged',h.file);renderRail();});
+  root.querySelectorAll('[data-hrevert]').forEach(b=>b.onclick=e=>{e.stopPropagation();
+    const h=t.hunks.find(x=>x.id===b.dataset.hrevert);
+    if(!confirm('Revert this hunk in the worktree? This discards the agent’s change for these lines.'))return;
+    t.hunks=t.hunks.filter(x=>x.id!==h.id);
+    t.add-=h.lines.filter(l=>l.t==='add').length;t.del-=h.lines.filter(l=>l.t==='del').length;
+    audit(t.id,'review.hunk_reverted',h.file);
+    t.comments.filter(c=>c.hunk===h.id).forEach(c=>c.outdated=true);
+    toast('Hunk reverted in worktree');renderRail();renderHead();renderWorkList();});
+  root.querySelectorAll('[data-fstage]').forEach(cb=>cb.onchange=()=>{
+    t.hunks.filter(h=>h.file===cb.dataset.fstage).forEach(h=>h.staged=cb.checked);
+    audit(t.id,cb.checked?'review.file_staged':'review.file_unstaged',cb.dataset.fstage);renderRail();});
+  root.querySelectorAll('[data-fopen]').forEach(b=>b.onclick=()=>{
+    addEvent(t,{k:'manual',file:b.dataset.fopen,text:'Opened in light editor — saved 1 small edit (string fix). External-change guard active.'});
+    audit(t.id,'editor.manual_edit',b.dataset.fopen);
+    toast('Light editor: edit saved · ManualEditBlock added to timeline');});
+  root.querySelectorAll('[data-line]').forEach(dl=>dl.onclick=()=>{
+    if(dl.nextElementSibling&&dl.nextElementSibling.classList.contains('cmtForm'))return;
+    const [hid,idx]=dl.dataset.line.split(':');
+    const form=document.createElement('div');form.className='cmtForm';
+    form.innerHTML=`<textarea placeholder="Comment on this line — sent to the agent with file, line and hunk context"></textarea>
+      <div class="row"><button class="btn sm primary">Add comment</button><button class="btn sm">Cancel</button></div>`;
+    dl.after(form);form.querySelector('textarea').focus();
+    const [ok,cancel]=form.querySelectorAll('button');
+    cancel.onclick=()=>form.remove();
+    ok.onclick=()=>{const txt=form.querySelector('textarea').value.trim();if(!txt)return;
+      const h=t.hunks.find(x=>x.id===hid);const l=h.lines[+idx];
+      t.comments.push({id:uid('c'),hunk:hid,lineIdx:+idx,file:h.file,line:l.n,text:txt,sent:false,outdated:false,resolved:false});
+      audit(t.id,'review.comment_added',h.file+':'+l.n);renderRail();};
+  });
+}
+function sendComments(t){
+  const fresh=t.comments.filter(c=>!c.sent);
+  fresh.forEach(c=>{c.sent=true;addEvent(t,{k:'rcomment',file:c.file,line:c.line,text:c.text,status:'sent'});});
+  audit(t.id,'review.comments_sent',fresh.length+' comment(s)');
+  toast(fresh.length+' comment(s) sent to agent as structured context');
+  setTimeout(()=>addEvent(t,{k:'note',text:'Addressing your review comments now — keeping scope minimal.'}),900);
+  setTimeout(()=>{addEvent(t,{k:'edit',files:[[fresh[0].file,'+3 −2']],add:3,del:2});t.add+=3;t.del+=2;
+    fresh.forEach(c=>c.outdated=true);
+    renderRail();toast('Patch updated — your comments are marked OUTDATED, resolve after re-reading');},2300);
+}
+function exportAudit(taskId){
+  const rows=state.audit.filter(a=>!taskId||a.taskId===taskId)
+    .map(a=>JSON.stringify({at:a.at,task:a.taskId,action:a.action,target:a.target,payload_hash:'sha256:…redacted'}));
+  const blob=new Blob([rows.join('\n')+'\n'],{type:'application/jsonl'});
+  const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='audit-export.jsonl';a.click();
+  URL.revokeObjectURL(u);toast('Audit exported — secrets redacted, hashes included');
+}
+
+/* ============================ review queue + merge gate (review: Direction E) ============================ */
+function gatesFor(t){
+  return [
+    ['Staged hunks',t.hunks.some(h=>h.staged),t.hunks.filter(h=>h.staged).length+' staged'],
+    ['Tests',/pass/.test(t.tests),t.tests==='not run'?'skipped by your denial':t.tests],
+    ['Review comments',!t.comments.some(c=>!c.resolved&&c.sent===true||(!c.resolved&&!c.sent)),
+      t.comments.filter(c=>!c.resolved).length?t.comments.filter(c=>!c.resolved).length+' unresolved':'all resolved'],
+    ['Browser comments',!(t===T5)||state.bcomments.every(c=>c.resolved),
+      t===T5?state.bcomments.filter(c=>!c.resolved).length+' unresolved':'none for this task'],
+  ];
+}
+function renderReviewQueue(){
+  const ready=Object.values(state.tasks).filter(t=>BUCKET_OF[t.status]==='review'||BUCKET_OF[t.status]==='done');
+  if(!ready.find(t=>t.id===state.reviewSel))state.reviewSel=ready[0]&&ready[0].id;
+  $('#rqList').innerHTML=ready.length?ready.map(t=>`
+    <div class="task ${state.reviewSel===t.id?'on':''}" data-sel="${t.id}">
+      <div class="tTop"><span class="dot ${BUCKET_OF[t.status]==='done'?'done':'ok'}"></span><span class="tTitle">${esc(t.title)}</span></div>
+      <div class="tMeta">${esc(STATUS[t.status])} · ${esc(t.tests)}</div>
+      <div class="tStat"><span class="green">+${t.add}</span><span class="red">−${t.del}</span></div>
+    </div>`).join(''):'<div class="bEmpty">Nothing is ready to review yet.</div>';
+  $$('#rqList [data-sel]').forEach(el=>el.onclick=()=>{state.reviewSel=el.dataset.sel;renderReviewQueue();});
+  const t=state.tasks[state.reviewSel];
+  if(!t){$('#rqGate').innerHTML='<div class="bEmpty">Select a task.</div>';return;}
+  const gates=gatesFor(t);const allOk=gates.every(g=>g[1]);
+  const files=Object.entries(filesOf(t));
+  const committed=BUCKET_OF[t.status]==='done';
+  $('#rqGate').innerHTML=`<div class="gateInner">
+    <div class="gateCard">
+      <div class="gh"><span>${esc(t.title)}</span><span class="chip mono">${esc(t.branch)}</span></div>
+      <div class="gateRow"><span class="gl muted">Harness · elapsed</span><span>${esc(t.harness)} · ${esc(t.elapsed)}</span></div>
+      <div class="gateRow"><span class="gl muted">Files changed</span><span class="mono" style="font-size:11.5px">${files.map(f=>esc(f[0])).join('<br>')||'—'}</span></div>
+      <div class="gateRow"><span class="gl muted">Risk</span><span class="chip ok">low — no schema, no deps</span></div>
+      <div class="gateRow"><span class="gl muted">Approvals used</span><span>${state.audit.filter(a=>a.taskId===t.id&&a.action.startsWith('approval.approved')).length+state.audit.filter(a=>a.taskId===t.id&&a.action==='approval.auto').length} command(s)</span></div>
+    </div>
+    <div class="gateCard">
+      <div class="gh">Ship gate</div>
+      ${gates.map(g=>`<div class="gateRow"><span class="gl">${g[1]?'<span class="green">✓</span>':'<span class="amber">▲</span>'} ${g[0]}</span><span class="${g[1]?'muted':'amber'}">${esc(g[2])}</span></div>`).join('')}
+      ${committed?`<div class="gateActions"><span class="chip ok">Committed</span>
+        <button class="btn sm" id="gatePush">Push / open PR</button></div>`
+      :allOk?`<div class="gateActions">
+        <input id="gateMsg" style="flex:1;border:1px solid var(--line);border-radius:9px;padding:7px 10px;background:var(--bg);font-family:var(--mono);font-size:12px" placeholder="Commit message" value="${esc(t.title)}"/>
+        <button class="btn primary" id="gateCommit">Commit</button></div>`
+      :`<div class="blockers">${gates.filter(g=>!g[1]).map(g=>'· blocked: '+esc(g[0].toLowerCase())+' — '+esc(g[2])).join('<br>')}</div>
+        <div class="gateActions">
+        <button class="btn sm" onclick="openTask('${t.id}')">Open task to fix</button>
+        <button class="btn sm danger" id="gateOverride">Commit anyway — ${esc(gates.find(g=>!g[1])[0].toLowerCase())} not clear</button></div>`}
+    </div>
+    <button class="btn sm" onclick="openTask('${t.id}');setRail('diff')" style="justify-self:start">Open full diff in Workstreams →</button>
+  </div>`;
+  const doCommit=(override)=>{
+    const msg=($('#gateMsg')&&$('#gateMsg').value.trim())||t.title;
+    const sha=Math.random().toString(16).slice(2,9);
+    t.status='committed';t.elapsed='done';
+    addEvent(t,{k:'commit',sha,msg,stat:`${t.hunks.filter(h=>h.staged).length} hunk(s) · +${t.add} −${t.del}`});
+    audit(t.id,'git.commit',sha+' · '+msg+(override?' · OVERRIDE: '+override:''));
+    toast(`Committed ${sha} on ${t.branch}`+(override?' (override recorded in audit)':''));
+    renderAll();renderReviewQueue();
+  };
+  const gc=$('#gateCommit');if(gc)gc.onclick=()=>doCommit(null);
+  const go=$('#gateOverride');if(go)go.onclick=()=>{
+    if(confirm('Override the ship gate? The blocker will be recorded in the audit log.'))doCommit(gates.find(g=>!g[1])[0]);};
+  const gp=$('#gatePush');if(gp)gp.onclick=()=>{
+    t.status='propen';audit(t.id,'git.push','origin '+t.branch);audit(t.id,'git.pr_opened','#'+(140+Math.floor(Math.random()*40)));
+    toast('Pushed '+t.branch+' · PR opened (simulated)');renderAll();renderReviewQueue();};
+}
+
+/* ============================ composer ============================ */
+function renderCtxChips(t){
+  $('#ctxChips').innerHTML=(t.ctx||[]).map((c,i)=>`<span class="chip info">${esc(c)} <button data-rm="${i}">✕</button></span>`).join('');
+  $$('#ctxChips [data-rm]').forEach(b=>b.onclick=()=>{t.ctx.splice(+b.dataset.rm,1);renderCtxChips(t);});
+}
+function attachCtx(label){const t=state.tasks[state.activeId];if(!t)return;
+  (t.ctx=t.ctx||[]).push(label);if(state.view!=='work')switchView('work');renderCtxChips(t);}
+function sendPromptMsg(){
+  const t=state.tasks[state.activeId];if(!t)return;
+  const txt=$('#composerText').value.trim();if(!txt&&!(t.ctx&&t.ctx.length))return;
+  addEvent(t,{k:'prompt',text:txt+(t.ctx&&t.ctx.length?`  [${t.ctx.length} attachment(s): ${t.ctx.join('; ')}]`:'')});
+  audit(t.id,'prompt.sent',(t.ctx||[]).join('; ')||'(no attachments)');
+  t.draft='';t.ctx=[];$('#composerText').value='';renderCtxChips(t);
+  if(t===T4&&t.status==='testfailed'){ /* answering the agent's question unblocks t4 */
+    t.status='editing';renderAll();
+    setTimeout(()=>addEvent(t,{k:'note',text:'Got it — targeting API v3 only. Regenerating types and dropping the v2 pagination shim.'}),800);
+    setTimeout(()=>{addEvent(t,{k:'edit',files:[['src/api/types.gen.ts','+22 −31']],add:22,del:31});},2000);
+    setTimeout(()=>{t.status='waiting';
+      t.pending=addEvent(t,{k:'approval',cmd:'npm test -- --grep api',cwd:'.worktrees/api-client-types',
+        risk:'low',reason:'Re-run the API suite after regenerating v3-only types.',origin:'agent request',
+        policy:'ask for all commands',repeat:'first request for this command',
+        touch:'node_modules/.cache, test output',last:'31m ago · exit 1 (3 failed)',decided:null});
+      audit(t.id,'approval.requested','npm test -- --grep api');renderAll();
+      toast('▲ api-client-types asks to re-run tests');},3200);
+  }else{
+    setTimeout(()=>addEvent(t,{k:'note',text:'On it — I’ll keep the change scoped to what you attached.'}),800);
+  }
+}
+
+/* ============================ browser QA ============================ */
+let dragStart=null;
+function setupBrowser(){
+  const cv=$('#bcanvas');
+  $$('.bTabs [data-btab]').forEach(b=>b.onclick=()=>{
+    state.bTab=b.dataset.btab;
+    $$('.bTabs [data-btab]').forEach(x=>x.classList.toggle('on',x===b));
+    $('#bPreview').style.display=state.bTab==='preview'?'flex':'none';
+    $('#bBridge').style.display=state.bTab==='bridge'?'block':'none';});
+  $$('#bMode button').forEach(b=>b.onclick=()=>{
+    state.bMode=b.dataset.m;
+    $$('#bMode button').forEach(x=>x.classList.toggle('on',x===b));
+    cv.classList.toggle('annotating',state.bMode==='comment');
+    if(state.bMode==='inspect')toast('Inspect: hover shows the a11y node + computed style (P1)');
+    if(state.bMode==='compare'){if(state.pageFixed){state.snapshot=state.snapshot==='after'?'before':'after';
+        cv.classList.toggle('fixed',state.snapshot==='after');
+        toast('Showing: '+state.snapshot);}else toast('No before/after snapshots yet — fix something first');}
+  });
+  $('#btnViewport').onclick=()=>{state.viewport=state.viewport==='desktop'?'390':'desktop';
+    cv.classList.toggle('vw390',state.viewport==='390');
+    $('#btnViewport').textContent=state.viewport==='390'?'Mobile 390':'Desktop';};
+  $$('[data-cap]').forEach(b=>b.onclick=()=>{
+    attachCtx('browser '+b.dataset.cap.toLowerCase()+': /pricing [untrusted]');
+    toast(b.dataset.cap+' captured → attached as UNTRUSTED browser context');});
+  $('#btnAskFixNet').onclick=()=>{attachCtx('network: 500 /api/pricing [untrusted]');
+    switchView('work');toast('Network failure attached — ask the agent to fix it');};
+  cv.addEventListener('mousedown',e=>{
+    if(state.bMode!=='comment'||!e.shiftKey)return;
+    const r=cv.getBoundingClientRect();dragStart={x:e.clientX-r.left,y:e.clientY-r.top};
+    const box=document.createElement('div');box.className='regionBox';box.id='dragBox';cv.append(box);e.preventDefault();});
+  cv.addEventListener('mousemove',e=>{
+    if(!dragStart)return;const r=cv.getBoundingClientRect();const box=$('#dragBox');
+    const x=e.clientX-r.left,y=e.clientY-r.top;
+    box.style.left=Math.min(x,dragStart.x)+'px';box.style.top=Math.min(y,dragStart.y)+'px';
+    box.style.width=Math.abs(x-dragStart.x)+'px';box.style.height=Math.abs(y-dragStart.y)+'px';});
+  window.addEventListener('mouseup',()=>{
+    if(dragStart){const box=$('#dragBox');box.removeAttribute('id');
+      annPopover(parseFloat(box.style.left)+parseFloat(box.style.width)/2,parseFloat(box.style.top),'region',
+        '(region '+Math.round(parseFloat(box.style.width))+'×'+Math.round(parseFloat(box.style.height))+')',box);
+      dragStart=null;}});
+  cv.addEventListener('click',e=>{
+    if(state.bMode!=='comment'||e.shiftKey||dragStart)return;
+    if(e.target.closest('.annPop')||e.target.closest('.pin'))return;
+    const r=cv.getBoundingClientRect();
+    const under=document.elementsFromPoint(e.clientX,e.clientY).find(el=>cv.contains(el)&&el!==cv&&!el.classList.contains('demoPage'));
+    const sel=under?guessSelector(under):'body';
+    annPopover(e.clientX-r.left,e.clientY-r.top,'element',sel);
+  });
+  $('#btnSendBcmts').onclick=sendBcomments;
+  $('#btnSnapshot').onclick=()=>{state.snapshot=state.snapshot==='after'?'before':'after';
+    cv.classList.toggle('fixed',state.pageFixed&&state.snapshot==='after');
+    $('#snapLabel').textContent='Showing: '+state.snapshot;};
+  drawPins();
+}
+function guessSelector(el){
+  if(el.classList.contains('cta'))return '.pricing-card .cta';
+  if(el.closest('.pcard'))return '.pricing-card';
+  if(el.tagName==='H2')return '.pricing-hero h2';
+  return el.tagName.toLowerCase();
+}
+function drawPins(){
+  const cv=$('#bcanvas');$$('.pin').forEach(p=>p.remove());
+  state.bcomments.forEach(c=>{
+    const pin=document.createElement('div');pin.className='pin'+(c.resolved?' resolved':'');pin.textContent=c.n;
+    pin.style.left=(c.x*100)+'%';pin.style.top=(c.y*100)+'%';cv.append(pin);});
+}
+/* Structured comment form: what / expected / scope (review §10) */
+function annPopover(x,y,kind,sel,regionBox){
+  $$('.annPop').forEach(p=>p.remove());
+  const cv=$('#bcanvas');const pop=document.createElement('div');pop.className='annPop';
+  pop.style.left=Math.min(x,cv.clientWidth-272)+'px';pop.style.top=(y+10)+'px';
+  pop.innerHTML=`<div class="mono faint" style="font-size:10.5px">${esc(kind)} · ${esc(sel)} · ${state.viewport==='390'?'390×844':'1280×800'}</div>
+    <textarea placeholder="What is wrong? Be specific."></textarea>
+    <input placeholder="Expected behavior"/>
+    <select><option>Scope: layout only</option><option>Scope: text only</option><option>Scope: color only</option><option>Scope: accessibility only</option><option>Scope: functionality</option></select>
+    <div class="row"><button class="btn sm primary">Add comment</button><button class="btn sm">Cancel</button></div>`;
+  cv.append(pop);pop.querySelector('textarea').focus();
+  const [ok,cancel]=pop.querySelectorAll('.row button');
+  cancel.onclick=()=>{pop.remove();regionBox&&regionBox.remove();};
+  ok.onclick=()=>{const txt=pop.querySelector('textarea').value.trim();if(!txt)return;
+    const n=state.bcomments.length+1;
+    state.bcomments.push({id:uid('b'),n,kind,sel,text:txt,
+      expected:pop.querySelector('input').value.trim(),scope:pop.querySelector('select').value.replace('Scope: ',''),
+      vp:state.viewport==='390'?'390×844':'1280×800',sent:false,resolved:false,
+      x:x/cv.clientWidth,y:y/cv.clientHeight});
+    pop.remove();
+    if(T5){addEvent(T5,{k:'bcomment',where:'/pricing',sel,text:txt,
+      expected:pop.querySelector?undefined:undefined,vp:state.viewport==='390'?'390×844':'1280×800'});
+      audit(T5.id,'browser.comment',sel);}
+    drawPins();renderBcomments();toast('Comment #'+n+' captured (selector → a11y node → text → crop)');};
+}
+function renderBcomments(){
+  const list=$('#bcmtList');
+  list.innerHTML=state.bcomments.length?state.bcomments.map(c=>`
+    <div class="bcmt"><div class="src">#${c.n} · ${esc(c.kind)} · ${esc(c.sel)} · ${esc(c.vp)} ${c.sent?'· <span class="green">sent</span>':''} ${c.resolved?'· <span class="green">resolved</span>':''}</div>
+    ${esc(c.text)}${c.expected?`<div class="muted" style="font-size:11.5px">expected: ${esc(c.expected)} · ${esc(c.scope||'')}</div>`:''}</div>`).join('')
+    :'<div class="bEmpty">No comments. Switch to Comment mode, then click an element or shift-drag a region.</div>';
+  $('#bcmtCount').textContent=state.bcomments.filter(c=>!c.resolved).length||'';
+  $('#btnSendBcmts').disabled=!state.bcomments.some(c=>!c.sent);
+  renderChrome();
+}
+function sendBcomments(){
+  const fresh=state.bcomments.filter(c=>!c.sent);fresh.forEach(c=>c.sent=true);
+  if(T5){audit(T5.id,'browser.comments_sent',fresh.length+' comment(s) · /pricing');
+    addEvent(T5,{k:'prompt',text:`Address ${fresh.length} browser comment(s) on /pricing. Keep scope minimal.`});
+    T5.status='editing';}
+  renderBcomments();renderAll();toast('Comments sent — agent is fixing the page');
+  setTimeout(()=>{if(T5){addEvent(T5,{k:'edit',files:[['src/pages/PricingCard.tsx','+4 −2']],add:4,del:2});T5.add+=4;T5.del+=2;}},1300);
+  setTimeout(()=>{state.pageFixed=true;$('#bcanvas').classList.add('fixed');
+    state.bcomments.forEach(c=>c.resolved=true);
+    $('#btnSnapshot').disabled=false;$('#snapLabel').textContent='Showing: after';
+    if(T5){T5.status='review';T5.tests='visual check ok';
+      T5.hunks=[{id:uid('h'),file:'src/pages/PricingCard.tsx',header:'@@ -22,3 +22,5 @@',staged:true,lines:[
+        {t:'ctx',n:22,text:'.pricing-card {'},
+        {t:'add',n:23,text:'  padding-bottom: 16px;'},
+        {t:'ctx',n:24,text:'}'}]}];
+      addEvent(T5,{k:'note',text:'Browser comments addressed — CTA spacing fixed without changing card height. Compare before/after in the preview.'});
+      audit(T5.id,'task.ready_for_review','browser comments resolved');}
+    drawPins();renderBcomments();renderAll();
+    toast('Fixed. Compare mode shows before/after — task moved to Ready to review');},2800);
+}
+
+/* ============================ compare (Direction D) ============================ */
+const CMP=[
+ {h:'Claude Code',status:['warn','needs approval'],diff:'+6 −4',files:2,tests:'wants npm test',risk:'low',time:'11m',cost:'$0.41',appr:1,conf:'medium',
+  code:'-  return toLocal(toLocal(iso, tz), tz);\n+  return toLocal(iso, tz);'},
+ {h:'Codex',status:['ok','tests pass'],diff:'+9 −8',files:3,tests:'42 passed',risk:'low',time:'9m',cost:'$0.62',appr:2,conf:'high',
+  code:'-  return toLocal(toLocal(iso, tz), tz);\n+  const local = normalizeTz(iso, tz);\n+  return formatLocal(local);'},
+ {h:'AutoCode',status:['bad','1 test failed'],diff:'+3 −1',files:1,tests:'1 failed',risk:'medium',time:'7m',cost:'$0.18',appr:1,conf:'low',
+  code:'-  return toLocal(toLocal(iso, tz), tz);\n+  return iso; // TODO: verify tz handling'},
+];
+function renderCompare(){
+  const c=state.cmp;
+  $('#cmpCols').innerHTML=CMP.map((r,i)=>`
+    <div class="cmpCol ${c.winner===i?'winner':''} ${c.winner!==null&&c.winner!==i?'archived':''}">
+      <div class="cmpH"><span>${r.h}</span><span class="chip ${r.status[0]}">${r.status[1]}</span></div>
+      <div class="metrics">
+        <div class="metric"><span>Diff</span><b>${r.diff} · ${r.files} files</b></div>
+        <div class="metric"><span>Tests</span><b>${r.tests}</b></div>
+        <div class="metric"><span>Risk</span><b>${r.risk}</b></div>
+        <div class="metric"><span>Approvals</span><b>${r.appr}</b></div>
+        <div class="metric"><span>Cost · time</span><b>${r.cost} · ${r.time}</b></div>
+        <div class="metric"><span>Confidence</span><b>${r.conf}</b></div>
+        <div class="metric"><span>Worktree</span><b>cmp/${r.h.toLowerCase().replace(/ /g,'-')}</b></div>
+      </div>
+      <div class="cmpF">
+        <button class="btn sm" data-diff="${i}">${c.viewed[i]?'Diff ✓ viewed':'Open diff'}</button>
+        ${c.winner===i?'<span class="chip ok">Winner</span>'
+          :c.winner!==null?`<button class="btn sm" data-cherry="${i}">Cherry-pick hunk</button><span class="chip">archived</span>`
+          :`<button class="btn sm primary" data-win="${i}" ${c.viewed[i]?'':'disabled title="Open the diff first — winners are picked after reading, not from the scorecard"'}>Pick winner</button>`}
+      </div>
+    </div>`).join('');
+  $$('#cmpCols [data-diff]').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.diff;state.cmp.viewed[i]=true;
+    const other=CMP[(i+1)%CMP.length];
+    $('#sxsTitle').textContent='Side-by-side: '+CMP[i].h+' vs '+other.h;
+    $('#sxsBody').innerHTML=`<div><h4>${CMP[i].h} <span class="muted">${CMP[i].diff}</span></h4><div class="code">${esc(CMP[i].code)}</div></div>
+      <div><h4>${other.h} <span class="muted">${other.diff}</span></h4><div class="code">${esc(other.code)}</div></div>`;
+    $('#ovlSxs').classList.add('on');renderCompare();});
+  $$('#cmpCols [data-win]').forEach(b=>b.onclick=()=>{state.cmp.winner=+b.dataset.win;
+    $('#cmpHint').innerHTML=`Winner: <b>${CMP[state.cmp.winner].h}</b>. Losing worktrees archived (recoverable). Cherry-pick hunks from them, then commit through the Review Queue gate.`;
+    toast(CMP[state.cmp.winner].h+' chosen — 2 worktrees archived');renderCompare();});
+  $$('#cmpCols [data-cherry]').forEach(b=>b.onclick=()=>toast('1 hunk merged from '+CMP[+b.dataset.cherry].h+' into winner worktree'));
+}
+
+/* ============================ new task (intent-first) ============================ */
+const INTENT_PROMPTS={
+  bug:'Fix: ',feature:'Build: ',review:'Review the current uncommitted changes and summarize risks.',
+  repair:'Run the test suite, fix what fails, keep patches minimal.',
+  browser:'Fix the UI issue captured in my browser comments.',
+  compare:'Run this task across Claude Code, Codex and AutoCode and prepare a comparison.',
+  raw:''};
+function setupNewTask(){
+  const open=()=>{$('#ovlNewTask').classList.add('on');$('#ntPrompt').focus();};
+  $('#btnNewTask').onclick=open;$('#btnNewTask2').onclick=open;
+  $$('#ntIntents .intent').forEach(b=>b.onclick=()=>{
+    $$('#ntIntents .intent').forEach(x=>x.classList.toggle('on',x===b));
+    const p=INTENT_PROMPTS[b.dataset.i];
+    if(p&&!$('#ntPrompt').value)$('#ntPrompt').value=p;
+    if(b.dataset.i==='raw'){$('#ntHarness').value='Raw PTY (custom CLI)';$('#ntMode').value='Raw terminal';}
+    updateNt();});
+  $('#ntExecToggle').onclick=()=>{const x=$('#ntExec');x.classList.toggle('on');
+    $('#ntExecToggle').textContent=x.classList.contains('on')?'Hide ▴':'Change ▾';};
+  ['ntPrompt','ntTitle','ntMode','ntBase','ntHarness','ntPerm'].forEach(id=>{
+    $('#'+id).addEventListener('input',updateNt);$('#'+id).addEventListener('change',updateNt);});
+  function updateNt(){
+    const title=$('#ntTitle').value.trim()||$('#ntPrompt').value.trim().slice(0,48);
+    const s=slug(title);
+    $('#ntBranch').textContent='agent/'+s;
+    $('#ntPath').textContent='.worktrees/'+s+' ← '+$('#ntBase').value;
+    $('#ntWarn').classList.toggle('on',$('#ntMode').value.startsWith('Local'));
+    $('#ntExecSummary').textContent=$('#ntHarness').value+' · '+$('#ntMode').value.split(' ')[0].toLowerCase()+' ← '+$('#ntBase').value+' · '+$('#ntPerm').value.split('·')[1].trim();
+  }
+  $('#ntStart').onclick=()=>{
+    const prompt=$('#ntPrompt').value.trim()||'untitled task';
+    const title=$('#ntTitle').value.trim()||prompt.slice(0,48);
+    const t=mkTask({title,harness:$('#ntHarness').value.replace(' (custom CLI)',''),
+      mode:$('#ntMode').value.split(' ')[0],base:$('#ntBase').value,status:'planning',
+      branch:'agent/'+slug(title),elapsed:'0m'});
+    audit(t.id,'task.created',t.harness+' · '+t.mode.toLowerCase()+' '+t.branch);
+    audit(t.id,'worktree.created','.worktrees/'+slug(title)+' ← '+t.base);
+    $('#ovlNewTask').classList.remove('on');
+    $('#ntTitle').value='';$('#ntPrompt').value='';
+    openTask(t.id);
+    toast('Worktree created — main checkout untouched');
+    runGenericScript(t,prompt);
+  };
+}
+function runGenericScript(t,prompt){
+  addEvent(t,{k:'prompt',text:prompt});audit(t.id,'prompt.sent','');
+  const S=(ms,fn)=>setTimeout(fn,ms);
+  S(700,()=>{t.plan={steps:['Understand the request and locate code','Make minimal edits','Validate (tests need your approval)','Summarize for review'],doneUpto:0};
+    addEvent(t,{k:'plan'});});
+  S(1700,()=>{t.status='reading';t.plan.doneUpto=1;
+    addEvent(t,{k:'read',files:['src/index.ts','src/lib/config.ts','README.md']});renderAll();});
+  S(2900,()=>addEvent(t,{k:'search',q:slug(t.title).split('-')[0],hits:'5 matches in 3 files'}));
+  S(4100,()=>{t.status='editing';t.add=23;t.del=6;t.plan.doneUpto=2;
+    addEvent(t,{k:'edit',files:[['src/lib/config.ts','+14 −6'],['src/index.ts','+9 −0']],add:23,del:6});
+    t.hunks=[{id:uid('h'),file:'src/lib/config.ts',header:'@@ -10,3 +10,9 @@',staged:true,lines:[
+      {t:'ctx',n:10,text:'export const config = {'},
+      {t:'add',n:11,text:'  validated: true,'},
+      {t:'ctx',n:12,text:'};'}]}];
+    renderAll();});
+  S(5400,()=>{
+    if(t.approvalPolicy==='task'){
+      addEvent(t,{k:'note',text:'Running tests (auto-approved by task rule).'});
+      t.status='running';renderAll();
+      runCommandSim(t,'npm test',()=>genericFinish(t,'npm test'));
+    }else{
+      t.status='waiting';
+      t.pending=addEvent(t,{k:'approval',cmd:'npm test',cwd:'.worktrees/'+slug(t.title),
+        risk:'low',reason:'Validate the edits above.',origin:'suggested by package.json scripts',
+        policy:'ask for all commands',repeat:'first request for this command',
+        touch:'node_modules/.cache, test output',last:'never run in this task',decided:null});
+      audit(t.id,'approval.requested','npm test');renderAll();
+      toast('▲ '+t.title+' needs your approval');
+    }
+  });
+}
+function genericFinish(t,cmd){
+  addEvent(t,{k:'test',cmd,ok:true,out:'all passed · 8s'});
+  t.tests='passed';t.status='review';if(t.plan)t.plan.doneUpto=4;
+  t.testRuns.push({cmd,res:'all passed',ok:true,at:now()});
+  addEvent(t,{k:'diffsum',text:'2 files changed · +'+t.add+' −'+t.del+' · tests passing'});
+  audit(t.id,'task.ready_for_review','tests green');renderAll();
+  toast('“'+t.title+'” is ready to review');
+}
+
+/* ============================ palette + shortcuts ============================ */
+const PAL=[
+ {l:'New task',k:'Ctrl N',fn:()=>$('#btnNewTask').click()},
+ {l:'Go to Inbox',k:'Alt 1',fn:()=>switchView('inbox')},
+ {l:'Go to Workstreams',k:'Alt 2',fn:()=>switchView('work')},
+ {l:'Go to Review Queue',k:'Alt 3',fn:()=>switchView('review')},
+ {l:'Go to Browser QA',k:'Alt 4',fn:()=>switchView('browser')},
+ {l:'Go to Compare',k:'Alt 5',fn:()=>switchView('compare')},
+ {l:'Go to Automations',k:'Alt 6',fn:()=>switchView('automations')},
+ {l:'Go to Settings',k:'Alt 7',fn:()=>switchView('settings')},
+ {l:'Toggle terminal drawer',k:'Ctrl J',fn:()=>{if(state.view!=='work')switchView('work');toggleDrawer();}},
+ {l:'Toggle theme',k:'',fn:toggleTheme},
+ {l:'Export audit log (JSONL)',k:'',fn:()=>exportAudit()},
+ {l:'Shortcuts',k:'?',fn:()=>openKeys()},
+];
+function openPalette(){$('#ovlPalette').classList.add('on');$('#palIn').value='';renderPal('');$('#palIn').focus();}
+function renderPal(q){
+  const items=[...PAL.map(p=>({...p})),
+    ...Object.values(state.tasks).map(t=>({l:'Open task: '+t.title,k:STATUS[t.status],fn:()=>openTask(t.id)}))]
+    .filter(p=>p.l.toLowerCase().includes(q.toLowerCase()));
+  $('#palList').innerHTML=items.map((p,i)=>`<button class="palItem ${i===0?'sel':''}" data-i="${i}"><span>${esc(p.l)}</span><span class="k">${esc(p.k||'')}</span></button>`).join('')||'<div class="bEmpty">No matches.</div>';
+  $$('#palList .palItem').forEach((b,i)=>b.onclick=()=>{$('#ovlPalette').classList.remove('on');items[i].fn();});
+  $('#palIn').onkeydown=e=>{if(e.key==='Enter'&&items.length){$('#ovlPalette').classList.remove('on');items[0].fn();}};
+}
+const KEYS=[['Ctrl K','Command palette'],['Ctrl N','New task'],['Ctrl J','Toggle terminal'],
+ ['Ctrl Enter','Send prompt'],['Esc','Close modal / cancel annotation'],['Alt 1…7','Switch areas'],['?','This dialog']];
+function openKeys(){$('#keysBody').innerHTML=KEYS.map(k=>`<div class="row" style="justify-content:space-between"><span>${esc(k[1])}</span><span class="kbd">${esc(k[0])}</span></div>`).join('');
+  $('#ovlKeys').classList.add('on');}
+
+/* ============================ view switching ============================ */
+function switchView(v){
+  state.view=v;
+  $$('.nitem').forEach(t=>t.classList.toggle('on',t.dataset.view===v));
+  $$('#narrowNav button').forEach(t=>t.classList.toggle('on',t.dataset.view===v));
+  $$('.view').forEach(x=>x.classList.toggle('on',x.id==='view-'+v));
+  if(v==='inbox')renderInbox();
+  if(v==='work'){renderWorkList();renderStream(false);renderHead();renderRail();}
+  if(v==='review')renderReviewQueue();
+  if(v==='compare')renderCompare();
+  renderChrome();
+}
+function openTask(id){
+  const cur=state.tasks[state.activeId];if(cur)cur.draft=$('#composerText').value;
+  state.activeId=id;switchView('work');
+}
+function stopTask(id){const t=state.tasks[id];t.status='stopped';t.tests='stopped';
+  addEvent(t,{k:'error',text:'Task stopped by user',detail:'Worktree preserved at .worktrees/'+t.branch.replace('agent/','')+' — restart or archive from the Inbox.'});
+  audit(id,'task.stopped','by user');toast('Task stopped — worktree preserved');renderAll();}
+function renderAll(){renderChrome();
+  if(state.view==='inbox')renderInbox();
+  if(state.view==='work'){renderWorkList();renderStream(true);renderHead();renderRail();}
+  if(state.view==='review')renderReviewQueue();}
+
+/* ============================ init ============================ */
+function init(){
+  seed();
+  $$('.nitem,[data-view]').forEach(t=>{if(t.dataset.view)t.onclick=()=>switchView(t.dataset.view);});
+  $$('.overlay').forEach(o=>o.addEventListener('mousedown',e=>{if(e.target===o)o.classList.remove('on');}));
+  $$('[data-close]').forEach(b=>b.onclick=()=>b.closest('.overlay').classList.remove('on'));
+  $('#btnPalette').onclick=openPalette;
+  $$('#railTabs button').forEach(b=>b.onclick=()=>{state.railTab=b.dataset.rtab;
+    $$('#railTabs button').forEach(x=>x.classList.toggle('on',x===b));renderRail();});
+  $('#btnStageAll').onclick=()=>{const t=state.tasks[state.activeId];if(!t)return;
+    t.hunks.forEach(h=>h.staged=true);audit(t.id,'review.stage_all','');renderRail();};
+  $('#btnOpenGate').onclick=()=>{state.reviewSel=state.activeId;switchView('review');};
+  $('#composerText').addEventListener('input',e=>{const t=state.tasks[state.activeId];if(t)t.draft=e.target.value;});
+  $('#btnSend').onclick=sendPromptMsg;
+  $('#btnRunTest').onclick=manualTest;
+  $('#btnRunDev').onclick=runDev;
+  $('#termIn').addEventListener('keydown',e=>{
+    if(e.key!=='Enter')return;const v=e.target.value.trim();e.target.value='';
+    if(!v)return;
+    if(v.startsWith('npm test'))manualTest();
+    else if(v.includes('dev'))runDev();
+    else{termLine(`<span class="cmdline">$ ${esc(v)}</span>`);termLine('command captured as terminal block · exit 0');}
+  });
+  $('#btnExportAudit').onclick=()=>exportAudit();
+  $('#btnStack').onclick=()=>$('#stackView').classList.toggle('on');
+  $('#palIn').addEventListener('input',e=>renderPal(e.target.value));
+  setupNewTask();setupBrowser();renderBcomments();renderCompare();
+
+  termLine('AutoCode Station terminal — PTY attached per task. Scrollback preserved per task.','faint');
+  termLine('Try the buttons above, or type: npm test · npm run dev');
+
+  document.addEventListener('keydown',e=>{
+    const mod=e.ctrlKey||e.metaKey;
+    const typing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+    if(mod&&e.key.toLowerCase()==='k'){e.preventDefault();openPalette();}
+    else if(mod&&e.key.toLowerCase()==='n'){e.preventDefault();$('#btnNewTask').click();}
+    else if(mod&&e.key.toLowerCase()==='j'){e.preventDefault();if(state.view!=='work')switchView('work');toggleDrawer();}
+    else if(mod&&e.key==='Enter'){if(state.view==='work'){e.preventDefault();sendPromptMsg();}}
+    else if(e.key==='?'&&!typing){openKeys();}
+    else if(e.key==='Escape'){$$('.overlay.on').forEach(o=>o.classList.remove('on'));
+      if(state.bMode==='comment'){$$('.annPop').forEach(p=>p.remove());}}
+    else if(e.altKey&&['1','2','3','4','5','6','7'].includes(e.key)){e.preventDefault();
+      switchView(['inbox','work','review','browser','compare','automations','settings'][+e.key-1]);}
+  });
+
+  switchView('inbox');
+  setTimeout(()=>toast('Tip: Ctrl+K for everything · ? for shortcuts'),900);
+
+  /* ambient activity so the inbox feels alive */
+  const t2=Object.values(state.tasks).find(t=>t.title.includes('cockpit'));
+  let amb=0;const ambEvents=[
+    ()=>addEvent(t2,{k:'search',q:'attention badge propagation',hits:'2 matches'}),
+    ()=>{t2.plan.doneUpto=3;addEvent(t2,{k:'edit',files:[['station_ui/src/state/attention.ts','+22 −4']],add:22,del:4});t2.add+=22;t2.del+=4;},
+    ()=>addEvent(t2,{k:'read',files:['station_ui/src/screens/Sidebar.tsx']}),
+    ()=>{t2.plan.doneUpto=4;t2.status='review';t2.tests='38 passed';
+      t2.hunks=[{id:uid('h'),file:'station_ui/src/state/attention.ts',header:'@@ -1,2 +1,9 @@',staged:true,lines:[
+        {t:'add',n:1,text:'export const bucketOf = (s: Status) => BUCKET_MAP[s];'},
+        {t:'add',n:2,text:'export const needsAttention = (t: Task) => bucketOf(t.status) === "attention";'}]}];
+      t2.testRuns.push({cmd:'npm test -- --grep board',res:'38 passed',ok:true,at:now()});
+      addEvent(t2,{k:'diffsum',text:'3 files changed · +434 −242 · tests passing'});
+      audit(t2.id,'task.ready_for_review','tests green');renderAll();},
+  ];
+  const ambIv=setInterval(()=>{if(amb>=ambEvents.length){clearInterval(ambIv);return;}ambEvents[amb++]();},9000);
+}
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>

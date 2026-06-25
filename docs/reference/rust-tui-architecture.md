@@ -2,7 +2,7 @@
 
 ## Overview
 
-The AutoCode Rust TUI (`autocode-tui`) replaces the Go BubbleTea TUI with a Rust implementation using `crossterm` + `ratatui` + `tokio` + `portable-pty`. It communicates with the unchanged Python backend via JSON-RPC over a PTY.
+The AutoCode Rust TUI (`autocode-tui`) replaces the Go BubbleTea TUI with a Rust implementation using `crossterm` + `ratatui` + `tokio`. It communicates with the Python backend via newline-delimited JSON-RPC over either a spawn-managed stdio subprocess or a localhost TCP attach connection.
 
 ## System Diagram
 
@@ -23,18 +23,18 @@ The AutoCode Rust TUI (`autocode-tui`) replaces the Go BubbleTea TUI with a Rust
 │  │          RPC Bus (tokio mpsc channels)               │   │
 │  │  event_tx ──→ main task ──→ rpc_tx                  │   │
 │  └─────────┬─────────────────────────┬──────────────────┘   │
-│  PTY reader│(spawn_blocking)         │PTY writer             │
+│  RPC reader│(spawn_blocking)         │RPC writer             │
 │  (blocking │ Read)                   │(blocking Write)       │
 │            ▼                         ▼                      │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │    portable-pty master (PTY I/O, resize, monitor)   │   │
+│  │   Backend connection (stdio subprocess or TCP attach)│   │
 │  └────────────────────────┬─────────────────────────────┘   │
 └───────────────────────────┼────────────────────────────────┘
                             │ framed JSON, 1 msg/line, LF
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Python backend (UNCHANGED)                                  │
-│  autocode/src/autocode/backend/server.py                     │
+│  Python backend                                               │
+│  autocode/src/autocode/backend/server.py + host adapters      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -50,10 +50,11 @@ autocode/rtui/src/
 ├── rpc/
 │   ├── protocol.rs            # 16 serde structs + round-trip tests
 │   ├── codec.rs               # line encode/decode, LF framing
-│   └── bus.rs                 # PTY reader/writer tasks, request correlation
+│   └── bus.rs                 # backend reader/writer tasks, request correlation
 ├── backend/
-│   ├── pty.rs                 # portable-pty spawn
-│   └── process.rs             # child lifecycle monitor
+│   ├── connection.rs          # spawn-managed vs attach/TCP backend selection
+│   ├── stdio.rs               # spawn-managed stdio subprocess + stderr log pipe
+│   └── process.rs             # child lifecycle monitor + exit status
 ├── ui/
 │   ├── composer.rs            # multi-line input, history
 │   ├── spinner.rs             # 194-verb spinner
@@ -70,10 +71,10 @@ autocode/rtui/src/
 ## Key Architectural Invariants
 
 1. **The RPC wire format is frozen.** Rust must be semantically indistinguishable on the wire.
-2. **The Rust process owns stdin/stdout raw mode.** Python child runs inside a PTY.
+2. **The Rust process owns terminal raw mode.** The Python backend is not terminal-interactive; it speaks JSON-RPC over stdio or TCP.
 3. **The state machine is a pure reducer** — `fn reduce(state: AppState, event: Event) -> (AppState, Vec<Effect>)` — testable without a terminal or network.
-4. **Rendering is pull-based from state** — no render calls from inside the input router, RPC decoder, or PTY monitor tasks.
-5. **PTY I/O is blocking; tokio channels are async.** `portable-pty`'s handles MUST live in `spawn_blocking` threads.
+4. **Rendering is pull-based from state** — no render calls from inside the input router, RPC decoder, or backend monitor tasks.
+5. **Backend I/O is blocking at the handle seam; tokio channels are async.** Reader/writer handles live behind the RPC bus and communicate with the main task over channels.
 
 ## Async Architecture
 
@@ -83,8 +84,8 @@ Five concurrent units of execution:
 |---|---|---|---|---|
 | Main task | `tokio::task` | `AppState`, ratatui terminal | `event_rx` | `rpc_tx`, terminal |
 | Key reader | `tokio::task` | `crossterm::event::EventStream` | Terminal stdin | `event_tx` |
-| PTY reader | `spawn_blocking` | PTY master `Read` handle | PTY master | `event_tx` |
-| PTY writer | `spawn_blocking` | PTY master `Write` handle | `rpc_rx` | PTY master |
+| RPC reader | `spawn_blocking` | backend `Read` handle | stdio/TCP backend connection | `event_tx` |
+| RPC writer | `spawn_blocking` | backend `Write` handle | `rpc_rx` | stdio/TCP backend connection |
 | Tick task | `tokio::task` | `tokio::time::interval` | Timer | `event_tx` |
 
 ## State Machine
@@ -103,7 +104,7 @@ Top-level state with: scrollback (bounded 10k lines), streaming buffers, compose
 
 ### Effect Enum
 
-`SendRpc | Render | SetRawMode | ResizePty | EnterAltScreen | LeaveAltScreen | SpawnEditor | Quit`
+`SendRpc | Render | SpawnEditor | Quit`
 
 ## Crate Stack
 
@@ -112,7 +113,6 @@ Top-level state with: scrollback (bounded 10k lines), streaming buffers, compose
 | `crossterm` | 0.28 | Terminal I/O, raw mode, EventStream |
 | `ratatui` | 0.29 | Layout + widgets |
 | `tokio` | 1 (full) | Async runtime |
-| `portable-pty` | 0.8 | PTY spawn |
 | `serde` + `serde_json` | 1 | JSON codec |
 | `anyhow` | 1 | Error propagation |
 | `tracing` + `tracing-subscriber` | 0.1/0.3 | File-only logging |

@@ -1,0 +1,36 @@
+id: p1-write-read-round-trip
+name: P1 write-read round-trip probe
+provenance:
+  source: p1
+  bug_id: write-read-round-trip
+  recorded_at: "2026-04-30"
+setup:
+  fixture_repo: ""
+  initial_files: {}
+input:
+  user_message: |
+    Write a file called state.txt containing the text "verification-checkpoint".
+    Then read it back to verify it was written correctly.
+    Report the content you read.
+expected_outcomes:
+  must_have:
+    - "tool_execution"
+    - "item_completed"
+    - "turn_completed"
+  must_not_have:
+    - "error"
+  judge_criteria:
+    - correctness
+    - test_quality
+config:
+  model: coding
+  max_turns: 3
+  timeout_sec: 120
+  temperature: 0.0
+  seed: 0
+baseline:
+  correctness_score: 0.90
+  minimality_score: 0.80
+  test_quality_score: 0.75
+  cost_usd_p50: 0.20
+archived: false

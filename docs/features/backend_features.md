@@ -1,7 +1,7 @@
 # Backend Features Inventory
 
 > Current-state backend inventory.
-> Last updated: 2026-05-01.
+> Last updated: 2026-05-06.
 > Scope: Python backend, agent runtime, session stores, JSON-RPC hosts, slash-command runtime, and backend-facing tool surfaces.
 
 This file is an implementation inventory, not a roadmap. Roadmap and tranche execution details remain in `docs/plan/backend-feature-improvement-plan.md` and `docs/plan/backend-feature-improvement-todo.md`.
@@ -13,9 +13,10 @@ This file is an implementation inventory, not a roadmap. Roadmap and tranche exe
 - Backend application host: `autocode.backend.server.BackendServer`.
 - Host-independent service helpers: `autocode/src/autocode/backend/services.py`.
 - JSON-RPC method dispatch separated from the host: `autocode/src/autocode/backend/dispatcher.py`.
-- Transport abstraction and concrete host adapters: `autocode/src/autocode/backend/transport.py`, `stdio_host.py`, and `tcp_host.py`.
+- Chat-turn service surface: `autocode/src/autocode/backend/chat.py` targets public host methods/properties such as `ensure_agent_loop`, `teardown_agent_resources`, `session_stats`, `task_store`, and `emit_cost_update`; private `BackendServer` fields are wrapped inside host adapters.
+- Transport abstraction and concrete host adapters: `autocode/src/autocode/backend/transport.py`, `stdio_host.py`, and `tcp_host.py`. Host adapters target the public `RpcApplication` protocol (`dispatch_rpc_request`, `route_rpc_response`, `emit_response`) rather than private `BackendServer` internals.
 - Runnable backend modes: `autocode serve --transport stdio` and `autocode serve --transport tcp --host 127.0.0.1 --port 8765`.
-- Frontend-compatible attach mode through the TCP JSON-RPC host.
+- Frontend-compatible attach mode through the TCP JSON-RPC host. The TCP host is intentionally local-first: it rejects non-loopback bind hosts by default, permits one active client at a time, queues additional clients behind that active connection, and serializes stream writes through a single back-pressure-aware writer task.
 - Startup status emission, response framing, request dispatch, graceful shutdown, and transport conformance coverage.
 - Headless NDJSON mode: `autocode exec [PROMPT] --json` emits Tier 4.4-compatible NDJSON event stream to stdout. Event schema in `autocode/src/autocode/backend/headless_schema.py` with typed Pydantic models, `protocol_version: "0.2.0-harness"` stamp on every event, `item.kind` constrained to {agent_message, tool_execution, plan_update, approval}, `usage` block always present on `turn_completed` with zero-defaulted cache/reasoning fields. Structured tool events (`tool_call_started`, `tool_call_completed`, `tool_call_failed`) provide first-class tool-execution evidence with tool name, family, call ID, timestamps, duration, args shape/hash, result bytes/hash, and error type. Stdout-only-NDJSON rule enforced; logs/warnings go to stderr. Tool requests emit visible `approval` items; headless JSON denies tool approvals by default unless launched with `--auto-approve`.
 - Headless runner: `autocode/src/autocode/backend/headless_runner.py` implements ChatHost protocol subset, reuses `backend/chat.py::run_chat_turn()`, emits NDJSON events without importing or spawning the Rust TUI.
@@ -66,6 +67,9 @@ This file is an implementation inventory, not a roadmap. Roadmap and tranche exe
 - Go and Rust subprocess LSP adapters are registered for `.go` and `.rs`, with `gopls` plus Go 1.16+ readiness metadata, `rust-analyzer` plus rustup component metadata, `go.mod` / `Cargo.toml` discovery, Rust cold-cache timeout extension, and project-local fixture coverage for the nine-operation client surface.
 - Post-edit auto-verify is implemented in `autocode/src/autocode/agent/auto_verify.py` and wired into `AgentLoop` after successful filesystem-mutating tools. It runs LSP diagnostics for edited files with registered adapters, skips unsupported or disabled languages, feeds formatted diagnostics back into the tool result, respects `/verify on|off|status`, surfaces persistent failures without automatic rollback, and halts retry guidance when the cost limit has been crossed.
 - P3a drift detectors live in `autocode/src/autocode/agent/drift.py`: schema drift detects structural changes in repeated tool outputs, context staleness warns on old MemoryFS topic reads, and same-turn tool consistency detects deterministic tools returning conflicting results. Detectors are registered through the internal hook dispatcher when `agent.drift.*.enabled` is true, inject drift warnings before the next model turn, and emit `tool_drift_detected` telemetry.
+- P3c entropy auditor substrate and opt-in production wiring live in `autocode/src/autocode/agent/entropy.py`: it audits recent conversation windows, caps audit context, skips audits when the caller reports a reached cost cap, parses structured inconsistency reports for naming drift, decision reversal, stale references, and fact conflicts, exposes severity-routing warning helpers, handles malformed auditor JSON deterministically, and emits `entropy_audit_completed` telemetry with `severity_max` and `incident_count`. The `AgentLoop` seam injects medium/high reports as system warnings when an `EntropyAuditor` is supplied. Production wiring is opt-in through `agent.entropy.enabled` with `model_alias`, `audit_interval_turns`, and `max_messages_audited`; backend, headless, and TUI construction paths pass a provider-backed auditor when enabled. `AUTOCODE_DISABLE_ENTROPY=true` is the rollback flag.
+- The stable system prompt includes an anti-entropy `## Internal consistency` section that instructs the agent to explicitly reconcile contradictions, verify missing file paths or variable names instead of silently substituting, and flag recommendation reversals.
+- Verify-before-use memory nudges are implemented in `AgentLoop`: same-turn `read_file` calls are tracked, candidate file paths are extracted from memory content/context, and assistant responses that cite a memory-derived path without reading it first receive a system reminder to re-read the file before relying on stale memory.
 - Iteration-zero bootstrap can include bounded cached Layer 1 symbol previews for active working-set files only.
 - Tool-result truncation is adaptive and preserves high-signal code, error, traceback, and list structure under per-tool budgets.
 
@@ -118,10 +122,14 @@ This file is an implementation inventory, not a roadmap. Roadmap and tranche exe
 - Backend emits task/subagent projections through `on_task_state`.
 - Plan mode state is persisted in the backend and can be queried/set over RPC.
 - Plan artifact export/sync bridges markdown checkboxes with task status.
+- PEV reliability substrate is implemented in `autocode/src/autocode/agent/pev.py`: sync and async plan runners, plan/step/result dataclasses, retry feedback handling, no-auto-rollback failure surfacing, LLM verifier prompt/parser, auto-detect policy plus deterministic todo-to-`Plan` boundary construction for large `todo_write` plans, a registered passive `PEVPlanningHook` observer, and manual `/plan run <goal>` execution through the existing frontend/backend prompt loop with backend provider-backed verifier parsing.
+- Ralph recovery substrate is implemented through `autocode/src/autocode/agent/ralph_loop.py` and `autocode/src/autocode/session/intent_store.py`: deterministic intent capture storage, give-up/stagnation/context-saturation detectors, capped recovery firing, aggressive `kept_messages=2` session compaction before recovery prompt injection, loop-recreation/session-resume intent reuse, telemetry, and `AUTOCODE_DISABLE_RALPH=true` rollback control.
+- P3b deterministic reliability gate coverage lives in `benchmarks/ai_verification/checks/check_p3b_reliability_criteria.py`: it verifies PEV catches at least 50% of simulated failing plans and Ralph recovers at least 80% of simulated context-limit sessions without requiring a live gateway.
 - Subagent manager supports spawn, status/result lookup, listing, cancellation, max-concurrency controls, timeouts, and status summaries.
 - Subagent spawn tools can optionally allocate an isolated git worktree and include a read-only diff-to-`apply_patch` merge-back plan. Integration remains user/reviewer-owned; no commits, pushes, merges, pulls, resets, or checkouts are performed by the merge-back helper.
 - Recurring `/loop` jobs are implemented in the slash-command runtime.
 - Watch mode state and marker parsing support `# AUTOCODE: <instruction>` file-save directives through `autocode/src/autocode/agent/watch.py` and `/watch on|off|status`.
+- P5 KAIROS proactive-mode substrate is implemented but default-off: `autocode/src/autocode/agent/proactive.py` provides `TickConfig`, `ProactiveLoop`, tick-message formatting, sleep capping, terminal-focus pause, anti-narration detection, approval-required tool gating, local audit logging, and KAIROS telemetry event kinds. The `sleep` tool is registered only when a proactive loop is supplied, `PROACTIVE_MODE_PROMPT` is injected only with `proactive_mode=True`, `autocode daemon --watch` exits inert unless `AUTOCODE_FEATURE_KAIROS=true`, `autocode daemon --watch <path> --once --attach HOST:PORT --no-dry-run` sends one proactive tick through the TCP JSON-RPC backend `kairos.tick` method with a `tick_id`, `--interval` + `--max-ticks` support bounded repeated scheduling, and `autocode kairos audit` reads the local blast-radius log. The `/kairos pulse` slash command summarizes the local audit log so users can see what KAIROS did while they were away. The daemon has a cost-cap skip guard and defaults to dry-run canary behavior. Its default `--read-only` path is backend-enforced by temporarily running the tick turn in `AgentMode.REVIEW`, which blocks mutating and shell-executing tools; `--allow-mutations` preserves the current session mode. `autocode telemetry summary` reports a KAIROS alert when anti-narration events exceed 5% of proactive ticks.
 
 ### Memory And Episode Retention
 
@@ -151,19 +159,19 @@ This file is an implementation inventory, not a roadmap. Roadmap and tranche exe
 
 - P1a local-only telemetry is implemented in `autocode/src/autocode/telemetry/`.
 - `TelemetryStore` writes append-only daily JSONL files under `~/.autocode/telemetry/events-YYYY-MM-DD.jsonl` using a bounded non-blocking queue and daemon writer thread.
-- `TelemetryAggregator` reads local JSONL files, filters by kind/session/date window, summarizes by event kind and session, and exports JSONL or CSV.
-- `autocode telemetry summary --last 7d|30d|all`, `events --kind ... --session ...`, `session <session_id>`, `export --since YYYY-MM-DD --format jsonl|csv`, and `purge` are available through the CLI.
+- `TelemetryAggregator` reads local JSONL files, filters by kind/session/date window, summarizes by event kind and session, exports JSONL or CSV, and produces public-safe aggregate reports without session ids or event payloads.
+- `autocode telemetry summary --last 7d|30d|all`, `events --kind ... --session ...`, `session <session_id>`, `export --since YYYY-MM-DD --format jsonl|csv`, `public-report --output public-stats.json`, and `purge` are available through the CLI.
 - `AUTOCODE_TELEMETRY_DISABLED=true` disables emission; `autocode telemetry purge` deletes the local store.
 - Agent-loop telemetry covers `session_start`, `turn_start`, `turn_completed`, `turn_interrupted`, `llm_call_completed`, `tool_call_started`, `tool_call_completed`, `tool_call_failed`, approval decisions, shell permission escalation, and P3 compaction events.
 - P2 cache telemetry emits `cache_breakpoint_applied` when a stable prefix breakpoint is present and populates `llm_call_completed` with cached input, cache creation, and reasoning token fields.
 - P2a scratch telemetry emits `tool_output_offloaded` with `tool_name`, `result_bytes`, and `scratch_path` whenever a tool result is replaced by a scratch stub.
 - Backend session transition telemetry covers initial thread start, new-session thread start, session resume, session fork, and session shutdown.
-- Reserved event kinds for later phases are declared in the catalog but not emitted until the owning feature lands.
+- Reserved event kinds for later phases are declared in the catalog and are emitted as owning features land; P3b now emits PEV/Ralph reliability events through the backend telemetry path.
 
 ### Slash Commands And Backend RPC Surface
 
 - Backend-owned slash-command catalog is exposed through `command.list`.
-- Current command runtime includes session, model/provider, mode, TUI mode, compaction, shell, copy, freeze, thinking, clear, loop, index, repomap, tasks, plan, research, build, review, architect/editor model overrides, nested AGENTS reload, fork/tree, recipe list/run, watch mode, marketplace list/info/install stubs, memory, checkpoint, rollback, undo, diff, cost, and export commands.
+- Current command runtime includes session, model/provider, mode, TUI mode, compaction, shell, copy, freeze, thinking, clear, loop, index, repomap, tasks, plan, research, build, review, architect/editor model overrides, nested AGENTS reload, fork/tree, recipe list/run, watch mode, marketplace list/info/install stubs, KAIROS pulse, memory, checkpoint, rollback, undo, diff, cost, and export commands. Rust consumes this catalog over backend RPC, Textual constructs the shared router directly, `autocode.tui.commands` remains a compatibility alias, and the Rich legacy REPL dispatches slash input through the shared router before provider chat fallback.
 - Frontend-facing RPC methods include `chat`, `cancel`, `command`, `command.list`, `session.new`, `session.list`, `session.resume`, `session.fork`, `model.list`, `provider.list`, `task.list`, `subagent.list`, `subagent.cancel`, `plan.status`, `plan.set`, `plan.export`, `plan.sync`, `config.get`, `config.set`, `memory.list`, `checkpoint.list`, `checkpoint.restore`, `steer`, and `shutdown`.
 - Backend notifications include status, warning, token, thinking, done, tool-call, task-state, cost-update, error, and chat-ack events.
 - Backend-originated frontend requests include tool approval and ask-user flows.
@@ -172,15 +180,17 @@ This file is an implementation inventory, not a roadmap. Roadmap and tranche exe
 ### Testing And Verification Surfaces
 
 - Unit coverage exists for backend server/services, backend chat, transport conformance, commands, cost dashboard, checkpoint restore, MCP server behavior, token accounting, doctor, and edge cases.
-- Transport conformance tests exercise both stdio and TCP host paths for core backend surfaces.
+- Transport conformance tests exercise both stdio and TCP host paths for core backend surfaces, including session/command catalogs, chat liveness/streaming, task/subagent/memory projection, checkpoint restore, config get/set, and plan status/set behavior.
 - PTY smoke tests cover real TUI/backend behavior, thinking split, slash surfaces, restore interaction, tool output budgets, and real gateway canaries.
+- P3d production eval substrate lives under root `evals/`: YAML eval cases with provenance/setup/input/outcome/config/baseline fields, deterministic fixture setup, subprocess-backed live headless AutoCode command execution, post-run diff capture, configurable scenario test-output capture, must-have/must-not-have telemetry predicates, structured LLM-judge score parsing, deterministic source-stratified sampling, and a CLI used by the soft-gate eval workflow. Initial cases cover the original five P1 substrate scenarios, P1 compaction, and the HFIX refactor-no-op guard.
+- Drift-derived eval proposal tooling lives in `evals/scripts/generate_evals_from_drift.py`: it reads `tool_drift_detected` telemetry JSONL, groups recurring `(tool_name, drift_kind)` pairs, preserves source session ids, seeds `setup.fixture_repo` / `setup.initial_files` from representative telemetry metadata when present, and writes proposed eval-case YAML when a threshold is met.
 - Stored release artifacts record the current green release gate, including Python unit, benchmark harness, Rust TUI, Track 1/4, PTY smoke, and real-gateway canary results.
 
 ## Expected Backend Features Not Fully Implemented
 
 - Capability/version negotiation between frontend and backend is not explicit.
 - Reconnect/reattach semantics for remote or dropped TCP clients are not explicit.
-- TCP host is local and simple; it is not a hardened multi-client remote service.
+- TCP host is local and simple; it is not a hardened remote service or concurrent multi-client collaboration server.
 - Transport security/authentication is not defined for remote attachment.
 - Backend application boundaries are still broad: `BackendServer` remains the coordinating host for many services even though dispatcher/services/transports are now split out.
 - Slash-command UX semantics remain backend-led; a fully swappable UI still needs a stricter command/picker contract.
@@ -201,7 +211,10 @@ This file is an implementation inventory, not a roadmap. Roadmap and tranche exe
 - Citation surfacing for code/search context and generated answers.
 - Provider failover and retry policy beyond current warning/retry behavior.
 - Streaming back-pressure and cancellation cleanup across every provider/tool edge case.
+- Full production KAIROS daemon hardening remains planned: the current daemon supports default-off one-shot and repeated tick dispatch with backend read-only enforcement, but runtime maturity still depends on live canary evidence and reviewer/user acceptance before default-on consideration.
+- Future KAIROS hardening should add graceful in-flight cancellation, live canary evidence against a real backend process, and default-on promotion gates. The current read-only guard uses existing review-mode tool blocking rather than a separate restricted registry.
 - Plan artifact versioning and richer task/plan synchronization.
+- Full PEV/Ralph integration gates remain incomplete: integration-level auto-detect wrapping remains planned; deterministic quantitative P3b criteria are implemented, but live long-horizon validation remains dependent on the broader AI verification harness/gateway path.
 - Subagent permission scoping, scheduler fairness, and deeper delegation policy controls.
 - Additional telemetry hooks for skill trigger accuracy, hook success, retry counts, compaction behavior, drift events, eval signals, and provider latency.
 - Config validation UX improvements around layered configuration and one-shot runtime overrides.
@@ -218,6 +231,15 @@ This file is an implementation inventory, not a roadmap. Roadmap and tranche exe
 - Upgraded `run_scenario.py._run_autocode()` to use the NDJSON runner instead of the previous `--non-interactive` placeholder, enabling structured tool-call/token accounting from C6.G5 NDJSON output.
 - `ScenarioSpec.expected_outcomes` field added for `must_have` / `must_not_have` NDJSON grader predicates, backward-compatible (defaults to empty lists).
 - `RunMeta.status` records the final scenario verdict independently from the agent process `exit_status`, so artifacts distinguish transport/process failures from deterministic scenario failures.
+- Direct `run_scenario.py` runs always emit `trajectory_report.json` and `turn_report.json`; when a scenario has no matching assertions, the files contain neutral passing reports so every run has a uniform diagnostic artifact set.
+- Scenario contract lint flags seeded visible Python test files unless protected by `artifact_assertions.must_not_change_files` or hidden tests; the current HFIX YAML suite is covered by a regression test for this rule.
+- Retained-sandbox regrading requires explicit passing evidence in cached `test_log.txt`; empty logs, zero-test collection, and logs with no passing signal are deterministic failures.
+- Missing default grading commands fail with `HARNESS_CLASSIFICATION: missing_grading_command` rather than passing through a no-op `echo`.
+- Supervised child runs that exit without readable verdict artifacts are completed as deterministic `INFRA_FAIL` runs with full artifact payloads.
+- Early substrate scenarios carry explicit snapshot commands and add trajectory/artifact or turn contracts when they are intended to verify behavior rather than protocol shape.
+- Summaries require `turn_report.json`, and supervised INFRA_FAIL completion always writes trajectory, turn, and artifact reports so assertion-free failures remain uniformly diagnosable.
+- Infra classification covers empty/no-stream turns, 429/rate-limit, gateway unreachable, timeouts, sandbox setup failures, known missing grading dependencies, and mixed infra+agent signals; supervised retries use the long default recovery schedule.
+- Backend surface coverage without TUI is artifacted at `autocode/docs/qa/test-results/20260506-113250-backend-feature-surface-coverage.md`, mapping thinking, headless/tool events, task/subagent/context/memory/cost/cache/KAIROS/transport surfaces to focused unit tests.
 
 ## Feature Contract Cross-References
 

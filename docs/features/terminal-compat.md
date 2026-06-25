@@ -34,7 +34,7 @@ Defines the terminal compatibility requirements for the Rust TUI: tmux compatibi
 
 ### Known compatibility notes
 
-- `portable-pty` 0.8 used for PTY management
+- Backend I/O uses JSON-RPC over stdio spawn-managed mode or localhost TCP attach mode; the backend is not terminal-interactive.
 - Mouse events may not work in all terminal multiplexers
 - Bracketed paste is supported but may vary by terminal
 

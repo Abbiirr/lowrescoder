@@ -55,7 +55,8 @@ Primary files:
 - `autocode/rtui/src/render/view.rs`
 - `autocode/rtui/src/rpc/`
 - `autocode/rtui/src/backend/connection.rs`
-- `autocode/rtui/src/backend/pty.rs`
+- `autocode/rtui/src/backend/stdio.rs`
+- `autocode/rtui/src/backend/process.rs`
 
 ### 3.2 Frontend-owned behavior
 
@@ -184,6 +185,7 @@ What is already good:
 - most visual state is isolated in reducer + renderer layers
 - the Rust TUI speaks a documented RPC contract
 - the Rust TUI can either spawn-manage a backend or attach to a running TCP backend
+- spawn-managed backend stderr is preserved in `~/.autocode/tui.log`
 - there is already strong frontend-focused test coverage
 
 What still blocks easy UI swapping:
@@ -290,7 +292,7 @@ The backend stack is currently still a broad application surface, even after tra
 - a session/task/subagent state manager
 - a slash-command runtime host
 
-Transport ownership itself is now split out into `transport.py`, `stdio_host.py`, and `tcp_host.py`; JSON-RPC method routing is split into `dispatcher.py`, and much of the application behavior is factored into `services.py` and `chat.py`.
+Transport ownership itself is now split out into `transport.py`, `stdio_host.py`, and `tcp_host.py`; JSON-RPC method routing is split into `dispatcher.py`, and much of the application behavior is factored into `services.py` and `chat.py`. Host adapters use the public `RpcApplication` methods `dispatch_rpc_request`, `route_rpc_response`, and `emit_response`. The chat-turn service uses a public host surface (`ensure_agent_loop`, `teardown_agent_resources`, `session_stats`, `task_store`, `emit_cost_update`, and related properties) rather than reaching into private `BackendServer` fields directly.
 
 That makes it powerful, but it also means the backend module boundary is not yet cleanly separated internally.
 
@@ -302,6 +304,12 @@ Run:
 autocode serve --transport stdio
 autocode serve --transport tcp --host 127.0.0.1 --port 8765
 ```
+
+TCP attach mode is local-first by design. The backend refuses non-loopback bind
+hosts by default, serves one active frontend client at a time, queues later
+connections until the active client disconnects, and serializes outbound writes
+through a single drain path so a slow client cannot spawn unbounded concurrent
+drain tasks.
 
 Direct programmatic exercise:
 
@@ -330,9 +338,9 @@ What is already good:
 What still blocks easy backend swapping:
 
 - the frontend assumes the current JSON-RPC method set and the current spawn-managed or attach-mode startup model
-- the backend application surface is still centered on `BackendServer`, with `chat.py` depending on a wide host protocol rather than a thinner service boundary
+- the backend application surface is still centered on `BackendServer`; `chat.py` now depends on a public host protocol, but the protocol remains broad and should be narrowed further as services split out
 - transport abstraction exists, but only stdio and single-client TCP hosts are built today
-- capability negotiation, reconnect, and remote-host security semantics are still not explicit
+- capability negotiation and reconnect semantics are still not explicit; remote-host attach is intentionally unsupported by the default TCP host
 
 ## 5. Shared Contract Inventory
 
@@ -373,7 +381,7 @@ The Rust TUI now supports both spawn-managed and attach mode, but the default ba
 
 ### 6.2 Slash command semantics are shared, but still backend-led
 
-The old frontend-local command-semantics leak is fixed: command semantics now live in `autocode.app.commands`. The remaining seam is that frontend UX still depends on the backend-owned command catalog and backend-owned provider/model/session list data.
+The old frontend-local command-semantics leak is fixed: command semantics now live in `autocode.app.commands`. The Rust TUI consumes the command catalog over backend RPC, Textual constructs `CommandRouter` from the shared module, `autocode.tui.commands` remains only a compatibility alias, and the Rich legacy REPL dispatches slash input through the same shared router before falling back to provider chat. The remaining seam is that frontend UX still depends on the backend-owned command catalog and backend-owned provider/model/session list data.
 
 ### 6.3 Transport is abstracted, but not broadly generalized
 

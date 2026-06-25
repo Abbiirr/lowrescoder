@@ -80,15 +80,15 @@ Status note (2026-04-23):
 
 Carry-forward items from Claude Entry `1400` after approving Phases 1-4 and tightening the Phase 5 close criterion.
 
-- [ ] Narrow `autocode.backend.chat.ChatHost` to a real public service surface instead of relying on `BackendServer` internals.
-- [ ] Rename `autocode/rtui/src/backend/pty.rs` or restore a real PTY-backed spawn path, and preserve backend stderr on the live user path.
-- [ ] Remove dead `ChildGuard` / resize scaffolding if the spawn-managed path remains stdio-based.
-- [ ] Expand the transport conformance harness beyond the current session/command/status seed surface.
-- [ ] Tighten or document the real `RpcApplication` host-adapter protocol surface.
-- [ ] Decide and document TCP host single-client behavior explicitly.
-- [ ] Warn or refuse non-loopback `serve --transport tcp --host` binds by default.
-- [ ] Replace fire-and-forget TCP drain tasks with a back-pressure-safe writer strategy.
-- [ ] Verify Textual and legacy UI entrypoints consume the shared `autocode.app.commands` runtime cleanly.
+- [x] Narrow `autocode.backend.chat.ChatHost` to a real public service surface instead of relying on `BackendServer` internals.
+- [x] Rename `autocode/rtui/src/backend/pty.rs` to `stdio.rs` for the spawn-managed stdio path, and preserve backend stderr on the live user path via `~/.autocode/tui.log`.
+- [x] Remove dead `ChildGuard` / resize scaffolding now that the spawn-managed path remains stdio-based.
+- [x] Expand the transport conformance harness beyond the current session/command/status seed surface.
+- [x] Tighten or document the real `RpcApplication` host-adapter protocol surface.
+- [x] Decide and document TCP host single-client behavior explicitly.
+- [x] Warn or refuse non-loopback `serve --transport tcp --host` binds by default.
+- [x] Replace fire-and-forget TCP drain tasks with a back-pressure-safe writer strategy.
+- [x] Verify Textual and legacy UI entrypoints consume the shared `autocode.app.commands` runtime cleanly.
 
 ## Phase 6 — Cutover And Cleanup
 

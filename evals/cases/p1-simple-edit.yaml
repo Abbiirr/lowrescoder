@@ -1,0 +1,34 @@
+id: p1-simple-edit
+name: P1 simple edit and verify diff
+provenance:
+  source: p1
+  bug_id: simple-edit
+  recorded_at: "2026-04-30"
+setup:
+  fixture_repo: ""
+  initial_files: {}
+input:
+  user_message: |
+    Create a file called hello.py with the content: print("hello world")
+    Then verify it exists by reading it back.
+expected_outcomes:
+  must_have:
+    - "item_completed"
+    - "turn_completed"
+  must_not_have:
+    - "error"
+  judge_criteria:
+    - correctness
+    - test_quality
+config:
+  model: coding
+  max_turns: 3
+  timeout_sec: 120
+  temperature: 0.0
+  seed: 0
+baseline:
+  correctness_score: 0.90
+  minimality_score: 0.80
+  test_quality_score: 0.75
+  cost_usd_p50: 0.20
+archived: false
