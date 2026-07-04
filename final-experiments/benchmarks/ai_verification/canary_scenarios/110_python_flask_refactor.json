@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-refactor-003",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Extract Flask blog in-memory store into a PostStore class",
+  "description": "Brownfield Python refactor: extract the module-level _posts list and _next_id counter from app.py into a PostStore class with method receivers. Route handlers become thin wrappers. All existing tests must pass.",
+  "target_stack": {
+    "language": "python",
+    "framework": "flask",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_blog_app",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Refactor src/app.py: extract the in-memory post store into a PostStore class. All existing tests must still pass without modification.\n\nAdd a PostStore class with:\n  def __init__(self) — initialise _posts list with the 5 fixture posts and _next_id=6\n  def reset(self) — restores fixture data and resets _next_id=6\n  def all(self) -> list[dict] — returns a copy of all posts\n  def published(self) -> list[dict] — returns only published posts\n  def get(self, post_id: int) -> dict | None — returns post by id or None\n  def create(self, data: dict) -> dict — creates post, increments _next_id, appends, returns post dict\n\nCreate a module-level instance:\n  _store = PostStore()\n\nUpdate the module-level reset() function to delegate to _store.reset().\n\nUpdate route handlers to call _store methods instead of operating on _posts directly.\nRoute URLs, response shapes, and status codes must remain identical.\n\nAll 6 existing tests must pass without any modification.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "PostStore class with __init__, reset, all, published, get, create methods",
+      "Module-level _store = PostStore() instance",
+      "reset() delegates to _store.reset()",
+      "Route handlers call _store methods",
+      "All 6 existing tests pass unmodified"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ passes",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `uv run pytest tests/ -v` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

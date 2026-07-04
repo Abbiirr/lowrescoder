@@ -1,0 +1,21 @@
+title: Memory survives restart
+category: backend_feature
+difficulty: medium
+target_stack:
+  language: python
+task_spec:
+  prompt: |
+    Use durable memory to write a topic called facts with the content
+    "restart-memory-check". Then read that topic back and report the content.
+repo_seed:
+  mode: fresh
+expected_outcomes:
+  must_have:
+    - "item_started with kind=tool_execution"
+    - "item_completed result contains restart-memory-check"
+    - "turn_completed event with usage"
+  must_not_have:
+    - "error event"
+grading:
+  checks:
+    - snapshot

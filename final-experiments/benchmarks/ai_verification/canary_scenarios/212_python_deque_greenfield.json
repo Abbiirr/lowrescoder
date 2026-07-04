@@ -1,0 +1,75 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-008",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Build a double-ended queue (Deque) in Python",
+  "description": "Greenfield Python task: implement a Deque class with append, appendleft, pop, popleft, peek, peek_left, is_empty, and __len__ methods. Raises IndexError on pop/peek of empty deque.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"deque\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/deque.py",
+        "content": "# TODO: implement Deque\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_deque.py",
+        "content": "import pytest\nfrom src.deque import Deque\n\n\ndef test_append_pop():\n    d = Deque()\n    d.append(1)\n    d.append(2)\n    assert d.pop() == 2\n    assert d.pop() == 1\n\n\ndef test_appendleft_popleft():\n    d = Deque()\n    d.appendleft(1)\n    d.appendleft(2)\n    assert d.popleft() == 2\n    assert d.popleft() == 1\n\n\ndef test_peek():\n    d = Deque()\n    d.append(10)\n    d.append(20)\n    assert d.peek() == 20\n    assert len(d) == 2\n\n\ndef test_peek_left():\n    d = Deque()\n    d.append(1)\n    d.append(2)\n    assert d.peek_left() == 1\n    assert len(d) == 2\n\n\ndef test_is_empty():\n    d = Deque()\n    assert d.is_empty()\n    d.append(1)\n    assert not d.is_empty()\n\n\ndef test_len():\n    d = Deque()\n    d.append(1)\n    d.appendleft(2)\n    d.append(3)\n    assert len(d) == 3\n\n\ndef test_pop_empty_raises():\n    d = Deque()\n    with pytest.raises(IndexError):\n        d.pop()\n\n\ndef test_popleft_empty_raises():\n    d = Deque()\n    with pytest.raises(IndexError):\n        d.popleft()\n\n\ndef test_mixed_operations():\n    d = Deque()\n    d.append(3)\n    d.appendleft(1)\n    d.append(4)\n    # internal order: [1, 3, 4]\n    assert d.popleft() == 1\n    assert d.pop() == 4\n    assert len(d) == 1\n    assert d.peek() == 3\n    assert d.peek_left() == 3\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement Deque in src/deque.py.\n\nclass Deque:\n    def __init__(self)\n    def append(self, item)        # add to right end\n    def appendleft(self, item)   # add to left end\n    def pop(self) -> any          # remove from right; raise IndexError if empty\n    def popleft(self) -> any     # remove from left;  raise IndexError if empty\n    def peek(self) -> any         # view right end without removing; raise IndexError if empty\n    def peek_left(self) -> any   # view left end without removing;  raise IndexError if empty\n    def is_empty(self) -> bool\n    def __len__(self) -> int\n\nAll 9 tests in tests/test_deque.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "Internal list or linked-structure storing elements in order",
+      "append adds to right end, appendleft adds to left end",
+      "pop removes from right, popleft removes from left",
+      "peek and peek_left return without removing",
+      "IndexError raised when popping or peeking empty deque",
+      "All 9 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (9 tests)",
+      "uv run python -c \"from src.deque import Deque\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.deque import Deque\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

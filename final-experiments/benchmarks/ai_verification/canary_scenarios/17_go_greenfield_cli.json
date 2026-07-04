@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-003",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 20,
+  "title": "Greenfield: build a Go line-count CLI tool from scratch",
+  "description": "Start with an empty Go module (go.mod only). Build a CLI that counts lines, words, and characters in one or more files (like wc). Include a proper package structure and tests.",
+  "target_stack": {
+    "language": "go",
+    "framework": "",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": "",
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module github.com/ai-verification/go-wc\n\ngo 1.21\n"
+      },
+      {
+        "path": "README.md",
+        "content": "# go-wc\n\nA line/word/char counter CLI (like Unix `wc`).\n\nUsage: `go-wc [--lines] [--words] [--chars] <file> [<file>...]`\n\nDefault (no flags): show all three counts.\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Build a `wc`-like CLI tool from scratch in this Go module.\n\nStructure:\n  internal/counter/counter.go  — Count(r io.Reader) -> (lines, words, chars int, err error)\n  internal/counter/counter_test.go  — at least 4 tests\n  cmd/go-wc/main.go  — CLI: accepts one or more file paths, flags --lines/--words/--chars\n    If no flags: print all three. If flag(s): print only requested counts.\n    Format per file: <lines>\\t<words>\\t<chars>\\t<filename>  (omit columns not requested)\n    Exit 1 if any file fails to open.\n\nRequirements:\n- Use only stdlib (no external deps)\n- counter.Count reads from io.Reader (testable without real files)\n- 4+ tests in counter_test.go covering: empty input, single line, multi-line, unicode\n- go test ./... must pass\n- go build ./... must succeed",
+    "required_artifacts": [
+      "internal/counter/counter.go with Count function",
+      "internal/counter/counter_test.go with 4+ tests",
+      "cmd/go-wc/main.go with flag parsing",
+      "go test ./... passes",
+      "go build ./... succeeds"
+    ],
+    "success_criteria": [
+      "Count reads from io.Reader correctly",
+      "Lines counted as newline-terminated",
+      "Words split on whitespace",
+      "Chars counted as Unicode codepoints",
+      "CLI handles multiple files",
+      "4+ passing tests"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

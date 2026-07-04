@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-032",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "hard",
+  "duration_hint_minutes": 35,
+  "title": "Implement a token bucket rate limiter in Go",
+  "description": "Greenfield Go task: implement a thread-safe TokenBucket rate limiter with a configurable capacity and refill rate. Allow() returns true if a token is available and consumes it; the bucket refills tokens over time.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module ratelimit\n\ngo 1.21\n"
+      },
+      {
+        "path": "limiter.go",
+        "content": "package ratelimit\n\n// TODO: implement TokenBucket rate limiter\n"
+      },
+      {
+        "path": "limiter_test.go",
+        "content": "package ratelimit\n\nimport (\n\t\"sync\"\n\t\"testing\"\n\t\"time\"\n)\n\nfunc TestAllow_FullBucket(t *testing.T) {\n\tlb := NewTokenBucket(5, 1.0) // capacity=5, refill=1/sec\n\tfor i := 0; i < 5; i++ {\n\t\tif !lb.Allow() {\n\t\t\tt.Fatalf(\"expected Allow() true on attempt %d\", i+1)\n\t\t}\n\t}\n\tif lb.Allow() {\n\t\tt.Fatal(\"bucket should be empty after 5 allows\")\n\t}\n}\n\nfunc TestAllow_Refill(t *testing.T) {\n\tlb := NewTokenBucket(2, 10.0) // refill 10 tokens/sec\n\tlb.Allow()\n\tlb.Allow() // drain\n\ttime.Sleep(150 * time.Millisecond) // ~1.5 tokens refilled\n\tif !lb.Allow() {\n\t\tt.Fatal(\"expected at least 1 token after refill\")\n\t}\n}\n\nfunc TestAllow_NotExceedCapacity(t *testing.T) {\n\tlb := NewTokenBucket(3, 1000.0) // very fast refill\n\ttime.Sleep(50 * time.Millisecond)\n\t// bucket should be capped at 3, not overflow\n\tcount := 0\n\tfor lb.Allow() {\n\t\tcount++\n\t}\n\tif count != 3 {\n\t\tt.Fatalf(\"expected 3 (capacity), got %d\", count)\n\t}\n}\n\nfunc TestAllow_Concurrent(t *testing.T) {\n\tlb := NewTokenBucket(100, 0) // no refill, 100 tokens\n\tvar allowed int64\n\tvar mu sync.Mutex\n\tvar wg sync.WaitGroup\n\tfor i := 0; i < 200; i++ {\n\t\twg.Add(1)\n\t\tgo func() {\n\t\t\tdefer wg.Done()\n\t\t\tif lb.Allow() {\n\t\t\t\tmu.Lock()\n\t\t\t\tallowed++\n\t\t\t\tmu.Unlock()\n\t\t\t}\n\t\t}()\n\t}\n\twg.Wait()\n\tif allowed != 100 {\n\t\tt.Fatalf(\"want 100 allowed, got %d\", allowed)\n\t}\n}\n\nfunc TestAllow_ZeroCapacity(t *testing.T) {\n\tlb := NewTokenBucket(0, 0)\n\tif lb.Allow() {\n\t\tt.Fatal(\"zero capacity bucket should never allow\")\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement TokenBucket in limiter.go.\n\npackage ratelimit\n\nimport (\n    \"sync\"\n    \"time\"\n)\n\ntype TokenBucket struct {\n    mu        sync.Mutex\n    capacity  float64\n    tokens    float64\n    refillRate float64  // tokens per second\n    lastRefill time.Time\n}\n\nfunc NewTokenBucket(capacity int, refillRate float64) *TokenBucket {\n    return &TokenBucket{\n        capacity:   float64(capacity),\n        tokens:     float64(capacity),\n        refillRate: refillRate,\n        lastRefill: time.Now(),\n    }\n}\n\nfunc (tb *TokenBucket) Allow() bool {\n    tb.mu.Lock()\n    defer tb.mu.Unlock()\n    // Refill based on elapsed time\n    now := time.Now()\n    elapsed := now.Sub(tb.lastRefill).Seconds()\n    tb.tokens = min(tb.capacity, tb.tokens + elapsed*tb.refillRate)\n    tb.lastRefill = now\n    if tb.tokens >= 1 {\n        tb.tokens--\n        return true\n    }\n    return false\n}\n\n// min helper for float64\nfunc min(a, b float64) float64 { if a < b { return a }; return b }\n\nAll 5 tests must pass.\nRun: go test -race ./...",
+    "required_artifacts": [
+      "TokenBucket is protected by sync.Mutex",
+      "Allow() refills tokens based on elapsed time since lastRefill",
+      "tokens are capped at capacity",
+      "Allow() returns false when tokens < 1",
+      "All 5 tests pass under -race"
+    ],
+    "success_criteria": [
+      "go test -race ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test -race ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test -race ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test -race ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

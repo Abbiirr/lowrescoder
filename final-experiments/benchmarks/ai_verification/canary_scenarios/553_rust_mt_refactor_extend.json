@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "553-rust-mt-refactor-extend",
+  "title": "Refactor clone-heavy Rust code then add Display impl — 3 turns",
+  "category": "refactor",
+  "difficulty": "medium",
+  "target_stack": {"language": "rust", "framework": null, "extra": {}},
+  "description": "Code clones unnecessarily everywhere. Reduce clones, keep tests green, add Display impl.",
+  "repo_seed": {
+    "files": {
+      "Cargo.toml": "[package]\nname = \"refactor-rust\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+      "src/lib.rs": "//! Clone-heavy code that needs refactoring.\n\n#[derive(Debug, Clone, PartialEq)]\npub struct Config {\n    pub name: String,\n    pub value: i32,\n    pub tags: Vec<String>,\n}\n\nimpl Config {\n    pub fn new(name: String, value: i32, tags: Vec<String>) -> Self {\n        Config { name, value, tags }\n    }\n\n    /// Returns config name. CLONE-HEAVY: clones unnecessarily.\n    pub fn get_name(&self) -> String {\n        self.name.clone() // should return &str\n    }\n\n    /// Returns tags. CLONE-HEAVY: clones all tags.\n    pub fn get_tags(&self) -> Vec<String> {\n        self.tags.clone() // should return &[String]\n    }\n\n    /// Returns formatted string. CLONE-HEAVY: clones name just to format.\n    pub fn summary(&self) -> String {\n        format!(\"{}={} tags={:?}\", self.name.clone(), self.value, self.tags.clone())\n    }\n\n    /// Check if tag exists. CLONE-HEAVY: clones each tag for comparison.\n    pub fn has_tag(&self, tag: &str) -> bool {\n        self.tags.iter().any(|t| t.clone() == tag.to_string()) // unnecessary clones\n    }\n}\n\n// Display impl: TODO\n// Should format as \"Config{name} (value=N, tags=[t1, t2])\"\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_basic() {\n        let c = Config::new(\"db\".into(), 42, vec![\"prod\".into(), \"cloud\".into()]);\n        assert_eq!(c.get_name(), \"db\");\n        assert!(c.has_tag(\"prod\"));\n        assert!(!c.has_tag(\"dev\"));\n    }\n\n    #[test]\n    fn test_summary() {\n        let c = Config::new(\"api\".into(), 8080, vec![]);\n        let s = c.summary();\n        assert!(s.contains(\"api\"));\n        assert!(s.contains(\"8080\"));\n    }\n\n    #[test]\n    fn test_get_tags() {\n        let c = Config::new(\"x\".into(), 1, vec![\"a\".into(), \"b\".into()]);\n        assert_eq!(c.get_tags(), [\"a\", \"b\"]);\n    }\n\n    #[test]\n    fn test_display() {\n        let c = Config::new(\"svc\".into(), 5, vec![\"t1\".into(), \"t2\".into()]);\n        let s = format!(\"{}\", c);\n        assert!(s.contains(\"svc\"));\n        assert!(s.contains(\"5\"));\n        assert!(s.contains(\"t1\"));\n    }\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Refactor `Config` in `src/lib.rs` to reduce unnecessary clones:\n1. Change `get_name()` to return `&str` instead of `String`\n2. Change `get_tags()` to return `&[String]` instead of `Vec<String>`\n3. Fix `summary()` to not clone name or tags before using them in format!\n4. Fix `has_tag()` to compare `t.as_str() == tag` instead of cloning\nRun `cargo test --quiet` to confirm no regressions.",
+    "followup_prompts": [
+      "Run `cargo test --quiet` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: implement `std::fmt::Display` for `Config`. Format it as `Config{name} (value=N, tags=[t1, t2])`. Then run `cargo test --quiet` and confirm everything is green — all 4 tests must pass."
+    ],
+    "success_criteria": [
+      "get_name returns &str (no clone)",
+      "get_tags returns &[String] (no clone)",
+      "summary and has_tag don't clone unnecessarily",
+      "Display impl formats Config correctly",
+      "cargo test passes (4 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "cargo test --quiet"}
+  },
+  "duration_hint_minutes": 15
+}

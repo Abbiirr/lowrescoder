@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-migration-006",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Introduce Text newtype wrapper for rust_string_utils",
+  "description": "Brownfield Rust migration: wrap the existing string utility functions in a Text newtype that exposes them as methods.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_string_utils",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Migrate src/lib.rs to introduce a Text newtype wrapper. All 3 existing tests must still pass.\n\nAdd:\n  pub struct Text(String);\n\n  impl Text {\n    pub fn new(s: &str) -> Self\n      — wraps s in a Text\n    pub fn word_count(&self) -> usize\n      — delegates to the free function word_count(&self.0)\n    pub fn capitalize_words(&self) -> String\n      — delegates to the free function capitalize_words(&self.0)\n  }\n\n  impl std::fmt::Display for Text {\n    — formats as the inner String\n  }\n\nDo not modify the existing free functions or tests.\nAdd tests for the Text struct methods (at least 3).\nAll 3 existing tests must still pass.\nRun: cargo test",
+    "required_artifacts": [
+      "Text newtype wrapping String",
+      "Text::new(s) constructs from &str",
+      "Text::word_count() delegates to free function",
+      "Text::capitalize_words() delegates to free function",
+      "Display impl formats as inner string",
+      "At least 3 tests for Text methods",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `cargo test` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

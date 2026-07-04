@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-backend-006",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Extend python_legacy_report with index generation and merge utilities",
+  "description": "Brownfield Python task: add generate_index_html and merge_reports functions to the report_gen module.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_legacy_report",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add two new functions to src/report_gen.py. All 5 existing tests must still pass.\n\n  def generate_index_html(base_dir: str) -> str\n    — calls list_reports(base_dir) to get report names\n    — writes base_dir/index.html with an <ul> listing each report name as <li>{name}</li>\n    — returns the full path to index.html\n    — if there are no reports, writes <ul><li><em>no reports</em></li></ul>\n\n  def merge_reports(base_dir: str, report_names: list[str], output_name: str, title: str) -> str\n    — for each name in report_names: reads rows from the existing report.html in that subdirectory\n      (parse all <tr>...</tr> blocks and extract <td> text values as a list per row)\n    — calls ensure_report_dir and write_html_report with the combined rows and the given title\n    — returns the path to the merged report.html\n    — if a named report does not exist or has no rows, skip it silently\n\nAdd at least 4 tests for the new functions in tests/test_report_gen.py.\nAll 5 existing tests must still pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "generate_index_html creates index.html in base_dir",
+      "generate_index_html lists all report names as li elements",
+      "generate_index_html shows empty state for no reports",
+      "merge_reports combines rows from multiple reports",
+      "merge_reports returns valid HTML path",
+      "All 5 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run python -c \"from src.report_gen import generate_index_html, merge_reports\" passes"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `uv run pytest tests/ -v` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.report_gen import write_html_report, read_report\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

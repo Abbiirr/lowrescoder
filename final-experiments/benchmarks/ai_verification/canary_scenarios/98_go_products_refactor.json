@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-refactor-003",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Extract global product state into a ProductStore struct in Go legacy products API",
+  "description": "The Go products API uses package-level global variables for state (store, nextID, mu). Refactor to a ProductStore struct with method receivers while keeping all existing tests passing via package-level wrapper functions.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_legacy_products",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Refactor internal/products/products.go: replace the three package-level globals (store, nextID, mu) with a ProductStore struct.\n\nRequirements:\n  type ProductStore struct {\n      mu     sync.Mutex\n      items  []Product\n      nextID int\n  }\n\n  func NewProductStore() *ProductStore — creates store with nextID=1\n\n  Move all CRUD logic to (*ProductStore) methods:\n    func (s *ProductStore) Reset()\n    func (s *ProductStore) Handler(w http.ResponseWriter, r *http.Request)\n    (and any internal helpers)\n\n  Keep the existing package-level API working by wiring to a default instance:\n    var defaultStore = NewProductStore()\n    func ResetStore() { defaultStore.Reset() }\n    func Handler(w http.ResponseWriter, r *http.Request) { defaultStore.Handler(w, r) }\n\nAll 4 existing tests (TestListEmpty, TestCreateAndGet, TestGetNotFound, TestDelete) must still pass — they use the package-level Handler and ResetStore.\nRun: go test ./...",
+    "required_artifacts": [
+      "ProductStore struct with mu/items/nextID fields",
+      "NewProductStore() constructor",
+      "CRUD logic on (*ProductStore) method receivers",
+      "Package-level Handler and ResetStore delegate to defaultStore",
+      "All 4 existing tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (4 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `go test ./...` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

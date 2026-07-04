@@ -1,0 +1,51 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-migration-009",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Migrate python-multistep-service store from module dict to Store class",
+  "description": "Brownfield Python migration: replace the module-level _records dict in store.py with a Store class, keeping the free-function API unchanged.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_multistep_service",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Migrate src/store.py to use a Store class. All 6 existing tests must still pass.\n\n  class Store:\n      def __init__(self) -> None:\n          self._records: dict[str, list[str]] = {}\n\n      def save(self, key: str, values: list[str]) -> None\n        — stores values under key\n\n      def load(self, key: str) -> list[str] | None\n        — returns values for key, or None if missing\n\n      def all_keys(self) -> list[str]\n        — returns list of all stored keys\n\n      def clear(self) -> None\n        — removes all records\n\n  _store = Store()\n\nKeep the existing free functions (save, load, all_keys, clear) as one-liners that\ndelegate to _store. Do not modify tests/ or any other file.\nAll 6 existing tests must still pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "Store class defined with save, load, all_keys, clear methods",
+      "Module-level _store = Store() instance",
+      "Free functions save/load/all_keys/clear delegate to _store",
+      "All 6 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

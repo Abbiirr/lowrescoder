@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "527-rust-mt-debug-lifetime",
+  "title": "Debug lifetime bug in Rust — 3 turns",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {"language": "rust", "framework": null, "extra": {}},
+  "description": "Function returns a reference to a local String (doesn't compile). Fix by returning owned value, run tests, refactor to use Arc for shared ownership.",
+  "repo_seed": {
+    "files": {
+      "Cargo.toml": "[package]\nname = \"lifetime-fix\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+      "src/lib.rs": "//! Lifetime bugs — won't compile as written.\nuse std::sync::Arc;\n\n/// BUG: returns reference to a local String — dangling reference.\n/// Fix: return String (owned) instead.\npub fn make_greeting(name: &str) -> String {\n    // This is fine — returns owned String. But the original was:\n    // let greeting = format!(\"Hello, {}!\", name);\n    // return &greeting;  // ERROR: returns reference to local\n    // We'll represent the bug as returning empty string (compiled but wrong):\n    String::new() // BUG: returns empty, should return format!(\"Hello, {}!\", name)\n}\n\n/// Stores a reference — BUG: lifetime annotation missing makes this\n/// fail to compile with a non-'static reference.\n/// Fix: store Arc<String> for shared ownership.\npub struct GreetingCache {\n    // BUG: should use Arc<String> instead of trying to store reference\n    cached: Option<Arc<String>>,\n}\n\nimpl GreetingCache {\n    pub fn new() -> Self {\n        GreetingCache { cached: None }\n    }\n\n    /// Store a greeting (takes ownership via Arc).\n    pub fn store(&mut self, greeting: String) {\n        self.cached = Some(Arc::new(greeting));\n    }\n\n    /// Retrieve the cached greeting (clones the Arc, not the String).\n    pub fn get(&self) -> Option<Arc<String>> {\n        self.cached.clone()\n    }\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_make_greeting() {\n        assert_eq!(make_greeting(\"Alice\"), \"Hello, Alice!\");\n        assert_eq!(make_greeting(\"Bob\"), \"Hello, Bob!\");\n    }\n\n    #[test]\n    fn test_make_greeting_empty() {\n        assert_eq!(make_greeting(\"\"), \"Hello, !\");\n    }\n\n    #[test]\n    fn test_cache_store_and_get() {\n        let mut cache = GreetingCache::new();\n        cache.store(\"Hello, World!\".to_string());\n        let result = cache.get().unwrap();\n        assert_eq!(*result, \"Hello, World!\");\n    }\n\n    #[test]\n    fn test_cache_shared_arc() {\n        let mut cache = GreetingCache::new();\n        cache.store(\"shared\".to_string());\n        let a = cache.get().unwrap();\n        let b = cache.get().unwrap();\n        // Both point to same allocation\n        assert!(Arc::ptr_eq(&a, &b));\n    }\n\n    #[test]\n    fn test_cache_empty() {\n        let cache = GreetingCache::new();\n        assert!(cache.get().is_none());\n    }\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The `make_greeting` function in `src/lib.rs` returns an empty `String::new()` instead of the formatted greeting. Fix it to return `format!(\"Hello, {}!\", name)`. Run `cargo test --quiet`.",
+    "followup_prompts": [
+      "Run `cargo test --quiet` to check the current state. Walk me through what you fixed. Look at `GreetingCache` — it uses `Arc<String>` correctly already, but make sure `store()` and `get()` compile and work. If any tests are failing, fix them.",
+      "Final step: refactor `make_greeting` to use `Arc<String>` if you haven't already — actually keep it returning `String` (that's correct), but add a new method `GreetingCache::store_greeting(name: &str)` that calls make_greeting internally and stores the result. Add a test if you can. Then run `cargo test --quiet` — all 5 existing tests must pass."
+    ],
+    "success_criteria": [
+      "make_greeting returns correctly formatted greeting string",
+      "GreetingCache.store() wraps String in Arc",
+      "GreetingCache.get() returns cloned Arc (same allocation)",
+      "get() returns None when cache is empty",
+      "cargo test passes (5 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "cargo test --quiet"}
+  },
+  "duration_hint_minutes": 15
+}

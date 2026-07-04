@@ -1,0 +1,281 @@
+{
+  "contract": {
+    "harness_version": "1.0.0",
+    "harness_commit_sha": "unknown",
+    "agent": "autocode",
+    "agent_version": "0.1.0",
+    "model": "fast",
+    "provider_mode": "local_free",
+    "lane": "META",
+    "run_id": "supervisor-meta004-20260625-163108",
+    "manifest_hash": "sha256:412e687ab57d3fc2",
+    "budget_profile": {
+      "wall_time_s": 1800,
+      "token_cap": 80000,
+      "max_tool_calls": 150
+    },
+    "budget_profile_id": "wt1800_tc80000_mc150",
+    "command_trace": "../benchmarks/benchmark_runner.py --agent autocode --lane META --model fast --run-id supervisor-meta004-20260625-163108",
+    "timestamp": "2026-06-25T10:40:13.766832+00:00",
+    "comparison_validity": "internal",
+    "seed": null,
+    "image_digests": {
+      "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+    }
+  },
+  "lane": "META",
+  "lane_name": "meta-autocode Build Lane",
+  "agent": "autocode",
+  "model": "fast",
+  "provider_mode": "local_free",
+  "aggregate": {
+    "total_tasks": 4,
+    "resolved": 3,
+    "resolve_rate": 0.75,
+    "infra_fails": 0,
+    "infra_fail_rate": 0.0,
+    "total_wall_time_s": 332.1,
+    "avg_wall_time_s": 83.0
+  },
+  "results": [
+    {
+      "task_id": "meta-001-piv-strategy",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 55.4,
+      "tool_calls": 19,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 55.4,
+            "changed_files": [],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "44129cf1",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-001-piv-strategy_20260625_103109/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 3,
+              "todo_write": 6,
+              "run_command": 4,
+              "write_file": 3,
+              "read_file": 3
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-001-piv-strategy_20260625_103109/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-002-context-loader",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 52.8,
+      "tool_calls": 17,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 52.8,
+            "changed_files": [],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "8171b662",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-002-context-loader_20260625_103257/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 2,
+              "read_file": 6,
+              "todo_write": 5,
+              "write_file": 1,
+              "run_command": 2,
+              "todo_read": 1
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-002-context-loader_20260625_103257/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-003-benchmark-maxxing",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 51.8,
+      "tool_calls": 16,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 51.8,
+            "changed_files": [],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "daf41987",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-003-benchmark-maxxing_20260625_103441/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 4,
+              "todo_write": 4,
+              "write_file": 1,
+              "run_command": 6
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-003-benchmark-maxxing_20260625_103441/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-004-runner-integration",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 172.1,
+      "tool_calls": 57,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 1,
+            "resolved": false,
+            "elapsed_s": 65.8,
+            "changed_files": [
+              "tests/test_runner.py"
+            ],
+            "test_files_changed": true,
+            "protected_path_violation": [
+              "tests/test_runner.py"
+            ],
+            "diff_hash": "f540660d",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-004-runner-integration_20260625_103628/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 2,
+              "read_file": 6,
+              "todo_write": 4,
+              "write_file": 1,
+              "run_command": 5,
+              "edit_file": 2
+            },
+            "tool_call_errors": 0
+          },
+          {
+            "attempt": 2,
+            "returncode": 1,
+            "resolved": false,
+            "elapsed_s": 132.4,
+            "changed_files": [
+              "tests/test_runner.py"
+            ],
+            "test_files_changed": true,
+            "protected_path_violation": [
+              "tests/test_runner.py"
+            ],
+            "diff_hash": "d41d8cd9",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-004-runner-integration_20260625_103628/grading_attempt_2.txt",
+            "tool_mix": {
+              "list_files": 3,
+              "todo_write": 2,
+              "read_file": 5,
+              "run_command": 9,
+              "search_text": 3,
+              "edit_file": 3,
+              "write_file": 1
+            },
+            "tool_call_errors": 0
+          },
+          {
+            "attempt": 3,
+            "returncode": 1,
+            "resolved": false,
+            "elapsed_s": 172.1,
+            "changed_files": [
+              "src/meta_autocode/scorer.py"
+            ],
+            "test_files_changed": true,
+            "protected_path_violation": [
+              "src/meta_autocode/scorer.py"
+            ],
+            "diff_hash": "d41d8cd9",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-004-runner-integration_20260625_103628/grading_attempt_3.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 1,
+              "todo_write": 3,
+              "edit_file": 2,
+              "write_file": 1,
+              "run_command": 3
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "WRONG_FIX",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-004-runner-integration_20260625_103628/setup_log.txt"
+      }
+    }
+  ],
+  "image_digests": {
+    "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+  },
+  "halted": false
+}

@@ -1,0 +1,60 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-dirty-003",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix two logic inversions in Python signup handlers: inverted email guard and negated validator",
+  "description": "Two bugs were introduced: handle_signup() raises ValueError for VALID emails (condition inverted), and validate_user_record() returns False for valid records (negated result). Four of six tests now fail.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "refactor_extract_function",
+    "injections": [
+      {
+        "path": "src/handlers.py",
+        "content": "import re\n\n\ndef handle_signup(email: str, name: str) -> dict:\n    # BUG: condition inverted — raises for valid emails, accepts invalid ones\n    if re.match(r\"^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$\", email):\n        raise ValueError(f\"Invalid email: {email}\")\n    return {\"user\": name, \"email\": email}\n"
+      },
+      {
+        "path": "src/models.py",
+        "content": "import re\n\n\ndef validate_user_record(record: dict) -> bool:\n    email = record.get(\"email\", \"\")\n    # BUG: result negated — returns False for valid records, True for invalid\n    return not bool(re.match(r\"^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$\", email))\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix the two logic bugs in src/handlers.py and src/models.py.\n\nBug 1 — src/handlers.py: handle_signup() raises ValueError when the email IS valid (condition inverted). Fix: the guard should raise when the regex does NOT match:\n  if not re.match(r\"^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$\", email):\n      raise ValueError(f\"Invalid email: {email}\")\n\nBug 2 — src/models.py: validate_user_record() returns not bool(...) — the return value is negated. Fix: remove the not:\n  return bool(re.match(r\"^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$\", email))\n\nAll 6 tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "handle_signup raises ValueError for invalid emails only",
+      "validate_user_record returns True for valid email records",
+      "All 6 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ passes (6 tests)",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-longhorizon-011",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "duration_hint_minutes": 50,
+  "title": "Extend the sqlite db layer with update, delete, count, and search functions",
+  "description": "Long-horizon task on python_sqlite_migration: add four new functions to src/db.py — update_user, delete_user, count_users, and search_users — each with their own SQL query. All original tests must continue to pass.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_sqlite_migration",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Add four new functions to src/db.py:\n\n1. update_user(user_id: int, name: str) -> dict | None\n   UPDATE users SET name = ? WHERE id = ?\n   Return the updated user dict (via get_user) or None if user_id not found.\n\n2. delete_user(user_id: int) -> bool\n   DELETE FROM users WHERE id = ?\n   Return True if a row was deleted (cur.rowcount > 0), False otherwise.\n\n3. count_users() -> int\n   SELECT COUNT(*) FROM users\n   Return the integer count.\n\n4. search_users(name_pattern: str) -> list[dict]\n   SELECT * FROM users WHERE name LIKE ?\n   Pass name_pattern directly as the LIKE argument (e.g. '%Alice%').\n   Return list of matching user dicts.\n\nAll 4 original tests in tests/test_db.py must still pass.\nAlso add tests/test_db_extended.py covering the four new functions.",
+    "required_artifacts": [
+      "update_user returns updated dict or None for missing id",
+      "delete_user returns True when row deleted, False otherwise",
+      "count_users returns integer row count",
+      "search_users accepts LIKE pattern and returns matching dicts",
+      "All 4 original tests still pass",
+      "New extended tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (all tests including extended)",
+      "uv run python -c \"from src.db import create_user\" passes"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `uv run pytest tests/ -v` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `uv run pytest tests/ -v` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.db import create_user\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

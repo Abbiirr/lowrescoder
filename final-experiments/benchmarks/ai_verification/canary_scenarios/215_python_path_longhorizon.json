@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-longhorizon-010",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "medium",
+  "duration_hint_minutes": 45,
+  "title": "Extend python_path_migration with four new file utility functions",
+  "description": "Long-horizon task: extend the file_utils module with four additional file utility functions (copy_file, list_by_extension, read_all_text_files, delete_file) using pathlib. All existing functions must continue to work.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_path_migration",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Extend src/file_utils.py with four new functions (use pathlib.Path internally):\n\n1. copy_file(src: str, dst: str) -> str\n   - Copy the file at src to dst.\n   - Create parent directories of dst if they do not exist.\n   - Return dst as a str.\n\n2. list_by_extension(directory: str, ext: str) -> list[str]\n   - Return sorted list of filenames (not full paths) in directory whose suffix equals ext.\n   - ext should include the leading dot, e.g. \".py\" or \".txt\".\n\n3. read_all_text_files(directory: str) -> dict[str, str]\n   - Return a dict mapping filename to file contents for every .txt file in directory.\n   - Use UTF-8 encoding.\n\n4. delete_file(path: str) -> bool\n   - Delete the file at path.\n   - Return True if the file existed and was deleted, False if it did not exist.\n\nAll original tests (tests/test_file_utils.py) must still pass.\nAlso add tests/test_file_utils_extended.py covering the four new functions.",
+    "required_artifacts": [
+      "copy_file creates parent dirs and copies file, returns dst",
+      "list_by_extension returns sorted filenames matching the given extension",
+      "read_all_text_files returns {filename: content} dict for all .txt files",
+      "delete_file returns True on deletion and False when file absent",
+      "All original tests still pass",
+      "New tests for the four functions pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (all tests including extended)",
+      "uv run python -c \"from src.file_utils import list_text_files\" passes"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `uv run pytest tests/ -v` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `uv run pytest tests/ -v` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.file_utils import list_text_files\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

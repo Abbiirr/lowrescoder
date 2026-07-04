@@ -1,0 +1,71 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-long-003",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "hard",
+  "duration_hint_minutes": 45,
+  "title": "Build a configurable data pipeline: transform, filter, aggregate, format",
+  "description": "Multi-step task: implement a 4-stage data pipeline in Python. Each stage builds on the previous. Tests for all stages are provided.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"python-pipeline\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = [\"pytest>=8.0\", \"ruff>=0.4\"]\n\n[tool.pytest.ini_options]\npythonpath = [\"src\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nline-length = 100\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_pipeline.py",
+        "content": "from pipeline import transform_items, filter_items, aggregate, format_report\n\n\n_RAW = [\n    {\"name\": \"  alice  \", \"score\": \"85\", \"category\": \"A\"},\n    {\"name\": \"BOB\", \"score\": \"72\", \"category\": \"B\"},\n    {\"name\": \"Charlie\", \"score\": \"91\", \"category\": \"A\"},\n    {\"name\": \"diana\", \"score\": \"60\", \"category\": \"B\"},\n]\n\n\n# Stage 1: transform\ndef test_transform_normalizes_name():\n    result = transform_items(_RAW)\n    assert result[0][\"name\"] == \"Alice\"\n    assert result[1][\"name\"] == \"Bob\"\n\n\ndef test_transform_converts_score_to_int():\n    result = transform_items(_RAW)\n    assert isinstance(result[0][\"score\"], int)\n    assert result[0][\"score\"] == 85\n\n\n# Stage 2: filter\ndef test_filter_by_min_score():\n    items = transform_items(_RAW)\n    result = filter_items(items, min_score=75)\n    names = [r[\"name\"] for r in result]\n    assert \"Alice\" in names\n    assert \"Charlie\" in names\n    assert \"Bob\" not in names\n    assert \"Diana\" not in names\n\n\ndef test_filter_by_category():\n    items = transform_items(_RAW)\n    result = filter_items(items, category=\"A\")\n    assert all(r[\"category\"] == \"A\" for r in result)\n    assert len(result) == 2\n\n\ndef test_filter_combined():\n    items = transform_items(_RAW)\n    result = filter_items(items, min_score=80, category=\"A\")\n    assert len(result) == 2\n    assert all(r[\"score\"] >= 80 and r[\"category\"] == \"A\" for r in result)\n\n\n# Stage 3: aggregate\ndef test_aggregate_basic():\n    items = transform_items(_RAW)\n    stats = aggregate(items)\n    assert stats[\"count\"] == 4\n    assert stats[\"total\"] == 85 + 72 + 91 + 60\n    assert abs(stats[\"average\"] - (85 + 72 + 91 + 60) / 4) < 0.01\n    assert stats[\"max\"] == 91\n    assert stats[\"min\"] == 60\n\n\ndef test_aggregate_empty():\n    stats = aggregate([])\n    assert stats[\"count\"] == 0\n    assert stats[\"total\"] == 0\n    assert stats[\"average\"] == 0.0\n    assert stats[\"max\"] is None\n    assert stats[\"min\"] is None\n\n\n# Stage 4: format_report\ndef test_format_report_contains_stats():\n    items = transform_items(_RAW)\n    stats = aggregate(items)\n    report = format_report(stats)\n    assert \"count: 4\" in report\n    assert \"total: 308\" in report\n    assert \"max: 91\" in report\n    assert \"min: 60\" in report\n\n\ndef test_format_report_empty():\n    stats = aggregate([])\n    report = format_report(stats)\n    assert \"count: 0\" in report\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Create src/pipeline.py implementing a 4-stage data pipeline.\n\nStage 1 — transform_items(items: list[dict]) -> list[dict]:\n  For each item: strip+title-case 'name', convert 'score' from str to int. Return new list.\n\nStage 2 — filter_items(items: list[dict], *, min_score: int = 0, category: str | None = None) -> list[dict]:\n  Keep items where score >= min_score AND (category is None OR item['category'] == category).\n\nStage 3 — aggregate(items: list[dict]) -> dict:\n  Return {'count': N, 'total': sum, 'average': mean, 'max': max_score|None, 'min': min_score|None}.\n  Empty list -> count=0, total=0, average=0.0, max=None, min=None.\n\nStage 4 — format_report(stats: dict) -> str:\n  Return a multi-line string with one 'key: value' per line for count, total, average, max, min.\n  Use integers for count/total/max/min; format average to 2 decimal places.\n\nAll 10 tests in tests/test_pipeline.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "src/pipeline.py with all 4 functions",
+      "transform_items normalizes name to Title Case and score to int",
+      "filter_items supports min_score and category kwargs independently",
+      "aggregate handles empty list with None max/min",
+      "format_report contains all 5 stat lines",
+      "All 10 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ passes (10 tests)",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

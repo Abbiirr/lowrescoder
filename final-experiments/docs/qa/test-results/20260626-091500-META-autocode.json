@@ -1,0 +1,2374 @@
+{
+  "contract": {
+    "harness_version": "1.0.0",
+    "harness_commit_sha": "unknown",
+    "agent": "autocode",
+    "agent_version": "0.1.0",
+    "model": "fast",
+    "provider_mode": "local_free",
+    "lane": "META",
+    "run_id": "supervisor-20260626-111902",
+    "manifest_hash": "sha256:cc58ffb3241f71de",
+    "budget_profile": {
+      "wall_time_s": 1800,
+      "token_cap": 80000,
+      "max_tool_calls": 150
+    },
+    "budget_profile_id": "wt1800_tc80000_mc150",
+    "command_trace": "../benchmarks/benchmark_runner.py --agent autocode --lane META --model fast --run-id supervisor-20260626-111902",
+    "timestamp": "2026-06-26T09:15:00.963343+00:00",
+    "comparison_validity": "internal",
+    "seed": null,
+    "image_digests": {
+      "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+    }
+  },
+  "lane": "META",
+  "lane_name": "meta-autocode Build Lane",
+  "agent": "autocode",
+  "model": "fast",
+  "provider_mode": "local_free",
+  "aggregate": {
+    "total_tasks": 85,
+    "resolved": 8,
+    "resolve_rate": 0.094,
+    "infra_fails": 77,
+    "infra_fail_rate": 0.906,
+    "total_wall_time_s": 3053.1,
+    "avg_wall_time_s": 35.9
+  },
+  "results": [
+    {
+      "task_id": "meta-001-piv-strategy",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 261.3,
+      "tool_calls": 14,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "RuntimeError: Provider rate limit reached (429).",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-001-piv-strategy_20260626_051904/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-002-context-loader",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 137.0,
+      "tool_calls": 18,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 137.0,
+            "changed_files": [],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "c1c6869a",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-002-context-loader_20260626_052852/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 5,
+              "todo_write": 4,
+              "write_file": 1,
+              "run_command": 5,
+              "git_status": 1,
+              "search_text": 1
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-002-context-loader_20260626_052852/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-003-benchmark-maxxing",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 140.9,
+      "tool_calls": 11,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 140.9,
+            "changed_files": [],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "348250fe",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-003-benchmark-maxxing_20260626_053515/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 3,
+              "todo_write": 4,
+              "write_file": 1,
+              "run_command": 1,
+              "memory_index_show": 1
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-003-benchmark-maxxing_20260626_053515/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-004-runner-integration",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 238.2,
+      "tool_calls": 12,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "RuntimeError: Provider rate limit reached (429).",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-004-runner-integration_20260626_053955/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-005-environment-setup",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 119.2,
+      "tool_calls": 14,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Could not reach the configured gateway at http://localhost:4000/v1.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-005-environment-setup_20260626_054931/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-006-pydantic-color-compat",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 241.7,
+      "tool_calls": 10,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "RuntimeError: Provider rate limit reached (429).",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-006-pydantic-color-compat_20260626_055350/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-007-pagination-off-by-one",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 183.1,
+      "tool_calls": 12,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 183.1,
+            "changed_files": [
+              "src/paginator.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "8bcbe382",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-007-pagination-off-by-one_20260626_060322/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 4,
+              "todo_write": 5,
+              "edit_file": 1,
+              "run_command": 1
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-007-pagination-off-by-one_20260626_060322/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-008-async-coroutine-not-awaited",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 249.2,
+      "tool_calls": 13,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "RuntimeError: Provider rate limit reached (429).",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-008-async-coroutine-not-awaited_20260626_060937/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-009-incident-tracker-eof",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 81.7,
+      "tool_calls": 3,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Could not reach the configured gateway at http://localhost:4000/v1.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-009-incident-tracker-eof_20260626_062041/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-010-url-builder-urljoin",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 245.1,
+      "tool_calls": 11,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "RuntimeError: Provider rate limit reached (429).",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-010-url-builder-urljoin_20260626_062357/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-011-semver-string-comparison",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 139.2,
+      "tool_calls": 15,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 139.2,
+            "changed_files": [
+              "src/semver.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "36f98ac2",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-011-semver-string-comparison_20260626_063208/grading_attempt_1.txt",
+            "tool_mix": {
+              "read_file": 4,
+              "list_files": 1,
+              "todo_write": 5,
+              "edit_file": 3,
+              "run_command": 2
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-011-semver-string-comparison_20260626_063208/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-012-file-extension-detection",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 1.1,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway request was forbidden by the configured provider (403).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-012-file-extension-detection_20260626_063615/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-013-commit-counter-assignment",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 47.1,
+      "tool_calls": 4,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 47.1,
+            "changed_files": [
+              "src/commit_stats.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "991a3996",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-013-commit-counter-assignment_20260626_063801/grading_attempt_1.txt",
+            "tool_mix": {
+              "edit_file": 1,
+              "run_command": 1,
+              "todo_write": 1,
+              "read_file": 1
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-013-commit-counter-assignment_20260626_063801/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-014-display-truncation-overflow",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 241.8,
+      "tool_calls": 12,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "RuntimeError: Provider rate limit reached (429).",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-014-display-truncation-overflow_20260626_064042/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-015-config-deep-merge",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 66.4,
+      "tool_calls": 11,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway request was forbidden by the configured provider (403).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-015-config-deep-merge_20260626_065006/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-016-tag-parser-trailing-punctuation",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 242.1,
+      "tool_calls": 11,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "RuntimeError: Provider rate limit reached (429).",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-016-tag-parser-trailing-punctuation_20260626_065256/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-017-flow-topo-sort",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 7.7,
+      "tool_calls": 1,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-017-flow-topo-sort_20260626_070151/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-018-status-page-sort",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 5.6,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-018-status-page-sort_20260626_070415/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-019-interceptor-lifo-order",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 4.8,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-019-interceptor-lifo-order_20260626_070606/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-020-response-exclude-none-nested",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 3.0,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-020-response-exclude-none-nested_20260626_070756/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-021-display-width-tab-expansion",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 1.5,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-021-display-width-tab-expansion_20260626_070959/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-022-wiki-name-sanitizer",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 3.1,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-022-wiki-name-sanitizer_20260626_071148/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-023-vite-config-array-merge",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 2.7,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-023-vite-config-array-merge_20260626_071335/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-024-uptime-kuma-http-status-range",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 3.9,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-024-uptime-kuma-http-status-range_20260626_071527/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-025-memos-search-case-insensitive",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 0.9,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-025-memos-search-case-insensitive_20260626_071715/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-026-gitea-release-semver-sort",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 1.5,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-026-gitea-release-semver-sort_20260626_071922/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-027-langflow-type-validator-any-wildcard",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 4.9,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-027-langflow-type-validator-any-wildcard_20260626_072117/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-028-bat-line-range-single-line",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 6.1,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-028-bat-line-range-single-line_20260626_072308/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-029-lazygit-branch-dot-validation",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 5.1,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-029-lazygit-branch-dot-validation_20260626_072459/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-030-fastapi-path-param-negative-int",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 2.0,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-030-fastapi-path-param-negative-int_20260626_072655/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-031-axios-header-merge",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 2.3,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-031-axios-header-merge_20260626_072923/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-032-gitea-label-deduplication",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 7.5,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-032-gitea-label-deduplication_20260626_073127/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-034-memos-visibility-case-insensitive",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 3.1,
+      "tool_calls": 1,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-034-memos-visibility-case-insensitive_20260626_073327/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-033-uptime-kuma-avg-response-time",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 52.9,
+      "tool_calls": 10,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 52.9,
+            "changed_files": [
+              "src/response_time.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "2fd093b3",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-033-uptime-kuma-avg-response-time_20260626_073522/grading_attempt_1.txt",
+            "tool_mix": {
+              "read_file": 1,
+              "todo_write": 2,
+              "edit_file": 1,
+              "list_files": 2,
+              "run_command": 4
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-033-uptime-kuma-avg-response-time_20260626_073522/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-047-uptime-kuma-cert-expiry-threshold",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 51.7,
+      "tool_calls": 12,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 51.7,
+            "changed_files": [
+              "src/cert_checker.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "d5e7a083",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-047-uptime-kuma-cert-expiry-threshold_20260626_073803/grading_attempt_1.txt",
+            "tool_mix": {
+              "read_file": 2,
+              "todo_write": 4,
+              "edit_file": 1,
+              "list_files": 2,
+              "run_command": 2,
+              "todo_read": 1
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-047-uptime-kuma-cert-expiry-threshold_20260626_073803/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-046-gitea-path-traversal-guard",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 5.6,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-046-gitea-path-traversal-guard_20260626_074041/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-045-langflow-string-bool-coercion",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 3.4,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-045-langflow-string-bool-coercion_20260626_074237/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-044-memos-multiline-tag-extraction",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 5.4,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-044-memos-multiline-tag-extraction_20260626_074426/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-043-lazygit-date-zero-padding",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 3.4,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-043-lazygit-date-zero-padding_20260626_074626/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-042-axios-url-double-slash",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 3.7,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-042-axios-url-double-slash_20260626_074817/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-041-bat-theme-sort-case-insensitive",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 3.4,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-041-bat-theme-sort-case-insensitive_20260626_075008/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-040-memos-word-count-whitespace",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 0.8,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-040-memos-word-count-whitespace_20260626_075158/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-039-langflow-input-max-inclusive",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 1.0,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-039-langflow-input-max-inclusive_20260626_075351/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-038-gitea-pagination-total",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 1.3,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-038-gitea-pagination-total_20260626_075537/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-037-axios-retry-5xx-range",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 1.7,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-037-axios-retry-5xx-range_20260626_075728/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-036-vite-css-module-collision",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 2.5,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-036-vite-css-module-collision_20260626_075915/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-035-fastapi-list-query-param",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 0.9,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-035-fastapi-list-query-param_20260626_080102/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-048-gitea-fork-count-increment",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 3.2,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-048-gitea-fork-count-increment_20260626_080252/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-049-bat-tab-width-expansion",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 7.3,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-049-bat-tab-width-expansion_20260626_080441/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-050-vite-env-var-prefix-filter",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 5.5,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-050-vite-env-var-prefix-filter_20260626_080639/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-051-memos-content-truncation-ellipsis",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 5.4,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-051-memos-content-truncation-ellipsis_20260626_080829/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-052-fastapi-response-exclude-none",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 5.3,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-052-fastapi-response-exclude-none_20260626_081023/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-053-lazygit-diff-header-exclusion",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 5.6,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-053-lazygit-diff-header-exclusion_20260626_081213/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-054-uptime-kuma-heartbeat-interval-minimum",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 8.8,
+      "tool_calls": 1,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-054-uptime-kuma-heartbeat-interval-minimum_20260626_081404/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-055-axios-case-insensitive-header-lookup",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 7.5,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-055-axios-case-insensitive-header-lookup_20260626_081557/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-056-vite-plugin-enforce-ordering",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 5.4,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-056-vite-plugin-enforce-ordering_20260626_081748/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-057-langflow-duplicate-output-port-detection",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 2.6,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-057-langflow-duplicate-output-port-detection_20260626_081942/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-058-fastapi-int-range-bound-validation",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 7.5,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-058-fastapi-int-range-bound-validation_20260626_082153/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-059-gitea-webhook-hmac-sha256",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 7.3,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-059-gitea-webhook-hmac-sha256_20260626_082400/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-060-langflow-timeout-default",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 3.1,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-060-langflow-timeout-default_20260626_082551/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-061-gitea-issue-comment-counter",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 6.5,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-061-gitea-issue-comment-counter_20260626_082738/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-062-memos-case-insensitive-search-highlight",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 5.2,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-062-memos-case-insensitive-search-highlight_20260626_082929/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-063-fastapi-rate-limiter-boundary",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 3.4,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-063-fastapi-rate-limiter-boundary_20260626_083118/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-064-lazygit-commit-message-length-threshold",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 5.2,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-064-lazygit-commit-message-length-threshold_20260626_083308/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-065-gitea-release-tag-semver-validation",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 21.9,
+      "tool_calls": 5,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 21.9,
+            "changed_files": [
+              "src/tag_validator.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "b1f3e3ca",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-065-gitea-release-tag-semver-validation_20260626_083503/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "todo_write": 1,
+              "read_file": 1,
+              "edit_file": 1,
+              "run_command": 1
+            },
+            "tool_call_errors": 1
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-065-gitea-release-tag-semver-validation_20260626_083503/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-066-uptime-kuma-http-2xx-range",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 12.8,
+      "tool_calls": 2,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-066-uptime-kuma-http-2xx-range_20260626_083723/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-067-bat-cr-line-ending-normalization",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 18.5,
+      "tool_calls": 1,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-067-bat-cr-line-ending-normalization_20260626_083928/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-068-axios-request-timeout-override",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 1.3,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-068-axios-request-timeout-override_20260626_084142/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-069-memos-default-visibility-private",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 0.8,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-069-memos-default-visibility-private_20260626_084328/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-070-gitea-pr-closing-issue-case-insensitive",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 5.7,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-070-gitea-pr-closing-issue-case-insensitive_20260626_084512/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-071-axios-non-2xx-error-detection",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 6.0,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-071-axios-non-2xx-error-detection_20260626_084706/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-072-langflow-component-description-validation",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 3.4,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-072-langflow-component-description-validation_20260626_084856/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-073-gitea-label-color-hex-validation",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 5.9,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-073-gitea-label-color-hex-validation_20260626_085045/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-074-memos-archived-memo-filtering",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 6.3,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-074-memos-archived-memo-filtering_20260626_085235/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-075-axios-url-param-list-encoding",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 0.8,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-075-axios-url-param-list-encoding_20260626_085429/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-076-fastapi-oauth2-scope-subset-check",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 1.0,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-076-fastapi-oauth2-scope-subset-check_20260626_085614/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-077-bat-line-number-padding-width",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 5.4,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-077-bat-line-number-padding-width_20260626_085759/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-078-gitea-team-permission-hierarchy",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 5.9,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-078-gitea-team-permission-hierarchy_20260626_085949/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-079-memos-pin-toggle",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 5.4,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-079-memos-pin-toggle_20260626_090139/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-080-uptime-kuma-monitor-last-check-update",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 4.0,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-080-uptime-kuma-monitor-last-check-update_20260626_090328/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-081-bat-line-numbering-start-offset",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 0.0,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "Setup failed",
+      "artifacts": {
+        "failure_type": "INFRA_FAIL",
+        "failure_evidence": {
+          "timeout_source": null,
+          "grading_launch": null,
+          "docker_state": {
+            "container_name": "bench-META-meta-081-bat-line-numbering-start-offset-supervisor-20260626-111902",
+            "status": "running",
+            "exit_code": 0,
+            "oom_killed": false,
+            "error": ""
+          }
+        },
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-081-bat-line-numbering-start-offset_20260626_090520/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-082-gitea-repo-unstar-counter",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 2.9,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-082-gitea-repo-unstar-counter_20260626_090737/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-083-lazygit-arg-builder-separator",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 4.8,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-083-lazygit-arg-builder-separator_20260626_090924/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-084-memos-tag-extractor-hyphen",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 2.3,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-084-memos-tag-extractor-hyphen_20260626_091126/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-085-vite-config-getter-none-vs-missing",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 4.7,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway authentication failed (401). Check the configured API key.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-085-vite-config-getter-none-vs-missing_20260626_091312/setup_log.txt"
+      }
+    }
+  ],
+  "image_digests": {
+    "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+  },
+  "halted": false
+}

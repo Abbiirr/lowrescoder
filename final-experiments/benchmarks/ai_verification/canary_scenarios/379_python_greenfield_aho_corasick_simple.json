@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-greenfield-043",
+  "title": "Implement multi-pattern string search in Python",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement find_all(text, patterns) that returns all (start, pattern) matches in text for any pattern in patterns. Uses a simple approach (not full Aho-Corasick): iterate each pattern, scan text.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/search.py": "def find_all(text: str, patterns: list[str]) -> list[tuple[int, str]]:\n    raise NotImplementedError\n",
+      "tests/test_search.py": "from src.search import find_all\n\ndef test_single_pattern():\n    result = find_all('hello world', ['world'])\n    assert result == [(6, 'world')]\n\ndef test_multiple_patterns():\n    result = find_all('abcabc', ['abc', 'bc'])\n    # abc at 0, 3; bc at 1, 4 — sorted by start\n    assert result == [(0, 'abc'), (1, 'bc'), (3, 'abc'), (4, 'bc')]\n\ndef test_overlapping():\n    result = find_all('aaaa', ['aa'])\n    assert result == [(0, 'aa'), (1, 'aa'), (2, 'aa')]\n\ndef test_no_match():\n    result = find_all('hello', ['xyz'])\n    assert result == []\n\ndef test_empty_text():\n    result = find_all('', ['abc'])\n    assert result == []\n",
+      "pyproject.toml": "[project]\nname = \"search\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npythonpath = [\".\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement find_all(text, patterns) in src/search.py:\n- For each pattern, scan text from index 0 to len(text)-len(pattern) inclusive\n- At each position check text[i:i+len(pattern)] == pattern; if so, append (i, pattern)\n- Collect all matches across all patterns, sort by (start, pattern), deduplicate, return\nAll 5 tests must pass.",
+    "entry_point": "src/search.py",
+    "success_criteria": "All 5 pytest tests pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -q` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

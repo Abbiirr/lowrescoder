@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-dirty-008",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 bugs in go_web_app handlers",
+  "description": "Brownfield Go dirty scenario: Index and APIItems each have bugs. Fix them so all 3 tests pass.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_web_app",
+    "injections": [
+      {
+        "path": "internal/handler/items.go",
+        "content": "package handler\n\nimport (\n\t\"encoding/json\"\n\t\"html/template\"\n\t\"net/http\"\n\t\"path/filepath\"\n\t\"runtime\"\n\t\"strings\"\n)\n\ntype Item struct {\n\tID    int     `json:\"id\"`\n\tName  string  `json:\"name\"`\n\tPrice float64 `json:\"price\"`\n}\n\nvar Store = []Item{\n\t{ID: 1, Name: \"Widget A\", Price: 9.99},\n\t{ID: 2, Name: \"Gadget B\", Price: 24.99},\n\t{ID: 3, Name: \"Tool C\", Price: 14.99},\n}\n\nfunc ResetStore() {\n\tStore = []Item{\n\t\t{ID: 1, Name: \"Widget A\", Price: 9.99},\n\t\t{ID: 2, Name: \"Gadget B\", Price: 24.99},\n\t\t{ID: 3, Name: \"Tool C\", Price: 14.99},\n\t}\n}\n\nfunc templateDir() string {\n\t_, filename, _, _ := runtime.Caller(0)\n\treturn filepath.Join(filepath.Dir(filename), \"..\", \"..\", \"templates\")\n}\n\nfunc Index(w http.ResponseWriter, r *http.Request) {\n\ttmpl := template.Must(template.ParseFiles(filepath.Join(templateDir(), \"index.html\")))\n\t// BUG: wrong Content-Type — should be text/html\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\ttmpl.Execute(w, Store)\n}\n\nfunc APIItems(w http.ResponseWriter, r *http.Request) {\n\tq := strings.ToLower(r.URL.Query().Get(\"q\"))\n\t// BUG: starts with nil instead of Store — no-filter case returns empty\n\tresult := []Item(nil)\n\tif q != \"\" {\n\t\tresult = nil\n\t\tfor _, item := range Store {\n\t\t\t// BUG: inverted filter — includes items that do NOT match\n\t\t\tif !strings.Contains(strings.ToLower(item.Name), q) {\n\t\t\t\tresult = append(result, item)\n\t\t\t}\n\t\t}\n\t}\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tjson.NewEncoder(w).Encode(result)\n}\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 bugs in internal/handler/items.go so all 3 tests pass.\n\n  func Index:\n    — wrong Content-Type: sets 'application/json' instead of 'text/html'\n    — fix: w.Header().Set(\"Content-Type\", \"text/html\")\n\n  func APIItems (bug 1):\n    — starts with nil instead of Store — no-filter case returns nothing\n    — fix: change 'result := []Item(nil)' to 'result := Store'\n\n  func APIItems (bug 2):\n    — filter uses '!' — includes items that do NOT match the query\n    — fix: remove the '!' from the Contains check\n\nDo not modify the test file.\nRun: go test ./...",
+    "required_artifacts": [
+      "Index sets Content-Type text/html",
+      "APIItems returns Store items when no filter",
+      "APIItems filter includes matching items (not excluded)",
+      "All 3 existing tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

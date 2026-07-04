@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-frontend-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Add /stats HTML page to Go web app showing item count and total price",
+  "description": "A Go web app with an HTML index page and JSON items API needs a new /stats page that renders a summary card.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_web_app",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Go web app in internal/handler/items.go has GET / (HTML) and GET /api/items (JSON). Add:\n\n1. A Stats handler at GET /stats:\n   Renders an HTML page showing:\n   - Item count: <p>Items: N</p>\n   - Total price: <p>Total: $X.XX</p> (sum of all item prices, 2 decimal places)\n   Content-Type must be text/html.\n\n2. Create templates/stats.html:\n   Any valid HTML structure that includes those two <p> elements. Use Go html/template (text/template also accepted).\n\n3. Register GET /stats in cmd/server/main.go.\n\n4. Write TestStatsPage:\n   - GET /stats returns 200\n   - Body contains \"Items: 3\" (the fixture has 3 items)\n   - Body contains \"Total: $\" (price string starts with $)\n\nAll 3 existing tests must still pass. Run go test ./... and go build ./... to confirm.",
+    "required_artifacts": [
+      "Stats handler in internal/handler/items.go",
+      "templates/stats.html with item count and total price",
+      "GET /stats registered in cmd/server/main.go",
+      "TestStatsPage test",
+      "All 3 original tests still pass",
+      "go test ./... passes"
+    ],
+    "success_criteria": [
+      "GET /stats returns 200 with text/html content-type",
+      "HTML body contains item count and total price",
+      "All 4 tests pass"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `go test ./...` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

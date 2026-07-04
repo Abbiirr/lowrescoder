@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-greenfield-040",
+  "title": "Implement a double-ended queue (Deque) in Python",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement a Deque with push_front, push_back, pop_front, pop_back, peek_front, peek_back, and len.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/deque.py": "class Deque:\n    def __init__(self):\n        raise NotImplementedError\n\n    def push_front(self, item) -> None:\n        raise NotImplementedError\n\n    def push_back(self, item) -> None:\n        raise NotImplementedError\n\n    def pop_front(self):\n        raise NotImplementedError\n\n    def pop_back(self):\n        raise NotImplementedError\n\n    def peek_front(self):\n        raise NotImplementedError\n\n    def peek_back(self):\n        raise NotImplementedError\n\n    def __len__(self) -> int:\n        raise NotImplementedError\n",
+      "tests/test_deque.py": "import pytest\nfrom src.deque import Deque\n\ndef test_push_back_pop_front():\n    d = Deque()\n    d.push_back(1)\n    d.push_back(2)\n    d.push_back(3)\n    assert d.pop_front() == 1\n    assert d.pop_front() == 2\n\ndef test_push_front_pop_back():\n    d = Deque()\n    d.push_front(1)\n    d.push_front(2)\n    assert d.pop_back() == 1\n    assert d.pop_back() == 2\n\ndef test_peek():\n    d = Deque()\n    d.push_back(10)\n    d.push_back(20)\n    assert d.peek_front() == 10\n    assert d.peek_back() == 20\n    assert len(d) == 2\n\ndef test_empty_raises():\n    d = Deque()\n    with pytest.raises(IndexError):\n        d.pop_front()\n    with pytest.raises(IndexError):\n        d.pop_back()\n\ndef test_len():\n    d = Deque()\n    assert len(d) == 0\n    d.push_front(1)\n    d.push_back(2)\n    assert len(d) == 2\n    d.pop_front()\n    assert len(d) == 1\n",
+      "pyproject.toml": "[project]\nname = \"deque\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npythonpath = [\".\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement Deque in src/deque.py using a list internally:\n- `__init__`: self._data = []\n- `push_front(item)`: self._data.insert(0, item)\n- `push_back(item)`: self._data.append(item)\n- `pop_front()`: if empty raise IndexError; return self._data.pop(0)\n- `pop_back()`: if empty raise IndexError; return self._data.pop()\n- `peek_front()`: return self._data[0]\n- `peek_back()`: return self._data[-1]\n- `__len__()`: return len(self._data)\nAll 5 tests must pass.",
+    "entry_point": "src/deque.py",
+    "success_criteria": "All 5 pytest tests pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -q` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

@@ -1,0 +1,343 @@
+{
+  "generated_at": "2026-06-21T02:53:31.852161+00:00",
+  "reps": 3,
+  "oracles_only": false,
+  "summary": {
+    "tasks": 3,
+    "oracle_false_positives": 0,
+    "oracle_false_negatives": 0,
+    "proven_harness_false_negatives": 0,
+    "harness_grading_trustworthy": true,
+    "agent_runs": 9,
+    "agent_solves": 8,
+    "agent_solve_rate": 0.889,
+    "agent_misses": 1,
+    "agent_mean_flip_rate": 0.111
+  },
+  "tasks": [
+    {
+      "task_id": "calib-greenfield-hello",
+      "category": "repo_init",
+      "probes": [
+        {
+          "label": "oracle-golden",
+          "kind": "oracle",
+          "expected_resolved": true,
+          "verdicts": [
+            true
+          ],
+          "pass_rate": 1.0,
+          "flips": 0,
+          "correct": true,
+          "reps": [
+            {
+              "resolved": true,
+              "changed": true,
+              "regrade_on_fail": null,
+              "num_turns": null,
+              "duration_s": 0.002,
+              "error": ""
+            }
+          ]
+        },
+        {
+          "label": "oracle-noop",
+          "kind": "oracle",
+          "expected_resolved": false,
+          "verdicts": [
+            false
+          ],
+          "pass_rate": 0.0,
+          "flips": 0,
+          "correct": true,
+          "reps": [
+            {
+              "resolved": false,
+              "changed": false,
+              "regrade_on_fail": null,
+              "num_turns": null,
+              "duration_s": 0.002,
+              "error": ""
+            }
+          ]
+        },
+        {
+          "label": "oracle-wrong",
+          "kind": "oracle",
+          "expected_resolved": false,
+          "verdicts": [
+            false
+          ],
+          "pass_rate": 0.0,
+          "flips": 0,
+          "correct": true,
+          "reps": [
+            {
+              "resolved": false,
+              "changed": true,
+              "regrade_on_fail": null,
+              "num_turns": null,
+              "duration_s": 0.002,
+              "error": ""
+            }
+          ]
+        },
+        {
+          "label": "puku",
+          "kind": "agent",
+          "expected_resolved": true,
+          "verdicts": [
+            true,
+            true,
+            true
+          ],
+          "pass_rate": 1.0,
+          "flips": 0,
+          "correct": true,
+          "reps": [
+            {
+              "resolved": true,
+              "changed": true,
+              "regrade_on_fail": null,
+              "num_turns": 2,
+              "duration_s": 15.4,
+              "error": ""
+            },
+            {
+              "resolved": true,
+              "changed": true,
+              "regrade_on_fail": null,
+              "num_turns": 2,
+              "duration_s": 3.8,
+              "error": ""
+            },
+            {
+              "resolved": true,
+              "changed": true,
+              "regrade_on_fail": null,
+              "num_turns": 2,
+              "duration_s": 4.1,
+              "error": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "task_id": "calib-bugfix-add",
+      "category": "bugfix",
+      "probes": [
+        {
+          "label": "oracle-golden",
+          "kind": "oracle",
+          "expected_resolved": true,
+          "verdicts": [
+            true
+          ],
+          "pass_rate": 1.0,
+          "flips": 0,
+          "correct": true,
+          "reps": [
+            {
+              "resolved": true,
+              "changed": true,
+              "regrade_on_fail": null,
+              "num_turns": null,
+              "duration_s": 0.165,
+              "error": ""
+            }
+          ]
+        },
+        {
+          "label": "oracle-noop",
+          "kind": "oracle",
+          "expected_resolved": false,
+          "verdicts": [
+            false
+          ],
+          "pass_rate": 0.0,
+          "flips": 0,
+          "correct": true,
+          "reps": [
+            {
+              "resolved": false,
+              "changed": true,
+              "regrade_on_fail": null,
+              "num_turns": null,
+              "duration_s": 0.186,
+              "error": ""
+            }
+          ]
+        },
+        {
+          "label": "oracle-wrong",
+          "kind": "oracle",
+          "expected_resolved": false,
+          "verdicts": [
+            false
+          ],
+          "pass_rate": 0.0,
+          "flips": 0,
+          "correct": true,
+          "reps": [
+            {
+              "resolved": false,
+              "changed": true,
+              "regrade_on_fail": null,
+              "num_turns": null,
+              "duration_s": 0.179,
+              "error": ""
+            }
+          ]
+        },
+        {
+          "label": "puku",
+          "kind": "agent",
+          "expected_resolved": true,
+          "verdicts": [
+            true,
+            true,
+            true
+          ],
+          "pass_rate": 1.0,
+          "flips": 0,
+          "correct": true,
+          "reps": [
+            {
+              "resolved": true,
+              "changed": true,
+              "regrade_on_fail": null,
+              "num_turns": 7,
+              "duration_s": 9.4,
+              "error": ""
+            },
+            {
+              "resolved": true,
+              "changed": true,
+              "regrade_on_fail": null,
+              "num_turns": 3,
+              "duration_s": 6.0,
+              "error": ""
+            },
+            {
+              "resolved": true,
+              "changed": true,
+              "regrade_on_fail": null,
+              "num_turns": 5,
+              "duration_s": 7.6,
+              "error": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "task_id": "calib-bugfix-clamp",
+      "category": "bugfix",
+      "probes": [
+        {
+          "label": "oracle-golden",
+          "kind": "oracle",
+          "expected_resolved": true,
+          "verdicts": [
+            true
+          ],
+          "pass_rate": 1.0,
+          "flips": 0,
+          "correct": true,
+          "reps": [
+            {
+              "resolved": true,
+              "changed": true,
+              "regrade_on_fail": null,
+              "num_turns": null,
+              "duration_s": 0.171,
+              "error": ""
+            }
+          ]
+        },
+        {
+          "label": "oracle-noop",
+          "kind": "oracle",
+          "expected_resolved": false,
+          "verdicts": [
+            false
+          ],
+          "pass_rate": 0.0,
+          "flips": 0,
+          "correct": true,
+          "reps": [
+            {
+              "resolved": false,
+              "changed": true,
+              "regrade_on_fail": null,
+              "num_turns": null,
+              "duration_s": 0.176,
+              "error": ""
+            }
+          ]
+        },
+        {
+          "label": "oracle-wrong",
+          "kind": "oracle",
+          "expected_resolved": false,
+          "verdicts": [
+            false
+          ],
+          "pass_rate": 0.0,
+          "flips": 0,
+          "correct": true,
+          "reps": [
+            {
+              "resolved": false,
+              "changed": true,
+              "regrade_on_fail": null,
+              "num_turns": null,
+              "duration_s": 0.172,
+              "error": ""
+            }
+          ]
+        },
+        {
+          "label": "puku",
+          "kind": "agent",
+          "expected_resolved": true,
+          "verdicts": [
+            false,
+            true,
+            true
+          ],
+          "pass_rate": 0.667,
+          "flips": 1,
+          "correct": false,
+          "reps": [
+            {
+              "resolved": false,
+              "changed": true,
+              "regrade_on_fail": false,
+              "num_turns": 5,
+              "duration_s": 6.1,
+              "error": ""
+            },
+            {
+              "resolved": true,
+              "changed": true,
+              "regrade_on_fail": null,
+              "num_turns": 4,
+              "duration_s": 7.6,
+              "error": ""
+            },
+            {
+              "resolved": true,
+              "changed": true,
+              "regrade_on_fail": null,
+              "num_turns": 9,
+              "duration_s": 25.4,
+              "error": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

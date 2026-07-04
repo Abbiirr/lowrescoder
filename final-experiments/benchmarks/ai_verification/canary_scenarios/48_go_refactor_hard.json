@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-refactor-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "hard",
+  "duration_hint_minutes": 45,
+  "title": "Refactor Go web app: extract ItemStore interface, inject into Server struct",
+  "description": "The Go web app uses package-level mutable state and hard-coded template paths. Refactor to a Server struct that accepts an ItemStore interface and a template directory path, making it testable without real files.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_web_app",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Go web app in internal/handler/items.go uses a package-level Store slice and a templateDir() helper that resolves paths via runtime.Caller. Refactor WITHOUT changing any HTTP routes or response shapes:\n\n1. Define type ItemStore interface { All() []Item; Filter(q string) []Item } in internal/handler/store.go.\n2. Define type InMemoryStore struct { items []Item } implementing ItemStore. Move Store initialization into InMemoryStore. Add NewInMemoryStore(items []Item) *InMemoryStore constructor.\n3. Define type Server struct { store ItemStore; tmplDir string } with methods ServeIndex, ServeAPIItems that replace Index and APIItems. The Server uses s.tmplDir to load templates (not runtime.Caller).\n4. Update cmd/server/main.go to construct Server with NewInMemoryStore(defaultItems) and a tmplDir resolved at startup.\n5. Rewrite items_test.go to test through Server with an InMemoryStore seeded inline — no package-level ResetStore() needed.\n\nAll existing HTTP behaviour (routes, response shapes, filter behaviour) must be identical. go test ./... must pass. go vet ./... must be clean.",
+    "required_artifacts": [
+      "internal/handler/store.go with ItemStore interface and InMemoryStore",
+      "Server struct with ServeIndex and ServeAPIItems methods",
+      "cmd/server/main.go updated to use Server",
+      "Tests rewritten to construct Server with injected store",
+      "go test ./... passes",
+      "go vet ./... clean"
+    ],
+    "success_criteria": [
+      "ItemStore interface enables mock injection in tests",
+      "Server struct holds no global mutable state",
+      "HTTP surface unchanged (same routes, same JSON shapes)",
+      "All tests pass"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `go test ./...` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-longhorizon-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Evolve Rust string-utils library in 3 steps: reverse, palindrome, truncate",
+  "description": "The rust_string_utils library has word_count and capitalize_words. Evolve it in three steps by adding reverse_words, is_palindrome_phrase, and truncate.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_string_utils",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The library in src/lib.rs has word_count and capitalize_words. Evolve it in three steps:\n\nStep 1 — reverse_words:\n  pub fn reverse_words(s: &str) -> String\n  Returns the words of s in reversed order, joined by a single space.\n  'hello world foo' -> 'foo world hello'\n  Empty string or all-whitespace -> ''\n  Add test_reverse_words_basic and test_reverse_words_empty.\n\nStep 2 — is_palindrome_phrase:\n  pub fn is_palindrome_phrase(s: &str) -> bool\n  Returns true if the phrase reads the same forwards and backwards when lowercased and all non-alphabetic characters removed.\n  'A man a plan a canal Panama' -> true\n  'hello world' -> false\n  Add test_palindrome_true and test_palindrome_false.\n\nStep 3 — truncate:\n  pub fn truncate(s: &str, max_len: usize, suffix: &str) -> String\n  If s.len() <= max_len, return s unchanged.\n  Otherwise return &s[..max_len] + suffix.\n  Slicing is by characters (use char_indices), not bytes.\n  Add test_truncate_short (no change), test_truncate_long (appends suffix), test_truncate_unicode (handles multibyte).\n\nAll 3 existing tests must still pass.\n\nRun cargo test to confirm.",
+    "required_artifacts": [
+      "pub fn reverse_words(s: &str) -> String added",
+      "pub fn is_palindrome_phrase(s: &str) -> bool added",
+      "pub fn truncate(s: &str, max_len: usize, suffix: &str) -> String added",
+      "2 tests for reverse_words",
+      "2 tests for is_palindrome_phrase",
+      "3 tests for truncate",
+      "All 3 original tests pass",
+      "cargo test passes"
+    ],
+    "success_criteria": [
+      "All 10 tests pass",
+      "reverse_words handles empty input",
+      "is_palindrome_phrase ignores case and non-alpha chars",
+      "truncate uses char boundaries not byte boundaries"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `cargo test` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `cargo test` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

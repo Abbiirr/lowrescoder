@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "523-rust-mt-ring-buffer",
+  "title": "Build a fixed-size ring buffer in Rust — 3 turns",
+  "category": "repo_init",
+  "difficulty": "hard",
+  "target_stack": {"language": "rust", "framework": null, "extra": {}},
+  "description": "Three turns build a ring buffer: turn 1 push/pop, turn 2 is_full/is_empty, turn 3 Iterator impl.",
+  "repo_seed": {
+    "files": {
+      "Cargo.toml": "[package]\nname = \"ring-buffer\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+      "src/lib.rs": "//! Fixed-capacity ring buffer (circular queue).\n\n/// A fixed-capacity FIFO ring buffer.\npub struct RingBuffer<T> {\n    data: Vec<Option<T>>,\n    head: usize,   // index to read from\n    tail: usize,   // index to write to\n    len: usize,\n    capacity: usize,\n}\n\nimpl<T> RingBuffer<T> {\n    /// Create a ring buffer with given capacity.\n    pub fn new(capacity: usize) -> Self {\n        assert!(capacity > 0, \"capacity must be > 0\");\n        let data = (0..capacity).map(|_| None).collect();\n        RingBuffer { data, head: 0, tail: 0, len: 0, capacity }\n    }\n\n    /// Push value to the back. Returns Err if full.\n    pub fn push(&mut self, value: T) -> Result<(), T> {\n        unimplemented!()\n    }\n\n    /// Pop value from the front. Returns None if empty.\n    pub fn pop(&mut self) -> Option<T> {\n        unimplemented!()\n    }\n\n    /// Return true if buffer is full.\n    pub fn is_full(&self) -> bool {\n        unimplemented!()\n    }\n\n    /// Return true if buffer is empty.\n    pub fn is_empty(&self) -> bool {\n        unimplemented!()\n    }\n\n    /// Return the number of elements currently stored.\n    pub fn len(&self) -> usize {\n        self.len\n    }\n}\n\nimpl<T: Clone> Iterator for RingBuffer<T> {\n    type Item = T;\n    fn next(&mut self) -> Option<T> {\n        self.pop()\n    }\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_push_pop_fifo() {\n        let mut rb: RingBuffer<i32> = RingBuffer::new(4);\n        rb.push(1).unwrap();\n        rb.push(2).unwrap();\n        rb.push(3).unwrap();\n        assert_eq!(rb.pop(), Some(1));\n        assert_eq!(rb.pop(), Some(2));\n        assert_eq!(rb.pop(), Some(3));\n        assert_eq!(rb.pop(), None);\n    }\n\n    #[test]\n    fn test_full_returns_err() {\n        let mut rb: RingBuffer<i32> = RingBuffer::new(2);\n        rb.push(1).unwrap();\n        rb.push(2).unwrap();\n        assert!(rb.is_full());\n        assert!(rb.push(3).is_err());\n    }\n\n    #[test]\n    fn test_wrap_around() {\n        let mut rb: RingBuffer<i32> = RingBuffer::new(3);\n        rb.push(1).unwrap();\n        rb.push(2).unwrap();\n        rb.push(3).unwrap();\n        rb.pop(); // remove 1, head moves\n        rb.push(4).unwrap(); // wraps around\n        assert_eq!(rb.pop(), Some(2));\n        assert_eq!(rb.pop(), Some(3));\n        assert_eq!(rb.pop(), Some(4));\n    }\n\n    #[test]\n    fn test_is_empty() {\n        let mut rb: RingBuffer<i32> = RingBuffer::new(3);\n        assert!(rb.is_empty());\n        rb.push(1).unwrap();\n        assert!(!rb.is_empty());\n        rb.pop();\n        assert!(rb.is_empty());\n    }\n\n    #[test]\n    fn test_iterator() {\n        let mut rb: RingBuffer<i32> = RingBuffer::new(4);\n        rb.push(10).unwrap();\n        rb.push(20).unwrap();\n        rb.push(30).unwrap();\n        let v: Vec<i32> = rb.collect();\n        assert_eq!(v, vec![10, 20, 30]);\n    }\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `push(&mut self, value: T) -> Result<(), T>` and `pop(&mut self) -> Option<T>` in `src/lib.rs`. push: if full return Err(value); else write to data[tail], advance tail with wrap-around (tail = (tail+1) % capacity), increment len. pop: if empty return None; else take data[head] (leave None), advance head with wrap-around, decrement len. Run `cargo test --quiet`.",
+    "followup_prompts": [
+      "Good. Now implement `is_full(&self) -> bool` (len == capacity) and `is_empty(&self) -> bool` (len == 0). Run `cargo test --quiet` and fix any failures — especially the wrap-around test.",
+      "Final check: run `cargo test --quiet` one more time. All 5 tests must pass. The Iterator impl already delegates to pop(), so just make sure it compiles and runs."
+    ],
+    "success_criteria": [
+      "push/pop maintain FIFO order",
+      "push returns Err(value) when full",
+      "pop handles wrap-around correctly",
+      "is_full and is_empty reflect current len",
+      "Iterator collects all elements via pop",
+      "cargo test passes (5 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "cargo test --quiet"}
+  },
+  "duration_hint_minutes": 25
+}

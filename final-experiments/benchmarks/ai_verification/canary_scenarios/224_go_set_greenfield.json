@@ -1,0 +1,67 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-012",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Build a generic Set in Go backed by a map with Union and Intersection",
+  "description": "Greenfield Go task: implement Set[T comparable] backed by map[T]struct{} with Add, Remove, Contains, Len, Union, and Intersection methods.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module set\n\ngo 1.21\n"
+      },
+      {
+        "path": "set.go",
+        "content": "package set\n\n// TODO: implement Set[T comparable]\n"
+      },
+      {
+        "path": "set_test.go",
+        "content": "package set\n\nimport \"testing\"\n\nfunc TestAddAndContains(t *testing.T) {\n\ts := New[int]()\n\ts.Add(1)\n\ts.Add(2)\n\ts.Add(2) // duplicate\n\tif !s.Contains(1) || !s.Contains(2) {\n\t\tt.Fatal(\"should contain 1 and 2\")\n\t}\n\tif s.Contains(3) {\n\t\tt.Fatal(\"should not contain 3\")\n\t}\n\tif s.Len() != 2 {\n\t\tt.Fatalf(\"expected len=2 got %d\", s.Len())\n\t}\n}\n\nfunc TestRemove(t *testing.T) {\n\ts := New[string]()\n\ts.Add(\"a\")\n\ts.Add(\"b\")\n\ts.Remove(\"a\")\n\tif s.Contains(\"a\") {\n\t\tt.Fatal(\"should not contain 'a' after remove\")\n\t}\n\tif !s.Contains(\"b\") {\n\t\tt.Fatal(\"should still contain 'b'\")\n\t}\n\ts.Remove(\"nonexistent\") // no-op\n}\n\nfunc TestUnion(t *testing.T) {\n\ta := New[int]()\n\ta.Add(1); a.Add(2)\n\tb := New[int]()\n\tb.Add(2); b.Add(3)\n\tu := a.Union(b)\n\tif u.Len() != 3 {\n\t\tt.Fatalf(\"expected union len=3, got %d\", u.Len())\n\t}\n\tfor _, v := range []int{1, 2, 3} {\n\t\tif !u.Contains(v) {\n\t\t\tt.Fatalf(\"union should contain %d\", v)\n\t\t}\n\t}\n}\n\nfunc TestIntersection(t *testing.T) {\n\ta := New[int]()\n\ta.Add(1); a.Add(2); a.Add(3)\n\tb := New[int]()\n\tb.Add(2); b.Add(3); b.Add(4)\n\ti := a.Intersection(b)\n\tif i.Len() != 2 {\n\t\tt.Fatalf(\"expected intersection len=2, got %d\", i.Len())\n\t}\n\tif !i.Contains(2) || !i.Contains(3) {\n\t\tt.Fatal(\"intersection should contain 2 and 3\")\n\t}\n}\n\nfunc TestEmptySet(t *testing.T) {\n\ts := New[float64]()\n\tif s.Len() != 0 || s.Contains(1.0) {\n\t\tt.Fatal(\"empty set should have len=0 and contain nothing\")\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement Set[T comparable] in set.go.\n\ntype Set[T comparable] struct { m map[T]struct{} }\n\nfunc New[T comparable]() *Set[T]\nfunc (s *Set[T]) Add(item T)\nfunc (s *Set[T]) Remove(item T)           // no-op if not present\nfunc (s *Set[T]) Contains(item T) bool\nfunc (s *Set[T]) Len() int\nfunc (s *Set[T]) Union(other *Set[T]) *Set[T]        // new set with all items from both\nfunc (s *Set[T]) Intersection(other *Set[T]) *Set[T] // new set with items in both\n\nAll 5 tests in set_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Set[T comparable] backed by map[T]struct{}",
+      "Add ignores duplicates; Remove is a no-op for absent items",
+      "Len returns distinct element count",
+      "Union returns new set containing all items from either set",
+      "Intersection returns new set containing only items in both sets",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

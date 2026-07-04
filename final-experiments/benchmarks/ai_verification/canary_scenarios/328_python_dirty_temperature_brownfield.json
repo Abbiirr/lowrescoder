@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-brownfield-011",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix bugs in Python temperature conversion functions",
+  "description": "Brownfield Python dirty_cleanup: fix three intentional bugs in temperature conversions (C-to-F uses wrong constant, F-to-C uses wrong formula, C-to-K subtracts instead of adds offset).",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"tempconv\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/tempconv.py",
+        "content": "# BUG: uses 30 instead of 32\ndef celsius_to_fahrenheit(c: float) -> float:\n    return c * 9 / 5 + 30\n\n\n# BUG: wrong order of operations — should be (f - 32) * 5 / 9\ndef fahrenheit_to_celsius(f: float) -> float:\n    return f * 5 / 9 - 32\n\n\n# BUG: subtracts 273.15 instead of adding\ndef celsius_to_kelvin(c: float) -> float:\n    return c - 273.15\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_tempconv.py",
+        "content": "from src.tempconv import celsius_to_fahrenheit, fahrenheit_to_celsius, celsius_to_kelvin\n\n\ndef test_c_to_f_freezing():\n    assert abs(celsius_to_fahrenheit(0) - 32.0) < 1e-9\n\n\ndef test_c_to_f_boiling():\n    assert abs(celsius_to_fahrenheit(100) - 212.0) < 1e-9\n\n\ndef test_f_to_c_freezing():\n    assert abs(fahrenheit_to_celsius(32) - 0.0) < 1e-9\n\n\ndef test_f_to_c_boiling():\n    assert abs(fahrenheit_to_celsius(212) - 100.0) < 1e-9\n\n\ndef test_c_to_kelvin():\n    assert abs(celsius_to_kelvin(0) - 273.15) < 1e-9\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/tempconv.py.\n\nBug 1 — celsius_to_fahrenheit: uses +30 instead of +32.\n  Fix: return c * 9 / 5 + 32\n\nBug 2 — fahrenheit_to_celsius: wrong order of operations.\n  Fix: return (f - 32) * 5 / 9\n\nBug 3 — celsius_to_kelvin: subtracts 273.15 instead of adding.\n  Fix: return c + 273.15\n\nAll 5 tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "celsius_to_fahrenheit: 0°C → 32°F, 100°C → 212°F",
+      "fahrenheit_to_celsius: 32°F → 0°C, 212°F → 100°C",
+      "celsius_to_kelvin: 0°C → 273.15 K",
+      "All conversions use correct formulas",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.tempconv import celsius_to_fahrenheit\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.tempconv import celsius_to_fahrenheit\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

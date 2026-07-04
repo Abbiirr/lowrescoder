@@ -1,0 +1,87 @@
+{"ts": "2026-06-29T06:16:28+00:00", "event": "run", "lane": "SMOKE", "run_id": "selfimprove-20260629-052747", "resolved": 1, "total": 4, "infra_fails": 3, "real_fails": 0}
+{"ts": "2026-06-29T07:05:30+00:00", "event": "run", "lane": "SMOKE", "run_id": "selfimprove-20260629-070452", "resolved": 0, "total": 4, "infra_fails": 0, "real_fails": 0}
+{"ts": "2026-06-29T09:13:01+00:00", "event": "crash", "error": "[Errno 2] No such file or directory: 'uv'"}
+{"ts": "2026-06-29T11:32:28+00:00", "event": "run", "lane": "B9-PROXY", "run_id": "selfimprove-20260629-101301", "resolved": 1, "total": 4, "infra_fails": 3, "real_fails": 0}
+{"ts": "2026-06-29T13:13:04+00:00", "event": "run", "lane": "B11", "run_id": "selfimprove-20260629-131301", "resolved": 0, "total": 0, "infra_fails": 0, "real_fails": 0}
+{"ts": "2026-06-29T14:58:41+00:00", "event": "run", "lane": "B13-PROXY", "run_id": "selfimprove-20260629-141301", "resolved": 2, "total": 4, "infra_fails": 2, "real_fails": 0}
+{"ts": "2026-06-29T15:13:01+00:00", "event": "skip", "lane": "B30-TBENCH", "reason": "tb_not_ready"}
+{"ts": "2026-06-29T16:15:39+00:00", "event": "run", "lane": "SMOKE", "run_id": "selfimprove-20260629-161301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-06-29T18:13:43+00:00", "event": "run", "lane": "META", "run_id": "selfimprove-20260629-171301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-06-29T19:15:43+00:00", "event": "run", "lane": "B9-PROXY", "run_id": "selfimprove-20260629-191301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-01T07:16:41+00:00", "event": "run", "lane": "B11", "run_id": "selfimprove-20260701-071301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-01T08:34:10+00:00", "event": "run", "lane": "B13-PROXY", "run_id": "selfimprove-20260701-081302", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-01T09:13:01+00:00", "event": "skip", "lane": "B30-TBENCH", "reason": "tb_not_ready"}
+{"ts": "2026-07-01T10:16:33+00:00", "event": "run", "lane": "SMOKE", "run_id": "selfimprove-20260701-101301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-01T11:16:20+00:00", "event": "run", "lane": "META", "run_id": "selfimprove-20260701-111301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-01T12:14:28+00:00", "event": "run", "lane": "B9-PROXY", "run_id": "selfimprove-20260701-121301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-01T13:16:24+00:00", "event": "run", "lane": "B11", "run_id": "selfimprove-20260701-131301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-01T14:30:17+00:00", "event": "run", "lane": "B13-PROXY", "run_id": "selfimprove-20260701-141301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-01T15:13:01+00:00", "event": "skip", "lane": "B30-TBENCH", "reason": "tb_not_ready"}
+{"ts": "2026-07-01T16:16:05+00:00", "event": "run", "lane": "SMOKE", "run_id": "selfimprove-20260701-161301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-01T17:16:22+00:00", "event": "run", "lane": "META", "run_id": "selfimprove-20260701-171301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-01T18:14:36+00:00", "event": "run", "lane": "B9-PROXY", "run_id": "selfimprove-20260701-181302", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-01T19:17:01+00:00", "event": "run", "lane": "B11", "run_id": "selfimprove-20260701-191301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-01T20:31:58+00:00", "event": "run", "lane": "B13-PROXY", "run_id": "selfimprove-20260701-201301", "resolved": 2, "total": 4, "infra_fails": 2, "real_fails": 0}
+{"ts": "2026-07-01T21:13:01+00:00", "event": "skip", "lane": "B30-TBENCH", "reason": "tb_not_ready"}
+{"ts": "2026-07-01T22:16:21+00:00", "event": "run", "lane": "SMOKE", "run_id": "selfimprove-20260701-221301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-01T23:13:39+00:00", "event": "run", "lane": "META", "run_id": "selfimprove-20260701-231301", "resolved": 0, "total": 0, "infra_fails": 0, "real_fails": 0}
+{"ts": "2026-07-02T00:14:13+00:00", "event": "run", "lane": "B9-PROXY", "run_id": "selfimprove-20260702-001302", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-02T01:16:44+00:00", "event": "run", "lane": "B11", "run_id": "selfimprove-20260702-011301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-02T02:40:03+00:00", "event": "run", "lane": "B13-PROXY", "run_id": "selfimprove-20260702-021301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-02T03:13:01+00:00", "event": "skip", "lane": "B30-TBENCH", "reason": "tb_not_ready"}
+{"ts": "2026-07-02T04:15:50+00:00", "event": "run", "lane": "SMOKE", "run_id": "selfimprove-20260702-041301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-02T05:16:56+00:00", "event": "run", "lane": "META", "run_id": "selfimprove-20260702-051301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-02T06:14:16+00:00", "event": "run", "lane": "B9-PROXY", "run_id": "selfimprove-20260702-061301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-02T07:17:29+00:00", "event": "run", "lane": "B11", "run_id": "selfimprove-20260702-071301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-02T08:13:39+00:00", "event": "run", "lane": "B13-PROXY", "run_id": "selfimprove-20260702-081301", "resolved": 0, "total": 0, "infra_fails": 0, "real_fails": 0}
+{"ts": "2026-07-02T09:13:01+00:00", "event": "skip", "lane": "B30-TBENCH", "reason": "tb_not_ready"}
+{"ts": "2026-07-02T10:16:14+00:00", "event": "run", "lane": "SMOKE", "run_id": "selfimprove-20260702-101301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T04:19:10+00:00", "event": "run", "lane": "META", "run_id": "selfimprove-20260703-041301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T05:14:58+00:00", "event": "run", "lane": "B9-PROXY", "run_id": "selfimprove-20260703-051301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T06:19:38+00:00", "event": "run", "lane": "B11", "run_id": "selfimprove-20260703-061301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T07:13:39+00:00", "event": "run", "lane": "B13-PROXY", "run_id": "selfimprove-20260703-071301", "resolved": 0, "total": 0, "infra_fails": 0, "real_fails": 0}
+{"ts": "2026-07-03T08:13:01+00:00", "event": "skip", "lane": "B30-TBENCH", "reason": "tb_not_ready"}
+{"ts": "2026-07-03T09:13:40+00:00", "event": "run", "lane": "SMOKE", "run_id": "selfimprove-20260703-091302", "resolved": 0, "total": 0, "infra_fails": 0, "real_fails": 0}
+{"ts": "2026-07-03T10:18:54+00:00", "event": "run", "lane": "META", "run_id": "selfimprove-20260703-101301", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T11:41:54+00:00", "event": "run", "lane": "B11", "run_id": "selfimprove-20260703-105504", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T12:02:52+00:00", "event": "run", "lane": "B13-PROXY", "run_id": "selfimprove-20260703-114154", "resolved": 1, "total": 4, "infra_fails": 3, "real_fails": 0}
+{"ts": "2026-07-03T12:02:52+00:00", "event": "skip", "lane": "B30-TBENCH", "reason": "tb_not_ready"}
+{"ts": "2026-07-03T12:56:23+00:00", "event": "run", "lane": "SMOKE", "run_id": "selfimprove-20260703-120252", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T13:49:10+00:00", "event": "run", "lane": "META", "run_id": "selfimprove-20260703-125623", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T14:30:55+00:00", "event": "run", "lane": "B9-PROXY", "run_id": "selfimprove-20260703-134910", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T15:18:47+00:00", "event": "run", "lane": "B11", "run_id": "selfimprove-20260703-143055", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T15:52:04+00:00", "event": "run", "lane": "B13-PROXY", "run_id": "selfimprove-20260703-151847", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T15:52:04+00:00", "event": "skip", "lane": "B30-TBENCH", "reason": "tb_not_ready"}
+{"ts": "2026-07-03T16:42:46+00:00", "event": "run", "lane": "SMOKE", "run_id": "selfimprove-20260703-155204", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T17:35:17+00:00", "event": "run", "lane": "META", "run_id": "selfimprove-20260703-164246", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T18:24:07+00:00", "event": "run", "lane": "B9-PROXY", "run_id": "selfimprove-20260703-173517", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T19:26:39+00:00", "event": "run", "lane": "B11", "run_id": "selfimprove-20260703-182407", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T19:49:12+00:00", "event": "run", "lane": "B13-PROXY", "run_id": "selfimprove-20260703-192639", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T19:49:12+00:00", "event": "skip", "lane": "B30-TBENCH", "reason": "tb_not_ready"}
+{"ts": "2026-07-03T20:38:21+00:00", "event": "run", "lane": "SMOKE", "run_id": "selfimprove-20260703-194912", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T21:29:12+00:00", "event": "run", "lane": "META", "run_id": "selfimprove-20260703-203821", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T22:21:33+00:00", "event": "run", "lane": "B9-PROXY", "run_id": "selfimprove-20260703-212912", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T23:22:16+00:00", "event": "run", "lane": "B11", "run_id": "selfimprove-20260703-222133", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T23:56:10+00:00", "event": "run", "lane": "B13-PROXY", "run_id": "selfimprove-20260703-232216", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-03T23:56:10+00:00", "event": "skip", "lane": "B30-TBENCH", "reason": "tb_not_ready"}
+{"ts": "2026-07-04T00:55:08+00:00", "event": "run", "lane": "SMOKE", "run_id": "selfimprove-20260703-235610", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T01:47:09+00:00", "event": "run", "lane": "META", "run_id": "selfimprove-20260704-005508", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T02:49:43+00:00", "event": "run", "lane": "B9-PROXY", "run_id": "selfimprove-20260704-014709", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T03:52:17+00:00", "event": "run", "lane": "B11", "run_id": "selfimprove-20260704-024943", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T04:19:57+00:00", "event": "run", "lane": "B13-PROXY", "run_id": "selfimprove-20260704-035217", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T04:19:57+00:00", "event": "skip", "lane": "B30-TBENCH", "reason": "tb_not_ready"}
+{"ts": "2026-07-04T05:11:29+00:00", "event": "run", "lane": "SMOKE", "run_id": "selfimprove-20260704-041957", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T06:02:54+00:00", "event": "run", "lane": "META", "run_id": "selfimprove-20260704-051129", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T07:04:38+00:00", "event": "run", "lane": "B9-PROXY", "run_id": "selfimprove-20260704-060254", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T08:04:04+00:00", "event": "run", "lane": "B11", "run_id": "selfimprove-20260704-070438", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T08:37:53+00:00", "event": "run", "lane": "B13-PROXY", "run_id": "selfimprove-20260704-080404", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T08:37:53+00:00", "event": "skip", "lane": "B30-TBENCH", "reason": "tb_not_ready"}
+{"ts": "2026-07-04T09:35:58+00:00", "event": "run", "lane": "SMOKE", "run_id": "selfimprove-20260704-083753", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T10:27:18+00:00", "event": "run", "lane": "META", "run_id": "selfimprove-20260704-093558", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T11:19:55+00:00", "event": "run", "lane": "B9-PROXY", "run_id": "selfimprove-20260704-102718", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T12:06:03+00:00", "event": "run", "lane": "B11", "run_id": "selfimprove-20260704-111955", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T12:31:55+00:00", "event": "run", "lane": "B13-PROXY", "run_id": "selfimprove-20260704-120603", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T12:31:55+00:00", "event": "skip", "lane": "B30-TBENCH", "reason": "tb_not_ready"}
+{"ts": "2026-07-04T13:22:18+00:00", "event": "run", "lane": "SMOKE", "run_id": "selfimprove-20260704-123155", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T14:17:21+00:00", "event": "run", "lane": "META", "run_id": "selfimprove-20260704-132218", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}
+{"ts": "2026-07-04T15:19:43+00:00", "event": "run", "lane": "B9-PROXY", "run_id": "selfimprove-20260704-141721", "resolved": 0, "total": 4, "infra_fails": 4, "real_fails": 0}

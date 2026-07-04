@@ -1,0 +1,22 @@
+{
+  "_source": "nyosegawa/harness-bench experiment harnessbench-v2-official-2026-05-04c",
+  "_fetched": "2026-06-25",
+  "_tasks": 27,
+  "_repos": ["axios/axios", "fastapi/fastapi", "go-gitea/gitea", "jesseduffield/lazygit",
+             "langflow-ai/langflow", "louislam/uptime-kuma", "sharkdp/bat",
+             "usememos/memos", "vitejs/vite"],
+  "scores": {
+    "codex:gpt-5.5:xhigh":             {"pass_rate": 0.8148, "passed": 22, "runs": 27},
+    "codex:gpt-5.5:medium":            {"pass_rate": 0.7778, "passed": 21, "runs": 27},
+    "cursor:gpt-5.5:medium":           {"pass_rate": 0.7778, "passed": 21, "runs": 27},
+    "cursor:claude-opus-4-7:high":     {"pass_rate": 0.7407, "passed": 20, "runs": 27},
+    "claude:claude-opus-4-7:high":     {"pass_rate": 0.7407, "passed": 20, "runs": 27},
+    "codex:gpt-5.5:high":              {"pass_rate": 0.7037, "passed": 19, "runs": 27},
+    "claude:claude-opus-4-7:xhigh":    {"pass_rate": 0.6667, "passed": 18, "runs": 27},
+    "claude:claude-opus-4-7:max":      {"pass_rate": 0.6296, "passed": 17, "runs": 27},
+    "claude:claude-opus-4-8:xhigh":    {"pass_rate": 0.5600, "passed": 14, "runs": 25}
+  },
+  "target_to_beat": "codex:gpt-5.5:xhigh at 81.5%",
+  "maxxing_theoretical_at_target": 0.994,
+  "note": "HarnessBench v2 tests real-repo debugging: clone repo at base commit, fix bug, pass hidden core+regression tests."
+}

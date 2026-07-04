@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "525-rust-mt-finite-automaton",
+  "title": "Build a DFA in Rust — 3 turns",
+  "category": "repo_init",
+  "difficulty": "hard",
+  "target_stack": {"language": "rust", "framework": null, "extra": {}},
+  "description": "Three turns build a deterministic finite automaton: turn 1 add_state/add_transition, turn 2 accepts(), turn 3 reachable_states().",
+  "repo_seed": {
+    "files": {
+      "Cargo.toml": "[package]\nname = \"dfa\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+      "src/lib.rs": "//! Deterministic Finite Automaton (DFA).\nuse std::collections::{HashMap, HashSet, VecDeque};\n\n/// A DFA over alphabet of chars.\npub struct Dfa {\n    /// transition[(state, symbol)] = next_state\n    transitions: HashMap<(usize, char), usize>,\n    accept_states: HashSet<usize>,\n    start_state: usize,\n    states: HashSet<usize>,\n}\n\nimpl Dfa {\n    /// Create a new DFA with given start state.\n    pub fn new(start_state: usize) -> Self {\n        let mut states = HashSet::new();\n        states.insert(start_state);\n        Dfa {\n            transitions: HashMap::new(),\n            accept_states: HashSet::new(),\n            start_state,\n            states,\n        }\n    }\n\n    /// Add a state. is_accept: whether it's an accepting state.\n    pub fn add_state(&mut self, state: usize, is_accept: bool) {\n        unimplemented!()\n    }\n\n    /// Add a transition: from state, on symbol, go to target state.\n    pub fn add_transition(&mut self, from: usize, symbol: char, to: usize) {\n        unimplemented!()\n    }\n\n    /// Run the DFA on input string. Returns true if ends in an accept state.\n    pub fn accepts(&self, input: &str) -> bool {\n        unimplemented!()\n    }\n\n    /// Return all states reachable from the start state.\n    pub fn reachable_states(&self) -> HashSet<usize> {\n        unimplemented!()\n    }\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    /// DFA that accepts strings ending with 'b'.\n    fn build_ends_with_b() -> Dfa {\n        let mut dfa = Dfa::new(0);\n        dfa.add_state(0, false);\n        dfa.add_state(1, true); // accept state\n        dfa.add_transition(0, 'a', 0);\n        dfa.add_transition(0, 'b', 1);\n        dfa.add_transition(1, 'a', 0);\n        dfa.add_transition(1, 'b', 1);\n        dfa\n    }\n\n    #[test]\n    fn test_accepts_valid() {\n        let dfa = build_ends_with_b();\n        assert!(dfa.accepts(\"b\"));\n        assert!(dfa.accepts(\"ab\"));\n        assert!(dfa.accepts(\"aab\"));\n        assert!(dfa.accepts(\"abb\"));\n    }\n\n    #[test]\n    fn test_rejects_invalid() {\n        let dfa = build_ends_with_b();\n        assert!(!dfa.accepts(\"\"));\n        assert!(!dfa.accepts(\"a\"));\n        assert!(!dfa.accepts(\"ba\"));\n        assert!(!dfa.accepts(\"aba\"));\n    }\n\n    #[test]\n    fn test_unknown_symbol_rejects() {\n        let dfa = build_ends_with_b();\n        // 'c' has no transition — should reject\n        assert!(!dfa.accepts(\"ac\"));\n    }\n\n    #[test]\n    fn test_reachable_states() {\n        let dfa = build_ends_with_b();\n        let reachable = dfa.reachable_states();\n        assert!(reachable.contains(&0));\n        assert!(reachable.contains(&1));\n        // Add an unreachable state\n        let mut dfa2 = build_ends_with_b();\n        dfa2.add_state(99, false); // no transitions to/from 99\n        let reachable2 = dfa2.reachable_states();\n        assert!(!reachable2.contains(&99));\n    }\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `add_state(&mut self, state: usize, is_accept: bool)` and `add_transition(&mut self, from: usize, symbol: char, to: usize)` in `src/lib.rs`. add_state: insert state into self.states; if is_accept, insert into self.accept_states. add_transition: insert into self.transitions. Also insert both from and to states. Run `cargo test --quiet` (the tests will panic on unimplemented accepts — focus on compilation first, then make accepts work).",
+    "followup_prompts": [
+      "Good. Now implement `accepts(&self, input: &str) -> bool` — start at self.start_state, for each char in input look up self.transitions.get(&(current, ch)); if no transition exists the input is rejected. After processing all chars, check if current state is in self.accept_states. Run `cargo test --quiet` and fix any failures.",
+      "Final step: implement `reachable_states(&self) -> HashSet<usize>` — BFS/DFS from self.start_state using self.transitions to find all reachable states. Run `cargo test --quiet` — all 4 tests must pass."
+    ],
+    "success_criteria": [
+      "add_state and add_transition correctly populate the DFA",
+      "accepts() correctly simulates the DFA on input strings",
+      "Unknown symbol causes immediate rejection",
+      "reachable_states returns only states reachable from start",
+      "Unreachable states are excluded",
+      "cargo test passes (4 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "cargo test --quiet"}
+  },
+  "duration_hint_minutes": 25
+}

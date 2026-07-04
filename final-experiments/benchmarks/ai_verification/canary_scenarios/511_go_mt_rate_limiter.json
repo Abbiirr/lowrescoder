@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "511-go-mt-rate-limiter",
+  "title": "Build a token bucket rate limiter in Go — 3 turns",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "Three scripted turns build a token bucket rate limiter: turn 1 adds Allow()/refill logic, turn 2 adds mutex for concurrent access, turn 3 adds burst capacity and runs tests.",
+  "repo_seed": {
+    "files": {
+      "go.mod": "module github.com/ai-verification/rate-limiter\n\ngo 1.22\n",
+      "limiter/limiter.go": "package limiter\n\nimport (\n\t\"sync\"\n\t\"time\"\n)\n\n// Limiter is a token bucket rate limiter.\ntype Limiter struct {\n\trate     float64   // tokens per second\n\tburst    int       // maximum token capacity\n\ttokens   float64   // current token count\n\tlast     time.Time // last refill time\n\tmu       sync.Mutex\n}\n\n// New creates a Limiter with given rate (tokens/sec) and burst capacity.\nfunc New(rate float64, burst int) *Limiter {\n\treturn &Limiter{\n\t\trate:   rate,\n\t\tburst:  burst,\n\t\ttokens: float64(burst),\n\t\tlast:   time.Now(),\n\t}\n}\n\n// Allow returns true if a request is allowed (consumes one token).\nfunc (l *Limiter) Allow() bool {\n\t// TODO: implement token bucket Allow\n\treturn false\n}\n\n// Tokens returns the current token count (for testing).\nfunc (l *Limiter) Tokens() float64 {\n\tl.mu.Lock()\n\tdefer l.mu.Unlock()\n\treturn l.tokens\n}\n",
+      "limiter/limiter_test.go": "package limiter_test\n\nimport (\n\t\"sync\"\n\t\"testing\"\n\t\"time\"\n\n\t\"github.com/ai-verification/rate-limiter/limiter\"\n)\n\nfunc TestAllowWithinBurst(t *testing.T) {\n\tl := limiter.New(10, 5)\n\tfor i := 0; i < 5; i++ {\n\t\tif !l.Allow() {\n\t\t\tt.Fatalf(\"expected allow on request %d\", i+1)\n\t\t}\n\t}\n}\n\nfunc TestDeniedWhenExhausted(t *testing.T) {\n\tl := limiter.New(10, 3)\n\tl.Allow(); l.Allow(); l.Allow()\n\tif l.Allow() {\n\t\tt.Fatal(\"expected deny after burst exhausted\")\n\t}\n}\n\nfunc TestRefillOverTime(t *testing.T) {\n\tl := limiter.New(100, 1) // 100 tokens/sec, burst 1\n\tl.Allow() // exhaust\n\ttime.Sleep(15 * time.Millisecond) // ~1.5 tokens should refill\n\tif !l.Allow() {\n\t\tt.Fatal(\"expected allow after refill\")\n\t}\n}\n\nfunc TestBurstCapacity(t *testing.T) {\n\tl := limiter.New(100, 3)\n\t// Wait a long time — tokens should not exceed burst\n\ttime.Sleep(200 * time.Millisecond)\n\tif l.Tokens() > 3 {\n\t\tt.Fatalf(\"tokens %f exceeded burst 3\", l.Tokens())\n\t}\n}\n\nfunc TestConcurrentSafe(t *testing.T) {\n\tl := limiter.New(1000, 100)\n\tvar wg sync.WaitGroup\n\tallowed := make(chan bool, 200)\n\tfor i := 0; i < 200; i++ {\n\t\twg.Add(1)\n\t\tgo func() {\n\t\t\tdefer wg.Done()\n\t\t\tallowed <- l.Allow()\n\t\t}()\n\t}\n\twg.Wait()\n\tclose(allowed)\n\tcount := 0\n\tfor a := range allowed {\n\t\tif a {\n\t\t\tcount++\n\t\t}\n\t}\n\tif count > 100 {\n\t\tt.Fatalf(\"allowed %d but burst is 100\", count)\n\t}\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `Allow()` in `limiter/limiter.go`. The token bucket algorithm: calculate elapsed time since `l.last`, add `elapsed * l.rate` tokens (capped at `l.burst`), update `l.last`, then if tokens >= 1 consume one (tokens -= 1) and return true, else return false. Don't worry about concurrency yet. Run `go test ./...`.",
+    "followup_prompts": [
+      "Good. Now wrap the entire `Allow()` body in `l.mu.Lock()/l.mu.Unlock()` to make it safe for concurrent use. Run `go test -race ./...` to verify no data races. Fix any test failures.",
+      "Final check: make sure `Tokens()` correctly returns the current (refilled) value — it should refill before returning, same as Allow(). Run `go test ./...` one more time — all 5 tests must pass."
+    ],
+    "success_criteria": [
+      "Allow() grants requests up to burst capacity",
+      "Allow() denies when tokens are exhausted",
+      "Tokens refill over time at the configured rate",
+      "Tokens are capped at burst capacity",
+      "Concurrent calls are data-race free",
+      "go test ./... passes (5 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "go test ./..."}
+  },
+  "duration_hint_minutes": 20
+}

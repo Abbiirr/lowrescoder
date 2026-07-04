@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-greenfield-wordcount-001",
+  "title": "Implement a Go word count library",
+  "category": "repo_init",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement three word-count functions in a Go package: CountWords, CountLines, and MostFrequent. All methods have stub panics.",
+  "repo_seed": {
+    "files": {
+      "wordcount.go": "package wordcount\n\nimport (\n\t\"strings\"\n)\n\n// CountWords returns the number of whitespace-separated words in s.\nfunc CountWords(s string) int {\n\t_ = strings.Fields(s)\n\tpanic(\"CountWords: implement me\")\n}\n\n// CountLines returns the number of newline-terminated lines in s.\n// An empty string has 0 lines. A trailing newline does not add an extra line.\nfunc CountLines(s string) int {\n\tpanic(\"CountLines: implement me\")\n}\n\n// MostFrequent returns the word that appears most often (case-insensitive).\n// Returns \"\" if s is empty. Tie-breaks by first occurrence.\nfunc MostFrequent(s string) string {\n\tpanic(\"MostFrequent: implement me\")\n}\n",
+      "wordcount_test.go": "package wordcount\n\nimport \"testing\"\n\nfunc TestCountWords(t *testing.T) {\n\ttests := []struct {\n\t\tinput string\n\t\twant  int\n\t}{\n\t\t{\"\", 0},\n\t\t{\"hello\", 1},\n\t\t{\"hello world\", 2},\n\t\t{\"  spaces  \", 1},\n\t\t{\"one two three four\", 4},\n\t}\n\tfor _, tc := range tests {\n\t\tif got := CountWords(tc.input); got != tc.want {\n\t\t\tt.Errorf(\"CountWords(%q) = %d, want %d\", tc.input, got, tc.want)\n\t\t}\n\t}\n}\n\nfunc TestCountLines(t *testing.T) {\n\ttests := []struct {\n\t\tinput string\n\t\twant  int\n\t}{\n\t\t{\"\", 0},\n\t\t{\"one line\", 1},\n\t\t{\"line1\\nline2\", 2},\n\t\t{\"line1\\nline2\\n\", 2},\n\t\t{\"a\\nb\\nc\", 3},\n\t}\n\tfor _, tc := range tests {\n\t\tif got := CountLines(tc.input); got != tc.want {\n\t\t\tt.Errorf(\"CountLines(%q) = %d, want %d\", tc.input, got, tc.want)\n\t\t}\n\t}\n}\n\nfunc TestMostFrequent(t *testing.T) {\n\ttests := []struct {\n\t\tinput string\n\t\twant  string\n\t}{\n\t\t{\"\", \"\"},\n\t\t{\"the cat sat on the mat\", \"the\"},\n\t\t{\"Go go GO\", \"go\"},\n\t\t{\"apple banana apple cherry banana apple\", \"apple\"},\n\t}\n\tfor _, tc := range tests {\n\t\tif got := MostFrequent(tc.input); got != tc.want {\n\t\t\tt.Errorf(\"MostFrequent(%q) = %q, want %q\", tc.input, got, tc.want)\n\t\t}\n\t}\n}\n",
+      "go.mod": "module wordcount\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement the three functions in wordcount.go:\n1. CountWords(s) — count whitespace-separated words (hint: strings.Fields)\n2. CountLines(s) — count newline-separated lines; empty string = 0, trailing newline doesn't add a line\n3. MostFrequent(s) — return the most common word, case-insensitive; tie-break by first occurrence; return \"\" for empty input\n\nRun `go test ./...` to verify all tests pass.",
+    "entry_point": "wordcount.go",
+    "success_criteria": [
+      "All go tests pass",
+      "CountWords, CountLines, MostFrequent all implemented"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./..."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 12
+}

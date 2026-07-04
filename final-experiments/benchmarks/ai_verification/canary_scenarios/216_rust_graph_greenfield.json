@@ -1,0 +1,67 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-010",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 35,
+  "title": "Build a directed graph in Rust with BFS traversal and path detection",
+  "description": "Greenfield Rust task: implement a directed Graph backed by a HashMap adjacency list with add_edge, neighbors, bfs_order (BFS node visit order), and has_path (reachability check via BFS).",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"graph\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement Graph\n"
+      },
+      {
+        "path": "tests/graph_test.rs",
+        "content": "use graph::Graph;\n\n#[test]\nfn test_neighbors() {\n    let mut g = Graph::new();\n    g.add_edge(1, 2);\n    g.add_edge(1, 3);\n    let mut nbrs = g.neighbors(1).to_vec();\n    nbrs.sort();\n    assert_eq!(nbrs, vec![2, 3]);\n    assert_eq!(g.neighbors(99).len(), 0);\n}\n\n#[test]\nfn test_bfs_order_visits_all() {\n    let mut g = Graph::new();\n    g.add_edge(0, 1);\n    g.add_edge(0, 2);\n    g.add_edge(1, 3);\n    let order = g.bfs_order(0);\n    assert_eq!(order[0], 0);\n    assert!(order.contains(&1));\n    assert!(order.contains(&2));\n    assert!(order.contains(&3));\n    assert_eq!(order.len(), 4);\n}\n\n#[test]\nfn test_has_path_direct() {\n    let mut g = Graph::new();\n    g.add_edge(1, 2);\n    assert!(g.has_path(1, 2));\n}\n\n#[test]\nfn test_has_path_indirect_and_directed() {\n    let mut g = Graph::new();\n    g.add_edge(1, 2);\n    g.add_edge(2, 3);\n    assert!(g.has_path(1, 3));\n    assert!(!g.has_path(3, 1)); // directed — no reverse edge\n}\n\n#[test]\nfn test_has_path_self() {\n    let g = Graph::new();\n    assert!(g.has_path(5, 5));\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement Graph in src/lib.rs.\n\nuse std::collections::{HashMap, HashSet, VecDeque};\n\npub struct Graph {\n    adj: HashMap<usize, Vec<usize>>,\n}\n\nimpl Graph {\n    pub fn new() -> Self\n    pub fn add_edge(&mut self, from: usize, to: usize)\n        // Add directed edge from→to. Ensure both nodes appear in adj map.\n    pub fn neighbors(&self, node: usize) -> &[usize]\n        // Return slice of neighbors; empty slice if node not present.\n    pub fn bfs_order(&self, start: usize) -> Vec<usize>\n        // BFS from start; visit neighbors in sorted order for determinism.\n    pub fn has_path(&self, start: usize, end: usize) -> bool\n        // True if end is reachable from start via directed edges. start==end is always true.\n}\n\nAll 5 tests in tests/graph_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "Graph backed by HashMap<usize, Vec<usize>> adjacency list",
+      "add_edge adds directed edge and ensures both endpoints exist in adj",
+      "neighbors returns empty slice for unknown nodes",
+      "bfs_order visits neighbors in sorted order for determinism",
+      "has_path returns true for self-loops and multi-hop paths; respects direction",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

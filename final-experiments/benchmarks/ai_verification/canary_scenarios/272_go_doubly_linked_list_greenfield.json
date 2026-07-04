@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-027",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement doubly linked list in Go",
+  "description": "Greenfield Go task: implement a generic doubly linked list with PushFront, PushBack, PopFront, PopBack, and ToSlice operations using sentinel head/tail nodes.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module dll\n\ngo 1.21\n"
+      },
+      {
+        "path": "dll.go",
+        "content": "package dll\n\n// TODO: implement doubly linked list\n"
+      },
+      {
+        "path": "dll_test.go",
+        "content": "package dll\n\nimport (\n\t\"testing\"\n)\n\nfunc TestPushBackToSlice(t *testing.T) {\n\tl := New[int]()\n\tl.PushBack(1)\n\tl.PushBack(2)\n\tl.PushBack(3)\n\tgot := l.ToSlice()\n\twant := []int{1, 2, 3}\n\tfor i, v := range want {\n\t\tif got[i] != v {\n\t\t\tt.Fatalf(\"want %v got %v\", want, got)\n\t\t}\n\t}\n}\n\nfunc TestPushFrontToSlice(t *testing.T) {\n\tl := New[int]()\n\tl.PushFront(1)\n\tl.PushFront(2)\n\tl.PushFront(3)\n\tgot := l.ToSlice()\n\twant := []int{3, 2, 1}\n\tfor i, v := range want {\n\t\tif got[i] != v {\n\t\t\tt.Fatalf(\"want %v got %v\", want, got)\n\t\t}\n\t}\n}\n\nfunc TestPopFront(t *testing.T) {\n\tl := New[string]()\n\tl.PushBack(\"a\")\n\tl.PushBack(\"b\")\n\tv, ok := l.PopFront()\n\tif !ok || v != \"a\" {\n\t\tt.Fatalf(\"want a,true got %v,%v\", v, ok)\n\t}\n\tif l.Len() != 1 {\n\t\tt.Fatalf(\"want len 1\")\n\t}\n}\n\nfunc TestPopBack(t *testing.T) {\n\tl := New[string]()\n\tl.PushBack(\"x\")\n\tl.PushBack(\"y\")\n\tv, ok := l.PopBack()\n\tif !ok || v != \"y\" {\n\t\tt.Fatalf(\"want y,true got %v,%v\", v, ok)\n\t}\n}\n\nfunc TestPopEmpty(t *testing.T) {\n\tl := New[int]()\n\t_, ok := l.PopFront()\n\tif ok {\n\t\tt.Fatal(\"PopFront on empty should return false\")\n\t}\n\t_, ok = l.PopBack()\n\tif ok {\n\t\tt.Fatal(\"PopBack on empty should return false\")\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement a generic doubly linked list in dll.go.\n\ntype node[T any] struct { val T; prev, next *node[T] }\ntype List[T any] struct { head, tail *node[T]; length int }\n\nfunc New[T any]() *List[T]\n  // Initialize with sentinel head and tail: head.next=tail, tail.prev=head.\n\nfunc (l *List[T]) Len() int\nfunc (l *List[T]) PushFront(v T)\n  // Insert new node between head and head.next.\nfunc (l *List[T]) PushBack(v T)\n  // Insert new node between tail.prev and tail.\nfunc (l *List[T]) PopFront() (T, bool)\n  // Remove and return node after head. Return zero, false if empty.\nfunc (l *List[T]) PopBack() (T, bool)\n  // Remove and return node before tail. Return zero, false if empty.\nfunc (l *List[T]) ToSlice() []T\n  // Walk from head.next to tail.prev, collecting values.\n\nAll 5 tests in dll_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Sentinel head/tail nodes avoid nil-pointer edge cases",
+      "PushFront inserts at front (after sentinel head)",
+      "PopFront/PopBack return (zero, false) when empty",
+      "Len() is maintained correctly across operations",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-longhorizon-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "medium",
+  "duration_hint_minutes": 35,
+  "title": "Extend Rust report library in 3 steps: average/median, top-n/bottom-n, normalize",
+  "description": "Multi-step Rust task: extend the report library with statistical functions in three steps, building on the existing sum/max_item/min_item free functions.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_report_gen",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Extend src/lib.rs in three steps. All 4 existing tests must still pass.\n\nStep 1 — Statistical averages:\n  pub fn average(items: &[Item]) -> f64\n    — returns sum / count; returns 0.0 if empty\n  pub fn median(items: &[Item]) -> f64\n    — sort values ascending; return middle element (odd count) or mean of two middle elements (even); 0.0 if empty\n\nStep 2 — Ranking:\n  pub fn top_n<'a>(items: &'a [Item], n: usize) -> Vec<&'a Item>\n    — returns up to n items sorted by value descending\n    — if n >= items.len(), returns all items sorted descending\n  pub fn bottom_n<'a>(items: &'a [Item], n: usize) -> Vec<&'a Item>\n    — returns up to n items sorted by value ascending\n  NOTE: tests calling top_n/bottom_n must bind sample() to a named variable before\n  passing a reference, e.g. let items = sample(); top_n(&items, 2)\n  — calling top_n(&sample(), 2) creates E0716 (temporary dropped while borrowed)\n\nStep 3 — Normalization:\n  pub fn normalize(items: &[Item]) -> Vec<f64>\n    — divides each item's value by the maximum value\n    — returns empty Vec if items is empty\n    — if max == 0.0, returns vec of 0.0 (same length as items)\n\nAll 4 existing tests plus solution-only tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "average returns sum/count and 0.0 for empty",
+      "median returns middle value for odd count and mean of two middles for even",
+      "top_n returns up to n items sorted by value descending",
+      "bottom_n returns up to n items sorted by value ascending",
+      "normalize returns each value divided by max",
+      "All 4 existing tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `cargo test` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `cargo test` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-dirty-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Fix three bugs in Go CSV util: off-by-one, nil check, wrong file mode",
+  "description": "The go_csv_reader csvutil package has three injected bugs: CountRows returns wrong count, FilterCSV panics on empty CSV, and WriteCSV uses wrong file permissions. Fix all three so the tests pass.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_csv_reader",
+    "injections": [
+      {
+        "path": "internal/csvutil/csvutil.go",
+        "content": "// Package csvutil provides CSV file reading and writing utilities.\npackage csvutil\n\nimport (\n\t\"encoding/csv\"\n\t\"os\"\n\t\"strings\"\n)\n\n// ParseCSV reads a CSV file and returns all records.\nfunc ParseCSV(path string) ([][]string, error) {\n\tdata, err := os.ReadFile(path)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tr := csv.NewReader(strings.NewReader(string(data)))\n\treturn r.ReadAll()\n}\n\n// WriteCSV writes records to a CSV file, creating or overwriting it.\n// BUG: wrong file permission (0o444 = read-only; should be 0o644)\nfunc WriteCSV(path string, rows [][]string) error {\n\tvar sb strings.Builder\n\tw := csv.NewWriter(&sb)\n\tif err := w.WriteAll(rows); err != nil {\n\t\treturn err\n\t}\n\treturn os.WriteFile(path, []byte(sb.String()), 0o444)\n}\n\n// CountRows returns the number of data rows (excluding header) in a CSV file.\n// BUG: returns len(records) instead of len(records) - 1 (includes header in count)\nfunc CountRows(path string) (int, error) {\n\trecords, err := ParseCSV(path)\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\tif len(records) == 0 {\n\t\treturn 0, nil\n\t}\n\treturn len(records), nil\n}\n\n// FilterCSV reads a CSV file and returns rows where pred returns true.\n// BUG: panics on empty CSV — accesses records[0] without nil check\nfunc FilterCSV(path string, pred func([]string) bool) ([][]string, error) {\n\trecords, err := ParseCSV(path)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := [][]string{records[0]}\n\tfor _, row := range records[1:] {\n\t\tif pred(row) {\n\t\t\tresult = append(result, row)\n\t\t}\n\t}\n\treturn result, nil\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in internal/csvutil/csvutil.go:\n\n1. CountRows: currently returns len(records) instead of len(records)-1 — fix to exclude the header row\n\n2. FilterCSV: panics on empty CSV because it accesses records[0] without checking if records is empty — fix with an early return for empty input\n\n3. WriteCSV: uses file permission 0o444 (read-only) which causes WriteFile to fail on re-runs — fix to use 0o644\n\nAll 4 existing tests in internal/csvutil/csvutil_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "CountRows returns len(records)-1 (excluding header)",
+      "FilterCSV returns empty slice for empty CSV (no panic)",
+      "WriteCSV uses 0o644 file permissions",
+      "All 4 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

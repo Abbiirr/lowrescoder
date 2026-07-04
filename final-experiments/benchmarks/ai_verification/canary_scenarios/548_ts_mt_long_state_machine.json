@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "548-ts-mt-long-state-machine",
+  "title": "Build an XState-like state machine in TypeScript — 4 turns",
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "target_stack": {"language": "typescript", "framework": null, "extra": {}},
+  "description": "Four-turn state machine: turn 1 define states/transitions, turn 2 actions, turn 3 guards/conditions, turn 4 history and tests.",
+  "repo_seed": {
+    "files": {
+      "package.json": "{\n  \"name\": \"state-machine\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"test\": \"jest --forceExit\"\n  },\n  \"devDependencies\": {\n    \"@types/jest\": \"^29.0.0\",\n    \"jest\": \"^29.0.0\",\n    \"ts-jest\": \"^29.0.0\",\n    \"typescript\": \"^5.0.0\"\n  },\n  \"jest\": {\n    \"preset\": \"ts-jest\",\n    \"testEnvironment\": \"node\"\n  }\n}\n",
+      "src/machine.ts": "export interface Transition<S extends string, E extends string> {\n  target: S;\n  guard?: (context: Record<string, unknown>) => boolean;\n  actions?: Array<(context: Record<string, unknown>) => void>;\n}\n\nexport interface StateConfig<S extends string, E extends string> {\n  transitions?: Partial<Record<E, Transition<S, E>>>;\n  onEnter?: (context: Record<string, unknown>) => void;\n  onExit?: (context: Record<string, unknown>) => void;\n}\n\nexport class StateMachine<S extends string, E extends string> {\n  private states: Partial<Record<S, StateConfig<S, E>>>;\n  private current: S;\n  private context: Record<string, unknown>;\n  private history: S[];\n\n  constructor(\n    states: Partial<Record<S, StateConfig<S, E>>>,\n    initial: S,\n    context: Record<string, unknown> = {}\n  ) {\n    this.states = states;\n    this.current = initial;\n    this.context = context;\n    this.history = [initial];\n  }\n\n  /** Get current state. */\n  getState(): S {\n    return this.current;\n  }\n\n  /** Get current context. */\n  getContext(): Record<string, unknown> {\n    return { ...this.context };\n  }\n\n  /** Send event, triggering transition if defined and guard passes. */\n  send(event: E): boolean {\n    // TODO\n    return false;\n  }\n\n  /** Get the full history of visited states. */\n  getHistory(): S[] {\n    return [...this.history];\n  }\n\n  /** Check if state was ever visited. */\n  wasVisited(state: S): boolean {\n    return this.history.includes(state);\n  }\n}\n",
+      "src/machine.test.ts": "import { StateMachine } from './machine';\n\ntype TrafficState = 'red' | 'green' | 'yellow';\ntype TrafficEvent = 'GO' | 'SLOW' | 'STOP';\n\nfunction buildTrafficLight() {\n  return new StateMachine<TrafficState, TrafficEvent>({\n    red: { transitions: { GO: { target: 'green' } } },\n    green: { transitions: { SLOW: { target: 'yellow' } } },\n    yellow: { transitions: { STOP: { target: 'red' } } },\n  }, 'red');\n}\n\ntest('initial state', () => {\n  const sm = buildTrafficLight();\n  expect(sm.getState()).toBe('red');\n});\n\ntest('basic transition', () => {\n  const sm = buildTrafficLight();\n  expect(sm.send('GO')).toBe(true);\n  expect(sm.getState()).toBe('green');\n});\n\ntest('unknown event returns false', () => {\n  const sm = buildTrafficLight();\n  expect(sm.send('SLOW')).toBe(false); // not valid from red\n  expect(sm.getState()).toBe('red');\n});\n\ntest('actions executed on transition', () => {\n  const log: string[] = [];\n  const sm = new StateMachine<'a' | 'b', 'GO'>({\n    a: { transitions: { GO: { target: 'b', actions: [() => log.push('action!')] } } },\n    b: {},\n  }, 'a');\n  sm.send('GO');\n  expect(log).toEqual(['action!']);\n});\n\ntest('guard prevents transition', () => {\n  const sm = new StateMachine<'locked' | 'open', 'UNLOCK'>({\n    locked: { transitions: { UNLOCK: { target: 'open', guard: (ctx) => ctx.hasKey === true } } },\n    open: {},\n  }, 'locked', { hasKey: false });\n  expect(sm.send('UNLOCK')).toBe(false);\n  expect(sm.getState()).toBe('locked');\n});\n\ntest('guard allows transition when condition met', () => {\n  const sm = new StateMachine<'locked' | 'open', 'UNLOCK'>({\n    locked: { transitions: { UNLOCK: { target: 'open', guard: (ctx) => ctx.hasKey === true } } },\n    open: {},\n  }, 'locked', { hasKey: true });\n  expect(sm.send('UNLOCK')).toBe(true);\n  expect(sm.getState()).toBe('open');\n});\n\ntest('history tracks visited states', () => {\n  const sm = buildTrafficLight();\n  sm.send('GO');\n  sm.send('SLOW');\n  sm.send('STOP');\n  const history = sm.getHistory();\n  expect(history).toEqual(['red', 'green', 'yellow', 'red']);\n});\n\ntest('wasVisited', () => {\n  const sm = buildTrafficLight();\n  expect(sm.wasVisited('red')).toBe(true);\n  expect(sm.wasVisited('green')).toBe(false);\n  sm.send('GO');\n  expect(sm.wasVisited('green')).toBe(true);\n});\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `send(event: E): boolean` in `src/machine.ts`. Look up `this.states[this.current]?.transitions?.[event]`. If the transition exists, update `this.current = transition.target` and return true. Return false if no transition. Run `npm test -- --forceExit`.",
+    "followup_prompts": [
+      "Good progress. Run `npm test -- --forceExit` to see where we stand. Now add support for `actions` in transitions: after updating state, execute each function in `transition.actions` with `this.context`. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Good. Now add guard support: if `transition.guard` is defined, call it with `this.context` — if it returns false, don't transition and return false. Run `npm test -- --forceExit` and fix any failures.",
+      "Final push: run `npm test -- --forceExit` and fix any remaining failures. Also make sure `getHistory()` includes the initial state and all subsequent states (update `this.history` in send() when transitioning). All 8 tests must pass."
+    ],
+    "success_criteria": [
+      "Basic transitions work (send returns true on match)",
+      "Unknown events return false without state change",
+      "Actions executed on transition",
+      "Guards prevent transition when condition is false",
+      "Guards allow transition when condition is true",
+      "History tracks all visited states including initial",
+      "All 8 tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "npm test -- --forceExit"}
+  },
+  "duration_hint_minutes": 30
+}

@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-dirty-002",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "hard",
+  "duration_hint_minutes": 35,
+  "title": "Fix three bugs in a Go concurrent KV store: nil map, missing read lock, uninitialized map",
+  "description": "A Go KV store has three bugs that cause panics and data races. All five tests fail at runtime. Fix all bugs so the store is safe for concurrent use.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_buggy_kvstore",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The KV store in internal/store/store.go has three bugs — all five tests currently panic or fail:\n\nBug 1 — Nil map panic: New() returns a KVStore with data == nil. Fix by initializing the map: data: make(map[string]string).\n\nBug 2 — Missing read lock in Get: Get() reads from data without holding the mutex, creating a data race with concurrent Set/Delete calls. Fix by adding s.mu.Lock() / defer s.mu.Unlock() (or use sync.RWMutex with RLock/RUnlock for better performance — either is acceptable).\n\nBug 3 — Comment noise: The comment in Keys() incorrectly claims there is a bug ('relies on uninitialized data map'). Once Bug 1 is fixed, Keys() is correct. Remove or correct the misleading comments in store.go.\n\nAfter your fixes: go test ./... must pass all five tests. go vet ./... must be clean. go build ./... must succeed.",
+    "required_artifacts": [
+      "data map initialized in New() constructor",
+      "Get() holds mutex during read",
+      "Misleading comments removed or corrected",
+      "go test ./... passes all 5 tests",
+      "go vet ./... clean",
+      "go build ./... succeeds"
+    ],
+    "success_criteria": [
+      "No nil map panics",
+      "No data races (mutex held for all map reads and writes)",
+      "All 5 tests pass"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

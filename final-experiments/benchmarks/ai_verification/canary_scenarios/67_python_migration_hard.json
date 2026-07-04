@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-migration-003",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "hard",
+  "duration_hint_minutes": 35,
+  "title": "Migrate legacy Python report generator to pathlib, f-strings, and dataclasses",
+  "description": "A Python report generator uses os.path, open(), and string concatenation. Migrate to pathlib.Path throughout, f-strings for HTML generation, a Report dataclass for metadata, and a ReportIndex class for multi-report management.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_legacy_report",
+    "injections": [],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "The module src/report_gen.py uses os.path, string concatenation for HTML, and procedural functions. Migrate and extend it:\n\n1. Replace all os.path.join, os.path.isdir, os.makedirs, os.path.exists, os.listdir, os.remove with pathlib.Path equivalents. The function signatures must remain compatible (still accept str, not Path) so existing tests keep passing — convert str args to Path internally.\n\n2. Replace all string concatenation in write_html_report with f-strings.\n\n3. Add a Report dataclass:\n   from dataclasses import dataclass\n   @dataclass\n   class Report:\n       name: str\n       title: str\n       rows: list[list[str]]\n       def save(self, base_dir: str) -> str: ...  # calls write_html_report, returns path str\n\n4. Add a ReportIndex class:\n   class ReportIndex:\n       def __init__(self, base_dir: str): ...\n       def add(self, report: Report) -> str: ...  # saves the report, returns path str\n       def names(self) -> list[str]: ...  # sorted list of report names\n       def get_path(self, name: str) -> str | None: ...  # path to report.html or None\n\n5. Add 3 new tests in tests/test_report_gen.py:\n   - test_report_save: create a Report, call save(), verify HTML file content\n   - test_report_index_add_names: use ReportIndex.add() twice, check names() returns sorted list\n   - test_report_index_get_path: check get_path() returns correct path; check get_path('missing') is None\n\nAll 5 existing tests must still pass.\n\nRun uv run pytest tests/ -q to confirm.",
+    "required_artifacts": [
+      "All os.path calls replaced with pathlib.Path",
+      "String concatenation in write_html_report replaced with f-strings",
+      "Report dataclass with name, title, rows, and save() method",
+      "ReportIndex class with __init__, add, names, get_path",
+      "3 new tests added",
+      "All 5 original tests pass"
+    ],
+    "success_criteria": [
+      "No os.path.join, os.path.exists etc. remain",
+      "f-strings used for HTML generation",
+      "Report and ReportIndex classes present and tested",
+      "All 8 tests pass"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-dirty-002",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "hard",
+  "duration_hint_minutes": 25,
+  "title": "Rescue a Python service: 3 failing tests, unused imports, wrong return type, missing env read",
+  "description": "A Python service has accumulated 5 concrete issues: 2 failing tests, 1 broken test fixture, 2 lint errors, a function returning the wrong type, and hardcoded config that should read from env. Fix all without changing the test file.",
+  "target_stack": {
+    "language": "python",
+    "framework": "",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "mutate",
+    "fixture_ref": "python_multistep_service",
+    "injections": [
+      {
+        "path": "src/broken_service.py",
+        "content": "import os\nimport sys  # unused\nimport json  # unused\nfrom src.store import save, load\n\n\nDEFAULT_BATCH = 10  # should be os.environ.get('DEFAULT_BATCH', '10')\n\n\ndef process_batch(items: list[str], batch_size: int = DEFAULT_BATCH) -> list[str]:  # wrong return hint, returns dict\n    \"\"\"Process items in batches.\"\"\"\n    results = {}\n    for i in range(0, len(items), batch_size):\n        chunk = items[i:i + batch_size]\n        results[i] = [x.upper() for x in chunk if x]\n    return results  # type: ignore — actually returns dict, not list\n\n\ndef save_results(key: str, results: list[str]) -> None:\n    save(key, results)\n\n\ndef load_results(key: str) -> list[str] | None:\n    return load(key)\n"
+      },
+      {
+        "path": "tests/test_broken_service.py",
+        "content": "import pytest\nfrom src.broken_service import process_batch, save_results, load_results\nfrom src.store import clear\n\n\n@pytest.fixture(autouse=True)\ndef reset():\n    clear()  # this call is correct — store.clear() exists\n\n\ndef test_process_batch_returns_list():\n    result = process_batch(['a', 'b', 'c'])\n    assert isinstance(result, list), f'expected list, got {type(result)}'\n    assert result == ['A', 'B', 'C']\n\n\ndef test_process_batch_filters_empty():\n    result = process_batch(['x', '', 'y'])\n    assert result == ['X', 'Y']\n\n\ndef test_save_and_load():\n    save_results('k1', ['A', 'B'])\n    assert load_results('k1') == ['A', 'B']\n\n\ndef test_load_missing_returns_none():\n    assert load_results('no_such_key') is None\n\n\ndef test_process_batch_respects_batch_size():\n    items = [str(i) for i in range(25)]\n    result = process_batch(items, batch_size=10)\n    # if correctly returning a list, len==25\n    assert len(result) == 25\n"
+      }
+    ],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix src/broken_service.py so all 5 tests in tests/test_broken_service.py pass. Do NOT modify the test file.\n\nIssues to fix:\n1. process_batch() returns a dict but should return a flat list[str] (all transformed items concatenated in order).\n2. Remove unused imports: sys and json.\n3. Change DEFAULT_BATCH to read from environment: int(os.environ.get('DEFAULT_BATCH', '10')).\n4. Fix the return type annotation to match the actual behavior after the fix.\n5. Ensure the autouse fixture reset() works (it calls store.clear() — verify store.clear() exists in src/store.py — it does).\n\nAll original tests in tests/test_processor.py must still pass.",
+    "required_artifacts": [
+      "all 5 tests in test_broken_service.py pass",
+      "all 6 tests in test_processor.py pass",
+      "ruff reports no lint errors",
+      "process_batch returns list[str]"
+    ],
+    "success_criteria": [
+      "process_batch concatenates all batch chunks into one flat list",
+      "sys and json imports removed",
+      "DEFAULT_BATCH reads from os.environ",
+      "Return type annotation corrected to list[str]",
+      "No existing tests broken"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

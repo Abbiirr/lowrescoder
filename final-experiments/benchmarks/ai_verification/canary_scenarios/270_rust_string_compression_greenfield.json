@@ -1,0 +1,67 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-027",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Implement string compression and decompression in Rust",
+  "description": "Greenfield Rust task: implement compress (run-length encode, emitting count+char when count>1 else just char) and decompress (expand count+char sequences back to original string).",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"strcompress\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement compress and decompress\n"
+      },
+      {
+        "path": "tests/compress_test.rs",
+        "content": "use strcompress::{compress, decompress};\n\n#[test]\nfn test_compress_basic() {\n    assert_eq!(compress(\"aabcccdddd\"), \"2ab3c4d\");\n}\n\n#[test]\nfn test_compress_no_runs() {\n    assert_eq!(compress(\"abcd\"), \"abcd\");\n}\n\n#[test]\nfn test_compress_single_char() {\n    assert_eq!(compress(\"aaaaa\"), \"5a\");\n}\n\n#[test]\nfn test_decompress_basic() {\n    assert_eq!(decompress(\"2ab3c4d\"), \"aabcccdddd\");\n}\n\n#[test]\nfn test_round_trip() {\n    let original = \"aaabbbcccaaa\";\n    assert_eq!(decompress(&compress(original)), original);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement compress and decompress in src/lib.rs.\n\npub fn compress(s: &str) -> String\n  // Scan characters, counting consecutive identical chars.\n  // When the char changes (or end): if count > 1, push count.to_string() + char; else just push char.\n  // Empty input returns empty string.\n\npub fn decompress(s: &str) -> String\n  // Use a Peekable char iterator.\n  // Collect leading digits as a number (if any), then take the next char.\n  // If number > 0: repeat char that many times; else: emit char once.\n  // If no leading digits: emit char once.\n\nAll 5 tests in tests/compress_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "compress emits count only when count > 1 (single chars have no prefix)",
+      "compress handles empty string",
+      "decompress correctly expands N-char sequences",
+      "decompress handles chars with no numeric prefix",
+      "Round-trip compress -> decompress restores original",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

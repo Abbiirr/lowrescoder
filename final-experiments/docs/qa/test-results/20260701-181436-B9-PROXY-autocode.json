@@ -1,0 +1,126 @@
+{
+  "contract": {
+    "harness_version": "1.0.0",
+    "harness_commit_sha": "unknown",
+    "agent": "autocode",
+    "agent_version": "0.1.0",
+    "model": "bench_stable",
+    "provider_mode": "local_free",
+    "lane": "B9-PROXY",
+    "run_id": "selfimprove-20260701-181302",
+    "manifest_hash": "sha256:bfc062176a82e4d3",
+    "budget_profile": {
+      "wall_time_s": 86400,
+      "token_cap": 50000,
+      "max_tool_calls": 100
+    },
+    "budget_profile_id": "wt86400_tc50000_mc100",
+    "command_trace": "/home/bs01763/projects/ai/autocode-full/benchmarks/benchmark_runner.py --agent autocode --lane B9-PROXY --model bench_stable --max-tasks 4 --task-timeout-s 600 --run-id selfimprove-20260701-181302",
+    "timestamp": "2026-07-01T18:14:36.303300+00:00",
+    "comparison_validity": "proxy-only",
+    "seed": null,
+    "image_digests": {
+      "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+    }
+  },
+  "lane": "B9-PROXY",
+  "lane_name": "Terminal-Bench Equivalent",
+  "agent": "autocode",
+  "model": "bench_stable",
+  "provider_mode": "local_free",
+  "aggregate": {
+    "total_tasks": 4,
+    "resolved": 0,
+    "resolve_rate": 0.0,
+    "infra_fails": 4,
+    "infra_fail_rate": 1.0,
+    "total_wall_time_s": 0.0,
+    "avg_wall_time_s": 0.0
+  },
+  "results": [
+    {
+      "task_id": "tb-001-hello-world",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 0.0,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "Task worker exited without result (rc=1)",
+      "artifacts": {
+        "failure_type": "INFRA_FAIL",
+        "failure_evidence": {
+          "timeout_source": null,
+          "worker_returncode": 1,
+          "worker_stdout": "",
+          "worker_stderr": "/home/bs01763/projects/ai/autocode-full/autocode/.venv/bin/python3: Error while finding module specification for 'benchmarks.benchmark_runner' (ModuleNotFoundError: No module named 'benchmarks')\n"
+        },
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_B9-PROXY_tb-001-hello-world_20260701_181322/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "tb-002-fix-git",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 0.0,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "Task worker exited without result (rc=1)",
+      "artifacts": {
+        "failure_type": "INFRA_FAIL",
+        "failure_evidence": {
+          "timeout_source": null,
+          "worker_returncode": 1,
+          "worker_stdout": "",
+          "worker_stderr": "/home/bs01763/projects/ai/autocode-full/autocode/.venv/bin/python3: Error while finding module specification for 'benchmarks.benchmark_runner' (ModuleNotFoundError: No module named 'benchmarks')\n"
+        },
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_B9-PROXY_tb-002-fix-git_20260701_181332/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "tb-003-fix-permissions",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 0.0,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "Task worker exited without result (rc=1)",
+      "artifacts": {
+        "failure_type": "INFRA_FAIL",
+        "failure_evidence": {
+          "timeout_source": null,
+          "worker_returncode": 1,
+          "worker_stdout": "",
+          "worker_stderr": "/home/bs01763/projects/ai/autocode-full/autocode/.venv/bin/python3: Error while finding module specification for 'benchmarks.benchmark_runner' (ModuleNotFoundError: No module named 'benchmarks')\n"
+        },
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_B9-PROXY_tb-003-fix-permissions_20260701_181356/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "tb-004-csv-to-parquet",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 0.0,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "Task worker exited without result (rc=1)",
+      "artifacts": {
+        "failure_type": "INFRA_FAIL",
+        "failure_evidence": {
+          "timeout_source": null,
+          "worker_returncode": 1,
+          "worker_stdout": "",
+          "worker_stderr": "/home/bs01763/projects/ai/autocode-full/autocode/.venv/bin/python3: Error while finding module specification for 'benchmarks.benchmark_runner' (ModuleNotFoundError: No module named 'benchmarks')\n"
+        },
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_B9-PROXY_tb-004-csv-to-parquet_20260701_181407/setup_log.txt"
+      }
+    }
+  ],
+  "image_digests": {
+    "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+  },
+  "halted": false
+}

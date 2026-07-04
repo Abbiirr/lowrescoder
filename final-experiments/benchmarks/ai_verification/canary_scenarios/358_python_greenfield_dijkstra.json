@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-greenfield-039",
+  "title": "Implement Dijkstra's shortest path in Python",
+  "category": "repo_init",
+  "difficulty": "hard",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement Dijkstra's algorithm on a weighted directed graph returning shortest distances from a source node.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/dijkstra.py": "import heapq\nfrom typing import Optional\n\nGraph = dict[str, list[tuple[str, int]]]\n\ndef dijkstra(graph: Graph, source: str) -> dict[str, int]:\n    \"\"\"Return shortest distances from source to all reachable nodes.\"\"\"\n    raise NotImplementedError\n",
+      "tests/test_dijkstra.py": "from src.dijkstra import dijkstra\n\ndef test_simple_path():\n    g = {'A': [('B', 1), ('C', 4)], 'B': [('C', 2), ('D', 5)], 'C': [('D', 1)], 'D': []}\n    d = dijkstra(g, 'A')\n    assert d['A'] == 0\n    assert d['B'] == 1\n    assert d['C'] == 3\n    assert d['D'] == 4\n\ndef test_source_only():\n    g = {'A': []}\n    d = dijkstra(g, 'A')\n    assert d == {'A': 0}\n\ndef test_disconnected():\n    g = {'A': [('B', 1)], 'C': []}\n    d = dijkstra(g, 'A')\n    assert d['A'] == 0\n    assert d['B'] == 1\n    assert 'C' not in d\n\ndef test_multiple_paths():\n    g = {'S': [('A', 10), ('B', 3)], 'A': [('E', 2)], 'B': [('A', 4), ('E', 15)], 'E': []}\n    d = dijkstra(g, 'S')\n    assert d['S'] == 0\n    assert d['B'] == 3\n    assert d['A'] == 7\n    assert d['E'] == 9\n",
+      "pyproject.toml": "[project]\nname = \"dijkstra\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npythonpath = [\".\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement dijkstra in src/dijkstra.py using heapq:\n- Initialize dist = {source: 0}; pq = [(0, source)]\n- While pq: pop (d, u); if d > dist[u] skip; for each (v, w) in graph[u]: if d+w < dist.get(v, inf): update dist[v]=d+w and push (d+w, v)\n- Return dist (only contains reachable nodes)\nAll 4 tests must pass.",
+    "entry_point": "src/dijkstra.py",
+    "success_criteria": "All 4 pytest tests pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -q` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

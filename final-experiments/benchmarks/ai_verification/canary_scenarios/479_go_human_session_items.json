@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "human-session-go-items-001",
+  "title": "Human-like session: implement Go item store across three turns",
+  "category": "repo_init",
+  "difficulty": "easy",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "Three scripted human turns build a Go item store incrementally: turn 1 implements GetItem, turn 2 implements ParseID, turn 3 implements DeleteItem and runs the tests. Full test suite provided upfront; progression is guided by human prompts, not failure output.",
+  "repo_seed": {
+    "files": {
+      "items.go": "// Package items provides a simple in-memory item store.\npackage items\n\nimport (\n\t\"errors\"\n)\n\n// ErrNotFound is returned when an item with the requested id does not exist.\nvar ErrNotFound = errors.New(\"item not found\")\n\n// Item holds a stored entry.\ntype Item struct {\n\tID   int\n\tName string\n}\n\nvar store = map[int]*Item{\n\t1: {ID: 1, Name: \"Widget\"},\n\t2: {ID: 2, Name: \"Gadget\"},\n\t3: {ID: 3, Name: \"Doohickey\"},\n}\n\n// GetItem returns the item with the given id, or ErrNotFound.\nfunc GetItem(id int) (*Item, error) {\n\tpanic(\"GetItem: not implemented\")\n}\n\n// ParseID parses a string as a positive integer id.\n// Returns an error if s is not a valid positive integer.\nfunc ParseID(s string) (int, error) {\n\tpanic(\"ParseID: not implemented\")\n}\n\n// DeleteItem removes the item with the given id from the store.\n// Returns ErrNotFound if no such item exists.\nfunc DeleteItem(id int) error {\n\tpanic(\"DeleteItem: not implemented\")\n}\n",
+      "items_test.go": "package items\n\nimport (\n\t\"testing\"\n)\n\nfunc TestGetItem_Found(t *testing.T) {\n\titem, err := GetItem(1)\n\tif err != nil {\n\t\tt.Fatalf(\"expected no error, got %v\", err)\n\t}\n\tif item.Name != \"Widget\" {\n\t\tt.Errorf(\"expected Widget, got %s\", item.Name)\n\t}\n}\n\nfunc TestGetItem_NotFound(t *testing.T) {\n\t_, err := GetItem(999)\n\tif err != ErrNotFound {\n\t\tt.Errorf(\"expected ErrNotFound, got %v\", err)\n\t}\n}\n\nfunc TestParseID_Valid(t *testing.T) {\n\tid, err := ParseID(\"2\")\n\tif err != nil {\n\t\tt.Fatalf(\"unexpected error: %v\", err)\n\t}\n\tif id != 2 {\n\t\tt.Errorf(\"expected 2, got %d\", id)\n\t}\n}\n\nfunc TestParseID_NonNumeric(t *testing.T) {\n\t_, err := ParseID(\"abc\")\n\tif err == nil {\n\t\tt.Error(\"expected error for non-numeric input\")\n\t}\n}\n\nfunc TestParseID_Zero(t *testing.T) {\n\t_, err := ParseID(\"0\")\n\tif err == nil {\n\t\tt.Error(\"expected error for id=0 (must be positive)\")\n\t}\n}\n\nfunc TestParseID_Negative(t *testing.T) {\n\t_, err := ParseID(\"-1\")\n\tif err == nil {\n\t\tt.Error(\"expected error for negative id\")\n\t}\n}\n\nfunc TestDeleteItem_Existing(t *testing.T) {\n\t// Reset store to known state first\n\tstore[99] = &Item{ID: 99, Name: \"Temp\"}\n\terr := DeleteItem(99)\n\tif err != nil {\n\t\tt.Fatalf(\"expected no error, got %v\", err)\n\t}\n\t_, err2 := GetItem(99)\n\tif err2 != ErrNotFound {\n\t\tt.Error(\"expected ErrNotFound after delete\")\n\t}\n}\n\nfunc TestDeleteItem_NotFound(t *testing.T) {\n\terr := DeleteItem(9999)\n\tif err != ErrNotFound {\n\t\tt.Errorf(\"expected ErrNotFound, got %v\", err)\n\t}\n}\n",
+      "go.mod": "module items\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `GetItem(id int)` in items.go. Look up the id in the `store` map and return `(item, nil)` if found, or `(nil, ErrNotFound)` if the id is not in the map. Do not implement ParseID or DeleteItem yet.",
+    "followup_prompts": [
+      "Good. Now implement `ParseID(s string)`. Use `strconv.Atoi` to parse s. Return an error if the parse fails, or if the resulting integer is not positive (i.e. <= 0). Return the integer and nil on success.",
+      "Now implement `DeleteItem(id int)`. Check if the id exists in the store map; if not, return ErrNotFound. If it does, delete it with `delete(store, id)` and return nil. Then run `go test ./...` to verify all 8 tests pass and fix any remaining failures."
+    ],
+    "success_criteria": [
+      "All 8 go tests pass",
+      "GetItem returns ErrNotFound for missing ids",
+      "ParseID rejects non-positive and non-numeric inputs",
+      "DeleteItem removes from store and returns ErrNotFound for missing ids"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {
+      "run_tests": "go test ./..."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 15
+}

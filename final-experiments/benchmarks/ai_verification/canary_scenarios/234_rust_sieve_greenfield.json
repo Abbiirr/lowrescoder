@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-015",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Implement the Sieve of Eratosthenes in Rust",
+  "description": "Greenfield Rust task: implement primes_up_to(limit: usize) -> Vec<usize> that returns all prime numbers up to and including limit using the Sieve of Eratosthenes algorithm.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"sieve\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement primes_up_to\n"
+      },
+      {
+        "path": "tests/sieve_test.rs",
+        "content": "use sieve::primes_up_to;\n\n#[test]\nfn test_primes_up_to_10() {\n    assert_eq!(primes_up_to(10), vec![2, 3, 5, 7]);\n}\n\n#[test]\nfn test_primes_up_to_2() {\n    assert_eq!(primes_up_to(2), vec![2]);\n}\n\n#[test]\nfn test_primes_up_to_1() {\n    let result: Vec<usize> = primes_up_to(1);\n    assert!(result.is_empty());\n}\n\n#[test]\nfn test_primes_up_to_30() {\n    assert_eq!(primes_up_to(30), vec![2, 3, 5, 7, 11, 13, 17, 19, 23, 29]);\n}\n\n#[test]\nfn test_include_limit_if_prime() {\n    assert!(primes_up_to(13).contains(&13));\n    assert!(!primes_up_to(14).contains(&14));\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement primes_up_to in src/lib.rs.\n\npub fn primes_up_to(limit: usize) -> Vec<usize>\n\nAlgorithm (Sieve of Eratosthenes):\n1. Create a bool vec `is_prime` of size limit+1, all true.\n2. Set is_prime[0] = is_prime[1] = false (if limit >= 1).\n3. For p from 2 to sqrt(limit):\n   if is_prime[p]: mark all multiples of p starting from p*p as false.\n4. Collect all i where is_prime[i] is true.\n\nReturn empty vec for limit < 2.\n\nAll 5 tests in tests/sieve_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "Bool sieve of size limit+1",
+      "0 and 1 marked as not prime",
+      "Marks multiples from p*p onward",
+      "Returns empty vec when limit < 2",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

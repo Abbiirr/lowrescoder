@@ -1,0 +1,55 @@
+title: Spawn subagent required
+category: long_horizon
+difficulty: hard
+target_stack:
+  language: python
+task_spec:
+  prompt: |
+    This repository needs two independent utilities implemented in parallel.
+    Use spawn_subagent to delegate the implementation of each utility:
+    1. string_utils.py: implement a function camel_to_snake(s) that converts CamelCase to snake_case
+    2. math_utils.py: implement a function clamp(value, min_val, max_val) that clamps value to [min_val, max_val]
+    Both must pass their respective tests.
+  followup_prompts:
+    - "Check if both subagents completed. Run tests to verify both utilities work correctly."
+    - "Final verification: run all tests and confirm everything passes."
+repo_seed:
+  mode: fresh
+  files:
+    test_string_utils.py: |
+      from string_utils import camel_to_snake
+      def test_simple():
+          assert camel_to_snake("CamelCase") == "camel_case"
+      def test_single_word():
+          assert camel_to_snake("Hello") == "hello"
+      def test_already_snake():
+          assert camel_to_snake("already_snake") == "already_snake"
+    test_math_utils.py: |
+      from math_utils import clamp
+      def test_in_range():
+          assert clamp(5, 0, 10) == 5
+      def test_below_min():
+          assert clamp(-3, 0, 10) == 0
+      def test_above_max():
+          assert clamp(15, 0, 10) == 10
+expected_outcomes:
+  must_have:
+    - "item_completed event present"
+  must_not_have:
+    - "error event"
+trajectory_assertions:
+  must_use_tools:
+    - "spawn_subagent"
+    - "check_subagent"
+  min_tool_calls: 2
+artifact_assertions:
+  require_non_empty_diff: true
+  forbid_noop_pass: true
+  must_not_change_files:
+    - "test_string_utils.py"
+    - "test_math_utils.py"
+grading:
+  checks:
+    - run_tests
+  check_commands:
+    run_tests: "python -m pytest test_string_utils.py test_math_utils.py -v"

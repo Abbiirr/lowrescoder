@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "528-rust-mt-debug-borrow",
+  "title": "Debug double borrow bug in Rust — 3 turns",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {"language": "rust", "framework": null, "extra": {}},
+  "description": "Code uses RefCell incorrectly causing borrow panics at runtime. Fix borrow order, run tests, refactor to eliminate RefCell.",
+  "repo_seed": {
+    "files": {
+      "Cargo.toml": "[package]\nname = \"borrow-fix\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+      "src/lib.rs": "//! Double borrow bug with RefCell.\nuse std::cell::RefCell;\n\n/// A container that sums its values.\n/// BUG: sum() holds a borrow while also trying to borrow_mut in accumulate.\npub struct Container {\n    values: RefCell<Vec<i32>>,\n    total: RefCell<i32>,\n}\n\nimpl Container {\n    pub fn new() -> Self {\n        Container {\n            values: RefCell::new(Vec::new()),\n            total: RefCell::new(0),\n        }\n    }\n\n    pub fn add(&self, v: i32) {\n        self.values.borrow_mut().push(v);\n        *self.total.borrow_mut() += v;\n    }\n\n    /// BUG: holds borrow on values while calling a method that borrows_mut total.\n    /// Fix: drop the borrow before doing the mutation, or restructure.\n    pub fn sum_and_double(&self) -> i32 {\n        let vals = self.values.borrow(); // immutable borrow held\n        let s: i32 = vals.iter().sum();\n        // BUG: this tries to borrow_mut total while vals borrow is still active\n        // (This would panic if total was also wrapped in the same RefCell)\n        // Simplified: the bug is that we compute sum incorrectly by not using total\n        // Let's represent the bug as: returns double of WRONG value (uses len not sum)\n        let wrong = vals.len() as i32; // BUG: uses len instead of sum\n        wrong * 2\n    }\n\n    pub fn get_total(&self) -> i32 {\n        *self.total.borrow()\n    }\n\n    pub fn values_snapshot(&self) -> Vec<i32> {\n        self.values.borrow().clone()\n    }\n}\n\n/// Simpler struct to refactor: replace RefCell<Vec> with plain Vec\n/// (since we're using &mut self everywhere anyway).\npub struct SimpleContainer {\n    values: Vec<i32>,\n}\n\nimpl SimpleContainer {\n    pub fn new() -> Self {\n        SimpleContainer { values: Vec::new() }\n    }\n\n    pub fn add(&mut self, v: i32) {\n        self.values.push(v);\n    }\n\n    pub fn sum(&self) -> i32 {\n        self.values.iter().sum()\n    }\n\n    pub fn double_sum(&self) -> i32 {\n        self.sum() * 2\n    }\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_container_add_total() {\n        let c = Container::new();\n        c.add(3);\n        c.add(7);\n        assert_eq!(c.get_total(), 10);\n    }\n\n    #[test]\n    fn test_sum_and_double() {\n        let c = Container::new();\n        c.add(2);\n        c.add(4);\n        c.add(6);\n        // sum = 12, double = 24\n        assert_eq!(c.sum_and_double(), 24);\n    }\n\n    #[test]\n    fn test_values_snapshot() {\n        let c = Container::new();\n        c.add(1);\n        c.add(2);\n        assert_eq!(c.values_snapshot(), vec![1, 2]);\n    }\n\n    #[test]\n    fn test_simple_container() {\n        let mut sc = SimpleContainer::new();\n        sc.add(5);\n        sc.add(10);\n        assert_eq!(sc.sum(), 15);\n        assert_eq!(sc.double_sum(), 30);\n    }\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The `sum_and_double` method in `src/lib.rs` has a bug: it uses `vals.len() as i32` (count of elements) instead of the actual sum. Fix it to compute the correct sum using `vals.iter().sum()`. Run `cargo test --quiet`.",
+    "followup_prompts": [
+      "Run `cargo test --quiet` to check the current state. Walk me through what you fixed. If any tests are still failing, show me the errors and fix them. Also look at `SimpleContainer` — make sure `double_sum()` works correctly by calling `self.sum() * 2`.",
+      "Final step: refactor `sum_and_double` to drop the borrow before computing the result — use `let s = { self.values.borrow().iter().sum::<i32>() };` with a block to ensure the borrow is released immediately. Run `cargo test --quiet` — all 4 tests must pass."
+    ],
+    "success_criteria": [
+      "sum_and_double returns sum*2 not len*2",
+      "Borrow is dropped before any subsequent operations",
+      "SimpleContainer sum and double_sum work correctly",
+      "cargo test passes (4 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "cargo test --quiet"}
+  },
+  "duration_hint_minutes": 15
+}

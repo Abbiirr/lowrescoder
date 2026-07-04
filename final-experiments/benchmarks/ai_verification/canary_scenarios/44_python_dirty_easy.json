@@ -1,0 +1,59 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-dirty-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 10,
+  "title": "Fix wrong response key and unused import in FastAPI items endpoint",
+  "description": "A FastAPI /items endpoint returns the wrong JSON key ('item' instead of 'items') and has an unused import. Both defects have failing checks.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "mutate",
+    "fixture_ref": "backend_health_endpoint",
+    "injections": [
+      {
+        "path": "src/app.py",
+        "content": "import os  # BUG: unused import\nfrom fastapi import FastAPI\n\napp = FastAPI()\n\n\n@app.get(\"/items\")\ndef list_items() -> dict:\n    return {\"item\": []}  # BUG: key should be \"items\"\n"
+      }
+    ],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "The FastAPI app in src/app.py has two bugs introduced by a bad commit:\n\nBug 1 — unused import: 'import os' at the top of the file is not used anywhere. Remove it. (Ruff flags this as F401.)\n\nBug 2 — wrong response key: The /items endpoint returns {\"item\": []} instead of {\"items\": []}. Fix the key to 'items'.\n\nAfter fixing both bugs:\n- uv run pytest tests/ -q must show 1/1 tests passing\n- uv run ruff check src/ tests/ must exit 0 with no errors",
+    "required_artifacts": [
+      "import os removed",
+      "Response key changed from 'item' to 'items'",
+      "uv run pytest tests/ -q passes",
+      "uv run ruff check src/ tests/ clean"
+    ],
+    "success_criteria": [
+      "Both fixes are minimal — change only what is broken",
+      "Test passes and ruff is clean"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q",
+      "lint": "uv run ruff check src/ tests/"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

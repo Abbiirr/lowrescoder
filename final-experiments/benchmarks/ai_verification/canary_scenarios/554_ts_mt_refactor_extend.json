@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "554-ts-mt-refactor-extend",
+  "title": "Refactor callbacks to async/await then add retry wrapper in TypeScript — 3 turns",
+  "category": "refactor",
+  "difficulty": "medium",
+  "target_stack": {"language": "typescript", "framework": null, "extra": {}},
+  "description": "Callback-based code refactored to async/await, tests kept green, retry wrapper added.",
+  "repo_seed": {
+    "files": {
+      "package.json": "{\n  \"name\": \"refactor-ts\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"test\": \"jest --forceExit\"\n  },\n  \"devDependencies\": {\n    \"@types/jest\": \"^29.0.0\",\n    \"jest\": \"^29.0.0\",\n    \"ts-jest\": \"^29.0.0\",\n    \"typescript\": \"^5.0.0\"\n  },\n  \"jest\": {\n    \"preset\": \"ts-jest\",\n    \"testEnvironment\": \"node\"\n  }\n}\n",
+      "src/dataService.ts": "// Callback-based data service — needs refactoring to async/await.\n\ntype Callback<T> = (error: Error | null, result: T | null) => void;\n\n/** Simulate async data fetch using callbacks. */\nexport function fetchUserCb(id: number, cb: Callback<{ id: number; name: string }>): void {\n  setTimeout(() => {\n    if (id <= 0) {\n      cb(new Error('Invalid ID'), null);\n    } else {\n      cb(null, { id, name: `User${id}` });\n    }\n  }, 0);\n}\n\n/** Simulate async save using callbacks. */\nexport function saveUserCb(\n  user: { id: number; name: string },\n  cb: Callback<boolean>\n): void {\n  setTimeout(() => {\n    if (!user.name) {\n      cb(new Error('Name required'), null);\n    } else {\n      cb(null, true);\n    }\n  }, 0);\n}\n\n// TODO: refactor to async/await versions\nexport async function fetchUser(id: number): Promise<{ id: number; name: string }> {\n  throw new Error('not implemented');\n}\n\nexport async function saveUser(user: { id: number; name: string }): Promise<boolean> {\n  throw new Error('not implemented');\n}\n\n// TODO: add retry wrapper\nexport async function withRetry<T>(\n  fn: () => Promise<T>,\n  maxRetries: number = 3\n): Promise<T> {\n  throw new Error('not implemented');\n}\n",
+      "src/dataService.test.ts": "import { fetchUser, saveUser, withRetry } from './dataService';\n\ntest('fetchUser returns user for valid id', async () => {\n  const user = await fetchUser(1);\n  expect(user.id).toBe(1);\n  expect(user.name).toBe('User1');\n});\n\ntest('fetchUser throws for invalid id', async () => {\n  await expect(fetchUser(-1)).rejects.toThrow('Invalid ID');\n});\n\ntest('saveUser returns true for valid user', async () => {\n  const result = await saveUser({ id: 1, name: 'Alice' });\n  expect(result).toBe(true);\n});\n\ntest('saveUser throws for missing name', async () => {\n  await expect(saveUser({ id: 1, name: '' })).rejects.toThrow('Name required');\n});\n\ntest('withRetry succeeds on first try', async () => {\n  const result = await withRetry(() => Promise.resolve(42));\n  expect(result).toBe(42);\n});\n\ntest('withRetry retries on failure then succeeds', async () => {\n  let attempts = 0;\n  const result = await withRetry(async () => {\n    attempts++;\n    if (attempts < 3) throw new Error('not yet');\n    return 'done';\n  }, 3);\n  expect(result).toBe('done');\n  expect(attempts).toBe(3);\n});\n\ntest('withRetry throws after max retries', async () => {\n  await expect(\n    withRetry(() => Promise.reject(new Error('always')), 2)\n  ).rejects.toThrow('always');\n});\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `fetchUser(id: number): Promise<...>` in `src/dataService.ts` by wrapping `fetchUserCb` in a Promise: `return new Promise((resolve, reject) => fetchUserCb(id, (err, result) => err ? reject(err) : resolve(result!)))`. Run `npm test -- --forceExit`.",
+    "followup_prompts": [
+      "Run `npm test -- --forceExit` to confirm no regressions. Now implement `saveUser(user)` the same way using `saveUserCb`. Also review the code — is the promisification pattern clean? Give me a one-line summary of what changed.",
+      "Final pass: implement `withRetry<T>(fn, maxRetries)` — try fn(), if it throws and we have retries left, try again. After maxRetries+1 total attempts, re-throw. Then run `npm test -- --forceExit` and confirm everything is green — all 7 tests must pass."
+    ],
+    "success_criteria": [
+      "fetchUser wraps callback in Promise correctly",
+      "saveUser wraps callback in Promise correctly",
+      "withRetry retries on failure up to maxRetries times",
+      "withRetry throws after exhausting retries",
+      "All 7 tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "npm test -- --forceExit"}
+  },
+  "duration_hint_minutes": 15
+}

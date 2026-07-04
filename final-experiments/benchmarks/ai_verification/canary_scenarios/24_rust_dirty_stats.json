@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-dirty-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Fix four bugs and dead code in a Rust statistics library",
+  "description": "A Rust stats library has four bugs: mean() crashes on empty input, median() is wrong for even-length slices, normalize() panics when all values are equal, and mode() has a dead unused variable. Fix all four.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_buggy_stats",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Rust library in src/lib.rs has four problems:\n\n1. mean() divides by values.len() even when the slice is empty, producing NaN or a panic. Change its signature to fn mean(values: &[f64]) -> Option<f64> — return None for empty, Some(mean) otherwise. Update the existing test to unwrap the Option.\n\n2. median() returns sorted[mid] which for even-length slices gives the upper-middle element instead of the average of the two middle elements. Fix it to return the average of sorted[mid-1] and sorted[mid] for even-length. Update test_median_even to assert the correct value (2.5 for [1,2,3,4]).\n\n3. normalize() panics when min==max (all values identical) because it divides by zero. Fix it: when max==min, return a vec of all 0.0s instead of panicking. Add a test test_normalize_uniform that passes &[5.0, 5.0, 5.0] and asserts the result is all 0.0.\n\n4. mode() has a dead `let unused = 42;` variable. Remove it. Also remove the now-unused `use std::collections::HashMap` if mode is the only user — but keep HashMap if still needed.\n\nAll cargo tests must pass after your changes. cargo clippy -- -D warnings must be clean (no dead_code warnings).",
+    "required_artifacts": [
+      "mean() returns Option<f64>",
+      "median() correct for even-length slices (returns average of two middles)",
+      "normalize() returns all-zeros for uniform input instead of panicking",
+      "mode() has no dead `unused` variable",
+      "cargo test passes",
+      "cargo clippy -- -D warnings clean"
+    ],
+    "success_criteria": [
+      "All four bugs fixed with appropriate type changes",
+      "New test_normalize_uniform test passes",
+      "No clippy warnings"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

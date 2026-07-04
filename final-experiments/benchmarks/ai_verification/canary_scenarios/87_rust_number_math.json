@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-number-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Add GCD, LCM, is_prime, and primes_up_to to Rust number-utils",
+  "description": "The rust_number_utils library has abs. Extend src/lib.rs with four number-theory functions: gcd, lcm, is_prime, and primes_up_to. Tests live in the solution.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_number_utils",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Extend src/lib.rs with four number-theory functions:\n\n  pub fn gcd(a: u64, b: u64) -> u64\n    — greatest common divisor using Euclidean algorithm; gcd(0,n)==n\n\n  pub fn lcm(a: u64, b: u64) -> u64\n    — least common multiple; lcm(0,n)==0\n\n  pub fn is_prime(n: u64) -> bool\n    — true if n is prime; 0 and 1 are not prime\n\n  pub fn primes_up_to(n: u64) -> Vec<u64>\n    — all primes <= n, in ascending order, using the Sieve of Eratosthenes\n\nThe 3 original abs tests must still pass. Add at least one test per new function (4+ new tests).\nAll tests must pass: cargo test",
+    "required_artifacts": [
+      "gcd via Euclidean algorithm",
+      "lcm = a/gcd*b (avoid overflow)",
+      "is_prime correct for 0, 1, 2, primes, composites",
+      "primes_up_to returns sorted prime list",
+      "Original 3 tests pass",
+      "4+ new tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (7+ tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `cargo test` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

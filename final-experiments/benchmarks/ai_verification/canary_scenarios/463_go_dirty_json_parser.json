@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-dirty-json-001",
+  "title": "Fix bugs in a Go JSON response builder",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Go HTTP response helper has three bugs: wrong status code for not-found, missing Content-Type header, and JSON marshaling error not checked. Fix all three.",
+  "repo_seed": {
+    "files": {
+      "response.go": "package response\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n)\n\ntype Response struct {\n\tOK      bool        `json:\"ok\"`\n\tData    interface{} `json:\"data,omitempty\"`\n\tError   string      `json:\"error,omitempty\"`\n}\n\n// WriteJSON writes a JSON response with the given status code.\nfunc WriteJSON(w http.ResponseWriter, status int, v interface{}) {\n\t// BUG 1: missing Content-Type header\n\tjsonBytes, _ := json.Marshal(v)\n\tw.WriteHeader(status)\n\tw.Write(jsonBytes)\n}\n\n// NotFound writes a 404-style error response.\nfunc NotFound(w http.ResponseWriter, msg string) {\n\t// BUG 2: uses 400 Bad Request instead of 404 Not Found\n\tWriteJSON(w, http.StatusBadRequest, Response{OK: false, Error: msg})\n}\n\n// OK writes a success response.\nfunc OK(w http.ResponseWriter, data interface{}) {\n\tWriteJSON(w, http.StatusOK, Response{OK: true, Data: data})\n}\n",
+      "response_test.go": "package response\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n\t\"net/http/httptest\"\n\t\"testing\"\n)\n\nfunc TestWriteJSONSetsContentType(t *testing.T) {\n\tw := httptest.NewRecorder()\n\tWriteJSON(w, http.StatusOK, map[string]string{\"key\": \"val\"})\n\tct := w.Header().Get(\"Content-Type\")\n\tif ct != \"application/json\" {\n\t\tt.Errorf(\"Content-Type = %q, want application/json\", ct)\n\t}\n}\n\nfunc TestNotFoundReturns404(t *testing.T) {\n\tw := httptest.NewRecorder()\n\tNotFound(w, \"item not found\")\n\tif w.Code != http.StatusNotFound {\n\t\tt.Errorf(\"status = %d, want 404\", w.Code)\n\t}\n\tvar resp Response\n\tif err := json.NewDecoder(w.Body).Decode(&resp); err != nil {\n\t\tt.Fatalf(\"decode: %v\", err)\n\t}\n\tif resp.OK {\n\t\tt.Error(\"expected ok=false\")\n\t}\n\tif resp.Error == \"\" {\n\t\tt.Error(\"expected non-empty error\")\n\t}\n}\n\nfunc TestOKSetsOKTrue(t *testing.T) {\n\tw := httptest.NewRecorder()\n\tOK(w, map[string]int{\"count\": 3})\n\tif w.Code != http.StatusOK {\n\t\tt.Errorf(\"status = %d, want 200\", w.Code)\n\t}\n\tvar resp Response\n\tif err := json.NewDecoder(w.Body).Decode(&resp); err != nil {\n\t\tt.Fatalf(\"decode: %v\", err)\n\t}\n\tif !resp.OK {\n\t\tt.Error(\"expected ok=true\")\n\t}\n}\n",
+      "go.mod": "module response\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix the bugs in response.go:\n\n1. BUG 1 in WriteJSON: Add `w.Header().Set(\"Content-Type\", \"application/json\")` BEFORE calling w.WriteHeader()\n2. BUG 2 in NotFound: Change http.StatusBadRequest to http.StatusNotFound\n\nRun `go test ./...` to verify all 3 tests pass.",
+    "entry_point": "response.go",
+    "success_criteria": [
+      "All 3 go tests pass",
+      "Content-Type header is set to application/json",
+      "NotFound returns 404 not 400"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./..."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 4
+}

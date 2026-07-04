@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "538-ts-mt-debug-type-coercion",
+  "title": "Debug === vs == type coercion bugs in TypeScript — 3 turns",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {"language": "typescript", "framework": null, "extra": {}},
+  "description": "Multiple == coercion bugs causing wrong comparisons. Fix to ===, run tests, add TypeScript strict mode.",
+  "repo_seed": {
+    "files": {
+      "package.json": "{\n  \"name\": \"coercion-fix\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"test\": \"jest --forceExit\"\n  },\n  \"devDependencies\": {\n    \"@types/jest\": \"^29.0.0\",\n    \"jest\": \"^29.0.0\",\n    \"ts-jest\": \"^29.0.0\",\n    \"typescript\": \"^5.0.0\"\n  },\n  \"jest\": {\n    \"preset\": \"ts-jest\",\n    \"testEnvironment\": \"node\"\n  }\n}\n",
+      "src/utils.ts": "/**\n * Check if a value is 'empty': null, undefined, empty string, or 0.\n * BUG: uses == which coerces types unexpectedly.\n */\nexport function isEmpty(value: unknown): boolean {\n  return value == null || value == '' || value == 0; // BUG: '0' == 0 is true, 'false' != false etc.\n}\n\n/**\n * Check if two values are equal.\n * BUG: uses == instead of ===.\n */\nexport function isEqual(a: unknown, b: unknown): boolean {\n  return a == b; // BUG: 0 == '' is true, false == 0 is true, etc.\n}\n\n/**\n * Parse an ID from a string or number.\n * Returns the numeric ID, or null if invalid.\n * BUG: uses == to check for falsy which misses '0' as valid ID.\n */\nexport function parseId(input: string | number | null | undefined): number | null {\n  if (input == null || input == '') { // BUG: input == '' is true for 0 (numeric)\n    return null;\n  }\n  const n = Number(input);\n  return isNaN(n) ? null : n;\n}\n\n/**\n * Check if array includes value using type-safe comparison.\n * BUG: inner comparison uses == instead of ===.\n */\nexport function includesStrict<T>(arr: T[], value: T): boolean {\n  for (const item of arr) {\n    if (item == value) { // BUG: == coerces types\n      return true;\n    }\n  }\n  return false;\n}\n",
+      "src/utils.test.ts": "import { isEmpty, isEqual, parseId, includesStrict } from './utils';\n\ntest('isEmpty: null and undefined are empty', () => {\n  expect(isEmpty(null)).toBe(true);\n  expect(isEmpty(undefined)).toBe(true);\n});\n\ntest('isEmpty: empty string is empty', () => {\n  expect(isEmpty('')).toBe(true);\n});\n\ntest('isEmpty: string \"0\" is NOT empty', () => {\n  // \"0\" is a non-empty string — should NOT be considered empty\n  expect(isEmpty('0')).toBe(false);\n});\n\ntest('isEmpty: 0 (number) is empty', () => {\n  expect(isEmpty(0)).toBe(true);\n});\n\ntest('isEqual: strict equality, 0 !== \"\"', () => {\n  expect(isEqual(0, '')).toBe(false);\n  expect(isEqual(false, 0)).toBe(false);\n  expect(isEqual(null, undefined)).toBe(false);\n});\n\ntest('isEqual: same values', () => {\n  expect(isEqual(1, 1)).toBe(true);\n  expect(isEqual('a', 'a')).toBe(true);\n});\n\ntest('parseId: numeric 0 is a valid ID', () => {\n  // 0 is a valid ID — should not return null\n  expect(parseId(0)).toBe(0);\n  expect(parseId('0')).toBe(0);\n});\n\ntest('parseId: null and undefined return null', () => {\n  expect(parseId(null)).toBe(null);\n  expect(parseId(undefined)).toBe(null);\n});\n\ntest('parseId: empty string returns null', () => {\n  expect(parseId('')).toBe(null);\n});\n\ntest('includesStrict: no coercion', () => {\n  expect(includesStrict([1, 2, 3], 1)).toBe(true);\n  expect(includesStrict<unknown>([1, 2, 3], '1')).toBe(false); // '1' !== 1\n  expect(includesStrict<unknown>([false], 0)).toBe(false); // false !== 0\n});\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The `isEqual` function in `src/utils.ts` uses `==` instead of `===`, causing type coercion bugs (e.g., `0 == ''` is true). Fix `isEqual` to use `===`. Run `npm test -- --forceExit`.",
+    "followup_prompts": [
+      "Run `npm test -- --forceExit` to check the current state. Walk me through what you fixed. Now fix the remaining == bugs: in `isEmpty`, change `value == ''` to `value === ''` and `value == 0` to `value === 0` (keep `value == null` for the null/undefined check, which is idiomatic). Fix `parseId` to use `=== null || === undefined` instead of `== null`, and check `=== ''` instead of `== ''`. Fix `includesStrict` to use `===`. Run `npm test -- --forceExit`.",
+      "Final verification: run `npm test -- --forceExit` and confirm a completely clean build. Every test must pass — especially the edge case tests for parseId(0) and includesStrict with type mismatches."
+    ],
+    "success_criteria": [
+      "isEqual uses === (no type coercion)",
+      "isEmpty uses === for string and number checks",
+      "parseId treats numeric 0 as a valid ID",
+      "includesStrict uses === to prevent type coercion",
+      "All 10 tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "npm test -- --forceExit"}
+  },
+  "duration_hint_minutes": 10
+}

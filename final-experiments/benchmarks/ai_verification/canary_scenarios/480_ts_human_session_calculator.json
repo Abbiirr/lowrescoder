@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "human-session-ts-calculator-001",
+  "title": "Human-like session: build a TypeScript calculator in three turns",
+  "category": "repo_init",
+  "difficulty": "easy",
+  "target_stack": {"language": "typescript", "framework": null, "extra": {}},
+  "description": "Three scripted turns build a Node.js calculator incrementally: turn 1 adds add/subtract, turn 2 adds multiply/divide, turn 3 adds power and runs tests. All tests exist upfront; scripted prompts guide incremental implementation.",
+  "repo_seed": {
+    "files": {
+      "calc.js": "\"use strict\";\n\n/**\n * Add two numbers.\n * @param {number} a\n * @param {number} b\n * @returns {number}\n */\nfunction add(a, b) {\n  throw new Error(\"not implemented\");\n}\n\n/**\n * Subtract b from a.\n * @param {number} a\n * @param {number} b\n * @returns {number}\n */\nfunction subtract(a, b) {\n  throw new Error(\"not implemented\");\n}\n\n/**\n * Multiply two numbers.\n * @param {number} a\n * @param {number} b\n * @returns {number}\n */\nfunction multiply(a, b) {\n  throw new Error(\"not implemented\");\n}\n\n/**\n * Divide a by b. Returns null if b is zero.\n * @param {number} a\n * @param {number} b\n * @returns {number|null}\n */\nfunction divide(a, b) {\n  throw new Error(\"not implemented\");\n}\n\n/**\n * Raise base to the integer power exp (exp >= 0).\n * @param {number} base\n * @param {number} exp\n * @returns {number}\n */\nfunction power(base, exp) {\n  throw new Error(\"not implemented\");\n}\n\nmodule.exports = { add, subtract, multiply, divide, power };\n",
+      "test_calc.js": "\"use strict\";\nconst assert = require(\"assert\");\nconst { add, subtract, multiply, divide, power } = require(\"./calc\");\n\nlet passed = 0;\nlet failed = 0;\n\nfunction test(name, fn) {\n  try {\n    fn();\n    console.log(`  PASS  ${name}`);\n    passed++;\n  } catch (err) {\n    console.log(`  FAIL  ${name}: ${err.message}`);\n    failed++;\n  }\n}\n\n// add\ntest(\"add: 2+3=5\", () => assert.strictEqual(add(2, 3), 5));\ntest(\"add: negative\", () => assert.strictEqual(add(-1, 1), 0));\n\n// subtract\ntest(\"subtract: 5-3=2\", () => assert.strictEqual(subtract(5, 3), 2));\ntest(\"subtract: negative result\", () => assert.strictEqual(subtract(1, 4), -3));\n\n// multiply\ntest(\"multiply: 3*4=12\", () => assert.strictEqual(multiply(3, 4), 12));\ntest(\"multiply: by zero\", () => assert.strictEqual(multiply(7, 0), 0));\n\n// divide\ntest(\"divide: 10/2=5\", () => assert.strictEqual(divide(10, 2), 5));\ntest(\"divide: by zero returns null\", () => assert.strictEqual(divide(5, 0), null));\n\n// power\ntest(\"power: 2^3=8\", () => assert.strictEqual(power(2, 3), 8));\ntest(\"power: any^0=1\", () => assert.strictEqual(power(7, 0), 1));\n\nconsole.log(`\\n${passed} passed, ${failed} failed`);\nif (failed > 0) process.exit(1);\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `add(a, b)` and `subtract(a, b)` in calc.js. Both should return the arithmetic result. Do not implement the other functions yet.",
+    "followup_prompts": [
+      "Good. Now implement `multiply(a, b)` and `divide(a, b)`. divide should return null when b is zero, otherwise return a / b.",
+      "Now implement `power(base, exp)` — raise base to the non-negative integer power exp. Then run `node test_calc.js` to verify all 10 tests pass and fix any remaining failures."
+    ],
+    "success_criteria": [
+      "All 10 tests pass",
+      "add/subtract return correct results",
+      "divide returns null for b=0",
+      "power(2,3)==8 and power(7,0)==1"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {
+      "run_tests": "node test_calc.js"
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 15
+}

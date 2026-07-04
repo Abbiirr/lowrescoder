@@ -1,0 +1,101 @@
+{
+  "_meta": {
+    "description": "B27: Efficiency Under Budget \u2014 solve small tasks with tight tool budgets",
+    "comparison_validity": "internal",
+    "parity_claim": "forbidden",
+    "note": "Multi-task lane: minimal config change, one-line fix, regex fix, typo fix, import fix. Tight budgets expose thrash.",
+    "last_verified": "2026-03-21"
+  },
+  "tasks": [
+    {
+      "task_id": "b27-minimal-config-change",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix a wrong port number in config.yaml \u2014 one value change, no code modifications.",
+      "fixture_dir": "fixtures/b27/b27-minimal-config-change",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "test_app.py"
+        ]
+      }
+    },
+    {
+      "task_id": "b27-one-line-fix",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix an off-by-one error where < should be <= to include the end boundary.",
+      "fixture_dir": "fixtures/b27/b27-one-line-fix",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "test_counter.py"
+        ]
+      }
+    },
+    {
+      "task_id": "b27-precise-regex-fix",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix a regex pattern for email validation that rejects valid emails with dots in the local part.",
+      "fixture_dir": "fixtures/b27/b27-precise-regex-fix",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "test_validator.py"
+        ]
+      }
+    },
+    {
+      "task_id": "b27-quick-typo-fix",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Rename a misspelled function calcualte_total to calculate_total to fix an ImportError.",
+      "fixture_dir": "fixtures/b27/b27-quick-typo-fix",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "test_math.py"
+        ]
+      }
+    },
+    {
+      "task_id": "b27-targeted-import-fix",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix a broken import path where a module was renamed from utils.parser to utils.data_parser.",
+      "fixture_dir": "fixtures/b27/b27-targeted-import-fix",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "test_app.py"
+        ]
+      }
+    }
+  ]
+}

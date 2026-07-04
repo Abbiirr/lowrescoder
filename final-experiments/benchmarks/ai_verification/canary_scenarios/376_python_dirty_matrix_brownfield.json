@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-017",
+  "title": "Fix three bugs in a Python matrix operations module",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Matrix class has three bugs: multiply returns row*row instead of row*col, transpose swaps i,j incorrectly, and scalar_multiply mutates in place instead of returning a new matrix.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/matrix.py": "class Matrix:\n    def __init__(self, data: list[list[float]]):\n        self.data = data\n        self.rows = len(data)\n        self.cols = len(data[0]) if data else 0\n\n    def multiply(self, other: 'Matrix') -> 'Matrix':\n        result = [[0.0] * self.rows for _ in range(self.rows)]  # bug: should be other.cols columns\n        for i in range(self.rows):\n            for j in range(other.cols):\n                for k in range(self.cols):\n                    result[i][j] += self.data[i][k] * other.data[k][j]\n        return Matrix(result)\n\n    def transpose(self) -> 'Matrix':\n        result = [[0.0] * self.rows for _ in range(self.cols)]\n        for i in range(self.rows):\n            for j in range(self.cols):\n                result[i][j] = self.data[i][j]  # bug: should be result[j][i]\n        return Matrix(result)\n\n    def scalar_multiply(self, scalar: float) -> 'Matrix':\n        for i in range(self.rows):\n            for j in range(self.cols):\n                self.data[i][j] *= scalar  # bug: mutates self, should return new Matrix\n        return self\n\n    def __eq__(self, other):\n        return self.data == other.data\n",
+      "tests/test_matrix.py": "from src.matrix import Matrix\n\ndef test_multiply_square():\n    a = Matrix([[1, 2], [3, 4]])\n    b = Matrix([[5, 6], [7, 8]])\n    result = a.multiply(b)\n    assert result.data == [[19.0, 22.0], [43.0, 50.0]]\n\ndef test_multiply_nonsquare():\n    a = Matrix([[1, 2, 3]])\n    b = Matrix([[4], [5], [6]])\n    result = a.multiply(b)\n    assert result.data == [[32.0]]\n\ndef test_transpose():\n    m = Matrix([[1, 2, 3], [4, 5, 6]])\n    t = m.transpose()\n    assert t.data == [[1, 4], [2, 5], [3, 6]]\n\ndef test_scalar_multiply_no_mutation():\n    m = Matrix([[1.0, 2.0], [3.0, 4.0]])\n    result = m.scalar_multiply(2.0)\n    assert result.data == [[2.0, 4.0], [6.0, 8.0]]\n    assert m.data == [[1.0, 2.0], [3.0, 4.0]]  # original must not be mutated\n",
+      "pyproject.toml": "[project]\nname = \"matrix\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npythonpath = [\".\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/matrix.py:\n1. `multiply`: change `[[0.0] * self.rows for _ in range(self.rows)]` to `[[0.0] * other.cols for _ in range(self.rows)]`\n2. `transpose`: change `result[i][j] = self.data[i][j]` to `result[j][i] = self.data[i][j]`\n3. `scalar_multiply`: replace the mutation loop with `return Matrix([[v * scalar for v in row] for row in self.data])`\nAll 4 tests must pass.",
+    "entry_point": "src/matrix.py",
+    "success_criteria": "All 4 pytest tests pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

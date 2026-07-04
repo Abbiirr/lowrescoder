@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-025",
+  "title": "Fix three bugs in a Python Trie class",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Fix bugs in Trie: insert never marks end_of_word, search returns True for any traversed node (including prefixes), starts_with returns True even when prefix is absent.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/trie.py": "class TrieNode:\n    def __init__(self):\n        self.children = {}\n        self.end_of_word = False\n\n\nclass Trie:\n    def __init__(self):\n        self.root = TrieNode()\n\n    def insert(self, word):\n        node = self.root\n        for char in word:\n            if char not in node.children:\n                node.children[char] = TrieNode()\n            node = node.children[char]\n        # BUG 1: missing node.end_of_word = True\n\n    def search(self, word):\n        node = self.root\n        for char in word:\n            if char not in node.children:\n                return False\n            node = node.children[char]\n        return node is not None  # BUG 2: should be node.end_of_word\n\n    def starts_with(self, prefix):\n        node = self.root\n        for char in prefix:\n            if char not in node.children:\n                return True  # BUG 3: should be False\n            node = node.children[char]\n        return True\n",
+      "tests/test_trie.py": "import sys\nsys.path.insert(0, '.')\nfrom src.trie import Trie\n\n\ndef test_search_exact():\n    t = Trie()\n    t.insert('cat')\n    assert t.search('cat') is True\n\n\ndef test_search_prefix_not_word():\n    t = Trie()\n    t.insert('cat')\n    assert t.search('ca') is False\n\n\ndef test_starts_with_present():\n    t = Trie()\n    t.insert('cat')\n    assert t.starts_with('ca') is True\n\n\ndef test_starts_with_absent():\n    t = Trie()\n    t.insert('cat')\n    assert t.starts_with('do') is False\n",
+      "pyproject.toml": "[project]\nname = \"trie_cls\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = []\n\n[tool.pytest.ini_options]\npythonpath = [\".\"]\n\n[dependency-groups]\ndev = [\"pytest>=8.0\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/trie.py:\n1. insert: add `node.end_of_word = True` after the loop so inserted words are marked complete\n2. search: return `node.end_of_word` instead of `node is not None` so prefixes don't match as words\n3. starts_with: return `False` (not `True`) when a prefix character is missing from children\nAll 4 tests must pass.",
+    "entry_point": "src/trie.py",
+    "success_criteria": "All 4 pytest test cases pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

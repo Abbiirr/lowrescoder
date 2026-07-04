@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-dirty-003",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "hard",
+  "duration_hint_minutes": 35,
+  "title": "Fix four Unicode and edge-case bugs in Rust text-stats library",
+  "description": "A Rust text-stats library has four bugs: byte-length instead of char-count, no palindrome normalization, case-sensitive vowel counting, and unsafe Unicode truncation.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_text_stats",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Rust library in src/lib.rs has four functions with bugs that cause 4 of 6 tests to fail:\n\n1. char_count(s: &str) -> usize — uses s.len() (byte count) instead of s.chars().count()\n2. is_palindrome(s: &str) -> bool — does not normalize: ignores case and non-alphanumeric chars\n3. count_vowels(s: &str) -> usize — only counts lowercase vowels (misses A, E, I, O, U)\n4. char_truncate(s: &str, max_len: usize) -> String — slices at byte offset, not char boundary\n\nFix all four bugs so that cargo test passes all 6 tests. Do not change the test code. Do not add or remove tests.",
+    "required_artifacts": [
+      "char_count counts Unicode characters not bytes",
+      "is_palindrome normalizes case and strips non-alphanumeric",
+      "count_vowels handles uppercase and lowercase",
+      "char_truncate is safe on Unicode strings",
+      "cargo test passes all 6 tests"
+    ],
+    "success_criteria": [
+      "All 6 existing tests pass",
+      "No new tests added or removed",
+      "cargo build succeeds"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude",
+    "dirty_cleanup": true
+  }
+}

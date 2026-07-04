@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "517-go-mt-debug-goroutine-leak",
+  "title": "Debug goroutine leak and WaitGroup misuse in Go — 3 turns",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "HTTP client leaks goroutine by not closing response body. WaitGroup is misused (Done called before Add). Fix both bugs and run go vet.",
+  "repo_seed": {
+    "files": {
+      "go.mod": "module github.com/ai-verification/goroutine-leak\n\ngo 1.22\n",
+      "fetcher/fetcher.go": "package fetcher\n\nimport (\n\t\"io\"\n\t\"net/http\"\n\t\"sync\"\n)\n\n// FetchAll fetches all URLs concurrently and returns bodies.\nfunc FetchAll(urls []string, client *http.Client) []string {\n\tresults := make([]string, len(urls))\n\tvar wg sync.WaitGroup\n\tfor i, url := range urls {\n\t\tgo func(idx int, u string) {\n\t\t\twg.Add(1)         // BUG: Add must be called before go, not inside\n\t\t\tdefer wg.Done()\n\t\t\tresp, err := client.Get(u)\n\t\t\tif err != nil {\n\t\t\t\treturn\n\t\t\t}\n\t\t\t// BUG: response body never closed — goroutine/connection leak\n\t\t\tbody, _ := io.ReadAll(resp.Body)\n\t\t\tresults[idx] = string(body)\n\t\t}(i, url)\n\t}\n\twg.Wait()\n\treturn results\n}\n\n// FetchOne fetches a single URL and returns the body.\nfunc FetchOne(url string, client *http.Client) (string, error) {\n\tresp, err := client.Get(url)\n\tif err != nil {\n\t\treturn \"\", err\n\t}\n\t// BUG: body never closed\n\tbody, err := io.ReadAll(resp.Body)\n\tif err != nil {\n\t\treturn \"\", err\n\t}\n\treturn string(body), nil\n}\n",
+      "fetcher/fetcher_test.go": "package fetcher_test\n\nimport (\n\t\"net/http\"\n\t\"net/http/httptest\"\n\t\"testing\"\n\n\t\"github.com/ai-verification/goroutine-leak/fetcher\"\n)\n\nfunc makeServer(body string) *httptest.Server {\n\treturn httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {\n\t\tw.Write([]byte(body))\n\t}))\n}\n\nfunc TestFetchOne(t *testing.T) {\n\ts := makeServer(\"hello\")\n\tdefer s.Close()\n\tbody, err := fetcher.FetchOne(s.URL, s.Client())\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\tif body != \"hello\" {\n\t\tt.Fatalf(\"expected hello, got %s\", body)\n\t}\n}\n\nfunc TestFetchAll(t *testing.T) {\n\ts1 := makeServer(\"first\")\n\tdefer s1.Close()\n\ts2 := makeServer(\"second\")\n\tdefer s2.Close()\n\tresults := fetcher.FetchAll([]string{s1.URL, s2.URL}, http.DefaultClient)\n\tif len(results) != 2 {\n\t\tt.Fatalf(\"expected 2 results, got %d\", len(results))\n\t}\n}\n\nfunc TestFetchAllEmpty(t *testing.T) {\n\tresults := fetcher.FetchAll(nil, http.DefaultClient)\n\tif len(results) != 0 {\n\t\tt.Fatalf(\"expected empty, got %d\", len(results))\n\t}\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The `FetchOne` function in `fetcher/fetcher.go` leaks the HTTP response body — `resp.Body` is never closed. Add `defer resp.Body.Close()` immediately after the nil error check. Run `go test ./...`.",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what you fixed. Now also fix `FetchAll()`: (1) the WaitGroup `Add(1)` is inside the goroutine — move it to before the `go` statement to prevent races; (2) add `defer resp.Body.Close()` inside the goroutine. Run `go vet ./...` to confirm no vet warnings.",
+      "Final verification: run `go test -race ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ],
+    "success_criteria": [
+      "FetchOne closes resp.Body with defer",
+      "FetchAll closes resp.Body inside goroutine",
+      "wg.Add(1) called before launching goroutine, not inside it",
+      "go vet ./... reports no issues",
+      "All 3 tests pass with -race"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "go test -race ./..."}
+  },
+  "duration_hint_minutes": 15
+}

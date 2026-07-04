@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "544-ts-mt-long-todo-app",
+  "title": "Build a full todo app in TypeScript — 4 turns",
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "target_stack": {"language": "typescript", "framework": "react", "extra": {}},
+  "description": "Four-turn todo app: turn 1 TodoList component, turn 2 add/remove, turn 3 filter/sort, turn 4 persistence and tests.",
+  "repo_seed": {
+    "files": {
+      "package.json": "{\n  \"name\": \"todo-app\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"test\": \"jest --forceExit\"\n  },\n  \"dependencies\": {\n    \"react\": \"^18.0.0\"\n  },\n  \"devDependencies\": {\n    \"@testing-library/react\": \"^14.0.0\",\n    \"@types/react\": \"^18.0.0\",\n    \"@types/jest\": \"^29.0.0\",\n    \"jest\": \"^29.0.0\",\n    \"jest-environment-jsdom\": \"^29.0.0\",\n    \"ts-jest\": \"^29.0.0\",\n    \"typescript\": \"^5.0.0\"\n  },\n  \"jest\": {\n    \"preset\": \"ts-jest\",\n    \"testEnvironment\": \"jsdom\",\n    \"setupFilesAfterFramework\": [\"@testing-library/jest-dom\"]\n  }\n}\n",
+      "src/useTodos.ts": "import { useState, useCallback } from 'react';\n\nexport interface Todo {\n  id: number;\n  text: string;\n  completed: boolean;\n  createdAt: number;\n}\n\nexport type Filter = 'all' | 'active' | 'completed';\nexport type SortOrder = 'newest' | 'oldest' | 'alpha';\n\nexport interface TodosState {\n  todos: Todo[];\n  filter: Filter;\n  sort: SortOrder;\n  filteredAndSorted: Todo[];\n}\n\nexport interface TodosActions {\n  addTodo: (text: string) => void;\n  removeTodo: (id: number) => void;\n  toggleTodo: (id: number) => void;\n  setFilter: (filter: Filter) => void;\n  setSort: (sort: SortOrder) => void;\n  clearCompleted: () => void;\n}\n\nlet nextId = 1;\n\nexport function useTodos(): TodosState & TodosActions {\n  const [todos, setTodos] = useState<Todo[]>([]);\n  const [filter, setFilter] = useState<Filter>('all');\n  const [sort, setSort] = useState<SortOrder>('newest');\n\n  // TODO: implement all actions and compute filteredAndSorted\n  const filteredAndSorted: Todo[] = [];\n  const addTodo = (_text: string) => {};\n  const removeTodo = (_id: number) => {};\n  const toggleTodo = (_id: number) => {};\n  const clearCompleted = () => {};\n\n  return { todos, filter, sort, filteredAndSorted, addTodo, removeTodo, toggleTodo, setFilter, setSort: (s) => setSort(s), clearCompleted };\n}\n",
+      "src/useTodos.test.ts": "import { renderHook, act } from '@testing-library/react';\nimport { useTodos } from './useTodos';\n\ntest('starts empty', () => {\n  const { result } = renderHook(() => useTodos());\n  expect(result.current.todos).toEqual([]);\n});\n\ntest('addTodo adds a todo', () => {\n  const { result } = renderHook(() => useTodos());\n  act(() => result.current.addTodo('Buy milk'));\n  expect(result.current.todos).toHaveLength(1);\n  expect(result.current.todos[0].text).toBe('Buy milk');\n  expect(result.current.todos[0].completed).toBe(false);\n});\n\ntest('removeTodo removes a todo', () => {\n  const { result } = renderHook(() => useTodos());\n  act(() => result.current.addTodo('to remove'));\n  const id = result.current.todos[0].id;\n  act(() => result.current.removeTodo(id));\n  expect(result.current.todos).toHaveLength(0);\n});\n\ntest('toggleTodo flips completed', () => {\n  const { result } = renderHook(() => useTodos());\n  act(() => result.current.addTodo('toggle me'));\n  const id = result.current.todos[0].id;\n  act(() => result.current.toggleTodo(id));\n  expect(result.current.todos[0].completed).toBe(true);\n  act(() => result.current.toggleTodo(id));\n  expect(result.current.todos[0].completed).toBe(false);\n});\n\ntest('filter: active shows only incomplete', () => {\n  const { result } = renderHook(() => useTodos());\n  act(() => result.current.addTodo('a'));\n  act(() => result.current.addTodo('b'));\n  act(() => result.current.toggleTodo(result.current.todos[0].id));\n  act(() => result.current.setFilter('active'));\n  expect(result.current.filteredAndSorted).toHaveLength(1);\n  expect(result.current.filteredAndSorted[0].text).toBe('b');\n});\n\ntest('filter: completed shows only done', () => {\n  const { result } = renderHook(() => useTodos());\n  act(() => result.current.addTodo('a'));\n  act(() => result.current.addTodo('b'));\n  act(() => result.current.toggleTodo(result.current.todos[0].id));\n  act(() => result.current.setFilter('completed'));\n  expect(result.current.filteredAndSorted).toHaveLength(1);\n  expect(result.current.filteredAndSorted[0].text).toBe('a');\n});\n\ntest('sort: alpha sorts alphabetically', () => {\n  const { result } = renderHook(() => useTodos());\n  act(() => result.current.addTodo('Zebra'));\n  act(() => result.current.addTodo('Apple'));\n  act(() => result.current.setSort('alpha'));\n  expect(result.current.filteredAndSorted[0].text).toBe('Apple');\n});\n\ntest('clearCompleted removes all completed todos', () => {\n  const { result } = renderHook(() => useTodos());\n  act(() => result.current.addTodo('a'));\n  act(() => result.current.addTodo('b'));\n  act(() => result.current.toggleTodo(result.current.todos[0].id));\n  act(() => result.current.clearCompleted());\n  expect(result.current.todos).toHaveLength(1);\n  expect(result.current.todos[0].text).toBe('b');\n});\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `addTodo(text)` in `src/useTodos.ts` — create a Todo with auto-incremented id, the given text, completed=false, and createdAt=Date.now(). Also compute `filteredAndSorted` — for now just return `todos` unfiltered. Run `npm test -- --forceExit`.",
+    "followup_prompts": [
+      "Good progress. Run `npm test -- --forceExit` to see where we stand. Now implement `removeTodo(id)`, `toggleTodo(id)`, and `clearCompleted()`. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Good. Now implement `filteredAndSorted`: apply the filter (all/active/completed) to todos, then sort by the sort order (newest=descending createdAt, oldest=ascending, alpha=alphabetical by text). Update setFilter and setSort to call their state setters. Run `npm test -- --forceExit` and fix any failures.",
+      "Final push: run `npm test -- --forceExit` and fix any remaining failures. All 8 tests must pass — basic CRUD, filter, sort, and clearCompleted."
+    ],
+    "success_criteria": [
+      "addTodo creates todo with all fields",
+      "removeTodo/toggleTodo work correctly",
+      "clearCompleted removes only completed todos",
+      "filter correctly shows all/active/completed subsets",
+      "sort orders by newest/oldest/alpha",
+      "All 8 tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "npm test -- --forceExit"}
+  },
+  "duration_hint_minutes": 30
+}

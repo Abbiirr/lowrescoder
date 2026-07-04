@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-greenfield-055",
+  "title": "Implement a binary search tree in Rust",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement BST<T: Ord> with insert, contains, and in_order traversal.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "pub struct BST<T> {\n    // TODO: implement\n}\n\nimpl<T: Ord> BST<T> {\n    pub fn new() -> Self { panic!(\"not implemented\") }\n    pub fn insert(&mut self, val: T) { panic!(\"not implemented\") }\n    pub fn contains(&self, val: &T) -> bool { panic!(\"not implemented\") }\n    pub fn in_order(&self) -> Vec<&T> { panic!(\"not implemented\") }\n}\n",
+      "tests/bst_test.rs": "use bst::BST;\n\n#[test]\nfn test_insert_contains() {\n    let mut tree: BST<i32> = BST::new();\n    tree.insert(5);\n    tree.insert(3);\n    tree.insert(7);\n    assert!(tree.contains(&5));\n    assert!(tree.contains(&3));\n    assert!(tree.contains(&7));\n    assert!(!tree.contains(&4));\n}\n\n#[test]\nfn test_in_order() {\n    let mut tree: BST<i32> = BST::new();\n    for v in [5, 3, 7, 1, 4, 6, 8] {\n        tree.insert(v);\n    }\n    assert_eq!(tree.in_order(), vec![&1, &3, &4, &5, &6, &7, &8]);\n}\n\n#[test]\nfn test_duplicates() {\n    let mut tree: BST<i32> = BST::new();\n    tree.insert(5);\n    tree.insert(5);\n    assert!(tree.contains(&5));\n    assert_eq!(tree.in_order().len(), 1); // no duplicates stored\n}\n",
+      "Cargo.toml": "[package]\nname = \"bst\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement BST<T: Ord> in src/lib.rs:\n- Node<T>: val T, left/right Option<Box<Node<T>>>\n- BST<T>: root Option<Box<Node<T>>>\n- `insert`: recursive: if val < node.val go left, if val > go right, if == do nothing (no duplicates)\n- `contains`: recursive: if val == return true; if < go left; if > go right; None = false\n- `in_order`: in-order DFS returning references in sorted order\nAll 3 tests must pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": "All 3 cargo test cases pass",
+    "followup_prompts": [
+      "Run `cargo test --quiet` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test --quiet` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "cargo test",
+    "expected_exit_code": 0
+  }
+}

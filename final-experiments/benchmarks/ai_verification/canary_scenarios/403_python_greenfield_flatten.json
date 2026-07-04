@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-greenfield-047",
+  "title": "Implement recursive list flattening in Python",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement flatten(nested) that recursively flattens arbitrarily nested lists into a single flat list.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/flatten.py": "def flatten(nested):\n    # TODO: implement\n    raise NotImplementedError\n",
+      "tests/test_flatten.py": "import sys\nsys.path.insert(0, '.')\nfrom src.flatten import flatten\n\n\ndef test_flat_list():\n    assert flatten([1, 2, 3]) == [1, 2, 3]\n\n\ndef test_nested():\n    assert flatten([1, [2, 3], [4, [5, 6]]]) == [1, 2, 3, 4, 5, 6]\n\n\ndef test_deeply_nested():\n    assert flatten([[[1]], [[2, 3]]]) == [1, 2, 3]\n\n\ndef test_empty():\n    assert flatten([]) == []\n\n\ndef test_mixed_depth():\n    assert flatten([1, [], [2, [3, [4]]]]) == [1, 2, 3, 4]\n",
+      "pyproject.toml": "[project]\nname = \"flatten\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = []\n\n[tool.pytest.ini_options]\npythonpath = [\".\"]\n\n[dependency-groups]\ndev = [\"pytest>=8.0\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement flatten(nested) in src/flatten.py:\n- Iterate over items in nested\n- If item is a list, recursively flatten it and extend the result\n- Otherwise append item to result\n- Return the flattened list\nAll 5 tests must pass.",
+    "entry_point": "src/flatten.py",
+    "success_criteria": "All 5 pytest test cases pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -q` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

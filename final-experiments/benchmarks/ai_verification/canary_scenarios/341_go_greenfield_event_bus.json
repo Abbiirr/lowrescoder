@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-greenfield-037",
+  "title": "Implement an in-process event bus in Go",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement a simple in-process event bus that supports Subscribe, Publish, and Unsubscribe operations with string topic names.",
+  "repo_seed": {
+    "files": {
+      "eventbus.go": "package eventbus\n\n// EventBus is an in-process pub/sub system.\ntype EventBus struct{}\n\n// HandlerFunc is a callback invoked when an event is published to a topic.\ntype HandlerFunc func(payload interface{})\n\n// New returns an initialised EventBus.\nfunc New() *EventBus { panic(\"not implemented\") }\n\n// Subscribe registers handler for topic and returns a subscription ID.\nfunc (b *EventBus) Subscribe(topic string, handler HandlerFunc) int { panic(\"not implemented\") }\n\n// Unsubscribe removes the subscription with the given ID from topic.\nfunc (b *EventBus) Unsubscribe(topic string, id int) { panic(\"not implemented\") }\n\n// Publish calls all handlers registered for topic with payload.\nfunc (b *EventBus) Publish(topic string, payload interface{}) { panic(\"not implemented\") }\n",
+      "eventbus_test.go": "package eventbus\n\nimport (\n\t\"testing\"\n\t\"sync\"\n)\n\nfunc TestSubscribeAndPublish(t *testing.T) {\n\tbus := New()\n\tcalled := false\n\tbus.Subscribe(\"greet\", func(p interface{}) {\n\t\tif p.(string) != \"hello\" {\n\t\t\tt.Fatalf(\"want hello, got %v\", p)\n\t\t}\n\t\tcalled = true\n\t})\n\tbus.Publish(\"greet\", \"hello\")\n\tif !called {\n\t\tt.Fatal(\"handler not called\")\n\t}\n}\n\nfunc TestUnsubscribe(t *testing.T) {\n\tbus := New()\n\tcount := 0\n\tid := bus.Subscribe(\"ev\", func(_ interface{}) { count++ })\n\tbus.Publish(\"ev\", nil)\n\tbus.Unsubscribe(\"ev\", id)\n\tbus.Publish(\"ev\", nil)\n\tif count != 1 {\n\t\tt.Fatalf(\"want 1 call, got %d\", count)\n\t}\n}\n\nfunc TestMultipleSubscribers(t *testing.T) {\n\tbus := New()\n\tvar mu sync.Mutex\n\tresults := []string{}\n\tbus.Subscribe(\"t\", func(_ interface{}) { mu.Lock(); results = append(results, \"a\"); mu.Unlock() })\n\tbus.Subscribe(\"t\", func(_ interface{}) { mu.Lock(); results = append(results, \"b\"); mu.Unlock() })\n\tbus.Publish(\"t\", nil)\n\tif len(results) != 2 {\n\t\tt.Fatalf(\"want 2 results, got %d\", len(results))\n\t}\n}\n\nfunc TestPublishNoSubscribers(t *testing.T) {\n\tbus := New()\n\tbus.Publish(\"empty\", \"data\") // should not panic\n}\n\nfunc TestSubscribeReturnsDifferentIDs(t *testing.T) {\n\tbus := New()\n\tid1 := bus.Subscribe(\"x\", func(_ interface{}) {})\n\tid2 := bus.Subscribe(\"x\", func(_ interface{}) {})\n\tif id1 == id2 {\n\t\tt.Fatal(\"IDs should be unique\")\n\t}\n}\n",
+      "go.mod": "module eventbus\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement the EventBus in eventbus.go:\n- `New()` returns a pointer to an initialised EventBus with internal maps\n- `Subscribe(topic, handler)` stores the handler and returns a unique integer ID\n- `Unsubscribe(topic, id)` removes that subscription\n- `Publish(topic, payload)` calls all registered handlers for that topic (no-op if none)\n- Use a `sync.Mutex` to protect the handler map\nAll 5 tests must pass.",
+    "entry_point": "eventbus.go",
+    "success_criteria": "All 5 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

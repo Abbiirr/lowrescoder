@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "519-go-mt-http-middleware",
+  "title": "Build HTTP middleware chain in Go — 3 turns",
+  "category": "backend_feature",
+  "difficulty": "medium",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "Build a composable HTTP middleware chain: logging middleware in turn 1, auth middleware in turn 2, chain composition in turn 3.",
+  "repo_seed": {
+    "files": {
+      "go.mod": "module github.com/ai-verification/middleware\n\ngo 1.22\n",
+      "server/middleware.go": "package server\n\nimport (\n\t\"log\"\n\t\"net/http\"\n)\n\n// Middleware is a function that wraps an http.Handler.\ntype Middleware func(http.Handler) http.Handler\n\n// Chain composes multiple middlewares into one, applied left to right.\nfunc Chain(middlewares ...Middleware) Middleware {\n\t// TODO: implement\n\treturn func(next http.Handler) http.Handler {\n\t\treturn next\n\t}\n}\n\n// Logging wraps h to log method + path + status code.\nfunc Logging(logger *log.Logger) Middleware {\n\treturn func(next http.Handler) http.Handler {\n\t\t// TODO: implement\n\t\treturn next\n\t}\n}\n\n// Auth checks for a Bearer token in the Authorization header.\n// If the token matches secret, the request proceeds; otherwise 401.\nfunc Auth(secret string) Middleware {\n\treturn func(next http.Handler) http.Handler {\n\t\t// TODO: implement\n\t\treturn next\n\t}\n}\n",
+      "server/middleware_test.go": "package server_test\n\nimport (\n\t\"bytes\"\n\t\"log\"\n\t\"net/http\"\n\t\"net/http/httptest\"\n\t\"testing\"\n\n\t\"github.com/ai-verification/middleware/server\"\n)\n\nfunc okHandler() http.Handler {\n\treturn http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {\n\t\tw.WriteHeader(http.StatusOK)\n\t\tw.Write([]byte(\"ok\"))\n\t})\n}\n\nfunc TestLoggingMiddleware(t *testing.T) {\n\tvar buf bytes.Buffer\n\tlogger := log.New(&buf, \"\", 0)\n\th := server.Logging(logger)(okHandler())\n\trec := httptest.NewRecorder()\n\th.ServeHTTP(rec, httptest.NewRequest(\"GET\", \"/test\", nil))\n\tif rec.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected 200, got %d\", rec.Code)\n\t}\n\tif buf.Len() == 0 {\n\t\tt.Fatal(\"expected log output\")\n\t}\n}\n\nfunc TestAuthMiddlewareAllows(t *testing.T) {\n\th := server.Auth(\"secret\")(okHandler())\n\trec := httptest.NewRecorder()\n\treq := httptest.NewRequest(\"GET\", \"/\", nil)\n\treq.Header.Set(\"Authorization\", \"Bearer secret\")\n\th.ServeHTTP(rec, req)\n\tif rec.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected 200, got %d\", rec.Code)\n\t}\n}\n\nfunc TestAuthMiddlewareDenies(t *testing.T) {\n\th := server.Auth(\"secret\")(okHandler())\n\trec := httptest.NewRecorder()\n\treq := httptest.NewRequest(\"GET\", \"/\", nil)\n\th.ServeHTTP(rec, req) // no auth header\n\tif rec.Code != http.StatusUnauthorized {\n\t\tt.Fatalf(\"expected 401, got %d\", rec.Code)\n\t}\n}\n\nfunc TestChain(t *testing.T) {\n\tvar buf bytes.Buffer\n\tlogger := log.New(&buf, \"\", 0)\n\thandler := server.Chain(\n\t\tserver.Logging(logger),\n\t\tserver.Auth(\"tok\"),\n\t)(okHandler())\n\trec := httptest.NewRecorder()\n\treq := httptest.NewRequest(\"GET\", \"/\", nil)\n\treq.Header.Set(\"Authorization\", \"Bearer tok\")\n\thandler.ServeHTTP(rec, req)\n\tif rec.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected 200, got %d\", rec.Code)\n\t}\n\tif buf.Len() == 0 {\n\t\tt.Fatal(\"expected logging output\")\n\t}\n}\n\nfunc TestChainUnauthenticated(t *testing.T) {\n\tvar buf bytes.Buffer\n\tlogger := log.New(&buf, \"\", 0)\n\thandler := server.Chain(\n\t\tserver.Logging(logger),\n\t\tserver.Auth(\"tok\"),\n\t)(okHandler())\n\trec := httptest.NewRecorder()\n\treq := httptest.NewRequest(\"GET\", \"/\", nil)\n\thandler.ServeHTTP(rec, req)\n\tif rec.Code != http.StatusUnauthorized {\n\t\tt.Fatalf(\"expected 401, got %d\", rec.Code)\n\t}\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement the `Logging(logger)` middleware in `server/middleware.go`. It should wrap the handler using a `responseWriter` (or `httptest.ResponseRecorder`-style type) to capture the status code, then log `METHOD PATH STATUS` to the logger after calling the next handler. Use a simple wrapper that captures WriteHeader. Run `go test ./...`.",
+    "followup_prompts": [
+      "Good. Now add input validation and error handling: implement the `Auth(secret)` middleware — parse the `Authorization: Bearer <token>` header, compare to secret, and if missing or mismatched return `http.StatusUnauthorized`. Run `go test ./...` and fix any failures.",
+      "Run `go test ./...` to verify everything including Chain composition. Implement `Chain(middlewares...)` — apply middlewares in reverse order so the first in the list is outermost. Fix any failures and confirm all 5 tests pass."
+    ],
+    "success_criteria": [
+      "Logging middleware logs method, path, and status code",
+      "Auth middleware allows requests with correct Bearer token",
+      "Auth middleware rejects requests with missing/wrong token (401)",
+      "Chain composes middlewares so first-listed is outermost",
+      "go test ./... passes (5 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "go test ./..."}
+  },
+  "duration_hint_minutes": 20
+}

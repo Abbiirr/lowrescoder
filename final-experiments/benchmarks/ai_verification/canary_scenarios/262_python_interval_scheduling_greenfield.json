@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-020",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement interval scheduling algorithms in Python",
+  "description": "Greenfield Python task: implement merge_intervals (merge overlapping intervals), max_non_overlapping (max count of non-overlapping intervals via greedy earliest-end), and is_covered (check if target interval is fully covered by union of intervals).",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"intervals\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/intervals.py",
+        "content": "# TODO: implement interval scheduling functions\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_intervals.py",
+        "content": "from src.intervals import merge_intervals, max_non_overlapping, is_covered\n\n\ndef test_merge_basic():\n    result = merge_intervals([[1, 3], [2, 6], [8, 10], [15, 18]])\n    assert result == [[1, 6], [8, 10], [15, 18]]\n\n\ndef test_merge_adjacent():\n    result = merge_intervals([[1, 4], [4, 5]])\n    assert result == [[1, 5]]\n\n\ndef test_max_non_overlapping():\n    assert max_non_overlapping([[1, 3], [2, 4], [3, 5]]) == 2\n    assert max_non_overlapping([[1, 2], [3, 4], [5, 6]]) == 3\n\n\ndef test_is_covered_true():\n    assert is_covered([[1, 4], [4, 8]], [2, 7]) is True\n\n\ndef test_is_covered_false():\n    assert is_covered([[1, 3], [5, 8]], [2, 6]) is False\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement three interval functions in src/intervals.py.\n\ndef merge_intervals(intervals: list[list[int]]) -> list[list[int]]:\n    # Sort by start. Merge overlapping/adjacent: if cur[0] <= last[1], extend last[1]=max(last[1],cur[1]).\n\ndef max_non_overlapping(intervals: list[list[int]]) -> int:\n    # Greedy: sort by end time. Take an interval if its start >= last chosen end.\n    # Return count of chosen intervals.\n\ndef is_covered(intervals: list[list[int]], target: list[int]) -> bool:\n    # Merge intervals first, then check if any merged span contains [target[0], target[1]].\n\nAll 5 tests in tests/test_intervals.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "merge_intervals sorts by start and merges overlapping spans",
+      "max_non_overlapping uses earliest-end greedy",
+      "is_covered merges then checks containment",
+      "is_covered returns False when gap exists in coverage",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.intervals import merge_intervals, max_non_overlapping, is_covered\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.intervals import merge_intervals, max_non_overlapping, is_covered\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-brownfield-019",
+  "title": "Fix three bugs in a Go temperature converter",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Three conversion functions have wrong formulas: CtoF ignores the scaling factor, FtoC applies operations in wrong order, CtoK uses wrong constant.",
+  "repo_seed": {
+    "files": {
+      "temp.go": "package temp\n\n// CtoF converts Celsius to Fahrenheit.\nfunc CtoF(c float64) float64 {\n\treturn c + 32 // bug: should be c*9/5 + 32\n}\n\n// FtoC converts Fahrenheit to Celsius.\nfunc FtoC(f float64) float64 {\n\treturn f*5/9 - 32 // bug: should be (f-32)*5/9\n}\n\n// CtoK converts Celsius to Kelvin.\nfunc CtoK(c float64) float64 {\n\treturn c + 274.15 // bug: should be c + 273.15\n}\n",
+      "temp_test.go": "package temp\n\nimport (\n\t\"math\"\n\t\"testing\"\n)\n\nfunc almostEqual(a, b float64) bool { return math.Abs(a-b) < 1e-9 }\n\nfunc TestCtoF(t *testing.T) {\n\tif !almostEqual(CtoF(0), 32) { t.Fatalf(\"CtoF(0) want 32, got %f\", CtoF(0)) }\n\tif !almostEqual(CtoF(100), 212) { t.Fatalf(\"CtoF(100) want 212, got %f\", CtoF(100)) }\n}\n\nfunc TestFtoC(t *testing.T) {\n\tif !almostEqual(FtoC(32), 0) { t.Fatalf(\"FtoC(32) want 0, got %f\", FtoC(32)) }\n\tif !almostEqual(FtoC(212), 100) { t.Fatalf(\"FtoC(212) want 100, got %f\", FtoC(212)) }\n}\n\nfunc TestCtoK(t *testing.T) {\n\tif !almostEqual(CtoK(0), 273.15) { t.Fatalf(\"CtoK(0) want 273.15, got %f\", CtoK(0)) }\n\tif !almostEqual(CtoK(-273.15), 0) { t.Fatalf(\"CtoK(-273.15) want 0, got %f\", CtoK(-273.15)) }\n}\n",
+      "go.mod": "module temp\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in temp.go:\n1. `CtoF`: change `c + 32` to `c*9/5 + 32`\n2. `FtoC`: change `f*5/9 - 32` to `(f-32)*5/9`\n3. `CtoK`: change `274.15` to `273.15`\nAll 3 tests must pass.",
+    "entry_point": "temp.go",
+    "success_criteria": "All 3 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

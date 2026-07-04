@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-027",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "hard",
+  "duration_hint_minutes": 35,
+  "title": "Implement a recursive descent arithmetic expression evaluator in Python",
+  "description": "Greenfield Python task: implement a tokenizer and recursive descent parser/evaluator for arithmetic expressions supporting +, -, *, / with proper precedence, parentheses, unary minus, and integer/float literals.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"expreval\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/evaluator.py",
+        "content": "# TODO: implement evaluate(expr: str) -> float\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_evaluator.py",
+        "content": "from src.evaluator import evaluate\n\n\ndef test_simple_addition():\n    assert evaluate(\"1 + 2\") == 3.0\n\n\ndef test_operator_precedence():\n    assert evaluate(\"2 + 3 * 4\") == 14.0  # multiplication before addition\n\n\ndef test_parentheses():\n    assert evaluate(\"(2 + 3) * 4\") == 20.0\n\n\ndef test_unary_minus():\n    assert evaluate(\"-5 + 3\") == -2.0\n\n\ndef test_nested_parens():\n    assert evaluate(\"((2 + 3) * (4 - 1)) / 5\") == 3.0\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement evaluate(expr: str) -> float in src/evaluator.py using recursive descent.\n\nGrammar:\n  expr   -> term (('+' | '-') term)*\n  term   -> factor (('*' | '/') factor)*\n  factor -> '-' factor | '(' expr ')' | NUMBER\n\nImplementation sketch:\n\ndef tokenize(expr: str) -> list[str]:\n    # Split into number tokens and operator/paren tokens.\n    # Use re.findall(r'\\d+\\.?\\d*|[+\\-*/()]', expr)\n\nclass Parser:\n    def __init__(self, tokens): self.tokens = tokens; self.pos = 0\n    def peek(self): return self.tokens[self.pos] if self.pos < len(self.tokens) else None\n    def consume(self): t = self.tokens[self.pos]; self.pos += 1; return t\n    def parse_expr(self):   # handles + and -\n    def parse_term(self):   # handles * and /\n    def parse_factor(self): # handles unary minus, parens, numbers\n\ndef evaluate(expr: str) -> float:\n    tokens = tokenize(expr)\n    return Parser(tokens).parse_expr()\n\nAll 5 tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "tokenize splits expression into number and operator tokens",
+      "parse_expr handles + and - with left-associativity",
+      "parse_term handles * and / with correct precedence over +/-",
+      "parse_factor handles unary minus and parenthesized sub-expressions",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.evaluator import evaluate\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.evaluator import evaluate\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

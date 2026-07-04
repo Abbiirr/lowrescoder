@@ -1,0 +1,70 @@
+title: Refactor noop guard
+category: refactor
+difficulty: medium
+target_stack:
+  language: python
+task_spec:
+  prompt: |
+    Refactor the calculator.py module to use a dispatch dictionary instead of the
+    if/elif chain for the four basic operations. Keep all existing tests passing.
+    The refactored code should be functionally identical but more maintainable.
+  followup_prompts:
+    - "Run the tests to confirm no regressions from your refactor."
+    - "Final pass: run the tests one more time and confirm everything is green."
+repo_seed:
+  mode: fresh
+  files:
+    calculator.py: |
+      def calculate(a, op, b):
+          if op == "add":
+              return a + b
+          elif op == "sub":
+              return a - b
+          elif op == "mul":
+              return a * b
+          elif op == "div":
+              if b == 0:
+                  raise ValueError("division by zero")
+              return a / b
+          else:
+              raise ValueError(f"unknown operation: {op}")
+    test_calculator.py: |
+      import pytest
+      from calculator import calculate
+
+      def test_add():
+          assert calculate(2, "add", 3) == 5
+
+      def test_sub():
+          assert calculate(5, "sub", 3) == 2
+
+      def test_mul():
+          assert calculate(4, "mul", 3) == 12
+
+      def test_div():
+          assert calculate(10, "div", 4) == 2.5
+
+      def test_div_zero():
+          with pytest.raises(ValueError):
+              calculate(1, "div", 0)
+
+      def test_unknown_op():
+          with pytest.raises(ValueError):
+              calculate(1, "mod", 2)
+expected_outcomes:
+  must_have:
+    - "item_completed event present"
+  must_not_have:
+    - "error event"
+artifact_assertions:
+  require_non_empty_diff: true
+  forbid_noop_pass: true
+  must_change_files:
+    - "calculator.py"
+  must_not_change_files:
+    - "test_calculator.py"
+grading:
+  checks:
+    - run_tests
+  check_commands:
+    run_tests: "python -m pytest test_calculator.py -v"

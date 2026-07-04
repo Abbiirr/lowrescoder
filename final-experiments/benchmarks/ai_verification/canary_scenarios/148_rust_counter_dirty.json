@@ -1,0 +1,60 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-dirty-010",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 buggy Counter struct methods in Rust",
+  "description": "Greenfield Rust dirty scenario: a Counter struct has 3 broken method implementations. Fix increment, reset, and top_n so all tests pass.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"rust-counter\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\nname = \"counter\"\npath = \"src/lib.rs\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "use std::collections::HashMap;\n\npub struct Counter {\n    counts: HashMap<String, u32>,\n}\n\nimpl Counter {\n    pub fn new() -> Self {\n        Counter { counts: HashMap::new() }\n    }\n\n    /// Increment the count for key by 1.\n    pub fn increment(&mut self, key: &str) {\n        // BUG: sets to 1 instead of incrementing\n        self.counts.insert(key.to_string(), 1);\n    }\n\n    /// Return the current count for key (0 if absent).\n    pub fn get(&self, key: &str) -> u32 {\n        *self.counts.get(key).unwrap_or(&0)\n    }\n\n    /// Reset the count for key to 0 (remove from map).\n    pub fn reset(&mut self, key: &str) {\n        // BUG: inserts 0 instead of removing\n        self.counts.insert(key.to_string(), 0);\n    }\n\n    /// Return up to n keys with the highest counts, sorted descending by count.\n    pub fn top_n<'a>(&'a self, items: &[&'a str], n: usize) -> Vec<&'a str> {\n        // BUG: returns first n items without sorting\n        items.iter().take(n).copied().collect()\n    }\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_increment_multiple_times() {\n        let mut c = Counter::new();\n        c.increment(\"a\");\n        c.increment(\"a\");\n        c.increment(\"a\");\n        assert_eq!(c.get(\"a\"), 3);\n    }\n\n    #[test]\n    fn test_get_absent() {\n        let c = Counter::new();\n        assert_eq!(c.get(\"missing\"), 0);\n    }\n\n    #[test]\n    fn test_reset_removes_key() {\n        let mut c = Counter::new();\n        c.increment(\"x\");\n        c.increment(\"x\");\n        c.reset(\"x\");\n        assert_eq!(c.get(\"x\"), 0);\n        // After reset, key should not show up in top_n\n        let items = [\"x\"];\n        let top = c.top_n(&items, 1);\n        assert!(top.is_empty(), \"expected empty top_n after reset\");\n    }\n\n    #[test]\n    fn test_top_n_sorted() {\n        let mut c = Counter::new();\n        c.increment(\"a\");\n        c.increment(\"b\");\n        c.increment(\"b\");\n        c.increment(\"c\");\n        c.increment(\"c\");\n        c.increment(\"c\");\n        let items = [\"a\", \"b\", \"c\"];\n        let top = c.top_n(&items, 2);\n        assert_eq!(top, vec![\"c\", \"b\"]);\n    }\n}\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 buggy methods in src/lib.rs so all tests pass.\n\n  fn increment(&mut self, key: &str)\n    — increment the count for key by 1 (use entry API or get+insert)\n\n  fn reset(&mut self, key: &str)\n    — remove key from the map entirely (so get returns 0 and top_n skips it)\n\n  fn top_n<'a>(&'a self, items: &[&'a str], n: usize) -> Vec<&'a str>\n    — return up to n items from the slice, sorted descending by count\n    — items with count 0 (or absent from map) are excluded from results\n\nDo not modify the test file.\nRun: cargo test",
+    "required_artifacts": [
+      "increment accumulates counts correctly across multiple calls",
+      "reset removes the key (get returns 0, top_n excludes it)",
+      "top_n returns items sorted by descending count, excluding zeros",
+      "All 4 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

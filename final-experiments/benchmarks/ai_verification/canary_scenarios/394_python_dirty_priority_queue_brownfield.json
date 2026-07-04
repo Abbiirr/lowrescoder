@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-020",
+  "title": "Fix three bugs in a Python max-priority queue",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A MaxPriorityQueue backed by heapq has three bugs: push negates priority wrong, pop returns wrong field, and peek returns the wrong field.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/pq.py": "import heapq\n\nclass MaxPriorityQueue:\n    def __init__(self):\n        self._heap = []\n        self._counter = 0\n\n    def push(self, item, priority: int) -> None:\n        # Use negative priority for max-heap via heapq (min-heap)\n        heapq.heappush(self._heap, (priority, self._counter, item))  # bug: should be -priority\n        self._counter += 1\n\n    def pop(self):\n        neg_priority, _, item = heapq.heappop(self._heap)\n        return neg_priority  # bug: should return item\n\n    def peek(self):\n        neg_priority, _, item = self._heap[0]\n        return neg_priority  # bug: should return item\n\n    def __len__(self):\n        return len(self._heap)\n",
+      "tests/test_pq.py": "from src.pq import MaxPriorityQueue\n\ndef test_push_pop_order():\n    pq = MaxPriorityQueue()\n    pq.push('low', 1)\n    pq.push('high', 10)\n    pq.push('mid', 5)\n    assert pq.pop() == 'high'\n    assert pq.pop() == 'mid'\n    assert pq.pop() == 'low'\n\ndef test_peek():\n    pq = MaxPriorityQueue()\n    pq.push('a', 3)\n    pq.push('b', 7)\n    assert pq.peek() == 'b'\n    assert len(pq) == 2\n\ndef test_single_item():\n    pq = MaxPriorityQueue()\n    pq.push('only', 99)\n    assert pq.pop() == 'only'\n    assert len(pq) == 0\n",
+      "pyproject.toml": "[project]\nname = \"pq\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npythonpath = [\".\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/pq.py:\n1. `push`: change `(priority, self._counter, item)` to `(-priority, self._counter, item)` so high priority sorts first\n2. `pop`: change `return neg_priority` to `return item`\n3. `peek`: change `return neg_priority` to `return item`\nAll 3 tests must pass.",
+    "entry_point": "src/pq.py",
+    "success_criteria": "All 3 pytest tests pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

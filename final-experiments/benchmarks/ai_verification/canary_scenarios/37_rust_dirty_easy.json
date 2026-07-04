@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-dirty-002",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix two simple bugs in a Rust string-utils library: off-by-one and panic on empty",
+  "description": "A Rust string-utils library has two injected bugs: an off-by-one in word_count and a panic on empty string in capitalize_words. Both bugs have failing tests.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "mutate",
+    "fixture_ref": "rust_string_utils",
+    "injections": [
+      {
+        "path": "src/lib.rs",
+        "content": "/// Counts the number of words in a string (whitespace-separated).\n/// BUG: off-by-one — adds 1 even for empty strings.\npub fn word_count(s: &str) -> usize {\n    if s.trim().is_empty() {\n        return 1; // BUG: should return 0\n    }\n    s.split_whitespace().count()\n}\n\n/// Capitalises the first letter of each word.\n/// BUG: panics on empty string input.\npub fn capitalize_words(s: &str) -> String {\n    // BUG: &s[0..1] panics on empty string\n    s.split_whitespace()\n        .map(|w| format!(\"{}{}\", &w[0..1].to_uppercase(), &w[1..]))\n        .collect::<Vec<_>>()\n        .join(\" \")\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_word_count_empty() {\n        // This FAILS with the buggy implementation (returns 1, not 0)\n        assert_eq!(word_count(\"\"), 0);\n    }\n\n    #[test]\n    fn test_word_count_single() {\n        assert_eq!(word_count(\"hello\"), 1);\n    }\n\n    #[test]\n    fn test_word_count_multiple() {\n        assert_eq!(word_count(\"hello world foo\"), 3);\n    }\n\n    #[test]\n    fn test_capitalize_basic() {\n        assert_eq!(capitalize_words(\"hello world\"), \"Hello World\");\n    }\n\n    #[test]\n    fn test_capitalize_empty() {\n        // This PANICS with the buggy implementation\n        assert_eq!(capitalize_words(\"\"), \"\");\n    }\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Rust library in src/lib.rs has two bugs introduced by a bad commit:\n\nBug 1 — word_count off-by-one: The function returns 1 for empty strings instead of 0. Fix the early-return for empty strings to return 0.\n\nBug 2 — capitalize_words panics on empty: The map closure uses &w[0..1] which panics if the word is empty string (and on empty input there are no words — but the split_whitespace guarantees non-empty words, so the real fix is handling the case where s is empty). Fix the function to return an empty String when the input is empty or all whitespace, without panicking.\n\nAfter fixing both bugs, cargo test must show 5/5 passing with no failures.",
+    "required_artifacts": [
+      "word_count returns 0 for empty string",
+      "capitalize_words returns empty string for empty input without panicking",
+      "cargo test passes all 5 tests"
+    ],
+    "success_criteria": [
+      "Both fixes are minimal — change only what is broken",
+      "All 5 tests pass"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

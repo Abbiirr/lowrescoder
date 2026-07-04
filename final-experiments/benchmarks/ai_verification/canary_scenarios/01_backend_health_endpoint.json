@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-backend-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 10,
+  "title": "Add /health endpoint to FastAPI app",
+  "description": "A minimal FastAPI app exists with no health endpoint. Add GET /health that returns {\"status\": \"ok\"} and a test for it.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "backend_health_endpoint",
+    "injections": [],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "This FastAPI app has no /health endpoint. Add GET /health that returns {\"status\": \"ok\"}. Write a pytest test in tests/test_health.py that asserts the response. Make sure all existing tests still pass.",
+    "required_artifacts": [
+      "tests/test_health.py exists",
+      "GET /health returns 200 with {\"status\": \"ok\"}",
+      "all tests pass"
+    ],
+    "success_criteria": [
+      "New /health route added to app.py or equivalent router",
+      "test_health.py covers the happy path",
+      "No existing tests broken"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `uv run pytest tests/ -q` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q",
+      "lint": "uv run ruff check src/ tests/"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

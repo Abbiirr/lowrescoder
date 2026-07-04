@@ -1,0 +1,51 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-backend-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add non-panicking parsing functions to Rust num-parser library",
+  "description": "Brownfield Rust task: add try_parse_int, parse_range, and parse_list to the existing num-parser library that currently only exposes panicking variants.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_num_parser",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add three new public functions to src/lib.rs. All 3 existing tests must still pass.\n\n  pub fn try_parse_int(s: &str) -> Option<i32>\n    — returns Some(n) on success, None on failure (no panic)\n    — trims leading/trailing whitespace before parsing\n\n  pub fn parse_range(s: &str) -> Result<(i32, i32), String>\n    — input format: \"lo..hi\" (e.g. \"1..10\" or \"-5..5\")\n    — trims whitespace around lo and hi\n    — returns Err if the format is wrong (missing \"..\")\n    — returns Err if lo or hi cannot be parsed as i32\n    — returns Err if lo >= hi (lo must be strictly less than hi)\n    — returns Ok((lo, hi)) on success\n\n  pub fn parse_list(s: &str) -> Vec<i32>\n    — splits on commas, trims each token, parses as i32\n    — silently skips tokens that cannot be parsed (no panic)\n    — empty string returns empty Vec\n\nAll 3 existing tests must still pass.\nRun: cargo test",
+    "required_artifacts": [
+      "try_parse_int returns Some for valid integers and None for invalid",
+      "parse_range parses lo..hi and returns Err when lo >= hi or format is wrong",
+      "parse_list returns all parseable integers and skips invalid tokens",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `cargo test` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

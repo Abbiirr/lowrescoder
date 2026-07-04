@@ -1,0 +1,58 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-frontend-003",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "hard",
+  "duration_hint_minutes": 40,
+  "title": "Extend Rust HTML page builder with CSS, headings, tables, and navigation",
+  "description": "A minimal Rust HTML page builder has basic paragraph support. Extend it with CSS injection, multi-level headings, full HTML tables, and a navigation bar, plus comprehensive tests for all new features.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_page_builder",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The rust-page-builder crate has a Page struct with new(), add_paragraph(), and render(). Extend it:\n\n1. Add CSS injection:\n   pub fn with_css(&mut self, css: &str) -> &mut Self\n   - Injects <style>{css}</style> inside the <head> block (after <title>).\n   - Multiple calls append multiple <style> blocks.\n\n2. Add headings:\n   pub fn add_heading(&mut self, level: u8, text: &str) -> &mut Self\n   - Appends <h{level}>{text}</h{level}> to the body.\n   - level must be 1–6 (inclusive). Panic with 'heading level must be 1–6' if out of range.\n\n3. Add HTML table:\n   pub fn add_table(&mut self, headers: &[&str], rows: &[&[&str]]) -> &mut Self\n   - Appends a <table> with a <thead> row of <th> cells and <tbody> rows of <td> cells.\n   - Empty headers slice → just an empty <table></table>.\n\n4. Add navigation bar:\n   pub fn add_nav(&mut self, links: &[(&str, &str)]) -> &mut Self\n   - Each tuple is (href, label).\n   - Renders <nav><ul><li><a href=\"{href}\">{label}</a></li>...</ul></nav>.\n   - Empty links slice → <nav><ul></ul></nav>.\n\n5. Add 8 new tests:\n   - test_with_css: render contains <style>body{color:red;}</style>\n   - test_multiple_css: render contains two <style> blocks\n   - test_add_heading_h1: render contains <h1>Title</h1>\n   - test_add_heading_h3: render contains <h3>Sub</h3>\n   - test_add_heading_invalid: std::panic::catch_unwind confirms panic on level=0\n   - test_add_table_basic: render contains <th>Name</th> and <td>Alice</td>\n   - test_add_nav_basic: render contains <a href=\"/home\">Home</a>\n   - test_add_nav_empty: render contains <nav><ul></ul></nav>\n\nAll 3 existing tests must still pass.\n\nRun cargo test to confirm.",
+    "required_artifacts": [
+      "with_css(&mut self, css: &str) -> &mut Self adds <style> in head",
+      "add_heading(&mut self, level: u8, text: &str) -> &mut Self with panic on invalid level",
+      "add_table(&mut self, headers: &[&str], rows: &[&[&str]]) -> &mut Self",
+      "add_nav(&mut self, links: &[(&str, &str)]) -> &mut Self",
+      "8 new tests",
+      "All 3 original tests pass",
+      "cargo test passes"
+    ],
+    "success_criteria": [
+      "All 11 tests pass",
+      "CSS appears inside <head>",
+      "Headings appear in body",
+      "Table renders thead/tbody correctly",
+      "Nav renders anchor links correctly"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `cargo test` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

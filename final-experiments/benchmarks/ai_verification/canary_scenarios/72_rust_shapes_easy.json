@@ -1,0 +1,57 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-shapes-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Greenfield Rust Shape trait for Circle and Rectangle",
+  "description": "Build a Rust library that defines a Shape trait with area() and perimeter() methods, and implements it for Circle and Rectangle.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"rust-shapes\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Build a Rust shapes library from scratch in src/lib.rs.\n\nDefine a trait:\n  pub trait Shape {\n      fn area(&self) -> f64;\n      fn perimeter(&self) -> f64;\n  }\n\nImplement the trait for:\n  pub struct Circle { pub radius: f64 }\n  pub struct Rectangle { pub width: f64, pub height: f64 }\n\nAlso add a free function:\n  pub fn largest_area(shapes: &[&dyn Shape]) -> f64\n  — returns the largest area in the slice (use f64::NEG_INFINITY as the fold seed)\n\nAdd tests (in the same file or a separate test module):\n  - test_circle_area: PI * r^2 for r=1.0 (approx within 1e-6)\n  - test_circle_perimeter: 2*PI*r for r=2.0 (approx within 1e-6)\n  - test_rect_area: w*h for w=3.0, h=4.0 = 12.0\n  - test_rect_perimeter: 2*(w+h) for w=3.0, h=4.0 = 14.0\n  - test_largest_area: given circle r=5 and rect 3x4, largest is circle\n  - test_largest_area_empty: empty slice returns NEG_INFINITY\n\nRun cargo test to confirm.",
+    "required_artifacts": [
+      "pub trait Shape with area() and perimeter()",
+      "Circle and Rectangle implementing Shape",
+      "largest_area() free function",
+      "6 tests passing"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "largest_area works with trait objects (&dyn Shape)"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

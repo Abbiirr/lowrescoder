@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "505-python-mt-state-machine",
+  "title": "Build a finite state machine in Python — 3 turns",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {"language": "python", "framework": null, "extra": {}},
+  "description": "Three scripted turns build a FSM: turn 1 adds add_transition/trigger/current_state, turn 2 adds guards (conditional transitions), turn 3 adds on_enter/on_exit callbacks.",
+  "repo_seed": {
+    "files": {
+      "state_machine.py": "\"\"\"Finite state machine with guards and callbacks.\"\"\"\nfrom typing import Callable, Any, Optional\n\n\nclass StateMachine:\n    def __init__(self, initial_state: str):\n        self._state = initial_state\n        # transitions[(state, event)] = {\"target\": state, \"guard\": callable|None}\n        self._transitions: dict[tuple[str, str], dict] = {}\n        # callbacks[(\"enter\"|\"exit\", state)] = callable\n        self._callbacks: dict[tuple[str, str], Callable] = {}\n\n    def add_transition(\n        self,\n        source: str,\n        event: str,\n        target: str,\n        guard: Optional[Callable[[], bool]] = None,\n    ) -> None:\n        \"\"\"Register a transition. Optional guard must return True to allow it.\"\"\"\n        raise NotImplementedError\n\n    def trigger(self, event: str, **context) -> bool:\n        \"\"\"Fire event. Returns True if transition happened, False if blocked/missing.\"\"\"\n        raise NotImplementedError\n\n    def on_enter(self, state: str, callback: Callable) -> None:\n        \"\"\"Register callback called when entering state.\"\"\"\n        raise NotImplementedError\n\n    def on_exit(self, state: str, callback: Callable) -> None:\n        \"\"\"Register callback called when leaving state.\"\"\"\n        raise NotImplementedError\n\n    @property\n    def current_state(self) -> str:\n        return self._state\n",
+      "tests/test_state_machine.py": "import pytest\nfrom state_machine import StateMachine\n\n\ndef test_initial_state():\n    sm = StateMachine(\"idle\")\n    assert sm.current_state == \"idle\"\n\n\ndef test_basic_transition():\n    sm = StateMachine(\"idle\")\n    sm.add_transition(\"idle\", \"start\", \"running\")\n    assert sm.trigger(\"start\") is True\n    assert sm.current_state == \"running\"\n\n\ndef test_unknown_event_returns_false():\n    sm = StateMachine(\"idle\")\n    assert sm.trigger(\"unknown\") is False\n    assert sm.current_state == \"idle\"\n\n\ndef test_chain_of_transitions():\n    sm = StateMachine(\"idle\")\n    sm.add_transition(\"idle\", \"start\", \"running\")\n    sm.add_transition(\"running\", \"pause\", \"paused\")\n    sm.add_transition(\"paused\", \"resume\", \"running\")\n    sm.trigger(\"start\")\n    sm.trigger(\"pause\")\n    assert sm.current_state == \"paused\"\n    sm.trigger(\"resume\")\n    assert sm.current_state == \"running\"\n\n\ndef test_guard_allows_transition():\n    sm = StateMachine(\"idle\")\n    sm.add_transition(\"idle\", \"start\", \"running\", guard=lambda: True)\n    assert sm.trigger(\"start\") is True\n    assert sm.current_state == \"running\"\n\n\ndef test_guard_blocks_transition():\n    sm = StateMachine(\"idle\")\n    sm.add_transition(\"idle\", \"start\", \"running\", guard=lambda: False)\n    assert sm.trigger(\"start\") is False\n    assert sm.current_state == \"idle\"\n\n\ndef test_on_enter_callback():\n    sm = StateMachine(\"idle\")\n    sm.add_transition(\"idle\", \"go\", \"running\")\n    entered = []\n    sm.on_enter(\"running\", lambda: entered.append(\"running\"))\n    sm.trigger(\"go\")\n    assert entered == [\"running\"]\n\n\ndef test_on_exit_callback():\n    sm = StateMachine(\"idle\")\n    sm.add_transition(\"idle\", \"go\", \"running\")\n    exited = []\n    sm.on_exit(\"idle\", lambda: exited.append(\"idle\"))\n    sm.trigger(\"go\")\n    assert exited == [\"idle\"]\n\n\ndef test_callbacks_not_called_when_blocked():\n    sm = StateMachine(\"idle\")\n    sm.add_transition(\"idle\", \"go\", \"running\", guard=lambda: False)\n    called = []\n    sm.on_exit(\"idle\", lambda: called.append(1))\n    sm.on_enter(\"running\", lambda: called.append(2))\n    sm.trigger(\"go\")\n    assert called == []\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `add_transition(source, event, target, guard)` and `trigger(event)` in `state_machine.py`. `add_transition` should store the transition in `self._transitions[(source, event)]`. `trigger` should look up `(current_state, event)`, check the guard if present, update `self._state` if allowed, and return True/False. Skip callbacks for now.",
+    "followup_prompts": [
+      "Good. Guards should already be working if you implemented them in turn 1. Now implement `on_enter(state, callback)` and `on_exit(state, callback)` — store in `self._callbacks[(\"enter\", state)]` and `self._callbacks[(\"exit\", state)]`. Update `trigger()` to call the exit callback before changing state and the enter callback after. Don't call callbacks if the transition is blocked. Run `uv run pytest tests/ -q`.",
+      "Final check: run `uv run pytest tests/ -q` one more time. All 9 tests must be green. Verify guard-blocked transitions do NOT fire callbacks."
+    ],
+    "success_criteria": [
+      "Basic transitions work: add_transition + trigger changes state",
+      "Unknown events return False without state change",
+      "Guards allow or block transitions based on return value",
+      "on_enter callbacks fire after entering a state",
+      "on_exit callbacks fire before leaving a state",
+      "Callbacks are not called when transition is blocked",
+      "All 9 pytest tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "uv run pytest tests/ -q"}
+  },
+  "duration_hint_minutes": 20
+}

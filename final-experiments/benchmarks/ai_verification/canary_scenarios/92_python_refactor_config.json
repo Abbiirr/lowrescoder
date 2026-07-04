@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-refactor-003",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Refactor procedural config loader into a Config dataclass",
+  "description": "A messy Python config module uses global state and magic numbers. Refactor into a Config dataclass with validation. All tests must still pass after refactor.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"python-config-refactor\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = [\"pytest>=8.0\", \"ruff>=0.4\"]\n\n[tool.pytest.ini_options]\npythonpath = [\"src\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nline-length = 100\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/config.py",
+        "content": "# TODO: refactor this mess into a Config dataclass\nDEFAULT_HOST = 'localhost'\nDEFAULT_PORT = 8080\nDEFAULT_WORKERS = 4\nDEFAULT_TIMEOUT = 30\nMAX_WORKERS = 64\nMIN_PORT = 1024\nMAX_PORT = 65535\n\n_config = {}\n\ndef init(host=DEFAULT_HOST, port=DEFAULT_PORT, workers=DEFAULT_WORKERS, timeout=DEFAULT_TIMEOUT):\n    if port < 1024 or port > 65535:\n        raise ValueError(f'port must be 1024-65535, got {port}')\n    if workers < 1 or workers > 64:\n        raise ValueError(f'workers must be 1-64, got {workers}')\n    if timeout < 1:\n        raise ValueError(f'timeout must be >= 1, got {timeout}')\n    _config['host'] = host\n    _config['port'] = port\n    _config['workers'] = workers\n    _config['timeout'] = timeout\n\ndef get_host(): return _config.get('host', DEFAULT_HOST)\ndef get_port(): return _config.get('port', DEFAULT_PORT)\ndef get_workers(): return _config.get('workers', DEFAULT_WORKERS)\ndef get_timeout(): return _config.get('timeout', DEFAULT_TIMEOUT)\n\ndef reset():\n    _config.clear()\n"
+      },
+      {
+        "path": "tests/test_config.py",
+        "content": "import pytest\nfrom config import Config\n\n\ndef test_defaults():\n    c = Config()\n    assert c.host == \"localhost\"\n    assert c.port == 8080\n    assert c.workers == 4\n    assert c.timeout == 30\n\n\ndef test_custom_values():\n    c = Config(host=\"0.0.0.0\", port=9000, workers=8, timeout=60)\n    assert c.host == \"0.0.0.0\"\n    assert c.port == 9000\n    assert c.workers == 8\n    assert c.timeout == 60\n\n\ndef test_invalid_port_low():\n    with pytest.raises(ValueError, match=\"port\"):\n        Config(port=80)\n\n\ndef test_invalid_port_high():\n    with pytest.raises(ValueError, match=\"port\"):\n        Config(port=70000)\n\n\ndef test_invalid_workers_zero():\n    with pytest.raises(ValueError, match=\"workers\"):\n        Config(workers=0)\n\n\ndef test_invalid_workers_too_many():\n    with pytest.raises(ValueError, match=\"workers\"):\n        Config(workers=100)\n\n\ndef test_invalid_timeout():\n    with pytest.raises(ValueError, match=\"timeout\"):\n        Config(timeout=0)\n\n\ndef test_config_is_immutable_after_creation():\n    c = Config(port=5000)\n    assert c.port == 5000\n    # dataclass frozen=True means this raises\n    with pytest.raises(Exception):\n        c.port = 9999  # type: ignore\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Refactor src/config.py: replace the procedural global-state approach with a Config dataclass.\n\nRequirements:\n  from dataclasses import dataclass\n\n  @dataclass(frozen=True)\n  class Config:\n      host: str = \"localhost\"\n      port: int = 8080\n      workers: int = 4\n      timeout: int = 30\n\n      def __post_init__(self) -> None:\n          — validate port in [1024, 65535], raise ValueError('port ...')\n          — validate workers in [1, 64], raise ValueError('workers ...')\n          — validate timeout >= 1, raise ValueError('timeout ...')\n\nThe existing procedural functions (init, get_host, etc.) can be removed.\nAll 8 tests in tests/test_config.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "Config is a frozen dataclass with 4 fields",
+      "Default values match original constants",
+      "Validation in __post_init__ with meaningful error messages",
+      "frozen=True makes attributes immutable",
+      "All 8 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ passes (8 tests)",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

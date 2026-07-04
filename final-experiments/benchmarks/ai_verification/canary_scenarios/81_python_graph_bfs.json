@@ -1,0 +1,70 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-graph-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Implement BFS, shortest path, and connected components in Python",
+  "description": "Build graph.py with three algorithms: BFS traversal, unweighted shortest path (BFS-based), and connected components detection. A failing test suite is provided.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"python-graph\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = [\"pytest>=8.0\", \"ruff>=0.4\"]\n\n[tool.pytest.ini_options]\npythonpath = [\"src\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nline-length = 100\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_graph.py",
+        "content": "from graph import Graph\n\n\ndef make_graph() -> Graph:\n    \"\"\"  0 - 1 - 2\n              |\n              3 - 4   5 (isolated)\n    \"\"\"\n    g = Graph()\n    for v in range(6):\n        g.add_vertex(v)\n    g.add_edge(0, 1)\n    g.add_edge(1, 2)\n    g.add_edge(1, 3)\n    g.add_edge(3, 4)\n    return g\n\n\ndef test_bfs_from_zero():\n    g = make_graph()\n    visited = g.bfs(0)\n    assert set(visited) == {0, 1, 2, 3, 4}\n    assert visited[0] == 0  # start vertex is first\n\n\ndef test_bfs_from_isolated():\n    g = make_graph()\n    visited = g.bfs(5)\n    assert visited == [5]\n\n\ndef test_shortest_path_direct():\n    g = make_graph()\n    path = g.shortest_path(0, 2)\n    assert path == [0, 1, 2]\n\n\ndef test_shortest_path_longer():\n    g = make_graph()\n    path = g.shortest_path(0, 4)\n    assert path == [0, 1, 3, 4]\n\n\ndef test_shortest_path_unreachable():\n    g = make_graph()\n    path = g.shortest_path(0, 5)\n    assert path is None\n\n\ndef test_shortest_path_same_vertex():\n    g = make_graph()\n    assert g.shortest_path(2, 2) == [2]\n\n\ndef test_connected_components():\n    g = make_graph()\n    comps = g.connected_components()\n    assert len(comps) == 2\n    component_sets = [frozenset(c) for c in comps]\n    assert frozenset({0, 1, 2, 3, 4}) in component_sets\n    assert frozenset({5}) in component_sets\n\n\ndef test_connected_components_empty():\n    g = Graph()\n    assert g.connected_components() == []\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Create src/graph.py implementing a Graph class for undirected graphs.\n\nThe Graph class must support:\n  add_vertex(v: int) -> None        — register a vertex (no-op if already present)\n  add_edge(u: int, v: int) -> None  — add undirected edge between u and v\n  bfs(start: int) -> list[int]      — BFS traversal from start; return vertices in visit order\n  shortest_path(src: int, dst: int) -> list[int] | None\n                                    — shortest (fewest hops) path from src to dst;\n                                       return [src] if src==dst; None if unreachable\n  connected_components() -> list[list[int]]\n                                    — return list of components (each a list of vertex IDs);\n                                       order within each component and order of components don't matter;\n                                       return [] for an empty graph\n\nAll 8 tests in tests/test_graph.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "src/graph.py with Graph class",
+      "bfs returns vertices in BFS order",
+      "shortest_path uses BFS for minimum hops",
+      "connected_components finds all disconnected subgraphs",
+      "All 8 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ passes (8 tests)",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

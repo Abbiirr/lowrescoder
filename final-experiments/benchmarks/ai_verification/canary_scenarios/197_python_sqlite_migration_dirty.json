@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-dirty-012",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 bugs in python_sqlite_migration db functions",
+  "description": "Brownfield Python dirty scenario: create_user, get_user, and list_users each have a bug. Fix them so all 4 tests pass.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_sqlite_migration",
+    "injections": [
+      {
+        "path": "src/db.py",
+        "content": "\"\"\"Raw sqlite3 database layer — to be migrated to SQLAlchemy.\"\"\"\n\nimport sqlite3\nfrom pathlib import Path\n\nDB_PATH = Path(\"data.db\")\n\n\ndef _conn() -> sqlite3.Connection:\n    conn = sqlite3.connect(DB_PATH)\n    conn.row_factory = sqlite3.Row\n    return conn\n\n\ndef init_db() -> None:\n    with _conn() as conn:\n        conn.execute(\n            \"\"\"CREATE TABLE IF NOT EXISTS users (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                name TEXT NOT NULL,\n                email TEXT UNIQUE NOT NULL\n            )\"\"\"\n        )\n\n\ndef create_user(name: str, email: str) -> dict:\n    with _conn() as conn:\n        cur = conn.execute(\n            \"INSERT INTO users (name, email) VALUES (?, ?)\", (name, email)\n        )\n        # BUG: returns empty string for name instead of the actual name\n        return {\"id\": cur.lastrowid, \"name\": \"\", \"email\": email}\n\n\ndef get_user(user_id: int) -> dict | None:\n    with _conn() as conn:\n        # BUG: inverted WHERE condition — finds rows where id != user_id\n        row = conn.execute(\"SELECT * FROM users WHERE id != ?\", (user_id,)).fetchone()\n        return dict(row) if row else None\n\n\ndef list_users() -> list[dict]:\n    # BUG: always returns empty list\n    return []\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 bugs in src/db.py so all 4 tests pass.\n\n  def create_user(name, email):\n    — returns empty string for name: {\"name\": \"\"} should be {\"name\": name}\n    — fix: change \"\" to name in the return dict\n\n  def get_user(user_id):\n    — inverted WHERE condition: WHERE id != ? should be WHERE id = ?\n    — fix: change != to =\n\n  def list_users():\n    — always returns [] without querying the database\n    — fix: restore SELECT * FROM users query and return converted rows\n\nDo not modify the test file.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "create_user returns dict with correct name",
+      "get_user uses WHERE id = ? not !=",
+      "list_users queries and returns all users",
+      "All 4 existing tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run python -c \"from src.db import init_db, create_user, get_user, list_users\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.db import init_db, create_user, get_user, list_users\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-014",
+  "title": "Fix three bugs in a text processor module",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Three text-processing functions have bugs: word_count uses split(' ') and counts empty strings, reverse_words reverses characters not words, capitalize_words uppercases everything.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/textproc.py": "def word_count(text: str) -> int:\n    \"\"\"Count non-empty words in text.\"\"\"\n    return len(text.split(' '))  # bug: split(' ') creates empty tokens on multiple spaces\n\ndef reverse_words(text: str) -> str:\n    \"\"\"Reverse the order of words in text.\"\"\"\n    return text[::-1]  # bug: reverses characters, not word order\n\ndef capitalize_words(text: str) -> str:\n    \"\"\"Capitalise the first letter of each word, lowercase the rest.\"\"\"\n    return text.upper()  # bug: uppercases all characters\n",
+      "tests/test_textproc.py": "from src.textproc import word_count, reverse_words, capitalize_words\n\ndef test_word_count_basic():\n    assert word_count(\"hello world\") == 2\n\ndef test_word_count_extra_spaces():\n    assert word_count(\"hello  world\") == 2\n\ndef test_reverse_words():\n    assert reverse_words(\"hello world foo\") == \"foo world hello\"\n\ndef test_capitalize_words():\n    assert capitalize_words(\"hello WORLD foo\") == \"Hello World Foo\"\n\ndef test_word_count_empty():\n    assert word_count(\"\") == 0\n",
+      "pyproject.toml": "[project]\nname = \"textproc\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npythonpath = [\".\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/textproc.py:\n1. `word_count`: use `text.split()` (no arg) to handle multiple spaces; return 0 for empty/whitespace-only strings\n2. `reverse_words`: use `' '.join(reversed(text.split()))` to reverse word order\n3. `capitalize_words`: use `text.title()` or `' '.join(w.capitalize() for w in text.split())`\nAll 5 tests must pass.",
+    "entry_point": "src/textproc.py",
+    "success_criteria": "All 5 pytest tests pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

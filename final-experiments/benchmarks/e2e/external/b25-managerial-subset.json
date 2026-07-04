@@ -1,0 +1,76 @@
+{
+  "_meta": {
+    "description": "B25: Managerial Review and Proposal Selection \u2014 evaluate options and make decisions",
+    "comparison_validity": "internal",
+    "parity_claim": "forbidden",
+    "note": "Multi-task lane: database selection, architecture evaluation, backlog prioritization, proposal review, PR review, ADR writing.",
+    "last_verified": "2026-03-21"
+  },
+  "tasks": [
+    {
+      "task_id": "b25-choose-database",
+      "category": "analysis",
+      "difficulty": "medium",
+      "language": "markdown",
+      "description": "Evaluate database options and select the best fit for a project with concrete rationale.",
+      "fixture_dir": "fixtures/b25/b25-choose-database",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b25-evaluate-architecture",
+      "category": "analysis",
+      "difficulty": "hard",
+      "language": "markdown",
+      "description": "Evaluate an architecture proposal and identify risks, trade-offs, and improvement suggestions.",
+      "fixture_dir": "fixtures/b25/b25-evaluate-architecture",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b25-prioritize-backlog",
+      "category": "analysis",
+      "difficulty": "medium",
+      "language": "markdown",
+      "description": "Prioritize a product backlog based on value, effort, and dependencies.",
+      "fixture_dir": "fixtures/b25/b25-prioritize-backlog",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b25-review-pr",
+      "category": "analysis",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Review a pull request and provide structured feedback on code quality, correctness, and style.",
+      "fixture_dir": "fixtures/b25/b25-review-pr",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b25-write-adr",
+      "category": "analysis",
+      "difficulty": "medium",
+      "language": "markdown",
+      "description": "Write an Architecture Decision Record documenting a technical decision with context and consequences.",
+      "fixture_dir": "fixtures/b25/b25-write-adr",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    }
+  ]
+}

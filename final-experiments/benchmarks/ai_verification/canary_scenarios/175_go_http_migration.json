@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-migration-009",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "easy",
+  "duration_hint_minutes": 25,
+  "title": "Introduce Store struct and expand go_http_server handlers",
+  "description": "Brownfield Go migration: add persistent in-memory storage via a Store struct and expose CreateItem and DeleteItem handlers alongside the existing ListItems.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_http_server",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Migrate internal/handler/items.go to use a Store struct. All existing tests must still pass.\n\nAdd to internal/handler/items.go:\n\n  type Item struct {\n    ID    int     `json:\"id\"`\n    Name  string  `json:\"name\"`\n    Value float64 `json:\"value\"`\n  }\n\n  type Store struct { /* mu sync.Mutex; items []Item; nextID int */ }\n\n  func NewStore() *Store\n    — initialises empty store with nextID=1\n\n  func (s *Store) Add(name string, value float64) Item\n    — assigns next ID, appends to store, returns the new Item\n\n  func (s *Store) All() []Item\n    — returns a copy of all items (or empty slice)\n\n  func (s *Store) Delete(id int) bool\n    — removes the item with the given ID; returns true if found, false otherwise\n\n  var defaultStore = NewStore()\n\n  func CreateItem(w http.ResponseWriter, r *http.Request)\n    — POST only (405 otherwise); reads JSON body with 'name' (string) and 'value' (float64)\n    — calls defaultStore.Add; writes the new item as JSON with status 201\n\n  func DeleteItem(w http.ResponseWriter, r *http.Request)\n    — DELETE only (405 otherwise); reads query param 'id' as int (400 if missing/invalid)\n    — calls defaultStore.Delete; 204 on success, 404 if not found\n\nUpdate ListItems to call defaultStore.All() instead of returning a hard-coded empty slice.\n\nAdd at least 4 tests for the Store struct methods.\nThe existing TestListItems test must still pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Item struct with ID, Name, Value fields",
+      "Store struct with NewStore constructor",
+      "Store.Add assigns sequential IDs",
+      "Store.All returns all items",
+      "Store.Delete removes by ID, returns bool",
+      "CreateItem POST handler writes 201 with new item JSON",
+      "DeleteItem DELETE handler returns 204 or 404",
+      "ListItems now returns items from store",
+      "All 1 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `go test ./...` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

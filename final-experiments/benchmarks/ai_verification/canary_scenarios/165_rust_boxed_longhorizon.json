@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-longhorizon-005",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Extend rust_boxed_errors with write, max_line, sum_numbers, and email validation",
+  "description": "Brownfield Rust task: add five new utility functions to the boxed-errors library alongside the existing four.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_boxed_errors",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add five new functions to src/lib.rs. All 7 existing tests must still pass.\n\n  pub fn write_file(path: &Path, content: &str) -> AppResult<()>\n    — write content to path, creating or truncating the file\n\n  pub fn max_line(path: &Path) -> AppResult<i64>\n    — read file, parse each non-empty line as i64, return the maximum value\n    — return Err if the file is empty, unreadable, or any line fails to parse\n\n  pub fn sum_numbers(s: &str) -> AppResult<i64>\n    — split s by ',' and parse each trimmed token as i64, return the sum\n    — return Err if s is empty (after trimming) or any token fails to parse\n\n  pub fn count_valid_usernames(names: &[&str]) -> usize\n    — count how many names in the slice pass validate_username; does not return Err\n\n  pub fn validate_email(email: &str) -> AppResult<()>\n    — return Ok if email contains '@' and the part after '@' contains '.'\n    — otherwise return Err with a descriptive message\n\nDo not modify the existing functions or tests.\nAdd tests for all 5 new functions.\nAll 7 existing tests must still pass.\nRun: cargo test",
+    "required_artifacts": [
+      "write_file creates or truncates the file at path",
+      "max_line returns max parsed integer from file lines",
+      "sum_numbers parses comma-separated integers and returns their sum",
+      "count_valid_usernames counts names that pass validate_username",
+      "validate_email accepts valid emails, rejects missing @ or missing domain dot",
+      "Tests for all 5 new functions",
+      "All 7 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `cargo test` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `cargo test` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

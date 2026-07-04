@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-greenfield-054",
+  "title": "Implement Sliding Window Maximum in Go",
+  "category": "repo_init",
+  "difficulty": "hard",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement SlidingWindowMax(nums []int, k int) []int returning the maximum in each window of size k using a monotone deque in O(n).",
+  "repo_seed": {
+    "files": {
+      "slidingwindow.go": "package slidingwindow\n\n// SlidingWindowMax returns the maximum value of each sliding window of size k.\nfunc SlidingWindowMax(nums []int, k int) []int {\n\tpanic(\"not implemented\")\n}\n",
+      "slidingwindow_test.go": "package slidingwindow\n\nimport (\n\t\"reflect\"\n\t\"testing\"\n)\n\nfunc TestEmpty(t *testing.T) {\n\tresult := SlidingWindowMax([]int{}, 3)\n\tif len(result) != 0 {\n\t\tt.Errorf(\"SlidingWindowMax([],3) = %v, want []\", result)\n\t}\n}\n\nfunc TestSingle(t *testing.T) {\n\tresult := SlidingWindowMax([]int{1}, 1)\n\tif !reflect.DeepEqual(result, []int{1}) {\n\t\tt.Errorf(\"SlidingWindowMax([1],1) = %v, want [1]\", result)\n\t}\n}\n\nfunc TestClassic(t *testing.T) {\n\tresult := SlidingWindowMax([]int{1, 3, -1, -3, 5, 3, 6, 7}, 3)\n\twant := []int{3, 3, 5, 5, 6, 7}\n\tif !reflect.DeepEqual(result, want) {\n\t\tt.Errorf(\"SlidingWindowMax = %v, want %v\", result, want)\n\t}\n}\n\nfunc TestWindowTwo(t *testing.T) {\n\tresult := SlidingWindowMax([]int{1, 2, 3, 4, 5}, 2)\n\twant := []int{2, 3, 4, 5}\n\tif !reflect.DeepEqual(result, want) {\n\t\tt.Errorf(\"SlidingWindowMax([1..5],2) = %v, want %v\", result, want)\n\t}\n}\n",
+      "go.mod": "module slidingwindow\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement SlidingWindowMax using a monotone deque of indices:\n- Return empty if nums is empty or k<=0\n- Maintain deque where front is always the index of the window's max\n- For each index i: (1) remove front if it is outside window (< i-k+1); (2) remove from back while nums[back] < nums[i]; (3) append i to deque; (4) if i>=k-1, append nums[deque[0]] to result\n- Return result\nAll 4 test cases must pass.",
+    "entry_point": "slidingwindow.go",
+    "success_criteria": "All 4 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

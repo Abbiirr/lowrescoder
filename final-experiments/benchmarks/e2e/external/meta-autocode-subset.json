@@ -1,0 +1,5253 @@
+{
+  "_meta": {
+    "description": "meta-autocode build tasks \u2014 autocode implements meta-autocode to beat Codex (61.5%) on harness benchmarks",
+    "comparison_validity": "internal",
+    "tier": "meta",
+    "generated_by": "supervisor"
+  },
+  "tasks": [
+    {
+      "task_id": "meta-001-piv-strategy",
+      "category": "harness-build",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Implement the PIV (Plan-Implement-Validate) loop core \u2014 EnhancedPIVStrategy, PIVPlan, PIVResult, SessionScores. All 9 pytest tests must pass. This is Phase 1 of meta-autocode, the harness designed to beat Codex (61.5% baseline).",
+      "fixture_dir": "fixtures/meta-autocode-001",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_piv.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "meta_phase": 1,
+        "target_to_beat": "Codex 61.5% (MindStudio 2025)",
+        "key_references": [
+          "/home/bs01763/projects/ai/autocode-full/autocode/src/autocode/agent/sop_runner.py",
+          "/home/bs01763/projects/ai/autocode-full/autocode/src/autocode/agent/strategy_overlays.py",
+          "/home/bs01763/projects/ai/autocode-full/research-components/openai-codex/codex-cli/src/"
+        ]
+      }
+    },
+    {
+      "task_id": "meta-002-context-loader",
+      "category": "harness-build",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Implement ProgressiveContextLoader in src/meta_autocode/context.py \u2014 relevance-scored file loading that puts test files first. 65% of harness failures are context/env setup issues (arxiv 2508.18993). All 8 pytest tests must pass.",
+      "fixture_dir": "fixtures/meta-autocode-002",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_context.py",
+          "task.md",
+          "verify.sh",
+          "src/meta_autocode/piv.py",
+          "src/meta_autocode/scorer.py"
+        ],
+        "meta_phase": 2,
+        "target_to_beat": "Codex 61.5% (MindStudio 2025)",
+        "key_references": [
+          "/home/bs01763/projects/ai/autocode-full/autocode/src/autocode/layer3/context_manager.py",
+          "/home/bs01763/projects/ai/autocode-full/research-components/openai-codex/codex-cli/src/"
+        ]
+      }
+    },
+    {
+      "task_id": "meta-003-benchmark-maxxing",
+      "category": "harness-build",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Implement BenchmarkMaxxer in src/meta_autocode/maxxing.py \u2014 multi-variant strategy that runs N approaches per task and picks the best. At 3 variants, P(at least one resolves) = 1-(1-0.615)^3 = 94.3%, demolishing Codex. All 9 pytest tests must pass.",
+      "fixture_dir": "fixtures/meta-autocode-003",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_maxxing.py",
+          "task.md",
+          "verify.sh",
+          "src/meta_autocode/piv.py",
+          "src/meta_autocode/scorer.py",
+          "src/meta_autocode/context.py"
+        ],
+        "meta_phase": 3,
+        "target_to_beat": "Codex 61.5% (MindStudio 2025)",
+        "key_references": [
+          "/home/bs01763/projects/ai/autocode-full/meta-autocode/src/meta_autocode/piv.py",
+          "/home/bs01763/projects/ai/autocode-full/meta-autocode/src/meta_autocode/scorer.py"
+        ]
+      }
+    },
+    {
+      "task_id": "meta-004-runner-integration",
+      "category": "harness-build",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Implement MetaAutocodeRunner in src/meta_autocode/runner.py \u2014 wires PIV + ProgressiveContextLoader + BenchmarkMaxxer into a single pipeline. This completes meta-autocode. Theoretical solve rate: 1-(1-0.615)^3 = 94.3% > Codex 61.5%. All 9 pytest tests must pass.",
+      "fixture_dir": "fixtures/meta-autocode-004",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_runner.py",
+          "task.md",
+          "verify.sh",
+          "src/meta_autocode/piv.py",
+          "src/meta_autocode/scorer.py",
+          "src/meta_autocode/context.py",
+          "src/meta_autocode/maxxing.py"
+        ],
+        "meta_phase": 4,
+        "target_to_beat": "Codex gpt-5.5:xhigh 81.5% on harness-bench v2",
+        "key_references": [
+          "/home/bs01763/projects/ai/autocode-full/meta-autocode/src/meta_autocode/piv.py",
+          "/home/bs01763/projects/ai/autocode-full/meta-autocode/src/meta_autocode/context.py",
+          "/home/bs01763/projects/ai/autocode-full/meta-autocode/src/meta_autocode/maxxing.py",
+          "/home/bs01763/projects/ai/autocode-full/meta-autocode/src/meta_autocode/scorer.py"
+        ]
+      }
+    },
+    {
+      "task_id": "meta-005-environment-setup",
+      "category": "harness-build",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Implement EnvironmentSetup in src/meta_autocode/environment.py \u2014 detects language/build system, generates setup commands. Addresses 65% of harness failures (arxiv 2508.18993). Target: beat Codex xhigh 81.5% on harness-bench v2. All 9 pytest tests must pass.",
+      "fixture_dir": "fixtures/meta-autocode-005",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_environment.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "meta_phase": 5,
+        "target_to_beat": "Codex gpt-5.5:xhigh 81.5% (harness-bench v2, 22/27 tasks)",
+        "real_scores": {
+          "codex_xhigh": 0.815,
+          "codex_medium": 0.778,
+          "cursor_medium": 0.778,
+          "claude_high": 0.741,
+          "claude_opus48_xhigh": 0.56
+        },
+        "key_references": [
+          "/home/bs01763/projects/ai/autocode-full/meta-autocode/benchmarks/harness-bench/scores.json"
+        ]
+      }
+    },
+    {
+      "task_id": "meta-006-pydantic-color-compat",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/color_encoder.py to handle both legacy pydantic.v1.color.Color (.as_hex()) and modern pydantic_extra_types.color.Color (.as_named()). Inspired by fastapi/fastapi PR#15101 (harness-bench v2 pattern). 3/6 tests currently fail with AttributeError.",
+      "fixture_dir": "fixtures/meta-autocode-006",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_color_encoder.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "fastapi/fastapi PR#15101",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-007-pagination-off-by-one",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/paginator.py: paginate() uses page*per_page instead of (page-1)*per_page, returning wrong slice for all pages. Inspired by memos/gitea pagination (harness-bench v2 pattern). 5/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-007",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_paginator.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "memos/gitea pagination off-by-one",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-008-async-coroutine-not-awaited",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/flow_runner.py: execute_flow() calls async run_step() without asyncio.run(), returning coroutine objects instead of dict results. Inspired by langflow-ai/langflow (harness-bench v2 pattern). 5/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-008",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_flow_runner.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "langflow-ai/langflow async coroutine not awaited",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-009-incident-tracker-eof",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/incident_tracker.py: ongoing down-incident at end-of-stream is silently dropped because the post-loop EOF check is missing. Inspired by louislam/uptime-kuma (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-009",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_incident_tracker.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "louislam/uptime-kuma incident EOF bug",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-010-url-builder-urljoin",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/api_client.py: urllib.parse.urljoin replaces the base path segment when endpoint is relative and base has no trailing slash. Inspired by axios/axios URL construction (harness-bench v2 pattern). 4/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-010",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_api_client.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "axios/axios urljoin RFC3986 surprise",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-011-semver-string-comparison",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/semver.py: is_newer() and latest() compare version strings lexicographically \u2014 '1.10.0' < '1.9.0' as strings. Inspired by vitejs/vite version checks (harness-bench v2 pattern). 5/8 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-011",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_semver.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "vitejs/vite semver string vs numeric comparison",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-012-file-extension-detection",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/file_detector.py: detect_language() uses split('.')[1] instead of split('.')[-1], returning wrong extension for multi-dot filenames. Inspired by sharkdp/bat (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-012",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_file_detector.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "sharkdp/bat file extension split index bug",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-013-commit-counter-assignment",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/commit_stats.py: count_commits_by_author() uses = 1 instead of += 1, resetting every author's count to 1 per commit. Inspired by go-gitea/gitea contributor stats (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-013",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_commit_stats.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "go-gitea/gitea commit counter assignment vs increment",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-014-display-truncation-overflow",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/display.py: truncate() appends suffix after cutting to max_len, producing max_len+len(suffix) chars. Inspired by jesseduffield/lazygit terminal rendering (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-014",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_display.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "jesseduffield/lazygit truncate suffix overflow",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-015-config-deep-merge",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/config_merger.py: merge_config() uses shallow dict unpacking ({**base, **override}), dropping sibling keys inside nested sections. Inspired by vitejs/vite config resolution (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-015",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_config_merger.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "vitejs/vite config deep merge shallow vs recursive",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-016-tag-parser-trailing-punctuation",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/tag_parser.py: extract_tags() returns raw word[1:] including trailing punctuation \u2014 '#bug.' yields 'bug.' instead of 'bug'. Inspired by usememos/memos hashtag parsing (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-016",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_tag_parser.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "usememos/memos tag extraction trailing punctuation",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-017-flow-topo-sort",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/flow_sorter.py: topological_sort() seeds BFS queue from nodes[0] only \u2014 graphs with multiple source nodes silently drop entire branches. Fix: seed from all zero-in-degree nodes. Inspired by langflow-ai/langflow DAG execution (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-017",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_flow_sorter.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "langflow-ai/langflow DAG topological sort multiple sources",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-018-status-page-sort",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/status_page.py: sort_monitor_groups() uses case-sensitive sort \u2014 'Backend' sorts before 'api' because uppercase ASCII < lowercase ASCII. Fix: use key=lambda g: g['name'].lower(). Inspired by louislam/uptime-kuma status page (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-018",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_status_page.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "louislam/uptime-kuma status page case-insensitive sort",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-019-interceptor-lifo-order",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/http_client.py: request() iterates interceptors in insertion order (FIFO) but axios contract requires LIFO \u2014 last added runs first. Fix: use reversed(self._interceptors). Inspired by axios/axios interceptor dispatch (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-019",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_http_client.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "axios/axios request interceptor LIFO dispatch order",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-020-response-exclude-none-nested",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/response_serializer.py: serialize_response() with exclude_none=True only strips top-level None fields \u2014 nested dicts are not recursed into. Fix: recurse into nested dicts. Inspired by fastapi/fastapi pydantic response_model_exclude_none (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-020",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_response_serializer.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "fastapi/fastapi pydantic exclude_none shallow vs recursive",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-021-display-width-tab-expansion",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/display_width.py: display_width() uses len(text), counting \\t as 1 col instead of expanding to next tab stop. Fix: return len(text.expandtabs(tab_width)). Inspired by sharkdp/bat terminal rendering (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-021",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_display_width.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "sharkdp/bat tab stop display width len vs expandtabs",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-022-wiki-name-sanitizer",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/wiki_name.py: sanitize_wiki_name() uses str.replace(' ', '_'), producing double underscores for consecutive spaces and leading underscores for leading spaces. Fix: re.sub(r'\\s+', '_', name.strip()). Inspired by go-gitea/gitea wiki (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-022",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_wiki_name.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "go-gitea/gitea wiki name consecutive-space collapse",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-023-vite-config-array-merge",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/config_merger.py: merge_vite_config() replaces arrays (plugins, conditions, etc.) with the override array instead of concatenating them. Fix: add isinstance(list) check and use base[key] + override[key]. Inspired by vitejs/vite mergeConfig (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-023",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_config_merger.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "vitejs/vite mergeConfig array concatenation",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-024-uptime-kuma-http-status-range",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/heartbeat.py: compute_status() checks response_code == 200 instead of the full 2xx range 200 <= response_code < 300. Fix: use range comparison. Inspired by louislam/uptime-kuma HTTP monitor (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-024",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_heartbeat.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "louislam/uptime-kuma HTTP status 2xx range",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-025-memos-search-case-insensitive",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/memo_search.py: search_memo() uses case-sensitive 'in' operator. Fix: query.lower() in content.lower(). Inspired by usememos/memos search (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-025",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_memo_search.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "usememos/memos case-insensitive search",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-026-gitea-release-semver-sort",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/release_sorter.py: sort_releases() uses lexicographic sort so v1.9.0 comes before v1.10.0. Fix: parse semver components and sort numerically. Inspired by go-gitea/gitea release listing (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-026",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_release_sorter.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "go-gitea/gitea release semver sort",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-027-langflow-type-validator-any-wildcard",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/type_validator.py: can_connect() uses exact equality so 'Any' wildcard connections are rejected. Fix: check for 'Any' on either side before comparing. Inspired by langflow-ai/langflow node connection validation (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-027",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_type_validator.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "langflow-ai/langflow node connection Any wildcard",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-028-bat-line-range-single-line",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/line_range.py: filter_lines() uses >= in the guard so single-line ranges (start==end) return [] instead of one element. Fix: change >= to >. Inspired by sharkdp/bat --line-range feature (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-028",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_line_range.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "sharkdp/bat --line-range single-line",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-029-lazygit-branch-dot-validation",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/branch_validator.py: is_valid_branch_name() rejects any dot ('.' in name) but git only forbids double-dots ('..') in ref names. Fix: change the check to '..' in name. Inspired by jesseduffield/lazygit branch validation (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-029",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_branch_validator.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "jesseduffield/lazygit branch name dot validation",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-030-fastapi-path-param-negative-int",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/path_param.py: parse_path_param() uses str.isdigit() which rejects negative integers like '-1'. Fix: use try/except int() instead. Inspired by fastapi/fastapi path parameter type coercion (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-030",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_path_param.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "fastapi/fastapi path parameter negative integer coercion",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-031-axios-header-merge",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/header_merger.py: merge_request_headers() returns config_headers directly, discarding defaults. Fix: return {**defaults, **config_headers}. Inspired by axios/axios default header merging (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-031",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_header_merger.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "axios/axios default + config header merging",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-032-gitea-label-deduplication",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/label_manager.py: add_labels_to_issue() concatenates lists without deduplication, allowing duplicate label IDs. Fix: deduplicate while preserving order. Inspired by go-gitea/gitea issue label management (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-032",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_label_manager.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "go-gitea/gitea issue label deduplication",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-034-memos-visibility-case-insensitive",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/memo_visibility.py: filter_by_visibility() uses strict equality so 'public' doesn't match memos stored as 'PUBLIC'. Fix: normalize both sides with .upper(). Inspired by usememos/memos visibility filter API (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-034",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_memo_visibility.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "usememos/memos visibility filter case-insensitive",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-033-uptime-kuma-avg-response-time",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/response_time.py: calculate_avg_response_time() includes zero (failed) entries, dragging the average down. Fix: filter out zeros before averaging. Inspired by louislam/uptime-kuma monitor response time display (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-033",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_response_time.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "louislam/uptime-kuma avg response time zero exclusion",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-047-uptime-kuma-cert-expiry-threshold",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/cert_checker.py: cert_status() warns only at <=7 days, missing 8-30 day window. Fix: change threshold to <=30. Inspired by louislam/uptime-kuma SSL monitoring (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-047",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_cert_checker.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "louislam/uptime-kuma SSL cert expiry warning threshold",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-046-gitea-path-traversal-guard",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/path_guard.py: is_safe_path() uses substring '..' check, blocking valid filenames like 'file..txt'. Fix: check path components. Inspired by go-gitea/gitea file path security (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-046",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_path_guard.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "go-gitea/gitea path traversal component check",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-045-langflow-string-bool-coercion",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/bool_coercer.py: coerce_to_bool() uses bool(value) which makes bool('false')=True (non-empty string). Fix: explicitly handle string representations. Inspired by langflow-ai/langflow type coercion (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-045",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_bool_coercer.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "langflow-ai/langflow string-to-bool coercion",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-044-memos-multiline-tag-extraction",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/tag_extractor.py: extract_tags_from_memo() only processes first line, missing tags on subsequent lines. Fix: process all words in content. Inspired by usememos/memos hashtag extraction (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-044",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_tag_extractor.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "usememos/memos multi-line hashtag extraction",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-043-lazygit-date-zero-padding",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/date_formatter.py: format_commit_date() uses plain f-string, so month 3 becomes '3' not '03'. Fix: use :02d format specifier. Inspired by jesseduffield/lazygit date display (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-043",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_date_formatter.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "jesseduffield/lazygit commit date zero-padding",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-042-axios-url-double-slash",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/url_builder.py: build_url() strips trailing slash from base but not leading slash from path, causing '//path' double slashes. Fix: also lstrip('/') from path. Inspired by axios/axios baseURL concatenation (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-042",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_url_builder.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "axios/axios baseURL path concatenation double slash",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-041-bat-theme-sort-case-insensitive",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/theme_sorter.py: list_themes() uses sorted() without a key, so uppercase names sort before lowercase. Fix: sorted(themes, key=str.lower). Inspired by sharkdp/bat --list-themes (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-041",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_theme_sorter.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "sharkdp/bat theme list case-insensitive sort",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-040-memos-word-count-whitespace",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/word_count.py: count_words() uses split(' ') which only handles single spaces \u2014 tabs and consecutive spaces cause wrong counts. Fix: use split() with no argument. Inspired by usememos/memos memo word count (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-040",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_word_count.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "usememos/memos word count whitespace handling",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-039-langflow-input-max-inclusive",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/input_validator.py: validate_numeric_input() uses >= max_val, rejecting the boundary value itself. Fix: change to > max_val. Inspired by langflow-ai/langflow component input validation (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-039",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_input_validator.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "langflow-ai/langflow numeric input max inclusive boundary",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-038-gitea-pagination-total",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/paginator.py: paginate() sets total=len(page_items) (current page count) instead of len(items) (full collection). Fix: use len(items). Inspired by go-gitea/gitea REST API pagination (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-038",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_paginator.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "go-gitea/gitea REST API pagination total count",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-037-axios-retry-5xx-range",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/retry_policy.py: should_retry() only retries on status 500, missing 502/503/504. Fix: check 500 <= status_code < 600. Inspired by axios/axios retry adapter (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-037",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_retry_policy.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "axios/axios retry on 5xx status codes",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-036-vite-css-module-collision",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/css_module.py: generate_css_module_class() hashes only class_name, causing same-named classes in different files to collide. Fix: include file_path in the hash. Inspired by vitejs/vite CSS module scoping (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-036",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_css_module.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "vitejs/vite CSS module class name hash scoping",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-035-fastapi-list-query-param",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/query_list.py: parse_list_query_param() uses dict assignment, keeping only the last value for repeated params like ?tag=a&tag=b. Fix: collect into a list with append. Inspired by fastapi/fastapi List query parameter (harness-bench v2 pattern). 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-035",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_query_list.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "fastapi/fastapi repeated query parameter list collection",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-048-gitea-fork-count-increment",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/fork_counter.py: fork_repository() uses a no-op assignment (repo['fork_count'] = repo['fork_count']) instead of incrementing. Fix: repo['fork_count'] += 1. Inspired by go-gitea/gitea fork event handling. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-048",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_fork_counter.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "go-gitea/gitea fork count increment",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-049-bat-tab-width-expansion",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/tab_expander.py: expand_tabs() ignores tab_width and always replaces tabs with 4 spaces. Fix: use ' ' * tab_width. Inspired by sharkdp/bat --tabs flag. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-049",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_tab_expander.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "sharkdp/bat configurable tab width expansion",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-050-vite-env-var-prefix-filter",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/env_filter.py: get_client_env_vars() returns all env vars instead of filtering to VITE_ prefix. Fix: {k: v for k, v in env_vars.items() if k.startswith('VITE_')}. Inspired by vitejs/vite client env exposure. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-050",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_env_filter.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "vitejs/vite VITE_ prefix env var filtering",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-051-memos-content-truncation-ellipsis",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/content_truncator.py: truncate_content() cuts content at max_length but omits the trailing '...'. Fix: return content[:max_length] + '...'. Inspired by usememos/memos list view. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-051",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_content_truncator.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "usememos/memos content truncation with ellipsis",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-052-fastapi-response-exclude-none",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/response_serializer.py: serialize_response() ignores exclude_none flag and always returns all fields including None values. Fix: when exclude_none=True, filter out keys with None value. Inspired by fastapi/fastapi response_model_exclude_none. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-052",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_response_serializer.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "fastapi/fastapi response_model_exclude_none",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-053-lazygit-diff-header-exclusion",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/diff_counter.py: count_diff_lines() counts '+++' and '---' file header lines as added/removed code lines. Fix: skip lines starting with '+++' or '---' before checking for '+'/'-'. Inspired by jesseduffield/lazygit diff stats. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-053",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_diff_counter.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "jesseduffield/lazygit unified diff header line exclusion",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-054-uptime-kuma-heartbeat-interval-minimum",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/heartbeat_validator.py: validate_heartbeat_interval() uses > 0 instead of >= 20, allowing intervals between 1-19 seconds that would over-poll targets. Fix: return interval_seconds >= 20. Inspired by louislam/uptime-kuma. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-054",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_heartbeat_validator.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "louislam/uptime-kuma heartbeat interval minimum 20s enforcement",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-055-axios-case-insensitive-header-lookup",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/header_checker.py: has_header() uses case-sensitive dict lookup. HTTP headers are case-insensitive per RFC 7230. Fix: name.lower() in {k.lower() for k in headers}. Inspired by axios/axios header handling. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-055",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_header_checker.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "axios/axios case-insensitive HTTP header matching",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-056-vite-plugin-enforce-ordering",
+      "category": "bugfix",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Fix src/plugin_sorter.py: sort_plugins() returns plugins in registration order, ignoring enforce property. Fix: sort by {'pre':0, None:1, 'post':2}. Inspired by vitejs/vite plugin pipeline. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-056",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_plugin_sorter.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "vitejs/vite plugin enforce ordering pre/normal/post",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-057-langflow-duplicate-output-port-detection",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/port_validator.py: validate_output_ports() checks for missing names but ignores duplicate port names. Fix: track seen names with a set and append error on collision. Inspired by langflow-ai/langflow component validation. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-057",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_port_validator.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "langflow-ai/langflow duplicate output port name detection",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-058-fastapi-int-range-bound-validation",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/range_validator.py: validate_int_range() ignores ge/le bounds and always returns value. Fix: raise ValueError when value < ge or value > le. Inspired by fastapi/fastapi parameter constraints. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-058",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_range_validator.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "fastapi/fastapi path parameter ge/le constraint enforcement",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-059-gitea-webhook-hmac-sha256",
+      "category": "bugfix",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Fix src/webhook_verifier.py: verify_webhook_signature() uses hashlib.sha1 instead of hashlib.sha256. Fix: replace sha1 with sha256 in the hmac.new() call. Inspired by go-gitea/gitea webhook security. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-059",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_webhook_verifier.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "go-gitea/gitea webhook HMAC-SHA256 signature verification",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-060-langflow-timeout-default",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/timeout_resolver.py: resolve_timeout() returns raw timeout even when <= 0. Fix: return DEFAULT_TIMEOUT (30) when timeout <= 0. Inspired by langflow-ai/langflow flow runner. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-060",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_timeout_resolver.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "langflow-ai/langflow flow execution timeout default fallback",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-061-gitea-issue-comment-counter",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/comment_counter.py: count_issue_comments() counts all comments including threaded replies. Fix: sum(1 for c in comments if c.get('parent_id') is None). Inspired by go-gitea/gitea issue API. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-061",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_comment_counter.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "go-gitea/gitea issue top-level comment count excluding replies",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-062-memos-case-insensitive-search-highlight",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/search_highlighter.py: highlight_matches() uses str.replace() which is case-sensitive. Fix: use re.sub with re.IGNORECASE flag. Inspired by usememos/memos search. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-062",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_search_highlighter.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "usememos/memos case-insensitive search result highlighting",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-063-fastapi-rate-limiter-boundary",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/rate_limiter.py: is_rate_limited() uses strict > (allows exactly limit requests). Fix: use >= to block at the limit. Inspired by fastapi/fastapi middleware rate limiting. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-063",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_rate_limiter.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "fastapi/fastapi rate limiter inclusive boundary enforcement",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-064-lazygit-commit-message-length-threshold",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/commit_checker.py: check_commit_message() warns only for first lines > 72 chars, but conventional limit is 50. Fix: change threshold from 72 to 50. Inspired by jesseduffield/lazygit commit linting. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-064",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_commit_checker.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "jesseduffield/lazygit commit subject line length warning at 50 chars",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-065-gitea-release-tag-semver-validation",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/tag_validator.py: is_valid_release_tag() accepts any non-empty string. Fix: validate with regex ^v\\d+\\.\\d+\\.\\d+$. Inspired by go-gitea/gitea release tag creation. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-065",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_tag_validator.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "go-gitea/gitea release tag semver format validation",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-066-uptime-kuma-http-2xx-range",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/status_checker.py: is_status_ok() checks for exactly 200 instead of the 2xx range. Fix: return 200 <= status_code < 300. Inspired by louislam/uptime-kuma monitor checks. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-066",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_status_checker.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "louislam/uptime-kuma HTTP success status 2xx range check",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-067-bat-cr-line-ending-normalization",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/line_normalizer.py: normalize_line_endings() only replaces \\r\\n, leaving standalone \\r (old Mac line endings) unchanged. Fix: chain .replace('\\r\\n','\\n').replace('\\r','\\n'). Inspired by sharkdp/bat. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-067",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_line_normalizer.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "sharkdp/bat CR and CRLF line ending normalization to LF",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-068-axios-request-timeout-override",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/timeout_merger.py: resolve_request_timeout() always returns instance_timeout, ignoring request_timeout. Fix: return request_timeout if request_timeout is not None else instance_timeout. Inspired by axios/axios. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-068",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_timeout_merger.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "axios/axios per-request timeout override of instance default",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-069-memos-default-visibility-private",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/memo_creator.py: create_memo() defaults visibility to 'public' instead of 'private'. Fix: change 'public' to 'private' in the fallback. Inspired by usememos/memos privacy defaults. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-069",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_memo_creator.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "usememos/memos default memo visibility set to private",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-070-gitea-pr-closing-issue-case-insensitive",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/pr_issue_finder.py: find_closing_issues() uses case-sensitive 'Closes' regex. Fix: add re.IGNORECASE flag to match 'closes', 'CLOSES', etc. Inspired by go-gitea/gitea auto-close on PR merge. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-070",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_pr_issue_finder.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "go-gitea/gitea case-insensitive PR closing keyword detection",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-071-axios-non-2xx-error-detection",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/error_detector.py: is_error_response() only returns True for >= 500, missing 4xx client errors. Fix: return not (200 <= status_code < 300). Inspired by axios/axios. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-071",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_error_detector.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "axios/axios non-2xx HTTP response error detection including 4xx",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-072-langflow-component-description-validation",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/component_validator.py: validate_component_metadata() only validates 'name', ignoring empty/missing 'description'. Fix: also append error when description is falsy. Inspired by langflow-ai/langflow. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-072",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_component_validator.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "langflow-ai/langflow component name and description required validation",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-073-gitea-label-color-hex-validation",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/color_validator.py: is_valid_label_color() accepts any non-empty string. Fix: validate with regex ^#[0-9a-fA-F]{6}$. Inspired by go-gitea/gitea label colors. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-073",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_color_validator.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "go-gitea/gitea label color #RRGGBB hex format validation",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-074-memos-archived-memo-filtering",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/memo_filter.py: filter_memos() returns all memos including archived, ignoring include_archived=False. Fix: filter out memos where archived=True when include_archived is False. Inspired by usememos/memos. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-074",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_memo_filter.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "usememos/memos archived memo exclusion from list results",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-075-axios-url-param-list-encoding",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/param_encoder.py: encode_params() joins list values with commas (ids=1,2,3) instead of repeating keys (ids=1&ids=2&ids=3). Fix: iterate list values and append separate key=value pairs. Inspired by axios/axios. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-075",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_param_encoder.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "axios/axios repeated key URL parameter serialization for lists",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-076-fastapi-oauth2-scope-subset-check",
+      "category": "bugfix",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Fix src/scope_checker.py: has_required_scopes() uses intersection (any overlap) instead of subset (all required). Fix: set(required_scopes).issubset(set(token_scopes)). Inspired by fastapi/fastapi OAuth2 scopes. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-076",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_scope_checker.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "fastapi/fastapi OAuth2 security scope subset containment check",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-077-bat-line-number-padding-width",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/line_formatter.py: format_line_number() always uses width=4 regardless of total_lines. Fix: width = len(str(total_lines)). Inspired by sharkdp/bat display. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-077",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_line_formatter.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "sharkdp/bat dynamic line number padding width based on file size",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-078-gitea-team-permission-hierarchy",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/permission_checker.py: user_has_permission() uses == (exact match) instead of >= (hierarchical). Fix: return user_level >= required_level. Inspired by go-gitea/gitea team permissions. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-078",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_permission_checker.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "go-gitea/gitea team permission level hierarchy >= comparison",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-079-memos-pin-toggle",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/pin_toggler.py: toggle_pin() always sets pinned=True, making it impossible to unpin. Fix: memo['pinned'] = not memo.get('pinned', False). Inspired by usememos/memos. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-079",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_pin_toggler.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "usememos/memos memo pin status boolean toggle",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-080-uptime-kuma-monitor-last-check-update",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/monitor_updater.py: update_monitor_status() only updates last_check when monitor was previously down. Fix: always set monitor['last_check'] = current_time. Inspired by louislam/uptime-kuma. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-080",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/test_monitor_updater.py",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "louislam/uptime-kuma heartbeat last_check always updated",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-081-bat-line-numbering-start-offset",
+      "fixture_dir": "fixtures/meta-autocode-081",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "bat/line-numbering-start-offset",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      },
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/line_numberer.py: number_lines() uses enumerate(lines) starting at 0 instead of the start parameter. Fix: enumerate(lines, start=start). Inspired by sharkdp/bat line number rendering. 3/7 tests currently fail."
+    },
+    {
+      "task_id": "meta-082-gitea-repo-unstar-counter",
+      "fixture_dir": "fixtures/meta-autocode-082",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "gitea/repo-star-counter-decrement",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      },
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/repo_star_counter.py: toggle_star() increments repo['stars'] on both star and unstar. Fix: decrement by 1 on unstar. Inspired by go-gitea/gitea star toggling. 3/7 tests currently fail."
+    },
+    {
+      "task_id": "meta-083-lazygit-arg-builder-separator",
+      "fixture_dir": "fixtures/meta-autocode-083",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "lazygit/arg-builder-space-separator",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      },
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/arg_builder.py: build_git_args() joins args with ',' instead of ' '. Fix: use ' '.join(). Inspired by jesseduffield/lazygit command building. 3/7 tests currently fail."
+    },
+    {
+      "task_id": "meta-084-memos-tag-extractor-hyphen",
+      "fixture_dir": "fixtures/meta-autocode-084",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "memos/tag-extractor-hyphen",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      },
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/tag_extractor.py: extract_tags() regex pattern [a-zA-Z0-9_]+ doesn't match hyphens in tag names like #open-source. Fix: use [a-zA-Z0-9_-]+. Inspired by usememos/memos. 3/7 tests currently fail."
+    },
+    {
+      "task_id": "meta-085-vite-config-getter-none-vs-missing",
+      "fixture_dir": "fixtures/meta-autocode-085",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "vite/config-getter-none-vs-missing",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      },
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/config_getter.py: get_nested() uses .get() + None check which conflates a None value with a missing key, returning default for both. Fix: check 'key not in current' before accessing. Inspired by vitejs/vite config resolution. 3/7 tests currently fail."
+    },
+    {
+      "task_id": "meta-086-axios-header-merger-content-type",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/request_merger.py: merge_request_headers() always sets Content-Type to 'application/json', overwriting the caller's value. Fix: use setdefault() instead. Inspired by axios/axios. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-086",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "axios/axios header merge content-type default",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-087-gitea-branch-name-double-dot",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/branch_checker.py: is_valid_branch_name() missing double-dot (..) check. Fix: add r'\\.\\.'  to invalid_patterns. Inspired by go-gitea/gitea. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-087",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "gitea/gitea branch name double-dot validation",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-088-gitea-issue-ref-extractor-keywords",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/issue_linker.py: extract_issue_refs() only matches 'Fixes' keyword, missing 'Closes', 'Resolves', 'Fix'. Fix: expand pattern alternation. Inspired by go-gitea/gitea. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-088",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "gitea/gitea PR issue closing keywords",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-089-langflow-flow-nodes-type-validation",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/flow_validator.py: validate_flow_inputs() uses len(nodes) without checking nodes is a list. Fix: add isinstance(nodes, list) check. Inspired by langflow-ai/langflow. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-089",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "langflow/langflow flow nodes type check",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-090-uptime-kuma-uptime-percentage",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/uptime_calculator.py: calculate_uptime_percentage() uses len(checks) as the numerator, always returning 100%. Fix: count only checks with status=='up'. Inspired by louislam/uptime-kuma. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-090",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "uptime-kuma/uptime percentage calculation",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-091-axios-url-path-join-slash",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/path_joiner.py: join_url_path() doesn't insert / when path lacks a leading slash. Fix: use '/' + path.lstrip('/'). Inspired by axios/axios. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-091",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "axios/axios URL path joining slash insertion",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-092-uptime-kuma-session-expiry-ttl-unit",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/session_expiry.py: is_session_expired() compares elapsed seconds against ttl_minutes directly. Fix: multiply ttl_minutes by 60. Inspired by louislam/uptime-kuma. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-092",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "uptime-kuma session expiry TTL unit seconds vs minutes",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-093-gitea-pr-merge-check-key-name",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/pr_merger.py: can_merge_pr() checks 'approved' key instead of 'review_approved'. Fix: change key name. Inspired by go-gitea/gitea. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-093",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "gitea/gitea PR review_approved key name",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-094-gitea-release-version-separator",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/release_namer.py: generate_release_name() uses dash (-) instead of dot (.) separator in version tag. Fix: f'v{major}.{minor}.{patch}'. Inspired by go-gitea/gitea. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-094",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "gitea/gitea release version dot separator",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-095-memos-memo-visibility-protected-role",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/memo_visibility.py: can_view_memo() incorrectly allows 'public' role to view 'protected' memos. Fix: remove 'public' from the allowed roles tuple. Inspired by usememos/memos. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-095",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "harnessbench_pattern": "memos/memos visibility protected role check",
+        "regression": false,
+        "codex_xhigh_baseline": 0.815
+      }
+    },
+    {
+      "task_id": "meta-096-gitea-label-matcher-case-insensitive",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/label_matcher.py: find_matching_labels() uses case-sensitive comparison. Fix: lowercase both sides. Inspired by go-gitea/gitea. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-096",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "gitea/gitea label case-insensitive match"
+      }
+    },
+    {
+      "task_id": "meta-097-axios-retry-backoff-multiplication",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/retry_calculator.py: get_retry_delay() uses base_delay + 2^attempt instead of base_delay * 2^attempt. Fix: change + to *. Inspired by axios/axios. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-097",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "axios/axios retry exponential backoff"
+      }
+    },
+    {
+      "task_id": "meta-098-bat-file-size-binary-units",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/file_sizer.py: format_file_size() uses 1000-based boundaries instead of 1024-based binary units. Fix: replace 1000 with 1024. Inspired by sharkdp/bat. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-098",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "bat/bat file size binary vs decimal units"
+      }
+    },
+    {
+      "task_id": "meta-099-vite-config-merger-base-mutation",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/config_merger.py: merge_configs() assigns result = base directly, mutating caller's config. Fix: use copy.deepcopy(base). Inspired by vitejs/vite. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-099",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "vite/vite config deep merge no mutation"
+      }
+    },
+    {
+      "task_id": "meta-100-langflow-priority-queue-min-vs-max",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/priority_queue.py: get_highest_priority() uses min() instead of max(). Fix: change min to max. Inspired by langflow-ai/langflow. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-100",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "langflow/langflow priority max selection"
+      }
+    },
+    {
+      "task_id": "meta-101-langflow-token-counter-chars-vs-words",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/token_counter.py: count_tokens() returns len(text) (char count) instead of len(text.split()) (word count). Inspired by langflow-ai/langflow. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-101",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "langflow token count characters vs words"
+      }
+    },
+    {
+      "task_id": "meta-102-gitea-webhook-dispatch-extra-or",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/webhook_dispatcher.py: should_dispatch_event() has extra 'or bool(subscribed_events)' making any event dispatch if subscriptions exist. Fix: remove it. Inspired by go-gitea/gitea. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-102",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "gitea webhook event dispatch extra or clause"
+      }
+    },
+    {
+      "task_id": "meta-103-fastapi-response-success-2xx-range",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/response_builder.py: build_api_response() sets success only for status==200. Fix: 200 <= status_code < 300. Inspired by fastapi/fastapi. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-103",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "fastapi response success 2xx range"
+      }
+    },
+    {
+      "task_id": "meta-104-gitea-commit-linter-type-check-inverted",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/commit_linter.py: lint_commit_message() has inverted condition \u2014 errors on valid types. Fix: change 'in' to 'not in'. Inspired by go-gitea/gitea. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-104",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "gitea commit type check inverted condition"
+      }
+    },
+    {
+      "task_id": "meta-105-gitea-watch-counter-field-update",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/watch_counter.py: update_watch_count() returns len but doesn't store in repo['watch_count']. Fix: add repo['watch_count'] = len(watchers). Inspired by go-gitea/gitea. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-105",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "gitea watch count field update"
+      }
+    },
+    {
+      "task_id": "meta-106-bat-diff-renderer-context-space",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/diff_renderer.py: render_diff_line() returns context lines without space prefix. Fix: return ' ' + line for context. Inspired by sharkdp/bat. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-106",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "bat diff context line space prefix"
+      }
+    },
+    {
+      "task_id": "meta-107-gitea-notification-filter-unread",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/notification_filter.py: filter_notifications() with unread_only=True returns READ items. Fix: change filter to 'not n.get(read)'. Inspired by go-gitea/gitea. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-107",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "gitea notification unread filter inverted"
+      }
+    },
+    {
+      "task_id": "meta-108-vite-file-watcher-extension-dot",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/file_watcher.py: get_watched_extensions() doesn't strip leading dot from extension names. Fix: use lstrip('.'). Inspired by vitejs/vite. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-108",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "vite file watcher extension dot normalization"
+      }
+    },
+    {
+      "task_id": "meta-109-memos-slug-generator-hyphen",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/slug_generator.py: generate_slug() uses underscore as word separator. Fix: use hyphen (-) for URL slugs. Inspired by usememos/memos. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-109",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "memos slug hyphen separator"
+      }
+    },
+    {
+      "task_id": "meta-110-langflow-lazy-loader-cache-miss",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/lazy_loader.py: get_or_load() stores to cache but calls loader_fn() again anyway. Fix: return _cache[key] instead of result of second call. Inspired by langflow-ai/langflow. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-110",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "langflow lazy loader cache always calls loader"
+      }
+    },
+    {
+      "task_id": "meta-111-gitea-page-count-ceiling-division",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/page_calculator.py: get_page_count() uses floor division (//) losing partial last page. Fix: use math.ceil or (total+size-1)//size. Inspired by go-gitea/gitea. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-111",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "gitea pagination ceiling division"
+      }
+    },
+    {
+      "task_id": "meta-112-vite-port-availability-inverted",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/port_allocator.py: is_port_available() is inverted, returns True when port IS used. Fix: change 'in' to 'not in'. Inspired by vitejs/vite. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-112",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "vite port availability inverted"
+      }
+    },
+    {
+      "task_id": "meta-113-memos-markdown-stripper-backtick",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/markdown_stripper.py: strip_markdown() removes bold/italic but not backtick code spans. Fix: add re.sub for backticks. Inspired by usememos/memos. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-113",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "memos markdown strip backticks"
+      }
+    },
+    {
+      "task_id": "meta-114-gitea-event-dedup-composite-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/event_deduplicator.py: deduplicate_events() uses only type as key, ignoring resource_id. Fix: key = (type, resource_id). Inspired by go-gitea/gitea. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-114",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "gitea event dedup composite key"
+      }
+    },
+    {
+      "task_id": "meta-115-fastapi-email-validator-tld-length",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix src/format_checker.py: is_valid_email() regex requires exactly 2-char TLD. Fix: use {2,} for TLD. Inspired by fastapi/fastapi. 3/7 tests currently fail.",
+      "fixture_dir": "fixtures/meta-autocode-115",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/",
+          "task.md",
+          "verify.sh"
+        ],
+        "regression": false,
+        "codex_xhigh_baseline": 0.815,
+        "harnessbench_pattern": "fastapi email TLD length validation"
+      }
+    },
+    {
+      "task_id": "meta-116-langflow-batch-processor-slice",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix off-by-one in batch slice: items[i:i+batch_size-1] drops last item per batch. Fix: items[i:i+batch_size].",
+      "fixture_dir": "fixtures/meta-autocode-116",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "langflow"
+      }
+    },
+    {
+      "task_id": "meta-117-gitea-repo-cloner-https-url",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix clone URL builder: HTTPS branch returns SSH URL format (git@host:owner/repo.git). Fix: https://host/owner/repo.git.",
+      "fixture_dir": "fixtures/meta-autocode-117",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "gitea"
+      }
+    },
+    {
+      "task_id": "meta-118-axios-interceptor-chain-order",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix interceptor chain: applies interceptors in reversed() order instead of insertion order.",
+      "fixture_dir": "fixtures/meta-autocode-118",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "axios"
+      }
+    },
+    {
+      "task_id": "meta-119-vite-semver-integer-comparison",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix semver comparator: compares version parts as strings, so '10' < '9'. Fix: int() conversion.",
+      "fixture_dir": "fixtures/meta-autocode-119",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "vite"
+      }
+    },
+    {
+      "task_id": "meta-120-uptime-kuma-rate-limiter-off-by-one",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix rate limiter: uses < instead of <= so the max_requests-th allowed request is blocked.",
+      "fixture_dir": "fixtures/meta-autocode-120",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "uptime-kuma"
+      }
+    },
+    {
+      "task_id": "meta-121-memos-cache-invalidator-multi-tag",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix cache invalidator: reassigns keys_to_remove on each tag (only last tag's keys removed). Fix: extend instead of assign.",
+      "fixture_dir": "fixtures/meta-autocode-121",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "memos"
+      }
+    },
+    {
+      "task_id": "meta-122-bat-syntax-highlighter-inclusive-range",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix syntax highlighter: uses exclusive range_end (line < range_end) instead of inclusive (line <= range_end), missing last line.",
+      "fixture_dir": "fixtures/meta-autocode-122",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "bat"
+      }
+    },
+    {
+      "task_id": "meta-123-lazygit-event-scheduler-due-check",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix event scheduler: uses >= instead of <= so future events are returned instead of past ones.",
+      "fixture_dir": "fixtures/meta-autocode-123",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "lazygit"
+      }
+    },
+    {
+      "task_id": "meta-124-vite-plugin-registry-case-insensitive",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix plugin registry: case-sensitive lookup fails when name casing differs from registration. Fix: normalize to lowercase.",
+      "fixture_dir": "fixtures/meta-autocode-124",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "vite"
+      }
+    },
+    {
+      "task_id": "meta-125-bat-path-normalizer-backslash",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix path normalizer: backslashes not converted to forward slashes before collapsing. Fix: path.replace('\\\\', '/').",
+      "fixture_dir": "fixtures/meta-autocode-125",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "bat"
+      }
+    },
+    {
+      "task_id": "meta-126-langflow-permission-checker-and-logic",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix permission checker: uses any() instead of all(), granting access with only one required permission.",
+      "fixture_dir": "fixtures/meta-autocode-126",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "langflow"
+      }
+    },
+    {
+      "task_id": "meta-127-axios-response-timer-subtraction-order",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix response timer: start - end instead of end - start returns negative elapsed time.",
+      "fixture_dir": "fixtures/meta-autocode-127",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "axios"
+      }
+    },
+    {
+      "task_id": "meta-128-gitea-connection-pool-health-check",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix connection pool: returns connections without checking healthy flag. Fix: skip unhealthy connections.",
+      "fixture_dir": "fixtures/meta-autocode-128",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "gitea"
+      }
+    },
+    {
+      "task_id": "meta-129-memos-template-renderer-double-brace",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix template renderer: uses single-brace substitution but templates use {{key}} double-brace format.",
+      "fixture_dir": "fixtures/meta-autocode-129",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "memos"
+      }
+    },
+    {
+      "task_id": "meta-130-langflow-node-validator-edge-direction",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix flow node validator: checks in-edges for source nodes instead of out-edges, producing wrong validity results.",
+      "fixture_dir": "fixtures/meta-autocode-130",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "langflow"
+      }
+    },
+    {
+      "task_id": "meta-131-fastapi-json-serializer-nested-none",
+      "category": "bugfix",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Fix JSON serializer: exclude_none only strips top-level None values, not nested ones. Fix: recursive cleanup.",
+      "fixture_dir": "fixtures/meta-autocode-131",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "fastapi"
+      }
+    },
+    {
+      "task_id": "meta-132-lazygit-git-log-parser-split-count",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix git log parser: split('|', 1) merges author and message into one field. Fix: split('|', 2).",
+      "fixture_dir": "fixtures/meta-autocode-132",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "lazygit"
+      }
+    },
+    {
+      "task_id": "meta-133-uptime-kuma-status-aggregator-up-down",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix status aggregator: counts 'down' checks instead of 'up' checks for uptime percentage.",
+      "fixture_dir": "fixtures/meta-autocode-133",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "uptime-kuma"
+      }
+    },
+    {
+      "task_id": "meta-134-axios-url-builder-ampersand-entity",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix URL builder: uses HTML entity &amp; instead of & to join query params.",
+      "fixture_dir": "fixtures/meta-autocode-134",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "axios"
+      }
+    },
+    {
+      "task_id": "meta-135-lazygit-diff-calculator-added-count",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix diff calculator: counts all new_lines as additions instead of only lines not in old_lines.",
+      "fixture_dir": "fixtures/meta-autocode-135",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "lazygit"
+      }
+    },
+    {
+      "task_id": "meta-136-memos-tag-sorter-count-descending",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix tag sorter: count-based sort is ascending instead of descending, showing least-used tags first.",
+      "fixture_dir": "fixtures/meta-autocode-136",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "memos"
+      }
+    },
+    {
+      "task_id": "meta-137-vite-search-indexer-overwrite",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix search indexer: index[word] = [doc_id] overwrites on each doc, losing all but the last. Fix: append.",
+      "fixture_dir": "fixtures/meta-autocode-137",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "vite"
+      }
+    },
+    {
+      "task_id": "meta-138-langflow-task-priority-max-vs-min",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix task priority selector: max() returns highest priority_number (lowest priority). Fix: use min().",
+      "fixture_dir": "fixtures/meta-autocode-138",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "langflow"
+      }
+    },
+    {
+      "task_id": "meta-139-fastapi-config-validator-falsy-none",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix config validator: 'if not value' treats 0, False, [] as missing. Fix: 'if value is None'.",
+      "fixture_dir": "fixtures/meta-autocode-139",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "fastapi"
+      }
+    },
+    {
+      "task_id": "meta-140-uptime-kuma-alert-throttler-time-unit",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix alert throttler: compares elapsed seconds against cooldown_minutes directly (60x mismatch). Fix: multiply by 60.",
+      "fixture_dir": "fixtures/meta-autocode-140",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "uptime-kuma"
+      }
+    },
+    {
+      "task_id": "meta-141-gitea-repo-forker-decrement-vs-increment",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix repo forker: fork_count is decremented (-1) instead of incremented (+1) on each fork.",
+      "fixture_dir": "fixtures/meta-autocode-141",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "gitea"
+      }
+    },
+    {
+      "task_id": "meta-142-bat-string-truncator-max-length",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix string truncator: slices to max_length then appends ellipsis, exceeding max_length. Fix: reserve space for ellipsis.",
+      "fixture_dir": "fixtures/meta-autocode-142",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "bat"
+      }
+    },
+    {
+      "task_id": "meta-143-vite-import-resolver-containment-check",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix import resolver: checks 'path in module_name' (backwards). Fix: 'module_name in path'.",
+      "fixture_dir": "fixtures/meta-autocode-143",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "vite"
+      }
+    },
+    {
+      "task_id": "meta-144-fastapi-paginator-offset-calculation",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix paginator: offset=page*page_size skips first page. Fix: offset=(page-1)*page_size.",
+      "fixture_dir": "fixtures/meta-autocode-144",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "fastapi"
+      }
+    },
+    {
+      "task_id": "meta-145-axios-list-rotator-left-vs-right",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix list rotation: rotates left (items[1:]+items[:1]) instead of right (items[-1:]+items[:-1]).",
+      "fixture_dir": "fixtures/meta-autocode-145",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "axios"
+      }
+    },
+    {
+      "task_id": "meta-146-langflow-tag-merger-union-vs-intersection",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix tag merger: returns intersection (&) instead of union (|), losing unique tags from each set.",
+      "fixture_dir": "fixtures/meta-autocode-146",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "langflow"
+      }
+    },
+    {
+      "task_id": "meta-147-axios-http-retry-status-check",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix HTTP retry: retries on 200 (success) instead of 5xx (server error). Fix: 500 <= status_code < 600.",
+      "fixture_dir": "fixtures/meta-autocode-147",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "axios"
+      }
+    },
+    {
+      "task_id": "meta-148-uptime-kuma-severity-filter-threshold",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix severity filter: uses > instead of >= so incidents exactly at threshold are silently excluded. Fix: change > to >=.",
+      "fixture_dir": "fixtures/meta-autocode-148",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "uptime-kuma"
+      }
+    },
+    {
+      "task_id": "meta-149-memos-tag-case-insensitive",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix memo tag search: case-sensitive comparison misses tags with different casing. Fix: lowercase both query and stored tags before comparing.",
+      "fixture_dir": "fixtures/meta-autocode-149",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "memos"
+      }
+    },
+    {
+      "task_id": "meta-150-vite-extension-extraction",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix file extension extraction: returns full filename for extension-less files instead of empty string. Fix: check rsplit produced 2 parts before returning index 1.",
+      "fixture_dir": "fixtures/meta-autocode-150",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "vite"
+      }
+    },
+    {
+      "task_id": "meta-151-fastapi-query-string-equals-in-value",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix query string parser: split('=') without maxsplit crashes when value contains '='. Fix: split('=', 1) to split only on first equals sign.",
+      "fixture_dir": "fixtures/meta-autocode-151",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "fastapi"
+      }
+    },
+    {
+      "task_id": "meta-152-gitea-event-log-recent-n-slicing",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix event log: returns first N events instead of last N (most recent). Fix: use events[-n:] instead of events[:n].",
+      "fixture_dir": "fixtures/meta-autocode-152",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "gitea"
+      }
+    },
+    {
+      "task_id": "meta-153-bat-title-case-apostrophe",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix title case: str.title() treats apostrophes as word boundaries, uppercasing after them. Fix: use ' '.join(w.capitalize() for w in text.split()).",
+      "fixture_dir": "fixtures/meta-autocode-153",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "bat"
+      }
+    },
+    {
+      "task_id": "meta-154-lazygit-tag-ref-typo",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix git tag ref detection: typo 'refs/tag/' (missing 's') never matches valid tag refs. Fix: use 'refs/tags/' prefix.",
+      "fixture_dir": "fixtures/meta-autocode-154",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "lazygit"
+      }
+    },
+    {
+      "task_id": "meta-155-axios-http-method-case-insensitive",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix HTTP method validation: case-sensitive check rejects lowercase/mixed-case methods. Fix: method.upper() before set lookup.",
+      "fixture_dir": "fixtures/meta-autocode-155",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "axios"
+      }
+    },
+    {
+      "task_id": "meta-156-langflow-percentage-integer-division",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix percentage calculation: integer division (//) truncates fractional results. Fix: use float division (/) instead.",
+      "fixture_dir": "fixtures/meta-autocode-156",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "langflow"
+      }
+    },
+    {
+      "task_id": "meta-157-uptime-kuma-vowel-counter-off-by-one",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix vowel counter: uses text[1:] skipping the first character. Words starting with a vowel are miscounted. Fix: iterate over text (not text[1:]).",
+      "fixture_dir": "fixtures/meta-autocode-157",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "uptime-kuma"
+      }
+    },
+    {
+      "task_id": "meta-158-vite-relative-path-parent-dir",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix relative path detection: only checks './' prefix, misses '../' parent-relative paths. Fix: also check startswith('../').",
+      "fixture_dir": "fixtures/meta-autocode-158",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "vite"
+      }
+    },
+    {
+      "task_id": "meta-159-memos-date-range-overlap",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix date range overlap: checks 'range1 contains range2' instead of any overlap. Fix: return start1 <= end2 and start2 <= end1.",
+      "fixture_dir": "fixtures/meta-autocode-159",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "memos"
+      }
+    },
+    {
+      "task_id": "meta-160-fastapi-palindrome-case-sensitivity",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix palindrome check: case-sensitive comparison treats 'Racecar' as non-palindrome. Fix: compare cleaned.lower() == cleaned.lower()[::-1].",
+      "fixture_dir": "fixtures/meta-autocode-160",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "fastapi"
+      }
+    },
+    {
+      "task_id": "meta-161-bat-mode-finder-min-vs-max",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix mode finder: uses min() instead of max() — returns least frequent item instead of most frequent. Fix: change min to max.",
+      "fixture_dir": "fixtures/meta-autocode-161",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "bat"
+      }
+    },
+    {
+      "task_id": "meta-162-lazygit-digit-sum-negative",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix digit sum for negative numbers: str(-5)='-5' causes int('-') ValueError. Fix: use str(abs(n)) to strip sign.",
+      "fixture_dir": "fixtures/meta-autocode-162",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "lazygit"
+      }
+    },
+    {
+      "task_id": "meta-163-langflow-missing-return-true",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix all_unique(): loop returns False on duplicate but falls off end (returns None) for unique lists. Fix: add 'return True' after the loop.",
+      "fixture_dir": "fixtures/meta-autocode-163",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "langflow"
+      }
+    },
+    {
+      "task_id": "meta-164-gitea-top-contributors-sort-order",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix top contributors: ascending sort picks least active authors. Fix: add reverse=True to sorted() call.",
+      "fixture_dir": "fixtures/meta-autocode-164",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "gitea"
+      }
+    },
+    {
+      "task_id": "meta-165-axios-cookie-header-separator",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix Cookie header builder: uses ',' separator instead of '; '. Fix: change join separator to '; '.",
+      "fixture_dir": "fixtures/meta-autocode-165",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "axios"
+      }
+    },
+    {
+      "task_id": "meta-166-uptime-kuma-clamp-swapped-bounds",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix value clamping: returns wrong bound when out of range (max when below min, min when above max). Fix: swap the return values.",
+      "fixture_dir": "fixtures/meta-autocode-166",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "uptime-kuma"
+      }
+    },
+    {
+      "task_id": "meta-167-bat-deduplicate-missing-seen-add",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix deduplicate(): seen set is never updated (missing seen.add), so duplicates are never filtered. Fix: add seen.add(item) after appending.",
+      "fixture_dir": "fixtures/meta-autocode-167",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "bat"
+      }
+    },
+    {
+      "task_id": "meta-168-memos-access-control-and-vs-or",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix edit access check: uses 'and' instead of 'or' — requires user to be BOTH owner AND admin. Fix: change 'and' to 'or'.",
+      "fixture_dir": "fixtures/meta-autocode-168",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "memos"
+      }
+    },
+    {
+      "task_id": "meta-169-fastapi-slug-underscore-vs-hyphen",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix URL slug generator: replaces spaces with '_' instead of '-'. Fix: change replace(' ', '_') to replace(' ', '-').",
+      "fixture_dir": "fixtures/meta-autocode-169",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "fastapi"
+      }
+    },
+    {
+      "task_id": "meta-170-gitea-prerelease-version-detection",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix pre-release detection: checks '+' (build metadata) instead of '-' (pre-release marker). Fix: return '-' in version.",
+      "fixture_dir": "fixtures/meta-autocode-170",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "gitea"
+      }
+    },
+    {
+      "task_id": "meta-171-vite-strip-leading-zeros-edge-case",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix leading zero strip: lstrip('0') returns '' for all-zero strings. Fix: return s.lstrip('0') or '0' to keep at least one digit.",
+      "fixture_dir": "fixtures/meta-autocode-171",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "vite"
+      }
+    },
+    {
+      "task_id": "meta-172-lazygit-camel-to-snake-leading-underscore",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix camel_to_snake(): PascalCase gets leading underscore. Fix: add .lstrip('_') to remove the spurious leading underscore.",
+      "fixture_dir": "fixtures/meta-autocode-172",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "lazygit"
+      }
+    },
+    {
+      "task_id": "meta-173-langflow-printable-ascii-missing-lower-bound",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_printable_ascii(): missing lower-bound check allows control chars (tab, newline, null). Fix: change to 32 <= ord(c) <= 126.",
+      "fixture_dir": "fixtures/meta-autocode-173",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "langflow"
+      }
+    },
+    {
+      "task_id": "meta-174-fastapi-word-count-space-split",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix count_words(): splits on literal ' ' — fails for empty string, consecutive spaces, and tabs. Fix: use text.split() (no args).",
+      "fixture_dir": "fixtures/meta-autocode-174",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "fastapi"
+      }
+    },
+    {
+      "task_id": "meta-175-axios-https-url-check-missing-separator",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_secure_url(): startswith('https') accepts 'httpsexample.com'. Fix: use startswith('https://').",
+      "fixture_dir": "fixtures/meta-autocode-175",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "axios"
+      }
+    },
+    {
+      "task_id": "meta-176-gitea-commit-message-whitespace-leak",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix format_commit(): message whitespace not stripped — leading/trailing spaces and newlines leak into output. Fix: message.strip().",
+      "fixture_dir": "fixtures/meta-autocode-176",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "gitea"
+      }
+    },
+    {
+      "task_id": "meta-177-uptime-kuma-case-sensitive-status-check",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix uptime_percentage(): case-sensitive 'UP' comparison misses 'up'/'Up'. Fix: use c.upper() == 'UP'.",
+      "fixture_dir": "fixtures/meta-autocode-177",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "uptime-kuma"
+      }
+    },
+    {
+      "task_id": "meta-178-bat-max-line-length-skips-last",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix max_line_length(): lines[:-1] skips the last line — wrong result when last line is longest. Fix: iterate lines without slice.",
+      "fixture_dir": "fixtures/meta-autocode-178",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "bat"
+      }
+    },
+    {
+      "task_id": "meta-179-memos-public-count-ignores-visibility",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix count_public_memos(): returns len(memos) instead of filtering by visibility='PUBLIC'. Fix: sum with get('visibility') check.",
+      "fixture_dir": "fixtures/meta-autocode-179",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "memos"
+      }
+    },
+    {
+      "task_id": "meta-180-vite-js-extension-missing-mjs-cjs",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_js_file(): only checks .js — misses .mjs and .cjs. Fix: endswith(('.js', '.mjs', '.cjs')).",
+      "fixture_dir": "fixtures/meta-autocode-180",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "vite"
+      }
+    },
+    {
+      "task_id": "meta-181-lazygit-short-hash-six-not-seven",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix short_hash(): returns 6 chars instead of conventional 7. Fix: commit_hash[:7].",
+      "fixture_dir": "fixtures/meta-autocode-181",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "lazygit"
+      }
+    },
+    {
+      "task_id": "meta-182-langflow-range-check-excludes-max",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_in_range(): uses < instead of <= for upper bound — excludes max_val. Fix: min_val <= value <= max_val.",
+      "fixture_dir": "fixtures/meta-autocode-182",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "langflow"
+      }
+    },
+    {
+      "task_id": "meta-183-fastapi-content-type-lstrip-not-strip",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix parse_content_type(): lstrip() leaves trailing space before ';'. Fix: strip().",
+      "fixture_dir": "fixtures/meta-autocode-183",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "fastapi"
+      }
+    },
+    {
+      "task_id": "meta-184-axios-success-check-only-200",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_success(): checks == 200 instead of 2xx range — rejects 201, 204, 206. Fix: 200 <= status_code < 300.",
+      "fixture_dir": "fixtures/meta-autocode-184",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "axios"
+      }
+    },
+    {
+      "task_id": "meta-185-gitea-repo-name-missing-slash-check",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_valid_repo_name(): checks space and dot but misses slash. Fix: add '/' not in name.",
+      "fixture_dir": "fixtures/meta-autocode-185",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "gitea"
+      }
+    },
+    {
+      "task_id": "meta-186-uptime-kuma-threshold-lte-not-lt",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_response_ok(): uses <= instead of < — accepts exact-threshold as OK. Fix: response_ms < max_ms.",
+      "fixture_dir": "fixtures/meta-autocode-186",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "uptime-kuma"
+      }
+    },
+    {
+      "task_id": "meta-187-bat-line-counter-phantom-extra-line",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix count_lines(): count('\\n')+1 adds phantom line for empty/trailing-newline input. Fix: len(text.splitlines()).",
+      "fixture_dir": "fixtures/meta-autocode-187",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "bat"
+      }
+    },
+    {
+      "task_id": "meta-188-memos-pinned-wrong-field-name",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_pinned(): reads 'pinned' key instead of 'is_pinned'. Fix: memo.get('is_pinned', False).",
+      "fixture_dir": "fixtures/meta-autocode-188",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "memos"
+      }
+    },
+    {
+      "task_id": "meta-189-vite-extension-removal-first-dot",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix remove_extension(): split('.')[0] removes at first dot — multi-dot names truncated. Fix: rsplit('.', 1)[0].",
+      "fixture_dir": "fixtures/meta-autocode-189",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "vite"
+      }
+    },
+    {
+      "task_id": "meta-190-lazygit-branch-from-ref-last-segment-only",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix branch_from_ref(): split('/')[-1] only returns last segment — nested branches truncated. Fix: split('refs/heads/', 1)[-1].",
+      "fixture_dir": "fixtures/meta-autocode-190",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "lazygit"
+      }
+    },
+    {
+      "task_id": "meta-191-langflow-left-pad-ignores-char",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix left_pad(): rjust(width) ignores char argument — always pads with space. Fix: rjust(width, char).",
+      "fixture_dir": "fixtures/meta-autocode-191",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "langflow"
+      }
+    },
+    {
+      "task_id": "meta-192-fastapi-param-name-allows-keywords",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_valid_param_name(): isidentifier() accepts Python keywords. Fix: add 'not keyword.iskeyword(name)'.",
+      "fixture_dir": "fixtures/meta-autocode-192",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "fastapi"
+      }
+    },
+    {
+      "task_id": "meta-193-axios-timeout-accepts-zero-negative",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix has_valid_timeout(): 'timeout' in config accepts 0 and negatives. Fix: add config['timeout'] > 0.",
+      "fixture_dir": "fixtures/meta-autocode-193",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "axios"
+      }
+    },
+    {
+      "task_id": "meta-194-gitea-admin-misses-owner-role",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_admin(): checks role == 'admin' only — misses 'owner'. Fix: role in ('admin', 'owner').",
+      "fixture_dir": "fixtures/meta-autocode-194",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "gitea"
+      }
+    },
+    {
+      "task_id": "meta-195-uptime-kuma-health-threshold-wrong-value",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_healthy(): threshold is 99 instead of 99.5 — accepts 99.0-99.4% as healthy. Fix: uptime_percent >= 99.5.",
+      "fixture_dir": "fixtures/meta-autocode-195",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "uptime-kuma"
+      }
+    },
+    {
+      "task_id": "meta-196-bat-syntax-highlight-uppercase-extension",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix should_highlight(): case-sensitive extension lookup misses .PY, .JS, .CSS. Fix: lowercase extension before lookup.",
+      "fixture_dir": "fixtures/meta-autocode-196",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "bat"
+      }
+    },
+    {
+      "task_id": "meta-197-memos-latest-memo-ascending-sort",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix get_latest_memo(): ascending sort returns oldest. Fix: reverse=True or use max().",
+      "fixture_dir": "fixtures/meta-autocode-197",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "memos"
+      }
+    },
+    {
+      "task_id": "meta-198-vite-bare-import-misses-parent-relative",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_bare_import(): only checks './' — misses '../' relative paths. Fix: not path.startswith('.').",
+      "fixture_dir": "fixtures/meta-autocode-198",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "vite"
+      }
+    },
+    {
+      "task_id": "meta-199-lazygit-conventional-commit-case-sensitive",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_conventional_commit(): type lookup is case-sensitive — 'Feat', 'FIX' rejected. Fix: type_part.lower() in _TYPES.",
+      "fixture_dir": "fixtures/meta-autocode-199",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "lazygit"
+      }
+    },
+    {
+      "task_id": "meta-200-langflow-overlapping-keys-equality-not-intersection",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix have_overlapping_keys(): uses == instead of intersection — misses partial overlap. Fix: bool(set(d1)&set(d2)).",
+      "fixture_dir": "fixtures/meta-autocode-200",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "langflow"
+      }
+    },
+    {
+      "task_id": "meta-201-fastapi-pagination-limit-max-1000",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix validate_limit(): max is 1000 instead of 100 — accepts oversized pages. Fix: 1 <= limit <= 100.",
+      "fixture_dir": "fixtures/meta-autocode-201",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "fastapi"
+      }
+    },
+    {
+      "task_id": "meta-202-axios-url-builder-double-slash",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix build_url(): base+path creates double slash when base has trailing '/'. Fix: rstrip('/') + '/' + lstrip('/').",
+      "fixture_dir": "fixtures/meta-autocode-202",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "axios"
+      }
+    },
+    {
+      "task_id": "meta-203-gitea-fork-requires-write-not-read",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix can_fork(): requires write/admin — fork only needs read. Fix: include 'read' in allowed permissions.",
+      "fixture_dir": "fixtures/meta-autocode-203",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "gitea"
+      }
+    },
+    {
+      "task_id": "meta-204-uptime-kuma-stale-alert-gt-not-gte",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_stale_alert(): uses > not >= — exact-threshold age not flagged. Fix: age_seconds >= max_age.",
+      "fixture_dir": "fixtures/meta-autocode-204",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "uptime-kuma"
+      }
+    },
+    {
+      "task_id": "meta-205-bat-page-count-truncates-partial-page",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix page_count(): integer division drops partial last page. Fix: math.ceil(total_items / page_size).",
+      "fixture_dir": "fixtures/meta-autocode-205",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "bat"
+      }
+    },
+    {
+      "task_id": "meta-206-memos-truncate-content-length-exceeds-max",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix truncate_content(): appends '...' after full slice — result is max_len+3. Fix: slice to max_len-3 before appending.",
+      "fixture_dir": "fixtures/meta-autocode-206",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "memos"
+      }
+    },
+    {
+      "task_id": "meta-207-vite-get-env-var-ignores-default",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix get_env_var(): ignores the default argument — always returns None on missing key. Fix: config.get(key, default).",
+      "fixture_dir": "fixtures/meta-autocode-207",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "vite"
+      }
+    },
+    {
+      "task_id": "meta-208-lazygit-is-main-branch-startswith-not-equals",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_main_branch(): startswith('main') matches 'mainline', 'main-branch'. Fix: branch_name == 'main'.",
+      "fixture_dir": "fixtures/meta-autocode-208",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "lazygit"
+      }
+    },
+    {
+      "task_id": "meta-209-langflow-merge-unique-no-deduplication",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix merge_unique(): simple concatenation keeps duplicates. Fix: list(dict.fromkeys(list1 + list2)).",
+      "fixture_dir": "fixtures/meta-autocode-209",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "langflow"
+      }
+    },
+    {
+      "task_id": "meta-210-fastapi-email-validator-missing-structure-check",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_valid_email(): only checks '@' presence — accepts '@domain', 'user@', 'a@@b'. Fix: split('@') and check two non-empty parts.",
+      "fixture_dir": "fixtures/meta-autocode-210",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "fastapi"
+      }
+    },
+    {
+      "task_id": "meta-211-axios-query-string-index-error",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix get_query_string(): split('?')[1] raises IndexError on URLs without query string. Fix: return '' when no '?' present.",
+      "fixture_dir": "fixtures/meta-autocode-211",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "axios"
+      }
+    },
+    {
+      "task_id": "meta-212-gitea-count-open-issues-no-filter",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix count_open_issues(): counts all issues instead of filtering by state='open'. Fix: use sum with state check.",
+      "fixture_dir": "fixtures/meta-autocode-212",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "gitea"
+      }
+    },
+    {
+      "task_id": "meta-213-uptime-kuma-status-label-case-sensitive",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix get_status_label(): case-sensitive dict lookup rejects 'UP', 'DOWN', 'PENDING'. Fix: normalize to lowercase before lookup.",
+      "fixture_dir": "fixtures/meta-autocode-213",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "uptime-kuma"
+      }
+    },
+    {
+      "task_id": "meta-214-bat-line-formatter-missing-padding",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix format_line_number(): ignores width — no right-justification padding. Fix: str(n).rjust(width).",
+      "fixture_dir": "fixtures/meta-autocode-214",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "bat"
+      }
+    },
+    {
+      "task_id": "meta-215-memos-get-memo-tags-wrong-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix get_memo_tags(): reads 'tag' instead of 'tags' — always returns []. Fix: use correct key 'tags'.",
+      "fixture_dir": "fixtures/meta-autocode-215",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "memos"
+      }
+    },
+    {
+      "task_id": "meta-216-vite-hmr-checker-wrong-config-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix has_hot_reload(): reads 'hmr' instead of 'hot' — returns False even when HMR is enabled. Fix: use key 'hot'.",
+      "fixture_dir": "fixtures/meta-autocode-216",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "vite"
+      }
+    },
+    {
+      "task_id": "meta-217-lazygit-detached-head-wrong-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_detached_head(): reads 'detached' instead of 'is_detached' — always returns False. Fix: use correct key 'is_detached'.",
+      "fixture_dir": "fixtures/meta-autocode-217",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "lazygit"
+      }
+    },
+    {
+      "task_id": "meta-218-langflow-component-id-rejects-underscores",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_valid_component_id(): isalnum() rejects underscore characters. Fix: allow alphanumeric and underscore.",
+      "fixture_dir": "fixtures/meta-autocode-218",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "langflow"
+      }
+    },
+    {
+      "task_id": "meta-219-fastapi-body-size-gte-instead-of-gt",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_body_too_large(): uses >= instead of > — rejects bodies at exactly the allowed limit. Fix: use strict greater-than.",
+      "fixture_dir": "fixtures/meta-autocode-219",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "fastapi"
+      }
+    },
+    {
+      "task_id": "meta-220-axios-strip-auth-header-case-sensitive",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix strip_auth_header(): case-sensitive check misses 'authorization', 'AUTHORIZATION'. Fix: normalize key to lowercase before comparison.",
+      "fixture_dir": "fixtures/meta-autocode-220",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "axios"
+      }
+    },
+    {
+      "task_id": "meta-221-gitea-repo-archived-wrong-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_repo_archived(): reads 'is_archive' instead of 'archived' — always returns False. Fix: use correct key 'archived'.",
+      "fixture_dir": "fixtures/meta-autocode-221",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "gitea"
+      }
+    },
+    {
+      "task_id": "meta-222-uptime-kuma-duration-total-minutes-not-remainder",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix format_duration(): uses seconds//60 (total minutes) instead of (seconds%3600)//60 (remainder). Fix: compute minutes as remainder within hour.",
+      "fixture_dir": "fixtures/meta-autocode-222",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "uptime-kuma"
+      }
+    },
+    {
+      "task_id": "meta-223-bat-replace-tabs-hardcoded-one-space",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix replace_tabs(): replaces tab with a single space instead of width spaces. Fix: use ' ' * width.",
+      "fixture_dir": "fixtures/meta-autocode-223",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "bat"
+      }
+    },
+    {
+      "task_id": "meta-224-memos-is-memo-public-lowercase-check",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_memo_public(): compares to lowercase 'public' instead of 'PUBLIC' — always returns False for public memos. Fix: compare to 'PUBLIC'.",
+      "fixture_dir": "fixtures/meta-autocode-224",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "memos"
+      }
+    },
+    {
+      "task_id": "meta-225-vite-get-port-wrong-config-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix get_port(): reads 'server_port' instead of 'port' — always returns default. Fix: use correct key 'port'.",
+      "fixture_dir": "fixtures/meta-autocode-225",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "vite"
+      }
+    },
+    {
+      "task_id": "meta-226-lazygit-abbreviate-branch-missing-ellipsis",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix abbreviate_branch(): truncates without appending '...'. Fix: slice to max_len-3 and append '...'.",
+      "fixture_dir": "fixtures/meta-autocode-226",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "lazygit"
+      }
+    },
+    {
+      "task_id": "meta-227-langflow-count-output-edges-no-source-filter",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix count_output_edges(): counts all edges instead of filtering by source node. Fix: filter edges where source == node_id.",
+      "fixture_dir": "fixtures/meta-autocode-227",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "langflow"
+      }
+    },
+    {
+      "task_id": "meta-228-fastapi-normalize-path-double-slash",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix normalize_path(): unconditionally prepends '/' — creates '//path'. Fix: only prepend when path doesn't already start with '/'.",
+      "fixture_dir": "fixtures/meta-autocode-228",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "fastapi"
+      }
+    },
+    {
+      "task_id": "meta-229-axios-is-absolute-url-misses-https",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_absolute_url(): only checks 'http://' — misses 'https://' URLs. Fix: check both schemes.",
+      "fixture_dir": "fixtures/meta-autocode-229",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "axios"
+      }
+    },
+    {
+      "task_id": "meta-230-gitea-count-watchers-wrong-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix count_watchers(): reads 'stargazers_count' instead of 'watchers_count'. Fix: use correct key.",
+      "fixture_dir": "fixtures/meta-autocode-230",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "gitea"
+      }
+    },
+    {
+      "task_id": "meta-231-uptime-kuma-uptime-percent-inverted-division",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix format_uptime_percent(): divides total/up instead of up/total — gives values over 100%. Fix: swap operands.",
+      "fixture_dir": "fixtures/meta-autocode-231",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "uptime-kuma"
+      }
+    },
+    {
+      "task_id": "meta-232-bat-is-empty-line-misses-whitespace",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_empty_line(): only checks '' — misses whitespace-only lines. Fix: use not line.strip().",
+      "fixture_dir": "fixtures/meta-autocode-232",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "bat"
+      }
+    },
+    {
+      "task_id": "meta-233-memos-get-memo-author-wrong-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix get_memo_author(): reads 'creator' instead of 'author' — always returns None. Fix: use correct key 'author'.",
+      "fixture_dir": "fixtures/meta-autocode-233",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "memos"
+      }
+    },
+    {
+      "task_id": "meta-234-vite-is-dev-mode-reads-env-not-mode",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_dev_mode(): reads 'env' instead of 'mode' — misses configs that only set 'mode'. Fix: use key 'mode'.",
+      "fixture_dir": "fixtures/meta-autocode-234",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "vite"
+      }
+    },
+    {
+      "task_id": "meta-235-lazygit-get-stash-count-wrong-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix get_stash_count(): reads 'count' instead of 'entries' — always returns 0. Fix: use correct key 'entries'.",
+      "fixture_dir": "fixtures/meta-autocode-235",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "lazygit"
+      }
+    },
+    {
+      "task_id": "meta-236-langflow-get-node-inputs-singular-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix get_node_inputs(): reads 'input' (singular) instead of 'inputs' — always returns []. Fix: use correct key 'inputs'.",
+      "fixture_dir": "fixtures/meta-autocode-236",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "langflow"
+      }
+    },
+    {
+      "task_id": "meta-237-fastapi-parse-query-int-crashes-on-none",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix parse_query_int(): int(None) raises TypeError when param is absent. Fix: return default when value is None.",
+      "fixture_dir": "fixtures/meta-autocode-237",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "fastapi"
+      }
+    },
+    {
+      "task_id": "meta-238-axios-timeout-error-checks-type-not-code",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_timeout_error(): checks 'type' instead of 'code' — misses errors with only a 'code' field. Fix: check 'code'.",
+      "fixture_dir": "fixtures/meta-autocode-238",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "axios"
+      }
+    },
+    {
+      "task_id": "meta-239-gitea-get-default-branch-wrong-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix get_default_branch(): reads 'default' instead of 'default_branch' — returns 'main' for repos with non-main default. Fix: use correct key.",
+      "fixture_dir": "fixtures/meta-autocode-239",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "gitea"
+      }
+    },
+    {
+      "task_id": "meta-240-uptime-kuma-format-response-time-wrong-divisor",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix format_response_time(): divides ms by 100 instead of 1000 — 1000ms shows as '10.00s'. Fix: divide by 1000.",
+      "fixture_dir": "fixtures/meta-autocode-240",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "uptime-kuma"
+      }
+    },
+    {
+      "task_id": "meta-241-bat-split-into-chunks-off-by-one-range",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix split_into_chunks(): uses len(text)-1 as range stop — drops last chunk when len%size==1. Fix: use len(text).",
+      "fixture_dir": "fixtures/meta-autocode-241",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "bat"
+      }
+    },
+    {
+      "task_id": "meta-242-memos-summarize-memo-off-by-one",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix summarize_memo(): slices words[:max_words-1] instead of words[:max_words] — returns one fewer word. Fix: use max_words.",
+      "fixture_dir": "fixtures/meta-autocode-242",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "memos"
+      }
+    },
+    {
+      "task_id": "meta-243-vite-get-base-url-wrong-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix get_base_url(): reads 'base_url' instead of 'base' — returns default for all configured bases. Fix: use correct key.",
+      "fixture_dir": "fixtures/meta-autocode-243",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "vite"
+      }
+    },
+    {
+      "task_id": "meta-244-lazygit-is-branch-merged-wrong-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix is_branch_merged(): reads 'is_merged' instead of 'merged' — always returns False for merged branches. Fix: use correct key.",
+      "fixture_dir": "fixtures/meta-autocode-244",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "lazygit"
+      }
+    },
+    {
+      "task_id": "meta-245-langflow-get-node-outputs-wrong-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix get_node_outputs(): reads singular 'output' instead of 'outputs' — returns empty list for all nodes with outputs. Fix: use correct key.",
+      "fixture_dir": "fixtures/meta-autocode-245",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "langflow"
+      }
+    },
+    {
+      "task_id": "meta-246-fastapi-get-rate-limit-wrong-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix get_rate_limit(): reads 'rate' instead of 'limit' — returns default 100 for all configured limits. Fix: use correct key.",
+      "fixture_dir": "fixtures/meta-autocode-246",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "fastapi"
+      }
+    },
+    {
+      "task_id": "meta-247-axios-get-response-data-wrong-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix get_response_data(): reads 'payload' instead of 'data' — returns None for all responses with data. Fix: use correct key.",
+      "fixture_dir": "fixtures/meta-autocode-247",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "axios"
+      }
+    },
+    {
+      "task_id": "meta-248-gitea-get-repo-language-wrong-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix get_repo_language(): reads 'lang' instead of 'language' — returns 'Unknown' for all repos. Fix: use correct key.",
+      "fixture_dir": "fixtures/meta-autocode-248",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "gitea"
+      }
+    },
+    {
+      "task_id": "meta-249-uptime-kuma-get-monitor-url-wrong-key",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix get_monitor_url(): reads 'endpoint' instead of 'url' — returns empty string for all monitors. Fix: use correct key.",
+      "fixture_dir": "fixtures/meta-autocode-249",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "uptime-kuma"
+      }
+    },
+    {
+      "task_id": "meta-250-bat-count-lines-trailing-newline",
+      "category": "bugfix",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix count_lines(): uses count('\\n') which undercounts by 1 for text without trailing newline. Fix: use splitlines().",
+      "fixture_dir": "fixtures/meta-autocode-250",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "protected_paths": [
+          "tests/"
+        ],
+        "harnessbench_pattern": "bat"
+      }
+    }
+  ]
+}

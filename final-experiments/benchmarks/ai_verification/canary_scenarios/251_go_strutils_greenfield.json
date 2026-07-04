@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-020",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Implement string analysis utilities in Go",
+  "description": "Greenfield Go task: implement IsAnagram, CharFrequency, IsPangram, and MostFrequentChar string analysis functions.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module strutils\n\ngo 1.21\n"
+      },
+      {
+        "path": "strutils.go",
+        "content": "package strutils\n\n// TODO: implement IsAnagram, CharFrequency, IsPangram, MostFrequentChar\n"
+      },
+      {
+        "path": "strutils_test.go",
+        "content": "package strutils\n\nimport (\n\t\"strings\"\n\t\"testing\"\n)\n\nfunc TestIsAnagram(t *testing.T) {\n\tif !IsAnagram(\"listen\", \"silent\") {\n\t\tt.Error(\"listen and silent are anagrams\")\n\t}\n\tif IsAnagram(\"hello\", \"world\") {\n\t\tt.Error(\"hello and world are not anagrams\")\n\t}\n\tif !IsAnagram(\"\", \"\") {\n\t\tt.Error(\"empty strings are anagrams\")\n\t}\n}\n\nfunc TestCharFrequency(t *testing.T) {\n\tfreq := CharFrequency(\"aabbc\")\n\tif freq['a'] != 2 {\n\t\tt.Errorf(\"want freq[a]=2, got %d\", freq['a'])\n\t}\n\tif freq['b'] != 2 {\n\t\tt.Errorf(\"want freq[b]=2, got %d\", freq['b'])\n\t}\n\tif freq['c'] != 1 {\n\t\tt.Errorf(\"want freq[c]=1, got %d\", freq['c'])\n\t}\n}\n\nfunc TestIsPangram(t *testing.T) {\n\tif !IsPangram(\"The quick brown fox jumps over the lazy dog\") {\n\t\tt.Error(\"expected pangram\")\n\t}\n\tif IsPangram(\"Hello world\") {\n\t\tt.Error(\"Hello world is not a pangram\")\n\t}\n}\n\nfunc TestMostFrequentChar(t *testing.T) {\n\tch, count := MostFrequentChar(\"aabbbcc\")\n\tif ch != 'b' || count != 3 {\n\t\tt.Errorf(\"want ('b', 3), got (%c, %d)\", ch, count)\n\t}\n}\n\nfunc TestIsAnagramCaseInsensitive(t *testing.T) {\n\t_ = strings.ToLower\n\tif !IsAnagram(\"Triangle\", \"Integral\") {\n\t\tt.Error(\"Triangle and Integral are anagrams (case-insensitive not required, but same-case should work)\")\n\t}\n\tif !IsAnagram(\"abc\", \"bca\") {\n\t\tt.Error(\"abc and bca are anagrams\")\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement four string-analysis functions in strutils.go.\n\nfunc IsAnagram(s1, s2 string) bool\n  // True if s1 and s2 contain the same characters with the same frequencies.\n  // Case-sensitive. Empty strings are anagrams of each other.\n\nfunc CharFrequency(s string) map[rune]int\n  // Return a map of each rune to its count in s.\n\nfunc IsPangram(s string) bool\n  // True if s contains every letter a-z (case-insensitive).\n\nfunc MostFrequentChar(s string) (rune, int)\n  // Return the most frequent rune and its count.\n  // On ties, return any one of the tied chars.\n\nAll 5 tests in strutils_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "IsAnagram compares two frequency maps built from each string",
+      "CharFrequency counts each rune with a map[rune]int",
+      "IsPangram uses unicode.ToLower and checks for all 26 letters",
+      "MostFrequentChar iterates CharFrequency result for max",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "526-rust-mt-debug-overflow",
+  "title": "Debug integer overflow in Rust Fibonacci — 3 turns",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {"language": "rust", "framework": null, "extra": {}},
+  "description": "Fibonacci function uses u32 and panics on overflow for large inputs. Fix with u64, run tests, add overflow-safe API.",
+  "repo_seed": {
+    "files": {
+      "Cargo.toml": "[package]\nname = \"fibonacci\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+      "src/lib.rs": "//! Fibonacci — overflows for n >= 47 with u32.\n\n/// Compute the nth Fibonacci number.\n/// BUG: uses u32 — overflows for n >= 47 in debug, wraps in release.\npub fn fibonacci(n: u32) -> u32 {\n    match n {\n        0 => 0,\n        1 => 1,\n        _ => fibonacci(n - 1) + fibonacci(n - 2), // BUG: u32 overflow at n=47\n    }\n}\n\n/// Fibonacci returning None if result would overflow u64.\npub fn fibonacci_checked(n: u32) -> Option<u64> {\n    // TODO: implement using checked_add\n    None\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_small_fibonacci() {\n        assert_eq!(fibonacci(0), 0);\n        assert_eq!(fibonacci(1), 1);\n        assert_eq!(fibonacci(2), 1);\n        assert_eq!(fibonacci(5), 5);\n        assert_eq!(fibonacci(10), 55);\n    }\n\n    #[test]\n    fn test_large_fibonacci() {\n        // This would panic with u32 due to overflow\n        assert_eq!(fibonacci(50), 12586269025);\n    }\n\n    #[test]\n    fn test_fibonacci_checked_valid() {\n        assert_eq!(fibonacci_checked(10), Some(55));\n        assert_eq!(fibonacci_checked(0), Some(0));\n    }\n\n    #[test]\n    fn test_fibonacci_checked_overflow() {\n        // Fibonacci(93) is the last that fits in u64\n        assert!(fibonacci_checked(93).is_some());\n        assert!(fibonacci_checked(94).is_none());\n    }\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The `fibonacci` function uses `u32` and will overflow for `n >= 47`. Change the return type to `u64` (and the recursive calls accordingly). The test `test_large_fibonacci` expects `fibonacci(50) == 12586269025` which doesn't fit in u32. Also update the test assertions to expect u64 values. Run `cargo test --quiet`.",
+    "followup_prompts": [
+      "Run `cargo test --quiet` to check the current state. Walk me through the fixes you made. If any tests are still failing, show me the errors and fix them.",
+      "Final step: implement `fibonacci_checked(n: u32) -> Option<u64>` using iterative computation with `checked_add` — return None if any intermediate addition overflows. Run `cargo test --quiet` — all 4 tests must pass."
+    ],
+    "success_criteria": [
+      "fibonacci() uses u64 return type to handle n >= 47",
+      "fibonacci(50) == 12586269025 (correct u64 value)",
+      "fibonacci_checked returns Some for n <= 93",
+      "fibonacci_checked returns None for n >= 94 (u64 overflow)",
+      "cargo test passes (4 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "cargo test --quiet"}
+  },
+  "duration_hint_minutes": 10
+}

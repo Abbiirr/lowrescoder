@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-trie-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Implement a Trie (prefix tree) in Python",
+  "description": "Build a Trie data structure in src/trie.py with insert, search, starts_with, and delete operations. A failing test suite is provided.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"python-trie\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = [\"pytest>=8.0\", \"ruff>=0.4\"]\n\n[tool.pytest.ini_options]\npythonpath = [\"src\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nline-length = 100\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_trie.py",
+        "content": "from trie import Trie\n\n\ndef test_search_empty():\n    t = Trie()\n    assert not t.search(\"hello\")\n\n\ndef test_insert_and_search():\n    t = Trie()\n    t.insert(\"hello\")\n    assert t.search(\"hello\")\n    assert not t.search(\"hell\")\n    assert not t.search(\"hellos\")\n\n\ndef test_starts_with():\n    t = Trie()\n    t.insert(\"apple\")\n    assert t.starts_with(\"app\")\n    assert t.starts_with(\"apple\")\n    assert not t.starts_with(\"ap2\")\n\n\ndef test_multiple_words():\n    t = Trie()\n    for word in [\"car\", \"card\", \"care\", \"careful\"]:\n        t.insert(word)\n    assert t.search(\"car\")\n    assert t.search(\"card\")\n    assert t.starts_with(\"care\")\n    assert not t.search(\"ca\")\n\n\ndef test_delete_leaf():\n    t = Trie()\n    t.insert(\"test\")\n    t.insert(\"testing\")\n    t.delete(\"test\")\n    assert not t.search(\"test\")\n    assert t.search(\"testing\")\n\n\ndef test_delete_prefix():\n    t = Trie()\n    t.insert(\"test\")\n    t.insert(\"testing\")\n    t.delete(\"testing\")\n    assert t.search(\"test\")\n    assert not t.search(\"testing\")\n\n\ndef test_delete_nonexistent():\n    t = Trie()\n    t.insert(\"hello\")\n    t.delete(\"world\")  # should not raise\n    assert t.search(\"hello\")\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Create src/trie.py implementing a Trie (prefix tree) data structure.\n\nThe Trie class must support:\n  insert(word: str) -> None      — add word to the trie\n  search(word: str) -> bool      — return True if the full word was inserted\n  starts_with(prefix: str) -> bool — return True if any inserted word starts with prefix\n  delete(word: str) -> None      — remove word if present; no-op if not found\n                                   deletion must not corrupt other words that share a prefix\n\nAll 7 tests in tests/test_trie.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "src/trie.py with Trie class",
+      "insert, search, starts_with, delete all implemented",
+      "delete preserves shared prefix words",
+      "All 7 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ passes (7 tests)",
+      "No import errors"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-brownfield-018",
+  "title": "Fix three bugs in a Rust generic Stack",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Fix bugs in Stack<T>: pop removes from front instead of end (FIFO not LIFO), peek returns first() instead of last(), size returns len+1.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "pub struct Stack<T> {\n    items: Vec<T>,\n}\n\nimpl<T> Stack<T> {\n    pub fn new() -> Self {\n        Stack { items: Vec::new() }\n    }\n\n    pub fn push(&mut self, val: T) {\n        self.items.push(val);\n    }\n\n    pub fn pop(&mut self) -> Option<T> {\n        if self.items.is_empty() {\n            return None;\n        }\n        Some(self.items.remove(0)) // BUG 1: removes from front (FIFO), should be self.items.pop()\n    }\n\n    pub fn peek(&self) -> Option<&T> {\n        self.items.first() // BUG 2: returns oldest (bottom), should be self.items.last()\n    }\n\n    pub fn size(&self) -> usize {\n        self.items.len() + 1 // BUG 3: off by one\n    }\n\n    pub fn is_empty(&self) -> bool {\n        self.items.is_empty()\n    }\n}\n",
+      "tests/stack_test.rs": "use generic_stack::Stack;\n\n#[test]\nfn test_lifo_order() {\n    let mut s: Stack<i32> = Stack::new();\n    s.push(1);\n    s.push(2);\n    s.push(3);\n    assert_eq!(s.pop(), Some(3));\n    assert_eq!(s.pop(), Some(2));\n    assert_eq!(s.pop(), Some(1));\n    assert_eq!(s.pop(), None);\n}\n\n#[test]\nfn test_peek() {\n    let mut s: Stack<i32> = Stack::new();\n    s.push(5);\n    s.push(10);\n    assert_eq!(s.peek(), Some(&10)); // peek shows top (last pushed)\n    assert_eq!(s.size(), 2);         // peek is non-destructive\n}\n\n#[test]\nfn test_size_and_empty() {\n    let mut s: Stack<i32> = Stack::new();\n    assert!(s.is_empty());\n    assert_eq!(s.size(), 0);\n    s.push(42);\n    s.push(99);\n    s.push(7);\n    assert_eq!(s.size(), 3);\n    assert!(!s.is_empty());\n}\n",
+      "Cargo.toml": "[package]\nname = \"generic_stack\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/lib.rs:\n1. pop: change `self.items.remove(0)` to `self.items.pop()` for LIFO behavior\n2. peek: change `self.items.first()` to `self.items.last()` to return the top element\n3. size: change `self.items.len() + 1` to `self.items.len()`\nAll 3 cargo test cases must pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": "All 3 cargo test cases pass",
+    "followup_prompts": [
+      "Run `cargo test --quiet` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test --quiet` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "cargo test",
+    "expected_exit_code": 0
+  }
+}

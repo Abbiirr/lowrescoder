@@ -1,0 +1,117 @@
+{
+  "contract": {
+    "harness_version": "1.0.0",
+    "harness_commit_sha": "unknown",
+    "agent": "autocode",
+    "agent_version": "0.1.0",
+    "model": "fast",
+    "provider_mode": "local_free",
+    "lane": "META",
+    "run_id": "supervisor-meta002-20260625-154958",
+    "manifest_hash": "sha256:2e6801b35528d4b4",
+    "budget_profile": {
+      "wall_time_s": 1800,
+      "token_cap": 80000,
+      "max_tool_calls": 150
+    },
+    "budget_profile_id": "wt1800_tc80000_mc150",
+    "command_trace": "../benchmarks/benchmark_runner.py --agent autocode --lane META --model fast --run-id supervisor-meta002-20260625-154958",
+    "timestamp": "2026-06-25T09:52:32.707459+00:00",
+    "comparison_validity": "internal",
+    "seed": null,
+    "image_digests": {
+      "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+    }
+  },
+  "lane": "META",
+  "lane_name": "meta-autocode Build Lane",
+  "agent": "autocode",
+  "model": "fast",
+  "provider_mode": "local_free",
+  "aggregate": {
+    "total_tasks": 2,
+    "resolved": 1,
+    "resolve_rate": 0.5,
+    "infra_fails": 1,
+    "infra_fail_rate": 0.5,
+    "total_wall_time_s": 42.7,
+    "avg_wall_time_s": 21.4
+  },
+  "results": [
+    {
+      "task_id": "meta-001-piv-strategy",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 0.6,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Could not reach the configured gateway at http://localhost:4000/v1.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-001-piv-strategy_20260625_094959/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-002-context-loader",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 42.1,
+      "tool_calls": 20,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 42.1,
+            "changed_files": [],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "6caf8e5f",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-002-context-loader_20260625_095055/grading_attempt_1.txt",
+            "tool_mix": {
+              "todo_write": 4,
+              "list_files": 2,
+              "read_file": 3,
+              "write_file": 2,
+              "run_command": 8,
+              "edit_file": 1
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-002-context-loader_20260625_095055/setup_log.txt"
+      }
+    }
+  ],
+  "image_digests": {
+    "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+  },
+  "halted": false
+}

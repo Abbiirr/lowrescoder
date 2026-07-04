@@ -1,0 +1,125 @@
+{
+  "contract": {
+    "harness_version": "1.0.0",
+    "harness_commit_sha": "unknown",
+    "agent": "autocode",
+    "agent_version": "0.1.0",
+    "model": "bench_stable",
+    "provider_mode": "local_free",
+    "lane": "SMOKE",
+    "run_id": "selfimprove-20260701-161301",
+    "manifest_hash": "sha256:ec4fdeea8b272954",
+    "budget_profile": {
+      "wall_time_s": 600,
+      "token_cap": 30000,
+      "max_tool_calls": 60
+    },
+    "budget_profile_id": "wt600_tc30000_mc60",
+    "command_trace": "/home/bs01763/projects/ai/autocode-full/benchmarks/benchmark_runner.py --agent autocode --lane SMOKE --model bench_stable --max-tasks 4 --task-timeout-s 600 --run-id selfimprove-20260701-161301",
+    "timestamp": "2026-07-01T16:16:05.192263+00:00",
+    "comparison_validity": "internal",
+    "seed": null,
+    "image_digests": {
+      "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+    }
+  },
+  "lane": "SMOKE",
+  "lane_name": "Smoke Tier (curated, fast)",
+  "agent": "autocode",
+  "model": "bench_stable",
+  "provider_mode": "local_free",
+  "aggregate": {
+    "total_tasks": 4,
+    "resolved": 0,
+    "resolve_rate": 0.0,
+    "infra_fails": 4,
+    "infra_fail_rate": 1.0,
+    "total_wall_time_s": 0.0,
+    "avg_wall_time_s": 0.0
+  },
+  "results": [
+    {
+      "task_id": "b27-minimal-config-change",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 0.0,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "Task worker exited without result (rc=1)",
+      "artifacts": {
+        "failure_type": "INFRA_FAIL",
+        "failure_evidence": {
+          "timeout_source": null,
+          "worker_returncode": 1,
+          "worker_stdout": "",
+          "worker_stderr": "/home/bs01763/projects/ai/autocode-full/autocode/.venv/bin/python3: Error while finding module specification for 'benchmarks.benchmark_runner' (ModuleNotFoundError: No module named 'benchmarks')\n"
+        },
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b27-minimal-config-change_20260701_161302/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "b24-hardcoded-secrets",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 0.0,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "Task worker exited without result (rc=1)",
+      "artifacts": {
+        "failure_type": "INFRA_FAIL",
+        "failure_evidence": {
+          "timeout_source": null,
+          "worker_returncode": 1,
+          "worker_stdout": "",
+          "worker_stderr": "/home/bs01763/projects/ai/autocode-full/autocode/.venv/bin/python3: Error while finding module specification for 'benchmarks.benchmark_runner' (ModuleNotFoundError: No module named 'benchmarks')\n"
+        },
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b24-hardcoded-secrets_20260701_161354/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "b20-fix-broken-symlinks",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 0.0,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "Task worker exited without result (rc=1)",
+      "artifacts": {
+        "failure_type": "INFRA_FAIL",
+        "failure_evidence": {
+          "timeout_source": null,
+          "worker_returncode": 1,
+          "worker_stdout": "",
+          "worker_stderr": "/home/bs01763/projects/ai/autocode-full/autocode/.venv/bin/python3: Error while finding module specification for 'benchmarks.benchmark_runner' (ModuleNotFoundError: No module named 'benchmarks')\n"
+        },
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b20-fix-broken-symlinks_20260701_161513/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "b28-deterministic-sort",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 0.0,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "Task worker exited without result (rc=1)",
+      "artifacts": {
+        "failure_type": "INFRA_FAIL",
+        "failure_evidence": {
+          "timeout_source": null,
+          "worker_returncode": 1,
+          "worker_stdout": "",
+          "worker_stderr": "/home/bs01763/projects/ai/autocode-full/autocode/.venv/bin/python3: Error while finding module specification for 'benchmarks.benchmark_runner' (ModuleNotFoundError: No module named 'benchmarks')\n"
+        }
+      }
+    }
+  ],
+  "image_digests": {
+    "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+  },
+  "halted": false
+}

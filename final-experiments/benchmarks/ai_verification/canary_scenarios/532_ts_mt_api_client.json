@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "532-ts-mt-api-client",
+  "title": "Build a typed fetch API client in TypeScript — 3 turns",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {"language": "typescript", "framework": null, "extra": {}},
+  "description": "Three turns build a typed fetch client: turn 1 GET with generic types, turn 2 POST with body, turn 3 error handling.",
+  "repo_seed": {
+    "files": {
+      "package.json": "{\n  \"name\": \"api-client\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"test\": \"jest --forceExit\"\n  },\n  \"devDependencies\": {\n    \"@types/jest\": \"^29.0.0\",\n    \"jest\": \"^29.0.0\",\n    \"jest-fetch-mock\": \"^3.0.0\",\n    \"ts-jest\": \"^29.0.0\",\n    \"typescript\": \"^5.0.0\"\n  },\n  \"jest\": {\n    \"preset\": \"ts-jest\",\n    \"testEnvironment\": \"node\",\n    \"setupFiles\": [\"jest-fetch-mock/setupJest\"]\n  }\n}\n",
+      "src/apiClient.ts": "export interface ApiError {\n  status: number;\n  message: string;\n}\n\nexport class ApiClient {\n  private baseUrl: string;\n\n  constructor(baseUrl: string) {\n    this.baseUrl = baseUrl.replace(/\\/$/, '');\n  }\n\n  /**\n   * GET request. Returns typed response data or throws ApiError.\n   * TODO: implement\n   */\n  async get<T>(path: string): Promise<T> {\n    throw new Error('not implemented');\n  }\n\n  /**\n   * POST request with JSON body. Returns typed response or throws ApiError.\n   * TODO: implement\n   */\n  async post<T, B = unknown>(path: string, body: B): Promise<T> {\n    throw new Error('not implemented');\n  }\n}\n",
+      "src/apiClient.test.ts": "import fetchMock from 'jest-fetch-mock';\nimport { ApiClient } from './apiClient';\n\nbeforeEach(() => {\n  fetchMock.resetMocks();\n});\n\ninterface Item { id: number; name: string; }\n\ntest('GET returns typed data', async () => {\n  fetchMock.mockResponseOnce(JSON.stringify({ id: 1, name: 'test' }));\n  const client = new ApiClient('http://api.example.com');\n  const item = await client.get<Item>('/items/1');\n  expect(item.id).toBe(1);\n  expect(item.name).toBe('test');\n  expect(fetchMock).toHaveBeenCalledWith('http://api.example.com/items/1', expect.any(Object));\n});\n\ntest('GET throws ApiError on non-2xx', async () => {\n  fetchMock.mockResponseOnce('Not Found', { status: 404 });\n  const client = new ApiClient('http://api.example.com');\n  await expect(client.get('/missing')).rejects.toMatchObject({ status: 404 });\n});\n\ntest('POST sends JSON body', async () => {\n  fetchMock.mockResponseOnce(JSON.stringify({ id: 2, name: 'created' }));\n  const client = new ApiClient('http://api.example.com');\n  const result = await client.post<Item, { name: string }>('/items', { name: 'created' });\n  expect(result.id).toBe(2);\n  const call = fetchMock.mock.calls[0];\n  expect(call[1]?.method).toBe('POST');\n  expect(call[1]?.headers).toMatchObject({ 'Content-Type': 'application/json' });\n});\n\ntest('POST throws ApiError on 500', async () => {\n  fetchMock.mockResponseOnce('Server Error', { status: 500 });\n  const client = new ApiClient('http://api.example.com');\n  await expect(client.post('/items', {})).rejects.toMatchObject({ status: 500 });\n});\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `get<T>(path: string): Promise<T>` in `src/apiClient.ts`. Call `fetch(this.baseUrl + path, { headers: { 'Accept': 'application/json' } })`. If the response is not ok (response.ok === false), throw `{ status: response.status, message: response.statusText }` as an ApiError. Otherwise return `response.json()` as T. Run `npm test -- --forceExit`.",
+    "followup_prompts": [
+      "Good. Now implement `post<T, B>(path: string, body: B): Promise<T>` — use method: 'POST', headers including Content-Type: application/json, and body: JSON.stringify(body). Same error handling as GET. Run `npm test -- --forceExit` and fix any failures.",
+      "Final check: run `npm test -- --forceExit` one more time. All 4 tests must pass. Make sure error objects match the expected shape: `{ status: number, message: string }`."
+    ],
+    "success_criteria": [
+      "GET fetches correct URL and returns typed JSON",
+      "GET throws ApiError on non-2xx response",
+      "POST sends JSON body with correct Content-Type header",
+      "POST throws ApiError on server error",
+      "All 4 tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "npm test -- --forceExit"}
+  },
+  "duration_hint_minutes": 15
+}

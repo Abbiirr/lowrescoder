@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-brownfield-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Migrate ioutil calls to os/io in Go",
+  "description": "Brownfield Go migration: replace deprecated ioutil.ReadFile, ioutil.WriteFile, ioutil.TempFile with os.ReadFile, os.WriteFile, os.CreateTemp. All existing tests must still pass.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module fileutil\n\ngo 1.21\n"
+      },
+      {
+        "path": "fileutil.go",
+        "content": "package fileutil\n\nimport (\n\t\"io/ioutil\"\n\t\"os\"\n)\n\nfunc ReadText(path string) (string, error) {\n\tdata, err := ioutil.ReadFile(path)\n\tif err != nil {\n\t\treturn \"\", err\n\t}\n\treturn string(data), nil\n}\n\nfunc WriteText(path, content string) error {\n\treturn ioutil.WriteFile(path, []byte(content), 0644)\n}\n\nfunc TempFile(dir, pattern string) (*os.File, error) {\n\treturn ioutil.TempFile(dir, pattern)\n}\n"
+      },
+      {
+        "path": "fileutil_test.go",
+        "content": "package fileutil\n\nimport (\n\t\"os\"\n\t\"testing\"\n)\n\nfunc TestReadWrite(t *testing.T) {\n\tf, err := TempFile(\"\", \"test\")\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\tdefer os.Remove(f.Name())\n\tf.Close()\n\n\terr = WriteText(f.Name(), \"hello world\")\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\n\tgot, err := ReadText(f.Name())\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\tif got != \"hello world\" {\n\t\tt.Fatalf(\"want 'hello world' got %q\", got)\n\t}\n}\n\nfunc TestReadMissing(t *testing.T) {\n\t_, err := ReadText(\"/nonexistent/path/file.txt\")\n\tif err == nil {\n\t\tt.Fatal(\"expected error for missing file\")\n\t}\n}\n\nfunc TestWriteAndRead(t *testing.T) {\n\tf, err := TempFile(\"\", \"rw\")\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\tdefer os.Remove(f.Name())\n\tf.Close()\n\tif err := WriteText(f.Name(), \"data\"); err != nil {\n\t\tt.Fatal(err)\n\t}\n\tgot, _ := ReadText(f.Name())\n\tif got != \"data\" {\n\t\tt.Fatalf(\"want data got %q\", got)\n\t}\n}\n\nfunc TestTempFile(t *testing.T) {\n\tf, err := TempFile(\"\", \"prefix\")\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\tdefer os.Remove(f.Name())\n\tf.Close()\n}\n\nfunc TestWriteEmpty(t *testing.T) {\n\tf, _ := TempFile(\"\", \"empty\")\n\tdefer os.Remove(f.Name())\n\tf.Close()\n\tWriteText(f.Name(), \"\")\n\tgot, _ := ReadText(f.Name())\n\tif got != \"\" {\n\t\tt.Fatalf(\"want empty got %q\", got)\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Migrate fileutil.go from deprecated ioutil to modern os/io equivalents.\n\n- Replace `ioutil.ReadFile` with `os.ReadFile`\n- Replace `ioutil.WriteFile` with `os.WriteFile`\n- Replace `ioutil.TempFile` with `os.CreateTemp`\n- Remove `\"io/ioutil\"` from imports\n- Function signatures must not change\n\nAll 5 tests in fileutil_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "ioutil import removed; os used for ReadFile, WriteFile, CreateTemp",
+      "ReadText signature unchanged",
+      "WriteText signature unchanged",
+      "TempFile signature unchanged",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `go test ./...` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

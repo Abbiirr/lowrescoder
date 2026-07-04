@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-csv-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Migrate Go CSV util from io/ioutil to os package",
+  "description": "The go_csv_reader package uses the deprecated io/ioutil package for file I/O in internal/csvutil/csvutil.go. Migrate to modern os.ReadFile and os.WriteFile.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_csv_reader",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Migrate internal/csvutil/csvutil.go from the deprecated io/ioutil package to modern equivalents.\n\nReplacements:\n  ioutil.ReadFile(path)  ->  os.ReadFile(path)\n  ioutil.WriteFile(path, data, perm)  ->  os.WriteFile(path, data, perm)\n\nRemove the 'io/ioutil' import and add 'os' if not already present.\nRemove all //nolint:staticcheck comments.\nAll existing tests must pass without modification.\n\nRun go test ./... to confirm.",
+    "required_artifacts": [
+      "No io/ioutil import",
+      "os.ReadFile used instead of ioutil.ReadFile",
+      "os.WriteFile used instead of ioutil.WriteFile",
+      "All tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "io/ioutil not imported"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `go test ./...` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

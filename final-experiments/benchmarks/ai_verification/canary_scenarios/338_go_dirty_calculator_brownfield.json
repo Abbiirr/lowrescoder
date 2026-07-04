@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-brownfield-013",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Fix bugs in a Go integer calculator",
+  "description": "Brownfield Go dirty_cleanup: fix three intentional bugs in integer calculator functions (Power uses multiplication instead of exponentiation, Factorial computes wrong base case, Gcd uses wrong algorithm).",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module intcalc\n\ngo 1.21\n"
+      },
+      {
+        "path": "intcalc.go",
+        "content": "package intcalc\n\n// BUG: returns base * exp instead of base^exp\nfunc Power(base, exp int) int {\n\tif exp == 0 {\n\t\treturn 1\n\t}\n\treturn base * exp\n}\n\n// BUG: base case returns 0 instead of 1\nfunc Factorial(n int) int {\n\tif n <= 0 {\n\t\treturn 0\n\t}\n\treturn n * Factorial(n-1)\n}\n\n// BUG: uses subtraction (Euclidean by subtraction) which is correct but\n// the implementation subtracts in wrong direction — always a-b even when b>a\nfunc Gcd(a, b int) int {\n\tfor b != 0 {\n\t\ta = a - b\n\t\tif a < 0 {\n\t\t\ta, b = b, -a\n\t\t}\n\t}\n\treturn a\n}\n"
+      },
+      {
+        "path": "intcalc_test.go",
+        "content": "package intcalc\n\nimport \"testing\"\n\nfunc TestPower(t *testing.T) {\n\tif got := Power(2, 10); got != 1024 {\n\t\tt.Fatalf(\"want 1024, got %d\", got)\n\t}\n}\n\nfunc TestPowerZeroExp(t *testing.T) {\n\tif got := Power(5, 0); got != 1 {\n\t\tt.Fatalf(\"want 1, got %d\", got)\n\t}\n}\n\nfunc TestFactorial(t *testing.T) {\n\tif got := Factorial(5); got != 120 {\n\t\tt.Fatalf(\"want 120, got %d\", got)\n\t}\n}\n\nfunc TestFactorialZero(t *testing.T) {\n\tif got := Factorial(0); got != 1 {\n\t\tt.Fatalf(\"want 1, got %d\", got)\n\t}\n}\n\nfunc TestGcd(t *testing.T) {\n\tif got := Gcd(48, 18); got != 6 {\n\t\tt.Fatalf(\"want 6, got %d\", got)\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in intcalc.go.\n\nBug 1 — Power: returns base * exp instead of base^exp.\n  Fix: use a loop to multiply base by itself exp times:\n    result := 1\n    for i := 0; i < exp; i++ { result *= base }\n    return result\n\nBug 2 — Factorial: base case returns 0 instead of 1.\n  Fix: change `return 0` to `return 1`\n\nBug 3 — Gcd: custom subtraction loop is fragile; use the standard modulo algorithm.\n  Fix: replace loop body with: a, b = b, a%b\n\nAll 5 tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Power(2, 10) = 1024",
+      "Factorial(0) = 1, Factorial(5) = 120",
+      "Gcd(48, 18) = 6",
+      "All edge cases handled",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

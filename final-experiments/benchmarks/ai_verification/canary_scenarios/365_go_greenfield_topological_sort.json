@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-greenfield-040",
+  "title": "Implement topological sort using Kahn's algorithm in Go",
+  "category": "repo_init",
+  "difficulty": "hard",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement topological sort (Kahn's BFS-based algorithm) on a directed acyclic graph. Return error if a cycle is detected.",
+  "repo_seed": {
+    "files": {
+      "topo.go": "package topo\n\nimport \"errors\"\n\n// TopoSort performs a topological sort of the DAG given as adjacency list.\n// Returns the sorted order, or error if the graph has a cycle.\nfunc TopoSort(graph map[string][]string) ([]string, error) {\n\tpanic(\"not implemented\")\n}\n",
+      "topo_test.go": "package topo\n\nimport \"testing\"\n\nfunc TestSimple(t *testing.T) {\n\tg := map[string][]string{\n\t\t\"A\": {\"B\", \"C\"},\n\t\t\"B\": {\"D\"},\n\t\t\"C\": {\"D\"},\n\t\t\"D\": {},\n\t}\n\torder, err := TopoSort(g)\n\tif err != nil { t.Fatalf(\"unexpected error: %v\", err) }\n\tpos := map[string]int{}\n\tfor i, v := range order { pos[v] = i }\n\tif pos[\"A\"] >= pos[\"B\"] || pos[\"A\"] >= pos[\"C\"] { t.Fatal(\"A must come before B and C\") }\n\tif pos[\"B\"] >= pos[\"D\"] || pos[\"C\"] >= pos[\"D\"] { t.Fatal(\"B and C must come before D\") }\n}\n\nfunc TestSingleNode(t *testing.T) {\n\tg := map[string][]string{\"X\": {}}\n\torder, err := TopoSort(g)\n\tif err != nil { t.Fatalf(\"unexpected error: %v\", err) }\n\tif len(order) != 1 || order[0] != \"X\" { t.Fatalf(\"want [X], got %v\", order) }\n}\n\nfunc TestCycleDetected(t *testing.T) {\n\tg := map[string][]string{\n\t\t\"A\": {\"B\"},\n\t\t\"B\": {\"C\"},\n\t\t\"C\": {\"A\"},\n\t}\n\t_, err := TopoSort(g)\n\tif err == nil { t.Fatal(\"expected cycle error, got nil\") }\n}\n\nfunc TestLinearChain(t *testing.T) {\n\tg := map[string][]string{\"1\": {\"2\"}, \"2\": {\"3\"}, \"3\": {}}\n\torder, err := TopoSort(g)\n\tif err != nil { t.Fatalf(\"unexpected error: %v\", err) }\n\tif order[0] != \"1\" || order[1] != \"2\" || order[2] != \"3\" {\n\t\tt.Fatalf(\"want [1 2 3], got %v\", order)\n\t}\n}\n",
+      "go.mod": "module topo\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement TopoSort using Kahn's algorithm:\n1. Compute in-degree for every node; initialize queue with nodes of in-degree 0\n2. While queue non-empty: dequeue node, append to result, for each neighbor decrement in-degree; if it reaches 0 enqueue it\n3. If len(result) < len(graph): return nil, errors.New(\"cycle detected\")\n4. Return result, nil\nNote: initialise all graph keys in in-degree map (including those with empty adjacency lists) so isolated nodes are included.\nAll 4 tests must pass.",
+    "entry_point": "topo.go",
+    "success_criteria": "All 4 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

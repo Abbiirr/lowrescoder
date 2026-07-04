@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-frontend-009",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add HTTP read handlers to go_ioutil_reader",
+  "description": "Brownfield Go task: expose the fileutil package over HTTP by adding two read handler functions.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_ioutil_reader",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add two HTTP handlers to the go_ioutil_reader project. All 3 existing tests must still pass.\n\nCreate a new file internal/handler/handler.go (package handler) with:\n\n  func ReadContentHandler(w http.ResponseWriter, r *http.Request)\n    — accepts GET only (405 otherwise)\n    — reads the query param \"path\" (400 if missing)\n    — reads the file with fileutil.ReadBytes; on error returns 500\n    — writes Content-Type: text/plain; charset=utf-8 and the file bytes\n\n  func ReadLinesHandler(w http.ResponseWriter, r *http.Request)\n    — accepts GET only (405 otherwise)\n    — reads the query param \"path\" (400 if missing)\n    — reads lines with fileutil.ReadLines; on error returns 500\n    — marshals lines to JSON and writes Content-Type: application/json\n\nCreate internal/handler/handler_test.go with at least 4 tests using httptest:\n  - ReadContentHandler returns 200 with file contents\n  - ReadContentHandler returns 400 when path param is missing\n  - ReadLinesHandler returns 200 with JSON array of lines\n  - ReadLinesHandler returns 405 for non-GET requests\n\nAll 3 existing fixture tests must still pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "ReadContentHandler in internal/handler/handler.go",
+      "ReadLinesHandler in internal/handler/handler.go",
+      "ReadContentHandler returns 200 with file content",
+      "ReadContentHandler returns 400 for missing path",
+      "ReadLinesHandler returns JSON array",
+      "ReadLinesHandler returns 405 for POST",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `go test ./...` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

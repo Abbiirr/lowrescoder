@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-030",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "hard",
+  "duration_hint_minutes": 35,
+  "title": "Implement minimax for Tic-Tac-Toe in Python",
+  "description": "Greenfield Python task: implement a minimax function that evaluates a Tic-Tac-Toe board and returns the best move for the maximizing player. The board is a list of 9 values ('X', 'O', or None).",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"tictactoe\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/tictactoe.py",
+        "content": "# TODO: implement minimax for Tic-Tac-Toe\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_tictactoe.py",
+        "content": "from src.tictactoe import check_winner, is_full, best_move\n\n\ndef test_check_winner_x():\n    board = ['X', 'X', 'X', None, None, None, None, None, None]\n    assert check_winner(board) == 'X'\n\n\ndef test_check_winner_none():\n    board = ['X', 'O', 'X', None, None, None, None, None, None]\n    assert check_winner(board) is None\n\n\ndef test_is_full():\n    board = ['X', 'O', 'X', 'O', 'X', 'O', 'O', 'X', 'O']\n    assert is_full(board)\n    board[0] = None\n    assert not is_full(board)\n\n\ndef test_best_move_wins():\n    # X can win immediately at index 2\n    board = ['X', 'X', None, 'O', 'O', None, None, None, None]\n    move = best_move(board, 'X')\n    assert move == 2\n\n\ndef test_best_move_blocks():\n    # X should block O from winning at index 2\n    board = ['O', 'O', None, 'X', None, None, None, None, None]\n    move = best_move(board, 'X')\n    assert move == 2\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement minimax Tic-Tac-Toe in src/tictactoe.py.\n\nWINS = [(0,1,2),(3,4,5),(6,7,8),(0,3,6),(1,4,7),(2,5,8),(0,4,8),(2,4,6)]\n\ndef check_winner(board: list) -> str | None:\n    for a,b,c in WINS:\n        if board[a] and board[a] == board[b] == board[c]:\n            return board[a]\n    return None\n\ndef is_full(board: list) -> bool:\n    return all(x is not None for x in board)\n\ndef minimax(board: list, player: str, maximizing: bool) -> int:\n    winner = check_winner(board)\n    if winner == 'X': return 10\n    if winner == 'O': return -10\n    if is_full(board): return 0\n    opponent = 'O' if player == 'X' else 'X'\n    scores = []\n    for i in range(9):\n        if board[i] is None:\n            board[i] = player\n            score = minimax(board, opponent, not maximizing)\n            board[i] = None\n            scores.append(score)\n    return max(scores) if maximizing else min(scores)\n\ndef best_move(board: list, player: str) -> int:\n    best = None\n    best_score = float('-inf') if player == 'X' else float('inf')\n    opponent = 'O' if player == 'X' else 'X'\n    for i in range(9):\n        if board[i] is None:\n            board[i] = player\n            score = minimax(board, opponent, player == 'O')  # opponent maximizes if player is X\n            board[i] = None\n            if player == 'X' and score > best_score:\n                best_score = score; best = i\n            elif player == 'O' and score < best_score:\n                best_score = score; best = i\n    return best\n\nAll 5 tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "check_winner detects row/col/diagonal wins",
+      "is_full returns True only when no None remains",
+      "minimax returns +10 for X win, -10 for O win, 0 for draw",
+      "best_move returns index of winning move or blocking move",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.tictactoe import check_winner, is_full, best_move\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.tictactoe import check_winner, is_full, best_move\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

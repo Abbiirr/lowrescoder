@@ -1,0 +1,178 @@
+{
+  "contract": {
+    "harness_version": "1.0.0",
+    "harness_commit_sha": "unknown",
+    "agent": "autocode",
+    "agent_version": "0.1.0",
+    "model": "bench_stable",
+    "provider_mode": "local_free",
+    "lane": "SMOKE",
+    "run_id": "validation-postfix-20260629",
+    "manifest_hash": "sha256:ec4fdeea8b272954",
+    "budget_profile": {
+      "wall_time_s": 600,
+      "token_cap": 30000,
+      "max_tool_calls": 60
+    },
+    "budget_profile_id": "wt600_tc30000_mc60",
+    "command_trace": "/home/bs01763/projects/ai/autocode-full/benchmarks/benchmark_runner.py --agent autocode --lane SMOKE --model bench_stable --max-tasks 4 --run-id validation-postfix-20260629",
+    "timestamp": "2026-06-29T08:06:05.606934+00:00",
+    "comparison_validity": "internal",
+    "seed": null,
+    "image_digests": {
+      "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+    }
+  },
+  "lane": "SMOKE",
+  "lane_name": "Smoke Tier (curated, fast)",
+  "agent": "autocode",
+  "model": "bench_stable",
+  "provider_mode": "local_free",
+  "aggregate": {
+    "total_tasks": 4,
+    "resolved": 1,
+    "resolve_rate": 0.25,
+    "infra_fails": 3,
+    "infra_fail_rate": 0.75,
+    "total_wall_time_s": 2066.8,
+    "avg_wall_time_s": 516.7
+  },
+  "results": [
+    {
+      "task_id": "b27-minimal-config-change",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 266.8,
+      "tool_calls": 10,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 266.8,
+            "changed_files": [
+              "config.yaml"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "cbb1a1b0",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b27-minimal-config-change_20260629_071154/grading_attempt_1.txt",
+            "tool_mix": {
+              "edit_file": 2,
+              "run_command": 3,
+              "todo_write": 4,
+              "read_file": 1
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 3,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b27-minimal-config-change_20260629_071154/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "b24-hardcoded-secrets",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 600.0,
+      "tool_calls": 42,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "Timeout after 600s",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "Timeout after 600s",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b24-hardcoded-secrets_20260629_071717/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "b20-fix-broken-symlinks",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 600.0,
+      "tool_calls": 39,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "Timeout after 600s",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": true,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "Timeout after 600s",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b20-fix-broken-symlinks_20260629_072952/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "b28-deterministic-sort",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 600.0,
+      "tool_calls": 20,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "Timeout after 600s",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "Timeout after 600s",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false
+      }
+    }
+  ],
+  "image_digests": {
+    "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+  },
+  "halted": false
+}

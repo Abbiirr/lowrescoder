@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-043",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement a bounded generic stack in Rust",
+  "description": "Greenfield Rust task: implement BoundedStack<T> with a fixed capacity. push() returns Err if full, pop() returns None if empty. Supports peek, len, is_empty, is_full.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"boundedstack\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement BoundedStack<T>\n"
+      },
+      {
+        "path": "tests/stack_test.rs",
+        "content": "use boundedstack::BoundedStack;\n\n#[test]\nfn test_push_pop() {\n    let mut s: BoundedStack<i32> = BoundedStack::new(3);\n    assert!(s.push(1).is_ok());\n    assert!(s.push(2).is_ok());\n    assert_eq!(s.pop(), Some(2));\n    assert_eq!(s.pop(), Some(1));\n    assert_eq!(s.pop(), None);\n}\n\n#[test]\nfn test_capacity_exceeded() {\n    let mut s: BoundedStack<&str> = BoundedStack::new(2);\n    s.push(\"a\").unwrap();\n    s.push(\"b\").unwrap();\n    assert!(s.push(\"c\").is_err());\n}\n\n#[test]\nfn test_peek() {\n    let mut s: BoundedStack<u32> = BoundedStack::new(5);\n    assert_eq!(s.peek(), None);\n    s.push(42).unwrap();\n    assert_eq!(s.peek(), Some(&42));\n    assert_eq!(s.len(), 1);  // peek doesn't remove\n}\n\n#[test]\nfn test_is_empty_is_full() {\n    let mut s: BoundedStack<i32> = BoundedStack::new(2);\n    assert!(s.is_empty());\n    assert!(!s.is_full());\n    s.push(1).unwrap();\n    s.push(2).unwrap();\n    assert!(s.is_full());\n    assert!(!s.is_empty());\n}\n\n#[test]\nfn test_len() {\n    let mut s: BoundedStack<i32> = BoundedStack::new(10);\n    assert_eq!(s.len(), 0);\n    s.push(1).unwrap();\n    s.push(2).unwrap();\n    assert_eq!(s.len(), 2);\n    s.pop();\n    assert_eq!(s.len(), 1);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement BoundedStack<T> in src/lib.rs.\n\npub struct BoundedStack<T> {\n    data: Vec<T>,\n    capacity: usize,\n}\n\nimpl<T> BoundedStack<T> {\n    pub fn new(capacity: usize) -> Self {\n        BoundedStack { data: Vec::new(), capacity }\n    }\n\n    pub fn push(&mut self, item: T) -> Result<(), &'static str> {\n        if self.data.len() >= self.capacity {\n            return Err(\"stack is full\");\n        }\n        self.data.push(item);\n        Ok(())\n    }\n\n    pub fn pop(&mut self) -> Option<T> {\n        self.data.pop()\n    }\n\n    pub fn peek(&self) -> Option<&T> {\n        self.data.last()\n    }\n\n    pub fn len(&self) -> usize {\n        self.data.len()\n    }\n\n    pub fn is_empty(&self) -> bool {\n        self.data.is_empty()\n    }\n\n    pub fn is_full(&self) -> bool {\n        self.data.len() >= self.capacity\n    }\n}\n\nAll 5 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "BoundedStack<T> is generic over T",
+      "push returns Err when at capacity",
+      "pop returns None when empty",
+      "peek returns Some(&T) without removing",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

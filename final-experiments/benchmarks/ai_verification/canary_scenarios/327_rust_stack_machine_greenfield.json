@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-040",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "hard",
+  "duration_hint_minutes": 35,
+  "title": "Implement a stack-based RPN calculator in Rust",
+  "description": "Greenfield Rust task: implement an RPN (Reverse Polish Notation) calculator that evaluates a sequence of tokens. Tokens are either f64 literals or operators (+, -, *, /). Returns Ok(f64) or Err(String).",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"rpncalc\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement RPN calculator\n"
+      },
+      {
+        "path": "tests/rpn_test.rs",
+        "content": "use rpncalc::evaluate;\n\n#[test]\nfn test_simple_add() {\n    assert_eq!(evaluate(\"3 4 +\").unwrap(), 7.0);\n}\n\n#[test]\nfn test_subtract() {\n    assert_eq!(evaluate(\"10 3 -\").unwrap(), 7.0);\n}\n\n#[test]\nfn test_multiply() {\n    assert_eq!(evaluate(\"6 7 *\").unwrap(), 42.0);\n}\n\n#[test]\nfn test_divide() {\n    assert!((evaluate(\"10 4 /\").unwrap() - 2.5).abs() < 1e-9);\n}\n\n#[test]\nfn test_complex_expression() {\n    // (3 + 4) * 2 = 14 in RPN: 3 4 + 2 *\n    assert_eq!(evaluate(\"3 4 + 2 *\").unwrap(), 14.0);\n}\n\n#[test]\nfn test_empty_expression_error() {\n    assert!(evaluate(\"\").is_err());\n}\n\n#[test]\nfn test_too_many_operands_error() {\n    assert!(evaluate(\"1 2 3\").is_err());\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement the RPN evaluate function in src/lib.rs.\n\npub fn evaluate(expr: &str) -> Result<f64, String> {\n    let mut stack: Vec<f64> = Vec::new();\n    for token in expr.split_whitespace() {\n        match token {\n            \"+\" | \"-\" | \"*\" | \"/\" => {\n                let b = stack.pop().ok_or(\"stack underflow\")?;\n                let a = stack.pop().ok_or(\"stack underflow\")?;\n                let result = match token {\n                    \"+\" => a + b,\n                    \"-\" => a - b,\n                    \"*\" => a * b,\n                    \"/\" => a / b,\n                    _ => unreachable!(),\n                };\n                stack.push(result);\n            }\n            num => {\n                let n = num.parse::<f64>().map_err(|e| format!(\"parse error: {}\", e))?;\n                stack.push(n);\n            }\n        }\n    }\n    if stack.len() == 1 {\n        Ok(stack.pop().unwrap())\n    } else {\n        Err(format!(\"invalid expression: {} values remain\", stack.len()))\n    }\n}\n\nAll 7 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "evaluate splits on whitespace and processes tokens left to right",
+      "operators pop two values, push result",
+      "numeric tokens are parsed as f64 and pushed",
+      "Empty expression or leftover values return Err",
+      "All 7 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (7 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

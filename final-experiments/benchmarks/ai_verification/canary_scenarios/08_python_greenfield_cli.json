@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-init-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 20,
+  "title": "Greenfield: build a word-frequency CLI tool from scratch",
+  "description": "Start with an empty repo (only pyproject.toml with pytest). Build a word-frequency CLI: given a text file, print the top-N most frequent words sorted by count descending. Include a proper test suite.",
+  "target_stack": {
+    "language": "python",
+    "framework": "",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": "",
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"word-freq\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = [\"pytest>=8.0\"]\n\n[project.scripts]\nword-freq = \"word_freq.cli:main\"\n"
+      },
+      {
+        "path": "README.md",
+        "content": "# word-freq\n\nCLI tool: print top-N most frequent words in a text file.\n\nUsage: `word-freq <file> [--top N]`\n"
+      }
+    ],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "Build a word-frequency CLI from scratch. The project is set up with a pyproject.toml that declares a `word-freq` entry point pointing to `word_freq.cli:main`.\n\nRequirements:\n1. `src/word_freq/__init__.py` and `src/word_freq/core.py` — word counting logic: tokenize (lowercase, strip punctuation), count, return sorted list of (word, count) tuples.\n2. `src/word_freq/cli.py` — argparse CLI: `word-freq <file> [--top N]` (default N=10). Reads file, prints top N words one per line: `word  COUNT`.\n3. `tests/test_core.py` — at least 5 tests covering: empty input, single word, multiple words, punctuation stripping, top-N limit.\n4. `uv run pytest tests/ -q` must pass.",
+    "required_artifacts": [
+      "src/word_freq/core.py with word counting logic",
+      "src/word_freq/cli.py with argparse entry point",
+      "tests/test_core.py with 5+ tests",
+      "pytest passes"
+    ],
+    "success_criteria": [
+      "core.py tokenizes and counts correctly",
+      "cli.py handles --top N argument",
+      "Punctuation stripped from tokens",
+      "Case-insensitive counting",
+      "At least 5 tests covering edge cases"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -q` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q",
+      "lint": "uv run ruff check src/ tests/ 2>/dev/null || true"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

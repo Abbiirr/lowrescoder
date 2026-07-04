@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-019",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement sliding window algorithms in Python",
+  "description": "Greenfield Python task: implement max_subarray_sum (max sum of fixed-size window), longest_unique_substr (longest substring without repeating chars using sliding window), and min_subarray_length (minimum length subarray with sum >= target).",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"sliding_window\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/sliding_window.py",
+        "content": "# TODO: implement sliding window functions\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_sliding_window.py",
+        "content": "from src.sliding_window import max_subarray_sum, longest_unique_substr, min_subarray_length\n\n\ndef test_max_subarray_sum():\n    assert max_subarray_sum([1, 3, -1, -3, 5, 3, 6], 3) == 14\n    assert max_subarray_sum([1, 2, 3], 2) == 5\n\n\ndef test_longest_unique_substr():\n    assert longest_unique_substr(\"abcabcbb\") == 3\n    assert longest_unique_substr(\"bbbbb\") == 1\n    assert longest_unique_substr(\"\") == 0\n\n\ndef test_min_subarray_length():\n    assert min_subarray_length([2, 3, 1, 2, 4, 3], 7) == 2\n    assert min_subarray_length([1, 1, 1, 1], 10) == 0\n\n\ndef test_max_subarray_sum_single_window():\n    assert max_subarray_sum([5], 1) == 5\n\n\ndef test_longest_unique_substr_all_unique():\n    assert longest_unique_substr(\"abcde\") == 5\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement three sliding window functions in src/sliding_window.py.\n\ndef max_subarray_sum(nums: list, k: int) -> int:\n    # Return max sum of any contiguous subarray of exactly size k.\n    # Build first window sum, then slide: add next, subtract leftmost.\n\ndef longest_unique_substr(s: str) -> int:\n    # Use a dict to track last seen index of each char.\n    # Expand right pointer; when duplicate found, advance left past last occurrence.\n    # Track max window size.\n\ndef min_subarray_length(nums: list, target: int) -> int:\n    # Find minimum length contiguous subarray with sum >= target.\n    # Expand right; when sum>=target, shrink from left.\n    # Return 0 if no such subarray exists.\n\nAll 5 tests in tests/test_sliding_window.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "max_subarray_sum builds initial window then slides one element at a time",
+      "longest_unique_substr uses dict {char: last_index} and left pointer",
+      "min_subarray_length uses shrinking window and tracks min length",
+      "min_subarray_length returns 0 when no subarray satisfies condition",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.sliding_window import max_subarray_sum, longest_unique_substr, min_subarray_length\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.sliding_window import max_subarray_sum, longest_unique_substr, min_subarray_length\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

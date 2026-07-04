@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-refactor-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Extract filterByName helper from Go APIItems handler and test it directly",
+  "description": "The Go web app APIItems handler contains inline name-filter logic. Extract it into a named, testable helper function.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_web_app",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The APIItems handler in internal/handler/items.go filters items inline when ?q= is set. Refactor it:\n\n1. Extract the filter logic into:\n   func filterByName(items []Item, q string) []Item\n   - q is already lowercased before the call (or normalize inside the function — your choice)\n   - Returns items whose Name contains q (case-insensitive)\n   - Returns all items if q is empty\n   - Returns a non-nil empty slice (not nil) when nothing matches\n\n2. Update APIItems to call filterByName instead of inline logic.\n\n3. Write 3 unit tests for filterByName directly:\n   TestFilterByName_Match — q=\"widget\" matches \"Widget A\"\n   TestFilterByName_NoMatch — q=\"xyz\" returns empty slice (len == 0)\n   TestFilterByName_EmptyQuery — q=\"\" returns all 3 items\n\nThe refactor must not change any observable behaviour. All 3 existing tests (TestIndex, TestAPIItems, TestAPIItemsFilter) must still pass. go test ./... and go build ./... must succeed.",
+    "required_artifacts": [
+      "func filterByName(items []Item, q string) []Item in items.go",
+      "APIItems updated to use filterByName",
+      "TestFilterByName_Match, TestFilterByName_NoMatch, TestFilterByName_EmptyQuery",
+      "All 3 original tests still pass",
+      "go test ./... passes"
+    ],
+    "success_criteria": [
+      "filterByName is a public or package-level function callable from tests",
+      "APIItems delegates to filterByName",
+      "All 6 tests pass"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `go test ./...` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

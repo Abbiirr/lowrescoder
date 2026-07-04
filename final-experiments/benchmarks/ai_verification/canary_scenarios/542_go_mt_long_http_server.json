@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "542-go-mt-long-http-server",
+  "title": "Build a REST HTTP server in Go — 4 turns",
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "Four-turn REST server: turn 1 GET /items list, turn 2 POST /items create, turn 3 DELETE /items/:id, turn 4 full test suite.",
+  "repo_seed": {
+    "files": {
+      "go.mod": "module github.com/ai-verification/http-server\n\ngo 1.22\n",
+      "server/server.go": "package server\n\nimport (\n\t\"encoding/json\"\n\t\"fmt\"\n\t\"net/http\"\n\t\"strconv\"\n\t\"strings\"\n\t\"sync\"\n)\n\ntype Item struct {\n\tID   int    `json:\"id\"`\n\tName string `json:\"name\"`\n}\n\n// Store is the in-memory item store.\ntype Store struct {\n\tmu     sync.RWMutex\n\titems  map[int]Item\n\tnextID int\n}\n\nfunc NewStore() *Store {\n\treturn &Store{items: make(map[int]Item), nextID: 1}\n}\n\nfunc (s *Store) List() []Item {\n\ts.mu.RLock()\n\tdefer s.mu.RUnlock()\n\tresult := make([]Item, 0, len(s.items))\n\tfor _, item := range s.items {\n\t\tresult = append(result, item)\n\t}\n\treturn result\n}\n\nfunc (s *Store) Create(name string) Item {\n\ts.mu.Lock()\n\tdefer s.mu.Unlock()\n\titem := Item{ID: s.nextID, Name: name}\n\ts.items[s.nextID] = item\n\ts.nextID++\n\treturn item\n}\n\nfunc (s *Store) Delete(id int) bool {\n\ts.mu.Lock()\n\tdefer s.mu.Unlock()\n\tif _, ok := s.items[id]; !ok {\n\t\treturn false\n\t}\n\tdelete(s.items, id)\n\treturn true\n}\n\n// Handler is the HTTP handler.\ntype Handler struct {\n\tstore *Store\n}\n\nfunc NewHandler(store *Store) *Handler {\n\treturn &Handler{store: store}\n}\n\nfunc (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {\n\t// TODO: route GET/POST/DELETE /items and /items/:id\n\thttp.NotFound(w, r)\n}\n\nfunc writeJSON(w http.ResponseWriter, status int, v interface{}) {\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tw.WriteHeader(status)\n\tjson.NewEncoder(w).Encode(v)\n}\n",
+      "server/server_test.go": "package server_test\n\nimport (\n\t\"bytes\"\n\t\"encoding/json\"\n\t\"net/http\"\n\t\"net/http/httptest\"\n\t\"testing\"\n\n\t\"github.com/ai-verification/http-server/server\"\n)\n\nfunc setup() *httptest.Server {\n\tstore := server.NewStore()\n\th := server.NewHandler(store)\n\treturn httptest.NewServer(h)\n}\n\nfunc TestListEmpty(t *testing.T) {\n\ts := setup()\n\tdefer s.Close()\n\tresp, _ := http.Get(s.URL + \"/items\")\n\tif resp.StatusCode != 200 {\n\t\tt.Fatalf(\"expected 200, got %d\", resp.StatusCode)\n\t}\n\tvar items []server.Item\n\tjson.NewDecoder(resp.Body).Decode(&items)\n\tif len(items) != 0 {\n\t\tt.Fatalf(\"expected empty, got %v\", items)\n\t}\n}\n\nfunc TestCreate(t *testing.T) {\n\ts := setup()\n\tdefer s.Close()\n\tbody := bytes.NewBufferString(`{\"name\":\"widget\"}`)\n\tresp, _ := http.Post(s.URL+\"/items\", \"application/json\", body)\n\tif resp.StatusCode != 201 {\n\t\tt.Fatalf(\"expected 201, got %d\", resp.StatusCode)\n\t}\n\tvar item server.Item\n\tjson.NewDecoder(resp.Body).Decode(&item)\n\tif item.Name != \"widget\" || item.ID == 0 {\n\t\tt.Fatalf(\"unexpected item: %+v\", item)\n\t}\n}\n\nfunc TestListAfterCreate(t *testing.T) {\n\ts := setup()\n\tdefer s.Close()\n\thttp.Post(s.URL+\"/items\", \"application/json\", bytes.NewBufferString(`{\"name\":\"a\"}`))\n\thttp.Post(s.URL+\"/items\", \"application/json\", bytes.NewBufferString(`{\"name\":\"b\"}`))\n\tresp, _ := http.Get(s.URL + \"/items\")\n\tvar items []server.Item\n\tjson.NewDecoder(resp.Body).Decode(&items)\n\tif len(items) != 2 {\n\t\tt.Fatalf(\"expected 2 items, got %d\", len(items))\n\t}\n}\n\nfunc TestDelete(t *testing.T) {\n\ts := setup()\n\tdefer s.Close()\n\tresp, _ := http.Post(s.URL+\"/items\", \"application/json\", bytes.NewBufferString(`{\"name\":\"x\"}`))\n\tvar item server.Item\n\tjson.NewDecoder(resp.Body).Decode(&item)\n\treq, _ := http.NewRequest(http.MethodDelete, s.URL+\"/items/\"+itoa(item.ID), nil)\n\thttp.DefaultClient.Do(req)\n\tresp2, _ := http.Get(s.URL + \"/items\")\n\tvar items []server.Item\n\tjson.NewDecoder(resp2.Body).Decode(&items)\n\tif len(items) != 0 {\n\t\tt.Fatalf(\"expected 0 items after delete, got %d\", len(items))\n\t}\n}\n\nfunc TestDeleteNotFound(t *testing.T) {\n\ts := setup()\n\tdefer s.Close()\n\treq, _ := http.NewRequest(http.MethodDelete, s.URL+\"/items/999\", nil)\n\tresp, _ := http.DefaultClient.Do(req)\n\tif resp.StatusCode != 404 {\n\t\tt.Fatalf(\"expected 404, got %d\", resp.StatusCode)\n\t}\n}\n\nfunc itoa(n int) string {\n\treturn strconv.Itoa(n)\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `GET /items` in the `ServeHTTP` method of `Handler` in `server/server.go`. Check `r.Method == http.MethodGet` and `r.URL.Path == \"/items\"`. Call `h.store.List()` and encode the result as JSON with status 200. Run `go test ./...` — focus on getting TestListEmpty to pass.",
+    "followup_prompts": [
+      "Good progress. Run `go test ./...` to see where we stand. Now add `POST /items`: decode `{\"name\": \"...\"}` from the request body, call `h.store.Create(name)`, and respond with 201 + the created item as JSON. Continue with the remaining steps.",
+      "Good. Now add `DELETE /items/:id`: parse the ID from the path (e.g., `/items/3`), call `h.store.Delete(id)`, respond 204 on success or 404 if not found. Run `go test ./...` to check.",
+      "Final push: run `go test ./...` and fix any remaining failures. Make sure all 5 tests pass — list, create, list-after-create, delete, and delete-not-found."
+    ],
+    "success_criteria": [
+      "GET /items returns JSON array (empty or populated)",
+      "POST /items creates item with auto-incremented ID, returns 201",
+      "DELETE /items/:id removes item, returns 204 or 404",
+      "All 5 go tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "go test ./..."}
+  },
+  "duration_hint_minutes": 30
+}

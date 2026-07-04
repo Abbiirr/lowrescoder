@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head><title>Items</title></head>
+<body>
+<h1>Item Catalogue</h1>
+<ul>
+{{range .}}
+  <li>{{.Name}} — ${{.Price}}</li>
+{{end}}
+</ul>
+</body>
+</html>

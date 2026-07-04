@@ -1,0 +1,71 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-functools-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Implement functional utilities: memoize, compose, pipe, retry",
+  "description": "Build a functional.py module with four higher-order utilities: memoize, compose, pipe, and retry. A failing test suite is provided.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"python-functools-utils\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = [\"pytest>=8.0\", \"ruff>=0.4\"]\n\n[tool.pytest.ini_options]\npythonpath = [\"src\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nline-length = 100\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_functional.py",
+        "content": "import time\nimport pytest\nfrom functional import memoize, compose, pipe, retry\n\n\ndef test_memoize_basic():\n    calls = []\n\n    @memoize\n    def add(a, b):\n        calls.append((a, b))\n        return a + b\n\n    assert add(1, 2) == 3\n    assert add(1, 2) == 3  # cached\n    assert len(calls) == 1\n\n\ndef test_memoize_different_args():\n    @memoize\n    def square(n):\n        return n * n\n\n    assert square(3) == 9\n    assert square(4) == 16\n    assert square(3) == 9\n\n\ndef test_compose_two_fns():\n    double = lambda x: x * 2\n    inc = lambda x: x + 1\n    double_then_inc = compose(inc, double)\n    assert double_then_inc(3) == 7  # inc(double(3)) = inc(6) = 7\n\n\ndef test_compose_order():\n    # compose(f, g)(x) == f(g(x)) — rightmost applied first\n    f = lambda x: x + \"!\"\n    g = lambda x: x.upper()\n    assert compose(f, g)(\"hello\") == \"HELLO!\"\n\n\ndef test_compose_single():\n    double = lambda x: x * 2\n    assert compose(double)(5) == 10\n\n\ndef test_pipe_basic():\n    result = pipe(3, lambda x: x * 2, lambda x: x + 1)\n    assert result == 7  # 3 -> 6 -> 7\n\n\ndef test_pipe_single_fn():\n    assert pipe(\"hello\", str.upper) == \"HELLO\"\n\n\ndef test_retry_succeeds_first_try():\n    calls = []\n\n    def always_ok():\n        calls.append(1)\n        return 42\n\n    assert retry(always_ok, times=3) == 42\n    assert len(calls) == 1\n\n\ndef test_retry_succeeds_after_failures():\n    calls = []\n\n    def flaky():\n        calls.append(1)\n        if len(calls) < 3:\n            raise ValueError(\"not yet\")\n        return \"ok\"\n\n    assert retry(flaky, times=5) == \"ok\"\n    assert len(calls) == 3\n\n\ndef test_retry_exhausted():\n    def always_fail():\n        raise RuntimeError(\"boom\")\n\n    with pytest.raises(RuntimeError):\n        retry(always_fail, times=3)\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Create src/functional.py with four higher-order utilities:\n\n  def memoize(fn):            — decorator that caches results by positional args\n  def compose(*fns):          — returns a function that applies fns right-to-left; compose(f,g)(x) == f(g(x))\n  def pipe(value, *fns):      — applies fns left-to-right to value; pipe(x,f,g) == g(f(x))\n  def retry(fn, times: int):  — calls fn() up to 'times' times; returns first success; re-raises last exception on exhaustion\n\nAll 10 tests in tests/test_functional.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "src/functional.py with memoize/compose/pipe/retry",
+      "memoize caches by positional args using a dict",
+      "compose applies functions right-to-left",
+      "pipe applies functions left-to-right",
+      "retry re-raises last exception after exhaustion",
+      "All 10 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ passes (10 tests)",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

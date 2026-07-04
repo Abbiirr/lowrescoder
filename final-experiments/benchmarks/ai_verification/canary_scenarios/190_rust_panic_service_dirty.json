@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-dirty-015",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 bugs in rust_panic_service functions",
+  "description": "Brownfield Rust dirty scenario: divide, parse_age, and find_user each have a bug. Fix them so all 5 tests pass.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_panic_service",
+    "injections": [
+      {
+        "path": "src/lib.rs",
+        "content": "use std::collections::HashMap;\n\npub fn divide(a: f64, b: f64) -> f64 {\n    if b == 0.0 {\n        panic!(\"division by zero\");\n    }\n    // BUG: multiplies instead of divides\n    a * b\n}\n\npub fn get_value(map: &HashMap<String, i32>, key: &str) -> i32 {\n    *map.get(key).unwrap()\n}\n\npub fn parse_age(s: &str) -> u32 {\n    // BUG: adds 1 to parsed result\n    s.parse::<u32>().unwrap() + 1\n}\n\npub fn first_element(v: &[i32]) -> i32 {\n    v[0]\n}\n\npub fn find_user(users: &[&str], name: &str) -> usize {\n    // BUG: inverted comparison — finds first user NOT equal to name\n    users.iter().position(|&u| u != name).unwrap()\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n    use std::collections::HashMap;\n\n    #[test]\n    fn test_divide_ok() {\n        assert_eq!(divide(10.0, 2.0), 5.0);\n    }\n\n    #[test]\n    fn test_get_value_found() {\n        let mut m = HashMap::new();\n        m.insert(\"x\".to_string(), 42);\n        assert_eq!(get_value(&m, \"x\"), 42);\n    }\n\n    #[test]\n    fn test_parse_age_valid() {\n        assert_eq!(parse_age(\"25\"), 25);\n    }\n\n    #[test]\n    fn test_first_element() {\n        assert_eq!(first_element(&[1, 2, 3]), 1);\n    }\n\n    #[test]\n    fn test_find_user_found() {\n        let users = vec![\"alice\", \"bob\", \"carol\"];\n        assert_eq!(find_user(&users, \"bob\"), 1);\n    }\n}\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 bugs in src/lib.rs so all 5 tests pass.\n\n  fn divide(a: f64, b: f64) -> f64:\n    — multiplies instead of divides: a * b should be a / b\n    — fix: change * to /\n\n  fn parse_age(s: &str) -> u32:\n    — adds 1 to result: s.parse::<u32>().unwrap() + 1 should omit the + 1\n    — fix: remove the + 1\n\n  fn find_user(users: &[&str], name: &str) -> usize:\n    — inverted comparison: |&u| u != name should be |&u| u == name\n    — fix: change != to ==\n\nDo not modify the test code.\nRun: cargo test",
+    "required_artifacts": [
+      "divide uses / not *",
+      "parse_age returns parsed value without + 1",
+      "find_user uses == comparison",
+      "All 5 existing tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

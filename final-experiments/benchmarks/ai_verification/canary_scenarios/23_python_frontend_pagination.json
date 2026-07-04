@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-frontend-002",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Add pagination and price-range filter to Flask items UI",
+  "description": "A Flask app displays a static list of items. Add server-side pagination (5 per page) and a price-range filter to both the HTML page and the /api/items endpoint.",
+  "target_stack": {
+    "language": "python",
+    "framework": "flask",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "mutate",
+    "fixture_ref": "python_flask_app",
+    "injections": [
+      {
+        "path": "src/app.py",
+        "content": "from flask import Flask, render_template, jsonify\n\napp = Flask(__name__, template_folder=\"../templates\")\n\n_items = [\n    {\"id\": i, \"name\": f\"Widget {chr(64 + i)}\", \"price\": round(i * 4.99, 2)}\n    for i in range(1, 26)\n]\n\n\n@app.get(\"/\")\ndef index():\n    return render_template(\"index.html\", items=_items)\n\n\n@app.get(\"/api/items\")\ndef api_items():\n    return jsonify(_items)\n"
+      },
+      {
+        "path": "tests/test_app.py",
+        "content": "import pytest\nfrom src.app import app as flask_app\n\n\n@pytest.fixture\ndef client():\n    flask_app.config[\"TESTING\"] = True\n    with flask_app.test_client() as c:\n        yield c\n\n\ndef test_index_returns_200(client):\n    resp = client.get(\"/\")\n    assert resp.status_code == 200\n\n\ndef test_api_items_returns_list(client):\n    resp = client.get(\"/api/items\")\n    assert resp.status_code == 200\n    data = resp.get_json()\n    assert isinstance(data, list)\n    assert len(data) == 25\n"
+      }
+    ],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "The Flask app in src/app.py shows 25 items. Add two features:\n\n1. Server-side pagination: GET /api/items and GET / should accept ?page=N (1-indexed, default 1) and return 5 items per page. The API response should be {\"items\": [...], \"total\": 25, \"page\": N, \"pages\": 5}. The HTML page should show only the current page's items and render Prev/Next links as plain <a> tags pointing to /?page=N-1 and /?page=N+1. Do not render Prev on page 1 or Next on the last page.\n\n2. Price-range filter: GET /api/items and GET / should also accept ?min_price=X and ?max_price=Y. Filter items whose price >= min_price and <= max_price before paginating. Both params are optional.\n\nAdd tests in tests/test_app.py (create it if absent) with pytest + flask test client covering: (a) first page returns 5 items, (b) last page (page 5) returns 5 items, (c) min_price filter narrows results, (d) combined filter+page returns correct subset. Run uv run pytest tests/ -q to confirm.",
+    "required_artifacts": [
+      "Pagination applied to GET /api/items and GET /",
+      "?page= param supported (1-indexed, 5 per page)",
+      "?min_price= and ?max_price= filter params supported",
+      "API returns {items, total, page, pages}",
+      "HTML renders Prev/Next links correctly",
+      "tests/test_app.py with 4+ tests passing"
+    ],
+    "success_criteria": [
+      "Pagination + filter work independently and together",
+      "Edge cases handled: page out of range returns last page or empty",
+      "All tests pass"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `uv run pytest tests/ -q` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

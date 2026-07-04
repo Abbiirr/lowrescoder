@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-034",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement functional options pattern for a Server config in Go",
+  "description": "Greenfield Go task: implement a Server struct configured via functional options. Options set host, port, and timeout. NewServer accepts variadic Option funcs.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module server\n\ngo 1.21\n"
+      },
+      {
+        "path": "server.go",
+        "content": "// TODO: implement functional options pattern for Server\npackage server\n"
+      },
+      {
+        "path": "server_test.go",
+        "content": "package server\n\nimport (\n\t\"testing\"\n\t\"time\"\n)\n\nfunc TestDefaults(t *testing.T) {\n\ts := NewServer()\n\tif s.Host != \"localhost\" {\n\t\tt.Fatalf(\"want localhost, got %q\", s.Host)\n\t}\n\tif s.Port != 8080 {\n\t\tt.Fatalf(\"want 8080, got %d\", s.Port)\n\t}\n\tif s.Timeout != 30*time.Second {\n\t\tt.Fatalf(\"want 30s, got %v\", s.Timeout)\n\t}\n}\n\nfunc TestWithHost(t *testing.T) {\n\ts := NewServer(WithHost(\"0.0.0.0\"))\n\tif s.Host != \"0.0.0.0\" {\n\t\tt.Fatalf(\"want 0.0.0.0, got %q\", s.Host)\n\t}\n}\n\nfunc TestWithPort(t *testing.T) {\n\ts := NewServer(WithPort(9090))\n\tif s.Port != 9090 {\n\t\tt.Fatalf(\"want 9090, got %d\", s.Port)\n\t}\n}\n\nfunc TestWithTimeout(t *testing.T) {\n\ts := NewServer(WithTimeout(60 * time.Second))\n\tif s.Timeout != 60*time.Second {\n\t\tt.Fatalf(\"want 60s, got %v\", s.Timeout)\n\t}\n}\n\nfunc TestCombinedOptions(t *testing.T) {\n\ts := NewServer(WithHost(\"example.com\"), WithPort(443), WithTimeout(10*time.Second))\n\tif s.Host != \"example.com\" || s.Port != 443 || s.Timeout != 10*time.Second {\n\t\tt.Fatalf(\"unexpected config: %+v\", s)\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement the functional options pattern in server.go.\n\npackage server\n\nimport \"time\"\n\ntype Server struct {\n    Host    string\n    Port    int\n    Timeout time.Duration\n}\n\ntype Option func(*Server)\n\nfunc WithHost(host string) Option {\n    return func(s *Server) { s.Host = host }\n}\n\nfunc WithPort(port int) Option {\n    return func(s *Server) { s.Port = port }\n}\n\nfunc WithTimeout(timeout time.Duration) Option {\n    return func(s *Server) { s.Timeout = timeout }\n}\n\nfunc NewServer(opts ...Option) *Server {\n    s := &Server{\n        Host:    \"localhost\",\n        Port:    8080,\n        Timeout: 30 * time.Second,\n    }\n    for _, opt := range opts {\n        opt(s)\n    }\n    return s\n}\n\nAll 5 tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Server struct with Host, Port, Timeout fields",
+      "Option is a func(*Server)",
+      "NewServer sets sensible defaults and applies all options",
+      "WithHost, WithPort, WithTimeout option constructors",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

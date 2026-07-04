@@ -1,0 +1,62 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-lru-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Implement an LRU cache in Go",
+  "description": "Build a fixed-capacity LRU (Least Recently Used) cache in Go using a doubly-linked list and hash map. Tests are provided; implement internal/lru/lru.go to make them pass.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module github.com/ai-verification/go-lru-cache\n\ngo 1.22\n"
+      },
+      {
+        "path": "internal/lru/lru_test.go",
+        "content": "package lru_test\n\nimport (\n\t\"testing\"\n\n\t\"github.com/ai-verification/go-lru-cache/internal/lru\"\n)\n\nfunc TestBasicPutGet(t *testing.T) {\n\tc := lru.New(2)\n\tc.Put(\"a\", \"1\")\n\tc.Put(\"b\", \"2\")\n\tv, ok := c.Get(\"a\")\n\tif !ok || v != \"1\" {\n\t\tt.Fatalf(\"expected a=1, got %q ok=%v\", v, ok)\n\t}\n}\n\nfunc TestEviction(t *testing.T) {\n\tc := lru.New(2)\n\tc.Put(\"a\", \"1\")\n\tc.Put(\"b\", \"2\")\n\tc.Put(\"c\", \"3\") // evicts \"a\" (LRU)\n\t_, ok := c.Get(\"a\")\n\tif ok {\n\t\tt.Fatal(\"expected 'a' to be evicted\")\n\t}\n\tv, ok := c.Get(\"b\")\n\tif !ok || v != \"2\" {\n\t\tt.Fatalf(\"expected b=2, got %q ok=%v\", v, ok)\n\t}\n\tv, ok = c.Get(\"c\")\n\tif !ok || v != \"3\" {\n\t\tt.Fatalf(\"expected c=3, got %q ok=%v\", v, ok)\n\t}\n}\n\nfunc TestGetPromotesRecency(t *testing.T) {\n\tc := lru.New(2)\n\tc.Put(\"a\", \"1\")\n\tc.Put(\"b\", \"2\")\n\tc.Get(\"a\")      // promote a\n\tc.Put(\"c\", \"3\") // should evict \"b\", not \"a\"\n\t_, ok := c.Get(\"b\")\n\tif ok {\n\t\tt.Fatal(\"expected 'b' to be evicted after promoting 'a'\")\n\t}\n\tv, ok := c.Get(\"a\")\n\tif !ok || v != \"1\" {\n\t\tt.Fatalf(\"expected a=1 after promotion, got %q ok=%v\", v, ok)\n\t}\n}\n\nfunc TestOverwriteKey(t *testing.T) {\n\tc := lru.New(2)\n\tc.Put(\"x\", \"old\")\n\tc.Put(\"x\", \"new\")\n\tv, ok := c.Get(\"x\")\n\tif !ok || v != \"new\" {\n\t\tt.Fatalf(\"expected x=new, got %q ok=%v\", v, ok)\n\t}\n\tif c.Len() != 1 {\n\t\tt.Fatalf(\"expected len=1 after overwrite, got %d\", c.Len())\n\t}\n}\n\nfunc TestLenAndCap(t *testing.T) {\n\tc := lru.New(3)\n\tif c.Len() != 0 {\n\t\tt.Fatalf(\"expected initial len=0, got %d\", c.Len())\n\t}\n\tif c.Cap() != 3 {\n\t\tt.Fatalf(\"expected cap=3, got %d\", c.Cap())\n\t}\n\tc.Put(\"a\", \"1\")\n\tif c.Len() != 1 {\n\t\tt.Fatalf(\"expected len=1, got %d\", c.Len())\n\t}\n}\n\nfunc TestMissReturnsOk(t *testing.T) {\n\tc := lru.New(2)\n\t_, ok := c.Get(\"missing\")\n\tif ok {\n\t\tt.Fatal(\"expected false for missing key\")\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Create internal/lru/lru.go implementing a fixed-capacity LRU (Least Recently Used) cache.\n\nThe package is `lru` and must export:\n  func New(cap int) *Cache            — create a cache with the given capacity\n  func (c *Cache) Get(key string) (string, bool) — return value and true, or \"\", false if missing; accessing a key makes it most recently used\n  func (c *Cache) Put(key, value string) — insert or update; if at capacity, evict the least recently used entry first\n  func (c *Cache) Len() int           — number of entries currently stored\n  func (c *Cache) Cap() int           — maximum capacity\n\nImplementation hint: use a doubly-linked list + map[string]*node for O(1) get and eviction.\n\nAll 6 tests in internal/lru/lru_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "internal/lru/lru.go with Cache type and New/Get/Put/Len/Cap",
+      "Eviction removes LRU entry when at capacity",
+      "Get promotes accessed key to most-recently-used",
+      "Put on existing key updates value and promotes recency",
+      "All 6 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (6 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

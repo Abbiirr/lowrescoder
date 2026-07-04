@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-014",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement Levenshtein edit distance in Rust using dynamic programming",
+  "description": "Greenfield Rust task: implement edit_distance(s1: &str, s2: &str) -> usize that returns the minimum number of single-character edits (insertions, deletions, substitutions) needed to transform s1 into s2.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"edit-distance\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement edit_distance\n"
+      },
+      {
+        "path": "tests/edit_test.rs",
+        "content": "use edit_distance::edit_distance;\n\n#[test]\nfn test_identical() {\n    assert_eq!(edit_distance(\"hello\", \"hello\"), 0);\n}\n\n#[test]\nfn test_empty_strings() {\n    assert_eq!(edit_distance(\"\", \"\"), 0);\n    assert_eq!(edit_distance(\"abc\", \"\"), 3);\n    assert_eq!(edit_distance(\"\", \"abc\"), 3);\n}\n\n#[test]\nfn test_single_substitution() {\n    assert_eq!(edit_distance(\"cat\", \"cut\"), 1);\n}\n\n#[test]\nfn test_insertion_and_deletion() {\n    // kitten → sitting: 3 edits\n    assert_eq!(edit_distance(\"kitten\", \"sitting\"), 3);\n}\n\n#[test]\nfn test_completely_different() {\n    assert_eq!(edit_distance(\"abc\", \"xyz\"), 3);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement edit_distance in src/lib.rs.\n\npub fn edit_distance(s1: &str, s2: &str) -> usize\n\nAlgorithm (Wagner-Fischer DP):\n- Convert s1 and s2 to char vectors.\n- Build (m+1) x (n+1) DP table where dp[i][j] = edit distance between s1[..i] and s2[..j].\n- Base cases: dp[i][0] = i, dp[0][j] = j.\n- Transition:\n  if s1[i-1] == s2[j-1]: dp[i][j] = dp[i-1][j-1]\n  else: dp[i][j] = 1 + min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1])\n\nAll 5 tests in tests/edit_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "DP table of size (m+1) x (n+1) initialized with base cases",
+      "Diagonal copy when characters match; 1 + min(del, ins, sub) otherwise",
+      "Returns dp[m][n]",
+      "Handles empty strings correctly",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

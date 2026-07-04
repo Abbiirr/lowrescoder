@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-refactor-001",
+  "title": "Refactor duplicated validation logic in Go",
+  "category": "refactor",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Two handlers (CreateUser, UpdateUser) each duplicate the same email+name validation logic inline. Extract it into a validateUser helper and call it from both. All tests must remain green.",
+  "repo_seed": {
+    "files": {
+      "handlers.go": "package handlers\n\nimport \"errors\"\n\ntype User struct {\n\tName  string\n\tEmail string\n}\n\n// BUG (code smell): validation duplicated in both handlers\nfunc CreateUser(u User) error {\n\tif u.Name == \"\" {\n\t\treturn errors.New(\"name is required\")\n\t}\n\tif u.Email == \"\" {\n\t\treturn errors.New(\"email is required\")\n\t}\n\t// ... create logic ...\n\treturn nil\n}\n\nfunc UpdateUser(u User) error {\n\tif u.Name == \"\" {\n\t\treturn errors.New(\"name is required\")\n\t}\n\tif u.Email == \"\" {\n\t\treturn errors.New(\"email is required\")\n\t}\n\t// ... update logic ...\n\treturn nil\n}\n",
+      "handlers_test.go": "package handlers\n\nimport \"testing\"\n\nfunc TestCreateUser_valid(t *testing.T) {\n\tif err := CreateUser(User{Name: \"Alice\", Email: \"a@b.com\"}); err != nil {\n\t\tt.Fatalf(\"unexpected error: %v\", err)\n\t}\n}\n\nfunc TestCreateUser_missing_name(t *testing.T) {\n\tif err := CreateUser(User{Email: \"a@b.com\"}); err == nil {\n\t\tt.Fatal(\"expected error for missing name\")\n\t}\n}\n\nfunc TestCreateUser_missing_email(t *testing.T) {\n\tif err := CreateUser(User{Name: \"Alice\"}); err == nil {\n\t\tt.Fatal(\"expected error for missing email\")\n\t}\n}\n\nfunc TestUpdateUser_valid(t *testing.T) {\n\tif err := UpdateUser(User{Name: \"Bob\", Email: \"b@c.com\"}); err != nil {\n\t\tt.Fatalf(\"unexpected error: %v\", err)\n\t}\n}\n\nfunc TestUpdateUser_missing_name(t *testing.T) {\n\tif err := UpdateUser(User{Email: \"b@c.com\"}); err == nil {\n\t\tt.Fatal(\"expected error for missing name\")\n\t}\n}\n\nfunc TestUpdateUser_missing_email(t *testing.T) {\n\tif err := UpdateUser(User{Name: \"Bob\"}); err == nil {\n\t\tt.Fatal(\"expected error for missing email\")\n\t}\n}\n",
+      "go.mod": "module handlers\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Refactor handlers.go to eliminate the duplicated validation logic. Extract a private validateUser(u User) error function that checks name and email are non-empty, and call it at the start of both CreateUser and UpdateUser. The behavior of both functions must be unchanged — all 6 tests must remain green.",
+    "entry_point": "handlers.go",
+    "success_criteria": [
+      "All 6 go tests pass",
+      "Validation logic appears only once (in validateUser helper)"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `go test ./...` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

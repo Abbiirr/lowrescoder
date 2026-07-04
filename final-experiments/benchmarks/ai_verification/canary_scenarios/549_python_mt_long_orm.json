@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "549-python-mt-long-orm",
+  "title": "Build a mini ORM in Python — 4 turns",
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "target_stack": {"language": "python", "framework": null, "extra": {}},
+  "description": "Four-turn mini ORM: turn 1 model definition, turn 2 create/save, turn 3 query/filter, turn 4 relationships and tests.",
+  "repo_seed": {
+    "files": {
+      "orm/__init__.py": "",
+      "orm/fields.py": "\"\"\"Field descriptors for the ORM.\"\"\"\nfrom typing import Any, Optional\n\n\nclass Field:\n    \"\"\"Base field descriptor.\"\"\"\n    def __init__(self, field_type: type, primary_key: bool = False, nullable: bool = True):\n        self.field_type = field_type\n        self.primary_key = primary_key\n        self.nullable = nullable\n        self.name: Optional[str] = None\n\n    def __set_name__(self, owner, name: str):\n        self.name = name\n\n    def validate(self, value: Any) -> Any:\n        \"\"\"Coerce and validate value.\"\"\"\n        if value is None and not self.nullable:\n            raise ValueError(f\"{self.name}: value cannot be None\")\n        if value is not None and not isinstance(value, self.field_type):\n            value = self.field_type(value)\n        return value\n\n\nclass IntField(Field):\n    def __init__(self, primary_key: bool = False, nullable: bool = False):\n        super().__init__(int, primary_key=primary_key, nullable=nullable)\n\n\nclass StrField(Field):\n    def __init__(self, nullable: bool = False):\n        super().__init__(str, nullable=nullable)\n",
+      "orm/model.py": "\"\"\"Base Model class for the mini ORM.\"\"\"\nfrom typing import Any, ClassVar, Optional, Type, TypeVar\nfrom orm.fields import Field\n\nT = TypeVar('T', bound='Model')\n\n\nclass ModelMeta(type):\n    \"\"\"Metaclass: collect Field descriptors into _fields.\"\"\"\n    def __new__(mcs, name, bases, namespace):\n        fields: dict[str, Field] = {}\n        for key, val in namespace.items():\n            if isinstance(val, Field):\n                fields[key] = val\n        namespace['_fields'] = fields\n        return super().__new__(mcs, name, bases, namespace)\n\n\nclass Model(metaclass=ModelMeta):\n    _fields: ClassVar[dict[str, Field]]\n    _table: ClassVar[list]  # in-memory storage\n    _next_id: ClassVar[int] = 1\n\n    def __init_subclass__(cls, **kwargs):\n        super().__init_subclass__(**kwargs)\n        cls._table = []\n        cls._next_id = 1\n\n    def __init__(self, **kwargs):\n        for name, field in self._fields.items():\n            value = kwargs.get(name)\n            setattr(self, f'_{name}', field.validate(value))\n        if not hasattr(self, '_id_val'):\n            self._id_val = None\n\n    def save(self) -> 'Model':\n        \"\"\"Save model to in-memory store. Assigns ID if new.\"\"\"\n        raise NotImplementedError\n\n    @classmethod\n    def create(cls: Type[T], **kwargs) -> T:\n        \"\"\"Create and immediately save a model instance.\"\"\"\n        raise NotImplementedError\n\n    @classmethod\n    def all(cls: Type[T]) -> list[T]:\n        \"\"\"Return all saved instances.\"\"\"\n        raise NotImplementedError\n\n    @classmethod\n    def filter(cls: Type[T], **kwargs) -> list[T]:\n        \"\"\"Return instances matching all keyword filters.\"\"\"\n        raise NotImplementedError\n\n    @classmethod\n    def get(cls: Type[T], **kwargs) -> Optional[T]:\n        \"\"\"Return first matching instance or None.\"\"\"\n        raise NotImplementedError\n\n    def __repr__(self) -> str:\n        fields = ', '.join(f'{k}={getattr(self, \"_\" + k, None)!r}' for k in self._fields)\n        return f'{self.__class__.__name__}({fields})'\n",
+      "tests/__init__.py": "",
+      "tests/test_orm.py": "import pytest\nfrom orm.fields import IntField, StrField\nfrom orm.model import Model\n\n\nclass User(Model):\n    id = IntField(primary_key=True)\n    name = StrField()\n    age = IntField()\n\n\n@pytest.fixture(autouse=True)\ndef clear_table():\n    User._table.clear()\n    User._next_id = 1\n    yield\n\n\ndef test_create_and_save():\n    u = User.create(name=\"Alice\", age=30)\n    assert u._id_val is not None\n    assert u._name == \"Alice\"\n    assert u._age == 30\n\n\ndef test_auto_increment_id():\n    u1 = User.create(name=\"A\", age=1)\n    u2 = User.create(name=\"B\", age=2)\n    assert u2._id_val > u1._id_val\n\n\ndef test_all_returns_saved():\n    User.create(name=\"A\", age=1)\n    User.create(name=\"B\", age=2)\n    all_users = User.all()\n    assert len(all_users) == 2\n\n\ndef test_filter_by_field():\n    User.create(name=\"Alice\", age=30)\n    User.create(name=\"Bob\", age=25)\n    User.create(name=\"Alice\", age=22)\n    results = User.filter(name=\"Alice\")\n    assert len(results) == 2\n    assert all(u._name == \"Alice\" for u in results)\n\n\ndef test_get_returns_first():\n    User.create(name=\"Charlie\", age=40)\n    u = User.get(name=\"Charlie\")\n    assert u is not None\n    assert u._name == \"Charlie\"\n\n\ndef test_get_returns_none_if_missing():\n    assert User.get(name=\"Nobody\") is None\n\n\ndef test_field_type_coercion():\n    u = User.create(name=\"Dave\", age=\"35\")  # age as string\n    assert u._age == 35\n    assert isinstance(u._age, int)\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `save(self)` and `create(cls, **kwargs)` in `orm/model.py`. save: if `self._id_val` is None, assign the next ID from `cls._next_id` (then increment it) and append self to `cls._table`; return self. create: instantiate the class with kwargs and call save(). Run `uv run pytest tests/ -q`.",
+    "followup_prompts": [
+      "Good progress. Run `uv run pytest tests/ -q` to see where we stand. Now implement `all(cls)` — return `list(cls._table)`. Also implement `filter(cls, **kwargs)` — return instances where all kwarg conditions match (check `getattr(instance, '_' + key) == value`). Continue with the remaining steps.",
+      "Good. Now implement `get(cls, **kwargs)` — return the first result from `filter(**kwargs)` or None. Run `uv run pytest tests/ -q` and fix any failures.",
+      "Final push: run `uv run pytest tests/ -q` and fix any remaining failures. All 7 tests must pass — create, auto-increment, all, filter, get, get-missing, type coercion."
+    ],
+    "success_criteria": [
+      "save() assigns auto-incrementing ID on first save",
+      "create() instantiates and saves in one step",
+      "all() returns all saved instances",
+      "filter() matches instances by field values",
+      "get() returns first match or None",
+      "Field coercion works (string '35' -> int 35)",
+      "All 7 pytest tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "uv run pytest tests/ -q"}
+  },
+  "duration_hint_minutes": 35
+}

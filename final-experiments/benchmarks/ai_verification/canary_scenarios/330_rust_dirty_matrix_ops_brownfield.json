@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-brownfield-007",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Fix bugs in Rust 2x2 matrix operations",
+  "description": "Brownfield Rust dirty_cleanup: fix three intentional bugs in 2x2 matrix operations (determinant uses wrong sign, transpose swaps wrong elements, multiply accumulates wrong products).",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"matrix2x2\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// A 2x2 matrix stored row-major: [[a, b], [c, d]]\npub struct Matrix2x2 {\n    pub data: [[f64; 2]; 2],\n}\n\nimpl Matrix2x2 {\n    pub fn new(a: f64, b: f64, c: f64, d: f64) -> Self {\n        Matrix2x2 { data: [[a, b], [c, d]] }\n    }\n\n    // BUG: wrong sign — should be a*d - b*c, not a*d + b*c\n    pub fn det(&self) -> f64 {\n        let [[a, b], [c, d]] = self.data;\n        a * d + b * c\n    }\n\n    // BUG: swaps [0][0] with [1][1] instead of [0][1] with [1][0]\n    pub fn transpose(&self) -> Matrix2x2 {\n        let [[a, b], [c, d]] = self.data;\n        Matrix2x2::new(d, b, c, a)\n    }\n\n    // BUG: top-right element uses a*b instead of a*d (wrong column)\n    pub fn multiply(&self, other: &Matrix2x2) -> Matrix2x2 {\n        let [[a, b], [c, d]] = self.data;\n        let [[e, f], [g, h]] = other.data;\n        Matrix2x2::new(\n            a * e + b * g,\n            a * b + b * h,  // BUG: should be a*f + b*h\n            c * e + d * g,\n            c * f + d * h,\n        )\n    }\n}\n"
+      },
+      {
+        "path": "tests/matrix_test.rs",
+        "content": "use matrix2x2::Matrix2x2;\n\n#[test]\nfn test_det() {\n    let m = Matrix2x2::new(1.0, 2.0, 3.0, 4.0);\n    assert!((m.det() - (-2.0)).abs() < 1e-9);\n}\n\n#[test]\nfn test_det_identity() {\n    let m = Matrix2x2::new(1.0, 0.0, 0.0, 1.0);\n    assert!((m.det() - 1.0).abs() < 1e-9);\n}\n\n#[test]\nfn test_transpose() {\n    let m = Matrix2x2::new(1.0, 2.0, 3.0, 4.0);\n    let t = m.transpose();\n    // transpose of [[1,2],[3,4]] is [[1,3],[2,4]]\n    assert_eq!(t.data[0][0], 1.0);\n    assert_eq!(t.data[0][1], 3.0);\n    assert_eq!(t.data[1][0], 2.0);\n    assert_eq!(t.data[1][1], 4.0);\n}\n\n#[test]\nfn test_multiply_identity() {\n    let m = Matrix2x2::new(1.0, 2.0, 3.0, 4.0);\n    let id = Matrix2x2::new(1.0, 0.0, 0.0, 1.0);\n    let result = m.multiply(&id);\n    assert_eq!(result.data[0][0], 1.0);\n    assert_eq!(result.data[0][1], 2.0);\n    assert_eq!(result.data[1][0], 3.0);\n    assert_eq!(result.data[1][1], 4.0);\n}\n\n#[test]\nfn test_multiply_general() {\n    // [[1,2],[3,4]] * [[5,6],[7,8]] = [[19,22],[43,50]]\n    let a = Matrix2x2::new(1.0, 2.0, 3.0, 4.0);\n    let b = Matrix2x2::new(5.0, 6.0, 7.0, 8.0);\n    let c = a.multiply(&b);\n    assert!((c.data[0][0] - 19.0).abs() < 1e-9);\n    assert!((c.data[0][1] - 22.0).abs() < 1e-9);\n    assert!((c.data[1][0] - 43.0).abs() < 1e-9);\n    assert!((c.data[1][1] - 50.0).abs() < 1e-9);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/lib.rs.\n\nBug 1 — det: uses + instead of -.\n  Fix: a * d - b * c\n\nBug 2 — transpose: swaps diagonal elements instead of off-diagonal.\n  Fix: Matrix2x2::new(a, c, b, d)  // [[a,c],[b,d]]\n\nBug 3 — multiply top-right element: a*b should be a*f.\n  Fix: change `a * b + b * h` to `a * f + b * h`\n\nAll 5 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "det returns a*d - b*c",
+      "transpose swaps off-diagonal elements (b↔c), keeps diagonal",
+      "multiply top-right element is a*f + b*h",
+      "All matrix operations correct",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

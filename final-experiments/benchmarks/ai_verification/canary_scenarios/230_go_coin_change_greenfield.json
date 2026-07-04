@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-013",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement coin change DP in Go returning the minimum number of coins",
+  "description": "Greenfield Go task: implement CoinChange(coins []int, amount int) int that returns the minimum number of coins needed to make up amount, or -1 if impossible, using bottom-up dynamic programming.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module coinchange\n\ngo 1.22\n"
+      },
+      {
+        "path": "coinchange.go",
+        "content": "package coinchange\n\n// TODO: implement CoinChange\n"
+      },
+      {
+        "path": "coinchange_test.go",
+        "content": "package coinchange\n\nimport \"testing\"\n\nfunc TestBasicCase(t *testing.T) {\n\t// coins [1,5,10] amount 11 = 2 coins (10+1)\n\tif got := CoinChange([]int{1, 5, 10}, 11); got != 2 {\n\t\tt.Fatalf(\"expected 2, got %d\", got)\n\t}\n}\n\nfunc TestGreedyWouldFail(t *testing.T) {\n\t// coins [1,3,4] amount 6: greedy gives 4+1+1=3, DP gives 3+3=2\n\tif got := CoinChange([]int{1, 3, 4}, 6); got != 2 {\n\t\tt.Fatalf(\"expected 2, got %d\", got)\n\t}\n}\n\nfunc TestImpossible(t *testing.T) {\n\t// coins [2] amount 3: impossible\n\tif got := CoinChange([]int{2}, 3); got != -1 {\n\t\tt.Fatalf(\"expected -1, got %d\", got)\n\t}\n}\n\nfunc TestAmountZero(t *testing.T) {\n\tif got := CoinChange([]int{1, 5}, 0); got != 0 {\n\t\tt.Fatalf(\"expected 0, got %d\", got)\n\t}\n}\n\nfunc TestSingleCoin(t *testing.T) {\n\tif got := CoinChange([]int{7}, 14); got != 2 {\n\t\tt.Fatalf(\"expected 2, got %d\", got)\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement CoinChange in coinchange.go.\n\nfunc CoinChange(coins []int, amount int) int\n\nAlgorithm (bottom-up DP):\n1. dp[0] = 0; dp[i] = math.MaxInt32 for i > 0.\n2. For each amount i from 1 to amount:\n   For each coin c in coins:\n     if c <= i and dp[i-c] != math.MaxInt32:\n       dp[i] = min(dp[i], dp[i-c] + 1)\n3. If dp[amount] == math.MaxInt32, return -1. Else return dp[amount].\n\nAll 5 tests in coinchange_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Bottom-up DP table of size amount+1",
+      "dp[0] = 0; all others start at math.MaxInt32",
+      "For each sub-amount, iterate all coins and take minimum",
+      "Returns -1 if dp[amount] remains math.MaxInt32",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,677 @@
+{
+  "contract": {
+    "harness_version": "1.0.0",
+    "harness_commit_sha": "unknown",
+    "agent": "autocode",
+    "agent_version": "0.1.0",
+    "model": "fast",
+    "provider_mode": "local_free",
+    "lane": "META",
+    "run_id": "supervisor-20260625-220327",
+    "manifest_hash": "sha256:dabd644c85f76267",
+    "budget_profile": {
+      "wall_time_s": 1800,
+      "token_cap": 80000,
+      "max_tool_calls": 150
+    },
+    "budget_profile_id": "wt1800_tc80000_mc150",
+    "command_trace": "../benchmarks/benchmark_runner.py --agent autocode --lane META --model fast --run-id supervisor-20260625-220327",
+    "timestamp": "2026-06-25T17:16:06.530612+00:00",
+    "comparison_validity": "internal",
+    "seed": null,
+    "image_digests": {
+      "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+    }
+  },
+  "lane": "META",
+  "lane_name": "meta-autocode Build Lane",
+  "agent": "autocode",
+  "model": "fast",
+  "provider_mode": "local_free",
+  "aggregate": {
+    "total_tasks": 15,
+    "resolved": 10,
+    "resolve_rate": 0.667,
+    "infra_fails": 5,
+    "infra_fail_rate": 0.333,
+    "total_wall_time_s": 2671.5,
+    "avg_wall_time_s": 178.1
+  },
+  "results": [
+    {
+      "task_id": "meta-001-piv-strategy",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 244.0,
+      "tool_calls": 11,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "RuntimeError: Provider rate limit reached (429).",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-001-piv-strategy_20260625_160331/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-002-context-loader",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 247.7,
+      "tool_calls": 10,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "RuntimeError: Provider rate limit reached (429).",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-002-context-loader_20260625_161239/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-003-benchmark-maxxing",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 158.1,
+      "tool_calls": 18,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 158.1,
+            "changed_files": [],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "7fbb0767",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-003-benchmark-maxxing_20260625_162150/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 2,
+              "read_file": 6,
+              "todo_write": 4,
+              "write_file": 1,
+              "run_command": 5
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-003-benchmark-maxxing_20260625_162150/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-004-runner-integration",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 999.7,
+      "tool_calls": 48,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 1,
+            "resolved": false,
+            "elapsed_s": 421.2,
+            "changed_files": [],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "7eb3c646",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-004-runner-integration_20260625_162617/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 5,
+              "todo_write": 6,
+              "write_file": 3,
+              "run_command": 12,
+              "git_status": 3
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "RuntimeError: Provider rate limit reached (429).",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-004-runner-integration_20260625_162617/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-005-environment-setup",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 224.1,
+      "tool_calls": 13,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "RuntimeError: Provider rate limit reached (429).",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-005-environment-setup_20260625_164526/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-006-pydantic-color-compat",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 197.0,
+      "tool_calls": 10,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 197.0,
+            "changed_files": [
+              "src/color_encoder.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "62ea056f",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-006-pydantic-color-compat_20260625_165408/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 3,
+              "todo_write": 4,
+              "edit_file": 1,
+              "run_command": 1
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-006-pydantic-color-compat_20260625_165408/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-007-pagination-off-by-one",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 65.6,
+      "tool_calls": 11,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 65.6,
+            "changed_files": [
+              "src/paginator.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "887a35d0",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-007-pagination-off-by-one_20260625_165818/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 2,
+              "todo_write": 4,
+              "edit_file": 1,
+              "run_command": 3
+            },
+            "tool_call_errors": 1
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-007-pagination-off-by-one_20260625_165818/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-008-async-coroutine-not-awaited",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 106.0,
+      "tool_calls": 16,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 106.0,
+            "changed_files": [
+              "src/flow_runner.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "0634df25",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-008-async-coroutine-not-awaited_20260625_170016/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 5,
+              "todo_write": 5,
+              "edit_file": 2,
+              "run_command": 3
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-008-async-coroutine-not-awaited_20260625_170016/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-009-incident-tracker-eof",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 22.7,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Gateway request was forbidden by the configured provider (403).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-009-incident-tracker-eof_20260625_170253/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-010-url-builder-urljoin",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 77.2,
+      "tool_calls": 11,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 77.2,
+            "changed_files": [
+              "src/api_client.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "dc515d41",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-010-url-builder-urljoin_20260625_170407/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 4,
+              "todo_write": 4,
+              "edit_file": 1,
+              "run_command": 1
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-010-url-builder-urljoin_20260625_170407/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-011-semver-string-comparison",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 69.4,
+      "tool_calls": 13,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 69.4,
+            "changed_files": [
+              "src/semver.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "3703809e",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-011-semver-string-comparison_20260625_170616/grading_attempt_1.txt",
+            "tool_mix": {
+              "read_file": 3,
+              "list_files": 1,
+              "todo_write": 5,
+              "edit_file": 2,
+              "run_command": 1,
+              "todo_read": 1
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-011-semver-string-comparison_20260625_170616/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-012-file-extension-detection",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 64.3,
+      "tool_calls": 9,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 64.3,
+            "changed_files": [
+              "src/file_detector.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "92296d68",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-012-file-extension-detection_20260625_170816/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 2,
+              "todo_write": 4,
+              "edit_file": 1,
+              "run_command": 1
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-012-file-extension-detection_20260625_170816/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-013-commit-counter-assignment",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 64.7,
+      "tool_calls": 9,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 64.7,
+            "changed_files": [
+              "src/commit_stats.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "fcf6614e",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-013-commit-counter-assignment_20260625_171012/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 2,
+              "todo_write": 4,
+              "edit_file": 1,
+              "run_command": 1
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-013-commit-counter-assignment_20260625_171012/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-014-display-truncation-overflow",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 66.8,
+      "tool_calls": 12,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 66.8,
+            "changed_files": [
+              "src/display.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "e63cfa7e",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-014-display-truncation-overflow_20260625_171212/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 4,
+              "todo_write": 5,
+              "edit_file": 1,
+              "run_command": 1
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-014-display-truncation-overflow_20260625_171212/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-015-config-deep-merge",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 64.2,
+      "tool_calls": 10,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 64.2,
+            "changed_files": [
+              "src/config_merger.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "02305e6b",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-015-config-deep-merge_20260625_171411/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 3,
+              "todo_write": 4,
+              "edit_file": 1,
+              "run_command": 1
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-015-config-deep-merge_20260625_171411/setup_log.txt"
+      }
+    }
+  ],
+  "image_digests": {
+    "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+  },
+  "halted": false
+}

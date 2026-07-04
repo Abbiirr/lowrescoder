@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-greenfield-stack-001",
+  "title": "Implement a Go stack data structure",
+  "category": "repo_init",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement a generic-free Go Stack with Push, Pop, Peek, Size, and IsEmpty. All methods have panic stubs.",
+  "repo_seed": {
+    "files": {
+      "stack.go": "package stack\n\n// Stack is a LIFO data structure.\ntype Stack struct {\n\titems []interface{}\n}\n\n// Push adds an item to the top.\nfunc (s *Stack) Push(item interface{}) {\n\tpanic(\"Push: not implemented\")\n}\n\n// Pop removes and returns the top item. Panics if empty.\nfunc (s *Stack) Pop() interface{} {\n\tpanic(\"Pop: not implemented\")\n}\n\n// Peek returns the top item without removing it. Panics if empty.\nfunc (s *Stack) Peek() interface{} {\n\tpanic(\"Peek: not implemented\")\n}\n\n// Size returns the number of items.\nfunc (s *Stack) Size() int {\n\tpanic(\"Size: not implemented\")\n}\n\n// IsEmpty returns true if the stack has no items.\nfunc (s *Stack) IsEmpty() bool {\n\tpanic(\"IsEmpty: not implemented\")\n}\n",
+      "stack_test.go": "package stack\n\nimport \"testing\"\n\nfunc TestPushAndPop(t *testing.T) {\n\ts := &Stack{}\n\ts.Push(1)\n\ts.Push(2)\n\ts.Push(3)\n\tif s.Pop() != 3 {\n\t\tt.Error(\"Pop should return 3\")\n\t}\n\tif s.Pop() != 2 {\n\t\tt.Error(\"Pop should return 2\")\n\t}\n\tif s.Size() != 1 {\n\t\tt.Errorf(\"size should be 1, got %d\", s.Size())\n\t}\n}\n\nfunc TestPeek(t *testing.T) {\n\ts := &Stack{}\n\ts.Push(\"hello\")\n\tif s.Peek() != \"hello\" {\n\t\tt.Error(\"Peek should return 'hello'\")\n\t}\n\tif s.Size() != 1 {\n\t\tt.Error(\"Peek should not remove item\")\n\t}\n}\n\nfunc TestIsEmpty(t *testing.T) {\n\ts := &Stack{}\n\tif !s.IsEmpty() {\n\t\tt.Error(\"new stack should be empty\")\n\t}\n\ts.Push(42)\n\tif s.IsEmpty() {\n\t\tt.Error(\"stack with item should not be empty\")\n\t}\n}\n",
+      "go.mod": "module stack\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement the Stack methods in stack.go:\n1. Push(item): append item to s.items\n2. Pop(): remove and return last item; panic if empty\n3. Peek(): return last item without removing; panic if empty\n4. Size(): return len(s.items)\n5. IsEmpty(): return len(s.items) == 0\n\nRun `go test ./...` to verify all 3 tests pass.",
+    "entry_point": "stack.go",
+    "success_criteria": [
+      "All 3 go tests pass",
+      "LIFO ordering correct",
+      "Peek does not remove item",
+      "IsEmpty correct for empty and non-empty"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./..."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 5
+}

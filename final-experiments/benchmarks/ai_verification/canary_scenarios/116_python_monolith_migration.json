@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-migration-006",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Migrate FastAPI monolith request bodies from raw dict to Pydantic BaseModel schemas",
+  "description": "Brownfield Python migration: replace raw dict parameters with typed Pydantic BaseModel request/response schemas in the FastAPI monolith. All existing tests must pass.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_monolith_api",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Migrate src/app.py to use Pydantic BaseModel request schemas (fastapi already depends on pydantic — no new deps needed).\n\nAdd these models (in src/app.py or a new src/schemas.py):\n  class UserCreate(BaseModel): username: str; email: str = \"\"\n  class PostCreate(BaseModel): title: str; body: str = \"\"; author_id: int | None = None\n  class CommentCreate(BaseModel): text: str\n\nUpdate endpoint signatures:\n  create_user(body: UserCreate) — keep manual 'if not body.username: HTTPException(400)'\n  create_post(body: PostCreate) — keep manual 'if not body.title: HTTPException(400)'\n  create_comment(post_id: int, body: CommentCreate) — keep manual 'if not body.text: HTTPException(400)'\n\nResponse shapes and status codes must not change.\nAll 7 existing tests must still pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "UserCreate BaseModel with username and email fields",
+      "PostCreate BaseModel with title, body, author_id fields",
+      "CommentCreate BaseModel with text field",
+      "create_user accepts UserCreate, validates username non-empty",
+      "create_post accepts PostCreate, validates title non-empty",
+      "All 7 existing tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ passes",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,75 @@
+title: Semantic search required
+category: backend_feature
+difficulty: hard
+target_stack:
+  language: python
+task_spec:
+  prompt: |
+    This repository has several modules implementing different data structures.
+    Use semantic_search to find the module that handles priority queue operations,
+    then add a peek_max() method that returns the highest-priority element without removing it.
+    The method should raise IndexError if the queue is empty.
+repo_seed:
+  mode: fresh
+  files:
+    main.py: |
+      from heapq import heappush, heappop
+
+      class PriorityQueue:
+          def __init__(self):
+              self._heap = []
+
+          def push(self, item, priority):
+              heappush(self._heap, (priority, item))
+
+          def pop(self):
+              if not self._heap:
+                  raise IndexError("pop from empty queue")
+              return heappop(self._heap)[1]
+
+          def __len__(self):
+              return len(self._heap)
+    test_main.py: |
+      import pytest
+      from main import PriorityQueue
+
+      def test_push_pop():
+          pq = PriorityQueue()
+          pq.push("a", 1)
+          pq.push("b", 3)
+          pq.push("c", 2)
+          assert pq.pop() == "a"
+          assert pq.pop() == "c"
+          assert pq.pop() == "b"
+
+      def test_peek_max():
+          pq = PriorityQueue()
+          pq.push("a", 1)
+          pq.push("b", 3)
+          pq.push("c", 2)
+          assert pq.peek_max() == "b"
+          assert len(pq) == 3
+
+      def test_peek_max_empty():
+          pq = PriorityQueue()
+          with pytest.raises(IndexError):
+              pq.peek_max()
+expected_outcomes:
+  must_have:
+    - "item_completed event present"
+  must_not_have:
+    - "error event"
+trajectory_assertions:
+  must_use_tools:
+    - "semantic_search"
+  min_tool_calls: 1
+artifact_assertions:
+  require_non_empty_diff: true
+  forbid_noop_pass: true
+  must_not_change_files:
+    - "test_main.py"
+grading:
+  checks:
+    - run_tests
+  check_commands:
+    run_tests: "python -m pytest test_main.py -v"

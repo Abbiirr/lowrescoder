@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-node-greenfield-notes-001",
+  "title": "Implement a Node.js in-memory Note store",
+  "category": "repo_init",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "typescript",
+    "framework": "node",
+    "extra": {}
+  },
+  "description": "Implement a simple in-memory NoteStore class in JavaScript with add, archive, remove, and list operations. Uses plain Node.js with no external deps for tests.",
+  "repo_seed": {
+    "files": {
+      "notes.js": "/**\n * In-memory Note store.\n */\nclass NoteStore {\n  constructor() {\n    this._notes = [];\n    this._nextId = 1;\n  }\n\n  /** Add a new note. Returns the created note object {id, text, archived}. */\n  add(text) {\n    throw new Error('add: not implemented');\n  }\n\n  /** Mark note as archived. Returns true if found, false if not found. */\n  archive(id) {\n    throw new Error('archive: not implemented');\n  }\n\n  /** Remove note by id. Returns true if found, false if not found. */\n  remove(id) {\n    throw new Error('remove: not implemented');\n  }\n\n  /** Return array of all notes. */\n  list() {\n    throw new Error('list: not implemented');\n  }\n\n  /** Return only notes where archived === true. */\n  listArchived() {\n    throw new Error('listArchived: not implemented');\n  }\n}\n\nmodule.exports = NoteStore;\n",
+      "test_notes.js": "const assert = require('assert');\nconst NoteStore = require('./notes');\n\nconst store = new NoteStore();\n\n// test add\nconst n1 = store.add('buy milk');\nassert.strictEqual(n1.id, 1);\nassert.strictEqual(n1.text, 'buy milk');\nassert.strictEqual(n1.archived, false);\n\nconst n2 = store.add('write tests');\nassert.strictEqual(n2.id, 2);\n\n// test list\nassert.strictEqual(store.list().length, 2);\n\n// test archive\nassert.strictEqual(store.archive(1), true);\nassert.strictEqual(store.list().find(n => n.id === 1).archived, true);\nassert.strictEqual(store.archive(999), false);\n\n// test listArchived\nassert.strictEqual(store.listArchived().length, 1);\nassert.strictEqual(store.listArchived()[0].id, 1);\n\n// test remove\nassert.strictEqual(store.remove(1), true);\nassert.strictEqual(store.list().length, 1);\nassert.strictEqual(store.remove(999), false);\n\nconsole.log('All tests passed!');\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement the NoteStore class in notes.js:\n- add(text): create a note {id, text, archived:false}, increment _nextId, store it, return it\n- archive(id): set archived=true for the note with that id, return true; return false if not found\n- remove(id): remove the note with that id, return true; return false if not found\n- list(): return array of all notes\n- listArchived(): return notes where archived === true\n\nRun `node test_notes.js` to verify (should print 'All tests passed!').",
+    "entry_point": "notes.js",
+    "success_criteria": [
+      "node test_notes.js exits 0",
+      "All 5 NoteStore methods implemented",
+      "IDs auto-increment from 1"
+    ],
+    "followup_prompts": [
+      "Run `node test_notes.js` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `node test_notes.js` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "node test_notes.js"
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 5
+}

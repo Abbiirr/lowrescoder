@@ -1,0 +1,51 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-frontend-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add HTML formatting helpers to Rust file-processor library",
+  "description": "Brownfield Rust task: add an html_fmt module with error/result HTML renderers to the existing file-processor library.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_boxed_errors",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add a pub mod html_fmt block inside src/lib.rs with two public functions. All 7 existing tests must still pass.\n\n  pub fn format_error_html(e: &dyn std::error::Error) -> String\n    — returns: <div class=\"error\"><strong>Error:</strong> {message}</div>\n    — message is e.to_string()\n\n  pub fn format_result_html<T: std::fmt::Display>(r: &Result<T, Box<dyn std::error::Error>>) -> String\n    — Ok(val)  → <div class=\"ok\"><strong>OK:</strong> {val}</div>\n    — Err(e)   → delegates to format_error_html(e.as_ref())\n\nDo not add any new files; add the module inline in src/lib.rs.\nAll 7 existing tests must still pass.\nRun: cargo test",
+    "required_artifacts": [
+      "format_error_html returns div with class='error' and the error message",
+      "format_result_html returns div with class='ok' and value for Ok variant",
+      "format_result_html delegates to format_error_html for Err variant",
+      "All 7 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `cargo test` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

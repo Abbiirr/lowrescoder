@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-frontend-007",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add HTML rendering helpers to rust_panic_service",
+  "description": "Brownfield Rust task: add a pub mod html inside src/lib.rs with safe HTML-rendering wrappers over the panicking functions.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_panic_service",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add a pub mod html block inside src/lib.rs. All 5 existing tests must still pass.\n\n  pub fn render_divide(a: f64, b: f64) -> String\n    — if b == 0.0: returns <span class=\"error\">division by zero</span>\n    — otherwise: returns <span class=\"result\">{value}</span> where value = a/b\n\n  pub fn render_find_user(users: &[&str], name: &str) -> String\n    — if found at index i: returns <li>{name} at index {i}</li>\n    — if not found: returns <li class=\"error\">{name} not found</li>\n\n  pub fn render_user_list(users: &[&str]) -> String\n    — if users is empty: returns <ul><li><em>no users</em></li></ul>\n    — otherwise: returns <ul> with one <li>{user}</li> per entry, joined\n\nDo not add any new files; add the module inline in src/lib.rs.\nAdd at least 4 tests for the html module functions.\nAll 5 existing fixture tests must still pass.\nRun: cargo test",
+    "required_artifacts": [
+      "pub mod html with render_divide, render_find_user, render_user_list",
+      "render_divide returns error span for b=0",
+      "render_divide returns result span for valid inputs",
+      "render_find_user returns li with index when found",
+      "render_find_user returns error li when not found",
+      "render_user_list returns empty-state for empty slice",
+      "render_user_list wraps each user in li",
+      "All 5 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `cargo test` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

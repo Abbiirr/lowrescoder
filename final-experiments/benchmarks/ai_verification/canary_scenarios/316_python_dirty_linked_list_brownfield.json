@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-brownfield-008",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Fix bugs in a Python singly linked list",
+  "description": "Brownfield Python dirty_cleanup: fix three intentional bugs in a singly linked list (append adds to head instead of tail, length counts only first node, contains always returns False).",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"linkedlist\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/linkedlist.py",
+        "content": "class Node:\n    def __init__(self, value):\n        self.value = value\n        self.next = None\n\n\nclass LinkedList:\n    def __init__(self):\n        self.head = None\n\n    # BUG: prepends to head instead of appending to tail\n    def append(self, value):\n        node = Node(value)\n        node.next = self.head\n        self.head = node\n\n    # BUG: always returns 1 if list is non-empty, 0 if empty\n    def length(self):\n        if self.head is None:\n            return 0\n        return 1\n\n    # BUG: always returns False\n    def contains(self, value):\n        current = self.head\n        while current:\n            current = current.next\n        return False\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_linkedlist.py",
+        "content": "from src.linkedlist import LinkedList\n\n\ndef test_append_order():\n    ll = LinkedList()\n    ll.append(1)\n    ll.append(2)\n    ll.append(3)\n    # head should be 1, then 2, then 3\n    node = ll.head\n    assert node.value == 1\n    node = node.next\n    assert node.value == 2\n    node = node.next\n    assert node.value == 3\n\n\ndef test_length():\n    ll = LinkedList()\n    assert ll.length() == 0\n    ll.append(10)\n    ll.append(20)\n    assert ll.length() == 2\n\n\ndef test_contains_true():\n    ll = LinkedList()\n    ll.append(5)\n    ll.append(10)\n    assert ll.contains(10)\n\n\ndef test_contains_false():\n    ll = LinkedList()\n    ll.append(5)\n    assert not ll.contains(99)\n\n\ndef test_empty_list():\n    ll = LinkedList()\n    assert ll.length() == 0\n    assert not ll.contains(1)\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/linkedlist.py.\n\nBug 1 — append: prepends to head instead of appending to tail.\n  Fix: traverse to the last node and set last.next = node. If head is None, set head = node.\n\nBug 2 — length: always returns 1 for non-empty lists.\n  Fix: traverse all nodes counting each one.\n\nBug 3 — contains: never checks node.value, always returns False.\n  Fix: add `if current.value == value: return True` before advancing current.\n\nAll 5 tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "append adds nodes in insertion order (tail end)",
+      "length returns the count of all nodes",
+      "contains returns True if value exists, False otherwise",
+      "empty list edge cases handled",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.linkedlist import LinkedList\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.linkedlist import LinkedList\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

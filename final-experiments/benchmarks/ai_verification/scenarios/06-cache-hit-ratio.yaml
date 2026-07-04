@@ -1,0 +1,25 @@
+title: Prompt cache hit ratio invariant
+category: backend_feature
+difficulty: medium
+target_stack:
+  language: python
+task_spec:
+  prompt: |
+    Run two short turns in the same session so the stable prompt prefix can be reused.
+  followup_prompts:
+    - "Run the second short turn now and keep the prompt prefix reusable."
+repo_seed:
+  mode: fresh
+expected_outcomes:
+  must_have:
+    - "turn_completed event with usage"
+    - "turn_completed usage cache_hit_ratio>=0.5"
+  must_not_have:
+    - "error event"
+grading:
+  checks:
+    - snapshot
+  check_commands:
+    snapshot: "true"
+turn_assertions:
+  min_turns: 2

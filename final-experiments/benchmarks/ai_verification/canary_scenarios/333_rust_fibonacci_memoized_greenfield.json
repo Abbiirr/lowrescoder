@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-041",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement memoized Fibonacci and related number theory in Rust",
+  "description": "Greenfield Rust task: implement fib(n) using a HashMap memo cache, is_prime(n) using trial division, and prime_factors(n) returning sorted unique prime factors.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"numtheory\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement fib, is_prime, prime_factors\n"
+      },
+      {
+        "path": "tests/numtheory_test.rs",
+        "content": "use numtheory::{fib, is_prime, prime_factors};\n\n#[test]\nfn test_fib_base_cases() {\n    assert_eq!(fib(0), 0);\n    assert_eq!(fib(1), 1);\n}\n\n#[test]\nfn test_fib_sequence() {\n    assert_eq!(fib(10), 55);\n    assert_eq!(fib(20), 6765);\n}\n\n#[test]\nfn test_is_prime() {\n    assert!(!is_prime(1));\n    assert!(is_prime(2));\n    assert!(is_prime(17));\n    assert!(!is_prime(18));\n}\n\n#[test]\nfn test_prime_factors() {\n    assert_eq!(prime_factors(12), vec![2, 3]);\n    assert_eq!(prime_factors(30), vec![2, 3, 5]);\n    assert_eq!(prime_factors(7), vec![7]);\n}\n\n#[test]\nfn test_prime_factors_one() {\n    assert_eq!(prime_factors(1), vec![]);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement fib, is_prime, and prime_factors in src/lib.rs.\n\nuse std::collections::HashMap;\n\npub fn fib(n: u64) -> u64 {\n    let mut memo = HashMap::new();\n    fib_memo(n, &mut memo)\n}\n\nfn fib_memo(n: u64, memo: &mut HashMap<u64, u64>) -> u64 {\n    if n <= 1 { return n; }\n    if let Some(&v) = memo.get(&n) { return v; }\n    let v = fib_memo(n - 1, memo) + fib_memo(n - 2, memo);\n    memo.insert(n, v);\n    v\n}\n\npub fn is_prime(n: u64) -> bool {\n    if n < 2 { return false; }\n    if n == 2 { return true; }\n    if n % 2 == 0 { return false; }\n    let mut i = 3;\n    while i * i <= n {\n        if n % i == 0 { return false; }\n        i += 2;\n    }\n    true\n}\n\npub fn prime_factors(mut n: u64) -> Vec<u64> {\n    let mut factors = std::collections::HashSet::new();\n    let mut d = 2;\n    while d * d <= n {\n        while n % d == 0 {\n            factors.insert(d);\n            n /= d;\n        }\n        d += 1;\n    }\n    if n > 1 { factors.insert(n); }\n    let mut v: Vec<u64> = factors.into_iter().collect();\n    v.sort();\n    v\n}\n\nAll 5 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "fib uses memoization (HashMap) for efficiency",
+      "fib(0)=0, fib(1)=1, fib(10)=55",
+      "is_prime uses trial division, correctly handles 1 and 2",
+      "prime_factors returns sorted unique prime factors",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

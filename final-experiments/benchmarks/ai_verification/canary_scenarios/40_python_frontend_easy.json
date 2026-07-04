@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-frontend-004",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 10,
+  "title": "Add GET /api/stats endpoint to Flask blog",
+  "description": "A Flask blog app needs a single JSON statistics endpoint that returns total, published, and draft post counts.",
+  "target_stack": {
+    "language": "python",
+    "framework": "flask",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_blog_app",
+    "injections": [],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "The Flask blog in src/app.py has a list of posts and existing routes (/, /posts/<id>, /admin, /api/posts, POST /api/posts). Add one new endpoint:\n\nGET /api/stats — returns JSON {\"total\": N, \"published\": P, \"drafts\": D} where:\n  total = number of all posts\n  published = number of posts with published=True\n  drafts = total - published\n\nAlso add 2 tests in tests/test_blog.py:\n  test_stats_counts — calls GET /api/stats, checks total/published/drafts against the initial data\n  test_stats_after_new_post — creates a draft via POST /api/posts then re-checks /api/stats\n\nAll 6 original tests must still pass. Run uv run pytest tests/ -q to confirm.",
+    "required_artifacts": [
+      "GET /api/stats route returning {total, published, drafts}",
+      "test_stats_counts and test_stats_after_new_post in tests/test_blog.py",
+      "All 6 original tests still pass"
+    ],
+    "success_criteria": [
+      "Endpoint returns correct counts",
+      "drafts = total - published always holds",
+      "Both new tests pass",
+      "All original tests unmodified and passing"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `uv run pytest tests/ -q` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

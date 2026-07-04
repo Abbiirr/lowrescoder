@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "514-go-mt-circuit-breaker",
+  "title": "Build a circuit breaker in Go — 3 turns",
+  "category": "repo_init",
+  "difficulty": "hard",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "Three turns build a circuit breaker: turn 1 closed state (count failures), turn 2 open state (reject calls), turn 3 half-open recovery.",
+  "repo_seed": {
+    "files": {
+      "go.mod": "module github.com/ai-verification/circuit-breaker\n\ngo 1.22\n",
+      "cb/cb.go": "package cb\n\nimport (\n\t\"errors\"\n\t\"sync\"\n\t\"time\"\n)\n\n// ErrOpen is returned when the circuit is open.\nvar ErrOpen = errors.New(\"circuit breaker is open\")\n\n// State represents the circuit state.\ntype State int\n\nconst (\n\tStateClosed   State = iota // normal operation\n\tStateOpen                  // rejecting all calls\n\tStateHalfOpen              // testing if service recovered\n)\n\n// CircuitBreaker protects a downstream service.\ntype CircuitBreaker struct {\n\tmu           sync.Mutex\n\tstate        State\n\tfailures     int\n\tmaxFailures  int\n\topenUntil    time.Time\n\tresetTimeout time.Duration\n}\n\n// New creates a CircuitBreaker.\n// maxFailures: failures before opening.\n// resetTimeout: how long to stay open before trying half-open.\nfunc New(maxFailures int, resetTimeout time.Duration) *CircuitBreaker {\n\treturn &CircuitBreaker{\n\t\tstate:        StateClosed,\n\t\tmaxFailures:  maxFailures,\n\t\tresetTimeout: resetTimeout,\n\t}\n}\n\n// Call executes fn through the circuit breaker.\n// Returns ErrOpen immediately if the circuit is open.\nfunc (c *CircuitBreaker) Call(fn func() error) error {\n\t// TODO: implement circuit breaker state machine\n\treturn fn()\n}\n\n// State returns current state (for testing).\nfunc (c *CircuitBreaker) GetState() State {\n\tc.mu.Lock()\n\tdefer c.mu.Unlock()\n\treturn c.state\n}\n",
+      "cb/cb_test.go": "package cb_test\n\nimport (\n\t\"errors\"\n\t\"testing\"\n\t\"time\"\n\n\t\"github.com/ai-verification/circuit-breaker/cb\"\n)\n\nvar errService = errors.New(\"service error\")\n\nfunc TestClosedStateAllowsCalls(t *testing.T) {\n\tcb := cb.New(3, time.Second)\n\terr := cb.Call(func() error { return nil })\n\tif err != nil {\n\t\tt.Fatalf(\"expected nil, got %v\", err)\n\t}\n\tif cb.GetState() != cb.StateClosed {\n\t\tt.Fatal(\"expected closed state\")\n\t}\n}\n\nfunc TestOpensAfterMaxFailures(t *testing.T) {\n\tcb := cb.New(3, time.Second)\n\tfor i := 0; i < 3; i++ {\n\t\tcb.Call(func() error { return errService })\n\t}\n\tif cb.GetState() != cb.StateOpen {\n\t\tt.Fatal(\"expected open state after 3 failures\")\n\t}\n}\n\nfunc TestOpenStateRejectsWithErrOpen(t *testing.T) {\n\tcb := cb.New(1, time.Second)\n\tcb.Call(func() error { return errService })\n\terr := cb.Call(func() error { return nil })\n\tif !errors.Is(err, cb.ErrOpen) {\n\t\tt.Fatalf(\"expected ErrOpen, got %v\", err)\n\t}\n}\n\nfunc TestHalfOpenAfterTimeout(t *testing.T) {\n\tcb := cb.New(1, 20*time.Millisecond)\n\tcb.Call(func() error { return errService })\n\ttime.Sleep(30 * time.Millisecond)\n\t// Next call should be allowed (half-open probe)\n\tcb.Call(func() error { return nil })\n\tif cb.GetState() != cb.StateClosed {\n\t\tt.Fatal(\"expected closed after successful probe\")\n\t}\n}\n\nfunc TestHalfOpenFailureReopens(t *testing.T) {\n\tcb := cb.New(1, 20*time.Millisecond)\n\tcb.Call(func() error { return errService })\n\ttime.Sleep(30 * time.Millisecond)\n\t// Probe fails — should go back to open\n\tcb.Call(func() error { return errService })\n\tif cb.GetState() != cb.StateOpen {\n\t\tt.Fatal(\"expected open after failed half-open probe\")\n\t}\n}\n\nfunc TestSuccessResetsFailureCount(t *testing.T) {\n\tcb := cb.New(3, time.Second)\n\tcb.Call(func() error { return errService })\n\tcb.Call(func() error { return errService })\n\tcb.Call(func() error { return nil }) // success should reset\n\tcb.Call(func() error { return errService })\n\tcb.Call(func() error { return errService })\n\tif cb.GetState() != cb.StateClosed {\n\t\tt.Fatal(\"should not open after reset\")\n\t}\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement the closed-state logic in `Call()` in `cb/cb.go`: when the circuit is closed, call fn(), track failures. If fn() returns an error increment c.failures; if it succeeds reset c.failures to 0. When c.failures reaches c.maxFailures, transition to StateOpen and record c.openUntil = time.Now().Add(c.resetTimeout). Return any error from fn(). Run `go test ./...`.",
+    "followup_prompts": [
+      "Good. Now add the open-state logic: at the start of Call(), check if c.state == StateOpen. If time.Now().Before(c.openUntil) return ErrOpen immediately. Otherwise transition to StateHalfOpen and allow the call through. Run `go test ./...` and fix any failures.",
+      "Final step: add half-open recovery — when in StateHalfOpen and fn() succeeds, reset to StateClosed with zero failures. If fn() fails in StateHalfOpen, go back to StateOpen and reset the timer. Run `go test ./...` — all 6 tests must pass."
+    ],
+    "success_criteria": [
+      "Closed state counts failures and opens at maxFailures",
+      "Success in closed state resets failure count",
+      "Open state returns ErrOpen immediately without calling fn",
+      "After resetTimeout, circuit transitions to HalfOpen",
+      "Successful probe in HalfOpen closes the circuit",
+      "Failed probe in HalfOpen re-opens the circuit",
+      "go test ./... passes (6 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "go test ./..."}
+  },
+  "duration_hint_minutes": 25
+}

@@ -1,0 +1,62 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-dirty-009",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix three bugs in Rust string utilities: reverse, word count, and capitalize",
+  "description": "Dirty-cleanup Rust task: three string functions have obvious logic bugs. All tests are written correctly; the implementations must be fixed to make them pass.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": "",
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"str-ops\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "/// Returns s with characters in reverse order.\npub fn reverse_string(s: &str) -> String {\n    s.to_string() // BUG: should reverse the chars\n}\n\n/// Returns the number of whitespace-delimited words in s.\npub fn count_words(s: &str) -> usize {\n    s.len() // BUG: should count split_whitespace tokens\n}\n\n/// Returns s with only the first character uppercased; rest unchanged.\npub fn capitalize(s: &str) -> String {\n    s.to_uppercase() // BUG: uppercases all chars, not just the first\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_reverse_basic() { assert_eq!(reverse_string(\"hello\"), \"olleh\"); }\n    #[test]\n    fn test_reverse_empty() { assert_eq!(reverse_string(\"\"), \"\"); }\n    #[test]\n    fn test_reverse_single() { assert_eq!(reverse_string(\"a\"), \"a\"); }\n    #[test]\n    fn test_count_words_two() { assert_eq!(count_words(\"hello world\"), 2); }\n    #[test]\n    fn test_count_words_empty() { assert_eq!(count_words(\"\"), 0); }\n    #[test]\n    fn test_count_words_four() { assert_eq!(count_words(\"one two three four\"), 4); }\n    #[test]\n    fn test_capitalize_basic() { assert_eq!(capitalize(\"hello world\"), \"Hello world\"); }\n    #[test]\n    fn test_capitalize_empty() { assert_eq!(capitalize(\"\"), \"\"); }\n    #[test]\n    fn test_capitalize_already() { assert_eq!(capitalize(\"Hello\"), \"Hello\"); }\n}\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/lib.rs. All 9 tests must pass after your fixes.\n\nBug 1 — reverse_string:\n  Current: s.to_string()  (returns unchanged)\n  Fix: collect chars in reverse order: s.chars().rev().collect()\n\nBug 2 — count_words:\n  Current: s.len()  (counts bytes, not words)\n  Fix: s.split_whitespace().count()\n\nBug 3 — capitalize:\n  Current: s.to_uppercase()  (uppercases entire string)\n  Fix: uppercase only the first char; leave the rest unchanged\n  Hint: use s.chars(), take the first with .next(), uppercase it, then append the remainder with chars.as_str()\n\nRun: cargo test",
+    "required_artifacts": [
+      "reverse_string(\"hello\") returns \"olleh\"",
+      "count_words(\"hello world\") returns 2",
+      "count_words(\"\") returns 0",
+      "capitalize(\"hello world\") returns \"Hello world\"",
+      "capitalize(\"\") returns \"\"",
+      "All 9 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (9 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

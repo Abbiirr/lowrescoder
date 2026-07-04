@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "506-python-mt-debug-binary-search",
+  "title": "Debug binary search off-by-one bug — 3 turns",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {"language": "python", "framework": null, "extra": {}},
+  "description": "Binary search implementation has an off-by-one bug causing infinite loop. Tests fail. Multi-turn: fix the bug, verify edge cases, confirm all tests pass.",
+  "repo_seed": {
+    "files": {
+      "binary_search.py": "\"\"\"Binary search — contains an off-by-one bug.\"\"\"\nfrom typing import Optional\n\n\ndef binary_search(arr: list, target) -> int:\n    \"\"\"Return index of target in sorted arr, or -1 if not found.\"\"\"\n    low, high = 0, len(arr)\n    while low < high:\n        mid = (low + high) // 2\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            low = mid  # BUG: should be mid + 1\n        else:\n            high = mid\n    return -1\n\n\ndef search_range(arr: list, target) -> tuple[int, int]:\n    \"\"\"Return (first_index, last_index) of target, or (-1, -1) if not found.\"\"\"\n    def find_left(arr, target):\n        low, high = 0, len(arr)\n        while low < high:\n            mid = (low + high) // 2\n            if arr[mid] < target:\n                low = mid  # BUG: should be mid + 1\n            else:\n                high = mid\n        return low if low < len(arr) and arr[low] == target else -1\n\n    def find_right(arr, target):\n        low, high = 0, len(arr)\n        while low < high:\n            mid = (low + high) // 2\n            if arr[mid] <= target:\n                low = mid  # BUG: should be mid + 1\n            else:\n                high = mid\n        return low - 1 if low > 0 and arr[low - 1] == target else -1\n\n    left = find_left(arr, target)\n    if left == -1:\n        return (-1, -1)\n    return (left, find_right(arr, target))\n",
+      "tests/test_binary_search.py": "import pytest\nfrom binary_search import binary_search, search_range\n\n\ndef test_found_in_middle():\n    assert binary_search([1, 3, 5, 7, 9], 5) == 2\n\n\ndef test_found_at_start():\n    assert binary_search([1, 3, 5, 7, 9], 1) == 0\n\n\ndef test_found_at_end():\n    assert binary_search([1, 3, 5, 7, 9], 9) == 4\n\n\ndef test_not_found():\n    assert binary_search([1, 3, 5, 7, 9], 4) == -1\n\n\ndef test_empty_list():\n    assert binary_search([], 5) == -1\n\n\ndef test_single_element_found():\n    assert binary_search([42], 42) == 0\n\n\ndef test_single_element_not_found():\n    assert binary_search([42], 99) == -1\n\n\ndef test_search_range_found():\n    assert search_range([1, 2, 2, 2, 3], 2) == (1, 3)\n\n\ndef test_search_range_single():\n    assert search_range([1, 2, 3], 2) == (1, 1)\n\n\ndef test_search_range_not_found():\n    assert search_range([1, 2, 3], 9) == (-1, -1)\n\n\ndef test_search_range_empty():\n    assert search_range([], 1) == (-1, -1)\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The `binary_search` function in `binary_search.py` has an off-by-one bug — when `arr[mid] < target`, it sets `low = mid` instead of `low = mid + 1`, which can cause an infinite loop. Fix `binary_search()` so the tests pass. Run `uv run pytest tests/ -q` to check.",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through the fixes you made. If any tests are still failing — especially the edge cases (empty list, single element) — show me the errors and fix them. Also look at `search_range()` — it has the same family of bugs in its find_left and find_right helpers.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — fix anything still red now."
+    ],
+    "success_criteria": [
+      "binary_search has no infinite loop (low = mid + 1 when arr[mid] < target)",
+      "Empty list returns -1",
+      "Single element works for found and not-found",
+      "search_range correctly finds first and last index of duplicates",
+      "All 11 pytest tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "uv run pytest tests/ -q"}
+  },
+  "duration_hint_minutes": 10
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-018",
+  "title": "Fix three bugs in a Python INI-style config parser",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A simple INI parser has three bugs: parse_line strips wrong side, get returns default for existing keys, and set does not create section if missing.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/config.py": "class Config:\n    def __init__(self):\n        self._data: dict[str, dict[str, str]] = {}\n\n    def parse_line(self, line: str) -> None:\n        line = line.rstrip()  # bug: should be strip() to remove leading whitespace too\n        if not line or line.startswith('#'):\n            return\n        if line.startswith('[') and line.endswith(']'):\n            self._current_section = line[1:-1]\n            if self._current_section not in self._data:\n                self._data[self._current_section] = {}\n        elif '=' in line:\n            key, _, value = line.partition('=')\n            section = getattr(self, '_current_section', 'DEFAULT')\n            self._data.setdefault(section, {})[key.strip()] = value.strip()\n\n    def parse(self, text: str) -> None:\n        self._current_section = 'DEFAULT'\n        self._data.setdefault('DEFAULT', {})\n        for line in text.splitlines():\n            self.parse_line(line)\n\n    def get(self, section: str, key: str, default: str = '') -> str:\n        return self._data.get(section, {}).get(key) or default  # bug: returns default if value is falsy (e.g., empty string); should use explicit None check\n\n    def set(self, section: str, key: str, value: str) -> None:\n        # bug: does not create section if it doesn't exist\n        self._data[section][key] = value\n",
+      "tests/test_config.py": "import pytest\nfrom src.config import Config\n\ndef test_parse_basic():\n    cfg = Config()\n    cfg.parse('[db]\\nhost=localhost\\nport=5432')\n    assert cfg.get('db', 'host') == 'localhost'\n    assert cfg.get('db', 'port') == '5432'\n\ndef test_parse_leading_whitespace():\n    cfg = Config()\n    cfg.parse('[app]\\n  debug=true')\n    assert cfg.get('app', 'debug') == 'true'\n\ndef test_get_empty_string_value():\n    cfg = Config()\n    cfg.parse('[s]\\nk=')\n    assert cfg.get('s', 'k') == ''\n    assert cfg.get('s', 'k', 'fallback') == ''  # empty value != missing key\n\ndef test_set_creates_section():\n    cfg = Config()\n    cfg.set('new_section', 'key', 'val')\n    assert cfg.get('new_section', 'key') == 'val'\n\ndef test_get_default_for_missing():\n    cfg = Config()\n    cfg.parse('[s]\\nx=1')\n    assert cfg.get('s', 'missing', 'def') == 'def'\n",
+      "pyproject.toml": "[project]\nname = \"config\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npythonpath = [\".\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/config.py:\n1. `parse_line`: change `line.rstrip()` to `line.strip()` so leading whitespace is also removed\n2. `get`: change `return self._data.get(section, {}).get(key) or default` to `v = self._data.get(section, {}).get(key); return v if v is not None else default` to handle empty-string values correctly\n3. `set`: add `self._data.setdefault(section, {})` before assigning so missing sections are created\nAll 5 tests must pass.",
+    "entry_point": "src/config.py",
+    "success_criteria": "All 5 pytest tests pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

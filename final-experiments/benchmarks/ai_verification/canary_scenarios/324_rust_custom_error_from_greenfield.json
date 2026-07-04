@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-039",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement custom error types with From conversions in Rust",
+  "description": "Greenfield Rust task: implement AppError enum with ParseError and IoError variants, with From<std::num::ParseIntError> and From<std::io::Error> conversions, enabling the ? operator.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"apperror\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement AppError with From conversions\n"
+      },
+      {
+        "path": "tests/error_test.rs",
+        "content": "use apperror::{AppError, parse_number, read_first_line};\n\n#[test]\nfn test_parse_number_ok() {\n    assert_eq!(parse_number(\"42\").unwrap(), 42);\n}\n\n#[test]\nfn test_parse_number_err() {\n    let err = parse_number(\"abc\").unwrap_err();\n    assert!(matches!(err, AppError::ParseError(_)));\n}\n\n#[test]\nfn test_read_first_line_err() {\n    let err = read_first_line(\"/nonexistent/path/file.txt\").unwrap_err();\n    assert!(matches!(err, AppError::IoError(_)));\n}\n\n#[test]\nfn test_app_error_display_parse() {\n    let err = parse_number(\"bad\").unwrap_err();\n    let msg = format!(\"{}\", err);\n    assert!(msg.contains(\"parse error\"));\n}\n\n#[test]\nfn test_app_error_display_io() {\n    let err = read_first_line(\"/nonexistent\").unwrap_err();\n    let msg = format!(\"{}\", err);\n    assert!(msg.contains(\"io error\"));\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement AppError with From conversions in src/lib.rs.\n\nuse std::fmt;\nuse std::io::{self, BufRead};\nuse std::fs::File;\n\n#[derive(Debug)]\npub enum AppError {\n    ParseError(std::num::ParseIntError),\n    IoError(std::io::Error),\n}\n\nimpl fmt::Display for AppError {\n    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {\n        match self {\n            AppError::ParseError(e) => write!(f, \"parse error: {}\", e),\n            AppError::IoError(e) => write!(f, \"io error: {}\", e),\n        }\n    }\n}\n\nimpl From<std::num::ParseIntError> for AppError {\n    fn from(e: std::num::ParseIntError) -> Self {\n        AppError::ParseError(e)\n    }\n}\n\nimpl From<std::io::Error> for AppError {\n    fn from(e: std::io::Error) -> Self {\n        AppError::IoError(e)\n    }\n}\n\npub fn parse_number(s: &str) -> Result<i64, AppError> {\n    Ok(s.trim().parse::<i64>()?)\n}\n\npub fn read_first_line(path: &str) -> Result<String, AppError> {\n    let file = File::open(path)?;\n    let mut reader = io::BufReader::new(file);\n    let mut line = String::new();\n    reader.read_line(&mut line)?;\n    Ok(line.trim_end().to_string())\n}\n\nAll 5 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "AppError enum with ParseError and IoError variants",
+      "From<ParseIntError> and From<io::Error> implemented",
+      "Display shows 'parse error: ...' or 'io error: ...'",
+      "parse_number and read_first_line use ? operator",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

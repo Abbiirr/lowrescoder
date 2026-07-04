@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "555-python-mt-migrate-extend",
+  "title": "Migrate raw dict to dataclass then add validation in Python — 3 turns",
+  "category": "migration",
+  "difficulty": "medium",
+  "target_stack": {"language": "python", "framework": null, "extra": {}},
+  "description": "Raw dict-based code migrated to dataclass, tests kept green, validators added.",
+  "repo_seed": {
+    "files": {
+      "product.py": "\"\"\"Product model — raw dict based, needs migration to dataclass.\"\"\"\nfrom typing import Optional\n\n\ndef create_product(name: str, price: float, stock: int = 0) -> dict:\n    \"\"\"Create a raw product dict.\"\"\"\n    return {\"name\": name, \"price\": price, \"stock\": stock}\n\n\ndef get_product_name(product: dict) -> str:\n    return product[\"name\"]\n\n\ndef get_product_price(product: dict) -> float:\n    return product[\"price\"]\n\n\ndef update_stock(product: dict, delta: int) -> dict:\n    \"\"\"Add delta to stock (can be negative to remove).\"\"\"\n    new_product = dict(product)\n    new_product[\"stock\"] = product[\"stock\"] + delta\n    return new_product\n\n\ndef is_in_stock(product: dict) -> bool:\n    return product[\"stock\"] > 0\n\n\ndef format_product(product: dict) -> str:\n    return f\"{product['name']}: ${product['price']:.2f} ({product['stock']} in stock)\"\n",
+      "tests/test_product.py": "import pytest\nfrom product import create_product, get_product_name, get_product_price, update_stock, is_in_stock, format_product\n\n\ndef test_create():\n    p = create_product(\"Widget\", 9.99)\n    assert get_product_name(p) == \"Widget\"\n    assert get_product_price(p) == 9.99\n\n\ndef test_update_stock():\n    p = create_product(\"Gadget\", 4.99, stock=10)\n    p = update_stock(p, 5)\n    assert p.stock == 15\n    p = update_stock(p, -3)\n    assert p.stock == 12\n\n\ndef test_is_in_stock():\n    p = create_product(\"Thing\", 1.00, stock=0)\n    assert not is_in_stock(p)\n    p = update_stock(p, 1)\n    assert is_in_stock(p)\n\n\ndef test_format():\n    p = create_product(\"Item\", 2.50, stock=3)\n    assert format_product(p) == \"Item: $2.50 (3 in stock)\"\n\n\ndef test_validation_negative_price():\n    \"\"\"Should raise ValueError for negative price.\"\"\"\n    with pytest.raises(ValueError):\n        create_product(\"Bad\", -1.0)\n\n\ndef test_validation_empty_name():\n    \"\"\"Should raise ValueError for empty name.\"\"\"\n    with pytest.raises(ValueError):\n        create_product(\"\", 9.99)\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Migrate `product.py` from raw dicts to a `Product` dataclass. Define `@dataclass class Product` with fields `name: str`, `price: float`, `stock: int = 0`. Update `create_product()` to return a `Product`, and update the other functions to accept `Product` instead of `dict`. The test uses `p.stock` (attribute access), not `p['stock']`. Run `uv run pytest tests/ -q` to confirm tests pass.",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to confirm no regressions. Make sure all attribute accesses work (p.stock, p.name, p.price). Walk me through what changed.",
+      "Final pass: add validation in `create_product()` (or in `__post_init__`): raise `ValueError` if name is empty or price is negative. Then run `uv run pytest tests/ -q` and confirm everything is green — all 6 tests must pass."
+    ],
+    "success_criteria": [
+      "Product dataclass defined with correct fields",
+      "All functions accept Product instead of dict",
+      "Attribute access works (p.stock, p.name)",
+      "Negative price raises ValueError",
+      "Empty name raises ValueError",
+      "All 6 pytest tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "uv run pytest tests/ -q"}
+  },
+  "duration_hint_minutes": 15
+}

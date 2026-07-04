@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-dirty-014",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 bugs in rust_report_gen functions",
+  "description": "Brownfield Rust dirty scenario: sum, max_item, and min_item each have a bug. Fix them so all 4 tests pass.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_report_gen",
+    "injections": [
+      {
+        "path": "src/lib.rs",
+        "content": "#[derive(Debug, Clone)]\npub struct Item {\n    pub name: String,\n    pub value: f64,\n}\n\nimpl Item {\n    pub fn new(name: &str, value: f64) -> Self {\n        Item { name: name.to_string(), value }\n    }\n}\n\n/// Returns the sum of all item values.\npub fn sum(items: &[Item]) -> f64 {\n    // BUG: negates values before summing\n    items.iter().map(|i| -i.value).sum()\n}\n\n/// Returns the item with the highest value, or None if empty.\npub fn max_item(items: &[Item]) -> Option<&Item> {\n    // BUG: uses min_by instead of max_by\n    items.iter().min_by(|a, b| a.value.partial_cmp(&b.value).unwrap())\n}\n\n/// Returns the item with the lowest value, or None if empty.\npub fn min_item(items: &[Item]) -> Option<&Item> {\n    // BUG: uses max_by instead of min_by\n    items.iter().max_by(|a, b| a.value.partial_cmp(&b.value).unwrap())\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    fn sample() -> Vec<Item> {\n        vec![\n            Item::new(\"Alpha\", 10.0),\n            Item::new(\"Beta\", 30.0),\n            Item::new(\"Gamma\", 20.0),\n        ]\n    }\n\n    #[test]\n    fn test_sum() {\n        assert!((sum(&sample()) - 60.0).abs() < 1e-9);\n    }\n\n    #[test]\n    fn test_max() {\n        assert_eq!(max_item(&sample()).unwrap().name, \"Beta\");\n    }\n\n    #[test]\n    fn test_min() {\n        assert_eq!(min_item(&sample()).unwrap().name, \"Alpha\");\n    }\n\n    #[test]\n    fn test_empty() {\n        assert_eq!(sum(&[]), 0.0);\n        assert!(max_item(&[]).is_none());\n    }\n}\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 bugs in src/lib.rs so all 4 tests pass.\n\n  fn sum(items: &[Item]) -> f64:\n    — negates values: map(|i| -i.value) should be map(|i| i.value)\n    — fix: remove the negation\n\n  fn max_item(items: &[Item]) -> Option<&Item>:\n    — uses min_by instead of max_by — returns smallest item\n    — fix: change min_by to max_by\n\n  fn min_item(items: &[Item]) -> Option<&Item>:\n    — uses max_by instead of min_by — returns largest item\n    — fix: change max_by to min_by\n\nDo not modify the test code.\nRun: cargo test",
+    "required_artifacts": [
+      "sum maps without negation",
+      "max_item uses max_by",
+      "min_item uses min_by",
+      "All 4 existing tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

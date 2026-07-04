@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-py-migration-async-001",
+  "title": "Migrate synchronous Python requests to async httpx",
+  "category": "migration",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Python HTTP client uses the synchronous `requests` library. Migrate it to async `httpx` with proper async/await. Tests use pytest-asyncio. Exercises migration category and async Python patterns.",
+  "repo_seed": {
+    "files": {
+      "client.py": "\"\"\"HTTP client using synchronous requests.\"\"\"\nimport requests\n\n\ndef fetch_user(base_url: str, user_id: int) -> dict:\n    \"\"\"Fetch a user by ID. Returns dict with 'id', 'name', 'email'.\"\"\"\n    resp = requests.get(f\"{base_url}/users/{user_id}\")\n    resp.raise_for_status()\n    return resp.json()\n\n\ndef fetch_posts(base_url: str, user_id: int) -> list:\n    \"\"\"Fetch posts for a user. Returns list of post dicts.\"\"\"\n    resp = requests.get(f\"{base_url}/posts\", params={\"userId\": user_id})\n    resp.raise_for_status()\n    return resp.json()\n\n\ndef create_post(base_url: str, title: str, body: str, user_id: int) -> dict:\n    \"\"\"Create a new post. Returns the created post dict.\"\"\"\n    resp = requests.post(\n        f\"{base_url}/posts\",\n        json={\"title\": title, \"body\": body, \"userId\": user_id},\n    )\n    resp.raise_for_status()\n    return resp.json()\n",
+      "test_client.py": "\"\"\"Tests using httpx.AsyncClient as mock.\"\"\"\nimport pytest\nimport pytest_asyncio\nimport httpx\nfrom unittest.mock import AsyncMock, MagicMock, patch\n\nfrom client import fetch_user, fetch_posts, create_post\n\n\n@pytest.mark.asyncio\nasync def test_fetch_user():\n    mock_response = MagicMock()\n    mock_response.json.return_value = {\"id\": 1, \"name\": \"Alice\", \"email\": \"alice@example.com\"}\n    mock_response.raise_for_status = MagicMock()\n\n    with patch(\"client.httpx.AsyncClient\") as mock_client_cls:\n        mock_client = AsyncMock()\n        mock_client.__aenter__ = AsyncMock(return_value=mock_client)\n        mock_client.__aexit__ = AsyncMock(return_value=False)\n        mock_client.get = AsyncMock(return_value=mock_response)\n        mock_client_cls.return_value = mock_client\n\n        result = await fetch_user(\"http://api.test\", 1)\n        assert result[\"name\"] == \"Alice\"\n\n\n@pytest.mark.asyncio\nasync def test_fetch_posts():\n    mock_response = MagicMock()\n    mock_response.json.return_value = [{\"id\": 1, \"title\": \"Post 1\", \"userId\": 1}]\n    mock_response.raise_for_status = MagicMock()\n\n    with patch(\"client.httpx.AsyncClient\") as mock_client_cls:\n        mock_client = AsyncMock()\n        mock_client.__aenter__ = AsyncMock(return_value=mock_client)\n        mock_client.__aexit__ = AsyncMock(return_value=False)\n        mock_client.get = AsyncMock(return_value=mock_response)\n        mock_client_cls.return_value = mock_client\n\n        result = await fetch_posts(\"http://api.test\", 1)\n        assert len(result) == 1\n        assert result[0][\"title\"] == \"Post 1\"\n\n\n@pytest.mark.asyncio\nasync def test_create_post():\n    mock_response = MagicMock()\n    mock_response.json.return_value = {\"id\": 101, \"title\": \"New\", \"body\": \"Body\", \"userId\": 1}\n    mock_response.raise_for_status = MagicMock()\n\n    with patch(\"client.httpx.AsyncClient\") as mock_client_cls:\n        mock_client = AsyncMock()\n        mock_client.__aenter__ = AsyncMock(return_value=mock_client)\n        mock_client.__aexit__ = AsyncMock(return_value=False)\n        mock_client.post = AsyncMock(return_value=mock_response)\n        mock_client_cls.return_value = mock_client\n\n        result = await create_post(\"http://api.test\", \"New\", \"Body\", 1)\n        assert result[\"id\"] == 101\n",
+      "pyproject.toml": "[build-system]\nrequires = [\"setuptools\"]\nbuild-backend = \"setuptools.backends.legacy:build\"\n\n[project]\nname = \"async-client\"\nversion = \"0.1.0\"\ndependencies = [\"httpx\", \"pytest-asyncio\"]\n\n[tool.pytest.ini_options]\nasyncio_mode = \"auto\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Migrate client.py from synchronous `requests` to async `httpx`.\n\nThe test file already uses `httpx.AsyncClient` as the mock target. You need to:\n1. Replace `import requests` with `import httpx`\n2. Make all three functions async (`async def`)\n3. Use `async with httpx.AsyncClient() as client:` for HTTP calls\n4. Use `await client.get(...)` and `await client.post(...)`\n\nRun `pytest test_client.py -v --rootdir=. --override-ini=asyncio_mode=auto` to verify all 3 tests pass. Do NOT modify pyproject.toml.",
+    "entry_point": "client.py",
+    "success_criteria": [
+      "All 3 async pytest tests pass",
+      "client.py uses httpx.AsyncClient not requests",
+      "All functions are async def"
+    ],
+    "followup_prompts": [
+      "Run `pytest test_client.py -v --rootdir=. --override-ini=asyncio_mode=auto` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `pytest test_client.py -v --rootdir=. --override-ini=asyncio_mode=auto` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "pytest test_client.py -v --rootdir=. --override-ini=asyncio_mode=auto"
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 8
+}

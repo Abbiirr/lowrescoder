@@ -1,0 +1,58 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-002",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "duration_hint_minutes": 30,
+  "title": "Extend Rust string-utils: truncate, reverse_words, snake_to_camel, tests, doc-comments",
+  "description": "A Rust library has word_count and capitalize_words. Extend it with 3 new functions, a comprehensive test module, and doc-comments on all public items.",
+  "target_stack": {
+    "language": "rust",
+    "framework": "",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_string_utils",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Extend src/lib.rs with 3 new public functions and improve quality:\n\n1. pub fn truncate_words(s: &str, max_words: usize) -> String\n   — keep first max_words words; append \" ...\" only if truncated. Empty input returns empty.\n\n2. pub fn reverse_words(s: &str) -> String\n   — reverse the order of words (not characters). \"hello world\" -> \"world hello\".\n\n3. pub fn snake_to_camel(s: &str) -> String\n   — convert snake_case to camelCase. \"hello_world_foo\" -> \"helloWorldFoo\".\n   Leading/trailing underscores should be dropped. Empty segments skipped.\n\n4. Add doc-comments (///) to ALL public functions (word_count, capitalize_words, and the 3 new ones).\n\n5. Expand the #[cfg(test)] module with at least 3 tests per new function (9+ new tests total).\n\nAll existing tests must pass. cargo clippy -- -D warnings must be clean.",
+    "required_artifacts": [
+      "truncate_words implemented and tested (3+ tests)",
+      "reverse_words implemented and tested (3+ tests)",
+      "snake_to_camel implemented and tested (3+ tests)",
+      "doc-comments on all 5 public functions",
+      "cargo test passes",
+      "cargo clippy clean"
+    ],
+    "success_criteria": [
+      "truncate_words handles empty, exact, and truncation cases",
+      "reverse_words handles empty, single-word, and multi-word",
+      "snake_to_camel handles empty, single-word, leading/trailing underscores",
+      "All public functions have /// doc-comments",
+      "9+ new tests, all passing",
+      "No clippy warnings"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `cargo test --quiet` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `cargo test --quiet` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test --quiet",
+      "lint": "cargo clippy -- -D warnings"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

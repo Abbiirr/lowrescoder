@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-report-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add average, above_average, and format_summary to Rust report library",
+  "description": "The rust_report_gen library has sum, max_item, and min_item. Extend src/lib.rs with three new public functions: average, above_average, and format_summary. New tests are injected alongside existing ones.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_report_gen",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Extend src/lib.rs with three new public functions:\n\n  pub fn average(items: &[Item]) -> f64\n    — return the mean value of all items; return 0.0 for empty slice\n\n  pub fn above_average(items: &[Item]) -> Vec<&Item>\n    — return items whose value is strictly above the average; empty slice -> empty vec\n\n  pub fn format_summary(items: &[Item]) -> String\n    — return a one-line summary string containing:\n        \"count: N\", \"sum: S\", \"avg: A\", \"max: <name>\", \"min: <name>\"\n      (exact float precision doesn't matter; round to nearest integer in the string)\n      For empty slice, return \"count: 0, sum: 0, avg: 0, max: -, min: -\"\n\nExisting 4 tests must still pass. New tests in tests/extended.rs must also pass.\nRun: cargo test",
+    "required_artifacts": [
+      "average returns 0.0 for empty slice, mean for non-empty",
+      "above_average returns items with value > average",
+      "format_summary contains count/sum/avg/max/min fields",
+      "All existing tests still pass",
+      "All new tests in tests/extended.rs pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (all tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `cargo test` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

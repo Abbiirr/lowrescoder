@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-frontend-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Add /search HTML page and price sort to Go web app",
+  "description": "A Go web app serving an items catalogue needs a search page (html/template) and a sort query param on the API endpoint.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_web_app",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Go web app in internal/handler/items.go serves GET / (HTML) and GET /api/items (JSON with optional ?q= filter). Add two features:\n\nFeature 1 — /search page: Add GET /search that accepts ?q=<query>, filters items by name (case-insensitive substring), and renders templates/search.html. The template must include an HTML form (method=GET, action=/search, input name=q) and a list of matching items. Register the route in cmd/server/main.go.\n\nFeature 2 — price sort on /api/items: Add an optional ?sort=price_asc or ?sort=price_desc query param to GET /api/items. Apply the sort after the name filter (if both present). Default (no sort param) is insertion order.\n\nWrite TestSearchPage (GET /search returns 200), TestAPIItemsSortAsc (sorted by price ascending), TestAPIItemsSortDesc (sorted by price descending). All 3 existing tests must still pass.\n\nRun go test ./... to confirm. Run go build ./... to confirm.",
+    "required_artifacts": [
+      "GET /search handler rendering search.html template",
+      "templates/search.html with form and results list",
+      "?sort=price_asc|price_desc on GET /api/items",
+      "TestSearchPage, TestAPIItemsSortAsc, TestAPIItemsSortDesc",
+      "All 3 original tests pass",
+      "go test ./... passes"
+    ],
+    "success_criteria": [
+      "Search page renders with form and filtered items",
+      "Sort composes with name filter",
+      "All 6 tests pass",
+      "go build clean"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `go test ./...` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-greenfield-030",
+  "title": "Implement a Stack class in Python",
+  "category": "repo_init",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement push, pop, peek, is_empty, and size on a Stack class. All methods raise NotImplementedError.",
+  "repo_seed": {
+    "files": {
+      "src/stack.py": "class Stack:\n    \"\"\"LIFO stack backed by a list.\"\"\"\n\n    def __init__(self):\n        raise NotImplementedError\n\n    def push(self, item) -> None:\n        raise NotImplementedError\n\n    def pop(self):\n        raise NotImplementedError\n\n    def peek(self):\n        raise NotImplementedError\n\n    def is_empty(self) -> bool:\n        raise NotImplementedError\n\n    def size(self) -> int:\n        raise NotImplementedError\n",
+      "tests/test_stack.py": "import pytest\nfrom stack import Stack\n\ndef test_empty_on_init():\n    s = Stack()\n    assert s.is_empty()\n    assert s.size() == 0\n\ndef test_push_peek():\n    s = Stack()\n    s.push(1)\n    assert s.peek() == 1\n    assert s.size() == 1\n    assert not s.is_empty()\n\ndef test_push_pop():\n    s = Stack()\n    s.push(1)\n    s.push(2)\n    assert s.pop() == 2\n    assert s.pop() == 1\n    assert s.is_empty()\n\ndef test_pop_empty_raises():\n    s = Stack()\n    with pytest.raises(IndexError):\n        s.pop()\n\ndef test_peek_empty_raises():\n    s = Stack()\n    with pytest.raises(IndexError):\n        s.peek()\n\ndef test_size_multiple():\n    s = Stack()\n    for i in range(5):\n        s.push(i)\n    assert s.size() == 5\n",
+      "pyproject.toml": "[build-system]\nrequires = [\"setuptools\"]\nbuild-backend = \"setuptools.backends.legacy:build\"\n\n[project]\nname = \"stack\"\nversion = \"0.1.0\"\n\n[tool.pytest.ini_options]\npythonpath = [\"src\"]\ntestpaths = [\"tests\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement the Stack class in src/stack.py. The stack should be backed by a Python list. Requirements:\n- __init__: initialize an empty internal list\n- push(item): append item to the list\n- pop(): remove and return the last item; raise IndexError if empty\n- peek(): return the last item without removing it; raise IndexError if empty\n- is_empty(): return True if the stack has no items\n- size(): return the number of items\nAll 6 tests must pass. Run `pytest tests/ -v --rootdir=. -p no:cacheprovider` to verify.",
+    "entry_point": "src/stack.py",
+    "success_criteria": [
+      "All 6 pytest tests pass"
+    ],
+    "followup_prompts": [
+      "Run `pytest tests/ -v --rootdir=. -p no:cacheprovider` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `pytest tests/ -v --rootdir=. -p no:cacheprovider` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "pytest tests/ -v --rootdir=. -p no:cacheprovider"
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 6
+}

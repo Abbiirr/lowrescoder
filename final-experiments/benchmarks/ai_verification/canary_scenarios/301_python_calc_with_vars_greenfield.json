@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-028",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement a calculator with variable assignment in Python",
+  "description": "Greenfield Python task: implement a Calculator class that evaluates arithmetic expressions and supports variable assignment (e.g. 'x = 5') and variable lookup in subsequent expressions.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"calculator\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/calculator.py",
+        "content": "# TODO: implement Calculator\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_calculator.py",
+        "content": "from src.calculator import Calculator\n\n\ndef test_basic_arithmetic():\n    calc = Calculator()\n    assert calc.eval(\"2 + 3\") == 5.0\n    assert calc.eval(\"10 - 4\") == 6.0\n    assert calc.eval(\"3 * 4\") == 12.0\n    assert calc.eval(\"15 / 3\") == 5.0\n\n\ndef test_variable_assignment():\n    calc = Calculator()\n    calc.eval(\"x = 10\")\n    assert calc.eval(\"x\") == 10.0\n\n\ndef test_variable_in_expression():\n    calc = Calculator()\n    calc.eval(\"a = 3\")\n    calc.eval(\"b = 4\")\n    assert calc.eval(\"a + b\") == 7.0\n\n\ndef test_reassignment():\n    calc = Calculator()\n    calc.eval(\"x = 5\")\n    calc.eval(\"x = 20\")\n    assert calc.eval(\"x\") == 20.0\n\n\ndef test_complex_expression():\n    calc = Calculator()\n    calc.eval(\"base = 6\")\n    calc.eval(\"height = 4\")\n    assert calc.eval(\"base * height / 2\") == 12.0\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement Calculator in src/calculator.py.\n\nclass Calculator:\n    def __init__(self):\n        self.vars: dict[str, float] = {}\n\n    def eval(self, expr: str) -> float:\n        expr = expr.strip()\n        # Check for assignment: 'name = expr'\n        if '=' in expr:\n            name, _, rhs = expr.partition('=')\n            name = name.strip()\n            value = self._evaluate(rhs.strip())\n            self.vars[name] = value\n            return value\n        return self._evaluate(expr)\n\n    def _evaluate(self, expr: str) -> float:\n        # Replace variable names with their values\n        import re\n        def replace_var(m):\n            name = m.group(0)\n            if name in self.vars:\n                return str(self.vars[name])\n            return name\n        expr = re.sub(r'[a-zA-Z_][a-zA-Z0-9_]*', replace_var, expr)\n        return float(eval(expr))  # safe for controlled input\n\nAll 5 tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "Calculator stores variables in a dict",
+      "eval detects assignment via '=' and stores result",
+      "eval looks up variables by name in subsequent expressions",
+      "reassignment overwrites previous value",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.calculator import Calculator\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.calculator import Calculator\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

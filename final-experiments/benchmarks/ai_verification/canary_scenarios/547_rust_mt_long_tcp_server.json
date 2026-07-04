@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "547-rust-mt-long-tcp-server",
+  "title": "Build a TCP echo server in Rust — 4 turns",
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "target_stack": {"language": "rust", "framework": null, "extra": {}},
+  "description": "Four-turn TCP server: turn 1 accept connections, turn 2 read/write echo protocol, turn 3 broadcast, turn 4 graceful shutdown and tests.",
+  "repo_seed": {
+    "files": {
+      "Cargo.toml": "[package]\nname = \"tcp-server\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\ntokio = { version = \"1\", features = [\"full\"] }\n",
+      "src/lib.rs": "//! TCP echo/broadcast server.\nuse std::net::SocketAddr;\nuse std::sync::Arc;\nuse tokio::net::{TcpListener, TcpStream};\nuse tokio::sync::{broadcast, Mutex};\nuse tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};\n\n/// Server state.\npub struct Server {\n    addr: SocketAddr,\n    tx: broadcast::Sender<String>,\n}\n\nimpl Server {\n    /// Create a new server bound to addr.\n    pub async fn bind(addr: &str) -> std::io::Result<(Self, SocketAddr)> {\n        let listener = TcpListener::bind(addr).await?;\n        let bound_addr = listener.local_addr()?;\n        let (tx, _) = broadcast::channel(64);\n        // TODO: store listener and start accept loop\n        Ok((Server { addr: bound_addr, tx }, bound_addr))\n    }\n\n    /// Echo all messages received from a client back to that client.\n    pub async fn handle_echo(stream: TcpStream) {\n        // TODO: read lines from stream, write each line back\n    }\n\n    /// Broadcast each message to all connected clients.\n    pub async fn handle_broadcast(stream: TcpStream, tx: broadcast::Sender<String>) {\n        // TODO: read lines, broadcast to tx; also subscribe and forward broadcasts to this client\n    }\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n    use tokio::io::{AsyncReadExt, AsyncWriteExt};\n    use tokio::net::TcpStream;\n\n    #[tokio::test]\n    async fn test_echo() {\n        // Start listener on ephemeral port\n        let listener = TcpListener::bind(\"127.0.0.1:0\").await.unwrap();\n        let addr = listener.local_addr().unwrap();\n        tokio::spawn(async move {\n            let (stream, _) = listener.accept().await.unwrap();\n            Server::handle_echo(stream).await;\n        });\n        let mut client = TcpStream::connect(addr).await.unwrap();\n        client.write_all(b\"hello\\n\").await.unwrap();\n        let mut buf = vec![0u8; 64];\n        let n = client.read(&mut buf).await.unwrap();\n        assert_eq!(&buf[..n], b\"hello\\n\");\n    }\n\n    #[tokio::test]\n    async fn test_broadcast() {\n        let (tx, _) = broadcast::channel(16);\n        let listener = TcpListener::bind(\"127.0.0.1:0\").await.unwrap();\n        let addr = listener.local_addr().unwrap();\n        let tx2 = tx.clone();\n        tokio::spawn(async move {\n            let (stream, _) = listener.accept().await.unwrap();\n            Server::handle_broadcast(stream, tx2).await;\n        });\n        // Subscribe before client connects to get messages\n        let mut rx = tx.subscribe();\n        let mut client = TcpStream::connect(addr).await.unwrap();\n        client.write_all(b\"broadcast me\\n\").await.unwrap();\n        // Give the server time to broadcast\n        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;\n        // The message should have been broadcast\n        match tokio::time::timeout(tokio::time::Duration::from_millis(100), rx.recv()).await {\n            Ok(Ok(msg)) => assert_eq!(msg.trim(), \"broadcast me\"),\n            _ => panic!(\"expected broadcast message\"),\n        }\n    }\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `handle_echo(stream: TcpStream)` in `src/lib.rs`. Use `BufReader::new(stream)`, read lines with `read_line()`, and write each line back using `writer.write_all(line.as_bytes()).await`. Stop when the client disconnects (read_line returns 0 bytes). Run `cargo test --quiet test_echo`.",
+    "followup_prompts": [
+      "Good progress. Run `cargo test --quiet` to see where we stand. Now implement `handle_broadcast(stream, tx)` — same as echo but instead of echoing back, broadcast each line with `tx.send(line)`. Also subscribe to `tx` and forward incoming broadcast messages to the client. Continue with the remaining steps.",
+      "Good. Now implement `Server::bind` properly — store the listener, and spawn an accept loop that calls `handle_broadcast` for each new connection. Run `cargo test --quiet` and fix any failures.",
+      "Final push: run `cargo test --quiet` and fix any remaining failures. Both tests must pass — echo and broadcast."
+    ],
+    "success_criteria": [
+      "handle_echo reads lines and writes them back",
+      "handle_broadcast broadcasts each line to all subscribers",
+      "Server::bind starts accept loop",
+      "cargo test passes (2 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "cargo test --quiet"}
+  },
+  "duration_hint_minutes": 40
+}

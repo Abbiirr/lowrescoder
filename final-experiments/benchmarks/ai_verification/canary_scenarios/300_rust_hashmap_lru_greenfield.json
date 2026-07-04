@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-034",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Implement an LRU cache using HashMap and VecDeque in Rust",
+  "description": "Greenfield Rust task: implement an LRU cache with a fixed capacity using HashMap for O(1) lookup and VecDeque to track access order. get() updates recency; put() evicts the least-recently-used entry when at capacity.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"lrucache\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement LruCache\n"
+      },
+      {
+        "path": "tests/lru_test.rs",
+        "content": "use lrucache::LruCache;\n\n#[test]\nfn test_basic_put_get() {\n    let mut cache = LruCache::new(3);\n    cache.put(1, \"one\");\n    cache.put(2, \"two\");\n    assert_eq!(cache.get(1), Some(&\"one\"));\n    assert_eq!(cache.get(2), Some(&\"two\"));\n}\n\n#[test]\nfn test_eviction() {\n    let mut cache = LruCache::new(2);\n    cache.put(1, \"a\");\n    cache.put(2, \"b\");\n    cache.put(3, \"c\"); // evicts key 1 (LRU)\n    assert_eq!(cache.get(1), None);\n    assert_eq!(cache.get(2), Some(&\"b\"));\n    assert_eq!(cache.get(3), Some(&\"c\"));\n}\n\n#[test]\nfn test_get_updates_recency() {\n    let mut cache = LruCache::new(2);\n    cache.put(1, \"a\");\n    cache.put(2, \"b\");\n    cache.get(1); // key 1 is now MRU; key 2 becomes LRU\n    cache.put(3, \"c\"); // evicts key 2\n    assert_eq!(cache.get(1), Some(&\"a\"));\n    assert_eq!(cache.get(2), None);\n    assert_eq!(cache.get(3), Some(&\"c\"));\n}\n\n#[test]\nfn test_put_overwrite() {\n    let mut cache = LruCache::new(2);\n    cache.put(1, \"old\");\n    cache.put(1, \"new\");\n    assert_eq!(cache.get(1), Some(&\"new\"));\n}\n\n#[test]\nfn test_missing_key() {\n    let mut cache: LruCache<i32, &str> = LruCache::new(3);\n    assert_eq!(cache.get(99), None);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement LruCache in src/lib.rs using HashMap + VecDeque.\n\nuse std::collections::{HashMap, VecDeque};\n\npub struct LruCache<K, V> {\n    capacity: usize,\n    map: HashMap<K, V>,\n    order: VecDeque<K>,  // front = MRU, back = LRU\n}\n\nimpl<K: Eq + std::hash::Hash + Clone, V> LruCache<K, V> {\n    pub fn new(capacity: usize) -> Self {\n        LruCache { capacity, map: HashMap::new(), order: VecDeque::new() }\n    }\n\n    pub fn get(&mut self, key: K) -> Option<&V> {\n        // If key exists: move it to front of order deque, return Some(&value).\n        // If not: return None.\n        // Hint: find position with order.iter().position(|k| k == &key)\n\n    pub fn put(&mut self, key: K, value: V) {\n        // If key already exists: update value and move to front (refresh recency).\n        // If at capacity: remove the entry at the back of order (LRU) from both map and order.\n        // Insert new key-value into map, push key to front of order.\n}\n\nAll 5 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "LruCache uses VecDeque to track access order (front=MRU, back=LRU)",
+      "get() moves accessed key to front of order",
+      "put() evicts the back of order (LRU) when at capacity",
+      "put() updates value and recency for existing keys",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

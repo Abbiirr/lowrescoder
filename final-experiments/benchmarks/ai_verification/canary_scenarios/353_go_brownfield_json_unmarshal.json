@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-brownfield-016",
+  "title": "Fix JSON struct tag and unmarshal bugs in Go",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A config struct has wrong JSON tags and the loader ignores unmarshal errors and reads the wrong field.",
+  "repo_seed": {
+    "files": {
+      "config.go": "package config\n\nimport \"encoding/json\"\n\ntype ServerConfig struct {\n\tHost    string `json:\"hostname\"` // bug: should be \"host\"\n\tPort    int    `json:\"port\"`\n\tDebug   bool   `json:\"debug\"`\n\tTimeout int    `json:\"timeout_seconds\"`\n}\n\nfunc Load(data []byte) (*ServerConfig, error) {\n\tvar cfg ServerConfig\n\tjson.Unmarshal(data, &cfg) // bug: error ignored\n\treturn &cfg, nil\n}\n\nfunc (c *ServerConfig) Addr() string {\n\treturn c.Host // bug: should format as host:port\n}\n",
+      "config_test.go": "package config\n\nimport (\n\t\"testing\"\n)\n\nfunc TestLoad(t *testing.T) {\n\tdata := []byte(`{\"host\":\"localhost\",\"port\":8080,\"debug\":true,\"timeout_seconds\":30}`)\n\tcfg, err := Load(data)\n\tif err != nil {\n\t\tt.Fatalf(\"unexpected error: %v\", err)\n\t}\n\tif cfg.Host != \"localhost\" {\n\t\tt.Fatalf(\"want host=localhost, got %q\", cfg.Host)\n\t}\n\tif cfg.Port != 8080 {\n\t\tt.Fatalf(\"want port=8080, got %d\", cfg.Port)\n\t}\n\tif !cfg.Debug {\n\t\tt.Fatal(\"want debug=true\")\n\t}\n}\n\nfunc TestLoadInvalidJSON(t *testing.T) {\n\t_, err := Load([]byte(`not json`))\n\tif err == nil {\n\t\tt.Fatal(\"want error on invalid JSON, got nil\")\n\t}\n}\n\nfunc TestAddr(t *testing.T) {\n\tcfg := &ServerConfig{Host: \"example.com\", Port: 9090}\n\tif got := cfg.Addr(); got != \"example.com:9090\" {\n\t\tt.Fatalf(\"want example.com:9090, got %q\", got)\n\t}\n}\n",
+      "go.mod": "module config\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in config.go:\n1. `Host` json tag: change `json:\"hostname\"` to `json:\"host\"`\n2. `Load`: propagate the unmarshal error — `if err := json.Unmarshal(data, &cfg); err != nil { return nil, err }`\n3. `Addr()`: return `fmt.Sprintf(\"%s:%d\", c.Host, c.Port)` (import `\"fmt\"`)\nAll 3 tests must pass.",
+    "entry_point": "config.go",
+    "success_criteria": "All 3 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

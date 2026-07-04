@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-dirty-010",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 bugs in python_legacy_report functions",
+  "description": "Brownfield Python dirty scenario: ensure_report_dir, write_html_report, and delete_report each have a bug. Fix them so all 5 tests pass.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_legacy_report",
+    "injections": [
+      {
+        "path": "src/report_gen.py",
+        "content": "\"\"\"Legacy report generator using os.path and string concatenation.\n\nNOTE: To be migrated to pathlib.Path, f-strings, and dataclass patterns.\n\"\"\"\nimport os\n\n\ndef ensure_report_dir(base_dir: str, report_name: str) -> str:\n    \"\"\"Create a subdirectory for a named report. Return the path.\"\"\"\n    report_dir = os.path.join(base_dir, report_name)\n    # BUG: never creates the directory\n    return report_dir\n\n\ndef write_html_report(report_dir: str, title: str, rows: list[list[str]]) -> str:\n    \"\"\"Write a simple HTML report to report_dir/report.html. Return the file path.\"\"\"\n    # BUG: uppercases the title in the output\n    html = \"<html><head><title>\" + title.upper() + \"</title></head><body>\"\n    html += \"<h1>\" + title + \"</h1>\"\n    html += \"<table>\"\n    for row in rows:\n        html += \"<tr>\"\n        for cell in row:\n            html += \"<td>\" + cell + \"</td>\"\n        html += \"</tr>\"\n    html += \"</table></body></html>\"\n    out_path = os.path.join(report_dir, \"report.html\")\n    os.makedirs(report_dir, exist_ok=True)\n    with open(out_path, \"w\", encoding=\"utf-8\") as fh:\n        fh.write(html)\n    return out_path\n\n\ndef read_report(path: str) -> str:\n    \"\"\"Return the HTML content of a report file, or empty string if not found.\"\"\"\n    if not os.path.exists(path):\n        return \"\"\n    with open(path, encoding=\"utf-8\") as fh:\n        return fh.read()\n\n\ndef list_reports(base_dir: str) -> list[str]:\n    \"\"\"Return sorted list of report subdirectory names in base_dir.\"\"\"\n    if not os.path.isdir(base_dir):\n        return []\n    result = []\n    for name in os.listdir(base_dir):\n        full = os.path.join(base_dir, name)\n        if os.path.isdir(full):\n            result.append(name)\n    return sorted(result)\n\n\ndef delete_report(report_dir: str) -> bool:\n    \"\"\"Delete the report.html inside report_dir. Return True if deleted.\"\"\"\n    # BUG: always returns False without attempting deletion\n    return False\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 bugs in src/report_gen.py so all 5 tests pass.\n\n  def ensure_report_dir(base_dir, report_name):\n    — never creates the directory (missing os.makedirs call)\n    — fix: add `if not os.path.isdir(report_dir): os.makedirs(report_dir)` before the return\n\n  def write_html_report(report_dir, title, rows):\n    — uppercases the title: title.upper() should be title\n    — fix: change title.upper() to title in the html string\n\n  def delete_report(report_dir):\n    — always returns False without deleting anything\n    — fix: check for and remove report.html, return True if deleted else False\n\nDo not modify the test file.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "ensure_report_dir creates the directory",
+      "write_html_report uses title as-is not uppercased",
+      "delete_report actually deletes report.html and returns True/False",
+      "All 5 existing tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run python -c \"from src.report_gen import write_html_report, read_report\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.report_gen import write_html_report, read_report\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

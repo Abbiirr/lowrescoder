@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-frontend-005",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add HTML items list page to Go items handler",
+  "description": "Brownfield Go task: extend the items JSON API with an HTML listing endpoint using html/template with an inline template string.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_items_handler",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add an HTML-rendering handler to internal/items/ in a new file html.go. All existing tests must still pass.\n\n  func HTMLListItems(w http.ResponseWriter, r *http.Request)\n    — GET only (405 otherwise)\n    — Content-Type: text/html; charset=utf-8\n    — page title: \"Items\"\n    — renders all items in a <table> with columns: ID, Name, Price\n    — if store is empty, shows <p>No items found.</p> instead of a table\n    — uses html/template with an inline template string (no external files)\n\nAll 3 existing tests must still pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "GET /items.html returns 200 with text/html content type",
+      "HTMLListItems shows item Name and Price in table",
+      "HTMLListItems shows 'No items found.' when store is empty",
+      "POST to HTMLListItems returns 405",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `go test ./...` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

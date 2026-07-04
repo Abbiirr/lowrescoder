@@ -1,0 +1,67 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-008",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Build a synchronous event bus in Go with Subscribe/Publish/Unsubscribe",
+  "description": "Greenfield Go task: implement an EventBus with named topics, ID-based subscriptions, and synchronous handler dispatch.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module github.com/ai-verification/go-eventbus\n\ngo 1.22\n"
+      },
+      {
+        "path": "internal/eventbus/bus.go",
+        "content": "package eventbus\n\n// TODO: implement EventBus\n"
+      },
+      {
+        "path": "internal/eventbus/bus_test.go",
+        "content": "package eventbus_test\n\nimport (\n\t\"testing\"\n\n\t\"github.com/ai-verification/go-eventbus/internal/eventbus\"\n)\n\nfunc TestPublishToSubscriber(t *testing.T) {\n\tbus := eventbus.New()\n\treceived := []string{}\n\tbus.Subscribe(\"news\", func(msg string) { received = append(received, msg) })\n\tbus.Publish(\"news\", \"hello\")\n\tif len(received) != 1 || received[0] != \"hello\" {\n\t\tt.Fatalf(\"expected [hello], got %v\", received)\n\t}\n}\n\nfunc TestMultipleSubscribers(t *testing.T) {\n\tbus := eventbus.New()\n\tvar a, b []string\n\tbus.Subscribe(\"topic\", func(msg string) { a = append(a, msg) })\n\tbus.Subscribe(\"topic\", func(msg string) { b = append(b, msg) })\n\tbus.Publish(\"topic\", \"event\")\n\tif len(a) != 1 || len(b) != 1 {\n\t\tt.Fatalf(\"expected both subscribers to receive: a=%v b=%v\", a, b)\n\t}\n}\n\nfunc TestUnsubscribe(t *testing.T) {\n\tbus := eventbus.New()\n\treceived := []string{}\n\tid := bus.Subscribe(\"alerts\", func(msg string) { received = append(received, msg) })\n\tbus.Publish(\"alerts\", \"first\")\n\tbus.Unsubscribe(id)\n\tbus.Publish(\"alerts\", \"second\")\n\tif len(received) != 1 || received[0] != \"first\" {\n\t\tt.Fatalf(\"expected only [first] after unsubscribe, got %v\", received)\n\t}\n}\n\nfunc TestDifferentTopicsIsolated(t *testing.T) {\n\tbus := eventbus.New()\n\tvar newsItems, weatherItems []string\n\tbus.Subscribe(\"news\", func(msg string) { newsItems = append(newsItems, msg) })\n\tbus.Subscribe(\"weather\", func(msg string) { weatherItems = append(weatherItems, msg) })\n\tbus.Publish(\"news\", \"breaking\")\n\tif len(newsItems) != 1 || len(weatherItems) != 0 {\n\t\tt.Fatalf(\"news=%v weather=%v\", newsItems, weatherItems)\n\t}\n}\n\nfunc TestPublishNoSubscribersDoesNotPanic(t *testing.T) {\n\tbus := eventbus.New()\n\tbus.Publish(\"empty\", \"nobody listening\")\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement EventBus in internal/eventbus/bus.go.\n\npackage eventbus\n\ntype EventBus struct {\n    // handlers: map from topic to map of subscription-id → handler\n    // nextID:  int, auto-increments\n}\n\nfunc New() *EventBus\nfunc (b *EventBus) Subscribe(topic string, handler func(string)) int\n    // Registers handler for topic. Returns unique subscription ID.\nfunc (b *EventBus) Unsubscribe(id int)\n    // Removes the subscription with the given ID.\nfunc (b *EventBus) Publish(topic string, msg string)\n    // Calls all registered handlers for topic with msg. No-op if no subscribers.\n\nStorage: use two maps — one from topic→(id→handler), one from id→topic for Unsubscribe.\nAll 5 tests in internal/eventbus/bus_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Subscribe returns a unique integer ID",
+      "Publish calls all handlers registered for the topic",
+      "Unsubscribe removes only the specified subscription by ID",
+      "Handlers on different topics are not called cross-topic",
+      "Publish on topic with no subscribers does not panic",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

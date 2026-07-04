@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-brownfield-020",
+  "title": "Fix three bugs in a Go binary search implementation",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Go binary search package has three bugs: BinarySearch uses wrong mid formula (integer overflow risk), the loop condition misses equality, and FirstOccurrence returns mid instead of tracking the best answer.",
+  "repo_seed": {
+    "files": {
+      "search.go": "package search\n\n// BinarySearch returns the index of target in sorted slice, or -1 if not found.\nfunc BinarySearch(nums []int, target int) int {\n\tlo, hi := 0, len(nums)-1\n\tfor lo < hi { // bug: should be lo <= hi\n\t\tmid := (lo + hi) / 2 // bug: safe but acceptable; real bug is loop condition\n\t\tif nums[mid] == target {\n\t\t\treturn mid\n\t\t} else if nums[mid] < target {\n\t\t\tlo = mid + 1\n\t\t} else {\n\t\t\thi = mid - 1\n\t\t}\n\t}\n\treturn -1\n}\n\n// FirstOccurrence returns the index of the first occurrence of target, or -1.\nfunc FirstOccurrence(nums []int, target int) int {\n\tlo, hi := 0, len(nums)-1\n\tresult := -1\n\tfor lo <= hi {\n\t\tmid := lo + (hi-lo)/2\n\t\tif nums[mid] == target {\n\t\t\treturn mid // bug: should set result=mid and continue searching left (hi=mid-1)\n\t\t} else if nums[mid] < target {\n\t\t\tlo = mid + 1\n\t\t} else {\n\t\t\thi = mid - 1\n\t\t}\n\t}\n\treturn result\n}\n",
+      "search_test.go": "package search\n\nimport \"testing\"\n\nfunc TestBinarySearch(t *testing.T) {\n\tnums := []int{1, 3, 5, 7, 9, 11}\n\tif got := BinarySearch(nums, 7); got != 3 {\n\t\tt.Errorf(\"BinarySearch(7) = %d, want 3\", got)\n\t}\n\tif got := BinarySearch(nums, 1); got != 0 {\n\t\tt.Errorf(\"BinarySearch(1) = %d, want 0\", got)\n\t}\n\tif got := BinarySearch(nums, 11); got != 5 {\n\t\tt.Errorf(\"BinarySearch(11) = %d, want 5\", got)\n\t}\n\tif got := BinarySearch(nums, 4); got != -1 {\n\t\tt.Errorf(\"BinarySearch(4) = %d, want -1\", got)\n\t}\n}\n\nfunc TestFirstOccurrence(t *testing.T) {\n\tnums := []int{1, 2, 2, 2, 3, 4}\n\tif got := FirstOccurrence(nums, 2); got != 1 {\n\t\tt.Errorf(\"FirstOccurrence(2) = %d, want 1\", got)\n\t}\n\tif got := FirstOccurrence(nums, 1); got != 0 {\n\t\tt.Errorf(\"FirstOccurrence(1) = %d, want 0\", got)\n\t}\n\tif got := FirstOccurrence(nums, 5); got != -1 {\n\t\tt.Errorf(\"FirstOccurrence(5) = %d, want -1\", got)\n\t}\n}\n",
+      "go.mod": "module search\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix two bugs in search.go:\n1. `BinarySearch`: change `lo < hi` to `lo <= hi` in the loop condition so the last element is reachable\n2. `FirstOccurrence`: replace `return mid` with `result = mid; hi = mid - 1` so it continues searching left for the earliest occurrence\nAll 2 test functions must pass.",
+    "entry_point": "search.go",
+    "success_criteria": "All go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

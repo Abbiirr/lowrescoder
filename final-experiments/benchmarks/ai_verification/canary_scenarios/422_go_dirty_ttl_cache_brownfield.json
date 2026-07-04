@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-brownfield-027",
+  "title": "Fix three bugs in a Go TTL cache",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Fix bugs in TTLCache: Set doesn't add TTL to expiry, Get returns expired entries, Len has off-by-one.",
+  "repo_seed": {
+    "files": {
+      "ttlcache.go": "package ttlcache\n\nimport \"time\"\n\ntype entry struct {\n\tvalue  string\n\texpiry time.Time\n}\n\ntype TTLCache struct {\n\tstore map[string]entry\n}\n\nfunc NewTTLCache() *TTLCache {\n\treturn &TTLCache{store: make(map[string]entry)}\n}\n\nfunc (c *TTLCache) Set(key, value string, ttl time.Duration) {\n\tc.store[key] = entry{\n\t\tvalue:  value,\n\t\texpiry: time.Now(), // BUG 1: should be time.Now().Add(ttl)\n\t}\n}\n\nfunc (c *TTLCache) Get(key string) (string, bool) {\n\te, ok := c.store[key]\n\tif !ok {\n\t\treturn \"\", false\n\t}\n\tif time.Now().Before(e.expiry) { // BUG 2: should be After — entry expired if now is past expiry\n\t\treturn \"\", false\n\t}\n\treturn e.value, true\n}\n\nfunc (c *TTLCache) Delete(key string) {\n\tdelete(c.store, key)\n}\n\nfunc (c *TTLCache) Len() int {\n\treturn len(c.store) + 1 // BUG 3: off by one\n}\n",
+      "ttlcache_test.go": "package ttlcache\n\nimport (\n\t\"testing\"\n\t\"time\"\n)\n\nfunc TestSetAndGet(t *testing.T) {\n\tc := NewTTLCache()\n\tc.Set(\"key\", \"value\", time.Second)\n\tif v, ok := c.Get(\"key\"); !ok || v != \"value\" {\n\t\tt.Errorf(\"expected value, got %q ok=%v\", v, ok)\n\t}\n}\n\nfunc TestExpiry(t *testing.T) {\n\tc := NewTTLCache()\n\tc.Set(\"key\", \"value\", 50*time.Millisecond)\n\ttime.Sleep(100 * time.Millisecond)\n\tif _, ok := c.Get(\"key\"); ok {\n\t\tt.Error(\"entry should be expired\")\n\t}\n}\n\nfunc TestLen(t *testing.T) {\n\tc := NewTTLCache()\n\tc.Set(\"a\", \"1\", time.Second)\n\tc.Set(\"b\", \"2\", time.Second)\n\tc.Set(\"c\", \"3\", time.Second)\n\tif l := c.Len(); l != 3 {\n\t\tt.Errorf(\"expected Len=3, got %d\", l)\n\t}\n}\n",
+      "go.mod": "module ttlcache\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in ttlcache.go:\n1. Set: change `expiry: time.Now()` to `expiry: time.Now().Add(ttl)`\n2. Get: change `time.Now().Before(e.expiry)` to `time.Now().After(e.expiry)` (entry is expired when now is AFTER expiry)\n3. Len: change `len(c.store) + 1` to `len(c.store)`\nAll 3 test cases must pass.",
+    "entry_point": "ttlcache.go",
+    "success_criteria": "All 3 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

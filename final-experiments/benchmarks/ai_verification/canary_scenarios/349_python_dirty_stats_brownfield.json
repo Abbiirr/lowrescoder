@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-013",
+  "title": "Fix four bugs in a statistics module",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A statistics module has four bugs: mean divides by wrong value, median doesn't sort, variance uses wrong formula, stdev calls wrong function.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/stats.py": "def mean(data: list[float]) -> float:\n    return sum(data) / len(data) + 1  # bug: +1 is wrong\n\ndef median(data: list[float]) -> float:\n    n = len(data)\n    # bug: not sorted\n    mid = n // 2\n    if n % 2 == 1:\n        return data[mid]\n    return (data[mid - 1] + data[mid]) / 2\n\ndef variance(data: list[float]) -> float:\n    m = mean(data)\n    # bug: divides by len instead of len (population variance is ok but formula wrong)\n    return sum((x - m) ** 2 for x in data) / (len(data) + 1)  # bug: +1\n\ndef stdev(data: list[float]) -> float:\n    return variance(data) ** 2  # bug: should be ** 0.5\n",
+      "tests/test_stats.py": "import math\nfrom src.stats import mean, median, variance, stdev\n\ndef test_mean():\n    assert mean([1, 2, 3, 4, 5]) == 3.0\n\ndef test_median_odd():\n    assert median([3, 1, 4, 1, 5]) == 3.0\n\ndef test_median_even():\n    assert median([4, 2, 8, 6]) == 5.0\n\ndef test_variance():\n    assert variance([2, 4, 4, 4, 5, 5, 7, 9]) == 4.0\n\ndef test_stdev():\n    assert abs(stdev([2, 4, 4, 4, 5, 5, 7, 9]) - 2.0) < 1e-9\n",
+      "pyproject.toml": "[project]\nname = \"stats\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npythonpath = [\".\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix four bugs in src/stats.py:\n1. `mean`: remove the `+ 1` — just `return sum(data) / len(data)`\n2. `median`: sort a copy first — `sorted_data = sorted(data)`, then index into sorted_data\n3. `variance`: remove the `+ 1` from the denominator — `/ len(data)`\n4. `stdev`: change `** 2` to `** 0.5`\nAll 5 tests must pass.",
+    "entry_point": "src/stats.py",
+    "success_criteria": "All 5 pytest tests pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

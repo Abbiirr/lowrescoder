@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-019",
+  "title": "Fix three bugs in a Python event emitter",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "An EventEmitter class has three bugs: on() appends to wrong key, emit() passes args as a tuple instead of unpacking, and off() removes the wrong listener.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/emitter.py": "class EventEmitter:\n    def __init__(self):\n        self._listeners: dict[str, list] = {}\n\n    def on(self, event: str, listener) -> None:\n        if event not in self._listeners:\n            self._listeners[event] = []\n        self._listeners['*'].append(listener)  # bug: should be self._listeners[event]\n\n    def off(self, event: str, listener) -> None:\n        if event in self._listeners:\n            listeners = self._listeners[event]\n            if listener in listeners:\n                listeners.remove(listeners[0])  # bug: should be listeners.remove(listener)\n\n    def emit(self, event: str, *args) -> None:\n        for listener in self._listeners.get(event, []):\n            listener(args)  # bug: should be listener(*args)\n",
+      "tests/test_emitter.py": "from src.emitter import EventEmitter\n\ndef test_on_emit():\n    em = EventEmitter()\n    results = []\n    em.on('data', lambda x: results.append(x))\n    em.emit('data', 42)\n    assert results == [42]\n\ndef test_emit_no_listeners():\n    em = EventEmitter()\n    em.emit('unknown')  # should not raise\n\ndef test_off_removes_correct_listener():\n    em = EventEmitter()\n    results = []\n    def a(x): results.append(('a', x))\n    def b(x): results.append(('b', x))\n    em.on('click', a)\n    em.on('click', b)\n    em.off('click', a)\n    em.emit('click', 1)\n    assert results == [('b', 1)]\n\ndef test_multiple_args():\n    em = EventEmitter()\n    results = []\n    em.on('msg', lambda x, y: results.append(x + y))\n    em.emit('msg', 3, 4)\n    assert results == [7]\n",
+      "pyproject.toml": "[project]\nname = \"emitter\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npythonpath = [\".\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/emitter.py:\n1. `on`: change `self._listeners['*'].append(listener)` to `self._listeners[event].append(listener)`\n2. `off`: change `listeners.remove(listeners[0])` to `listeners.remove(listener)`\n3. `emit`: change `listener(args)` to `listener(*args)`\nAll 4 tests must pass.",
+    "entry_point": "src/emitter.py",
+    "success_criteria": "All 4 pytest tests pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

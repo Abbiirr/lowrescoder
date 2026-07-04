@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-greenfield-048",
+  "title": "Implement a max-heap from scratch in Python",
+  "category": "repo_init",
+  "difficulty": "hard",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement MaxHeap with push, pop, peek, and size using sift-up/sift-down on a list. No heapq allowed.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/max_heap.py": "class MaxHeap:\n    def __init__(self):\n        self._heap = []\n\n    def push(self, val):\n        raise NotImplementedError\n\n    def pop(self):\n        raise NotImplementedError\n\n    def peek(self):\n        raise NotImplementedError\n\n    def size(self):\n        raise NotImplementedError\n\n    def _sift_up(self, i):\n        raise NotImplementedError\n\n    def _sift_down(self, i):\n        raise NotImplementedError\n",
+      "tests/test_max_heap.py": "import sys\nsys.path.insert(0, '.')\nfrom src.max_heap import MaxHeap\nimport pytest\n\n\ndef test_push_pop_order():\n    h = MaxHeap()\n    for v in [3, 1, 4, 1, 5, 9, 2, 6]:\n        h.push(v)\n    result = []\n    while h.size() > 0:\n        result.append(h.pop())\n    assert result == [9, 6, 5, 4, 3, 2, 1, 1]\n\n\ndef test_peek():\n    h = MaxHeap()\n    h.push(3)\n    h.push(7)\n    h.push(1)\n    assert h.peek() == 7\n    assert h.size() == 3  # peek should not remove\n\n\ndef test_size():\n    h = MaxHeap()\n    assert h.size() == 0\n    h.push(10)\n    h.push(20)\n    h.push(30)\n    assert h.size() == 3\n\n\ndef test_empty_raises():\n    h = MaxHeap()\n    with pytest.raises((IndexError, Exception)):\n        h.pop()\n",
+      "pyproject.toml": "[project]\nname = \"max_heap\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = []\n\n[tool.pytest.ini_options]\npythonpath = [\".\"]\n\n[dependency-groups]\ndev = [\"pytest>=8.0\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement MaxHeap in src/max_heap.py using a list:\n- _sift_up(i): while i>0, compare with parent=(i-1)//2; swap and move up if heap[i]>heap[parent]\n- _sift_down(i): find largest among i, left=2i+1, right=2i+2; swap with largest child if larger than i; repeat\n- push(val): append val, call _sift_up\n- pop(): swap root with last, pop last, call _sift_down(0); raise IndexError if empty\n- peek(): return _heap[0]; raise IndexError if empty\n- size(): return len(_heap)\nAll 4 tests must pass.",
+    "entry_point": "src/max_heap.py",
+    "success_criteria": "All 4 pytest test cases pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -q` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

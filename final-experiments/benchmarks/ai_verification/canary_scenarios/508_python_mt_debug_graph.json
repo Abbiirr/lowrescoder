@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "508-python-mt-debug-graph",
+  "title": "Debug graph traversal BFS/DFS bugs — 3 turns",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {"language": "python", "framework": null, "extra": {}},
+  "description": "BFS and DFS have visited-set bugs causing infinite loops or missing nodes. Fix BFS in turn 1, fix DFS in turn 2, add has_path in turn 3.",
+  "repo_seed": {
+    "files": {
+      "graph.py": "\"\"\"Graph traversal — BFS and DFS contain visited-set bugs.\"\"\"\nfrom collections import deque\nfrom typing import Optional\n\n\nclass Graph:\n    def __init__(self):\n        self._adj: dict[str, list[str]] = {}\n\n    def add_edge(self, u: str, v: str) -> None:\n        \"\"\"Add undirected edge.\"\"\"\n        self._adj.setdefault(u, []).append(v)\n        self._adj.setdefault(v, []).append(u)\n\n    def bfs(self, start: str) -> list[str]:\n        \"\"\"Return nodes in BFS order starting from start.\"\"\"\n        if start not in self._adj:\n            return [start]\n        visited = set()\n        queue = deque([start])\n        result = []\n        while queue:\n            node = queue.popleft()\n            if node in visited:\n                continue\n            result.append(node)\n            # BUG: adds to visited AFTER appending, but also needs to add\n            # neighbors to visited before enqueuing to avoid duplicates in queue\n            visited.add(node)\n            for neighbor in self._adj.get(node, []):\n                # BUG: should check 'if neighbor not in visited' before appending\n                queue.append(neighbor)\n        return result\n\n    def dfs(self, start: str) -> list[str]:\n        \"\"\"Return nodes in DFS order starting from start.\"\"\"\n        if start not in self._adj:\n            return [start]\n        # BUG: visited initialized outside recursive helper but not passed\n        result = []\n        def _dfs(node):\n            # BUG: missing visited set — will loop forever on cycles\n            result.append(node)\n            for neighbor in self._adj.get(node, []):\n                _dfs(neighbor)\n        _dfs(start)\n        return result\n\n    def has_path(self, src: str, dst: str) -> bool:\n        \"\"\"Return True if a path exists from src to dst.\"\"\"\n        raise NotImplementedError\n",
+      "tests/test_graph.py": "import pytest\nfrom graph import Graph\n\n\ndef test_bfs_simple():\n    g = Graph()\n    g.add_edge(\"a\", \"b\")\n    g.add_edge(\"a\", \"c\")\n    g.add_edge(\"b\", \"d\")\n    result = g.bfs(\"a\")\n    assert result[0] == \"a\"\n    assert set(result) == {\"a\", \"b\", \"c\", \"d\"}\n    assert len(result) == 4\n\n\ndef test_bfs_no_duplicates():\n    g = Graph()\n    g.add_edge(\"a\", \"b\")\n    g.add_edge(\"b\", \"c\")\n    g.add_edge(\"a\", \"c\")\n    result = g.bfs(\"a\")\n    assert len(result) == len(set(result))\n\n\ndef test_bfs_isolated_node():\n    g = Graph()\n    g._adj[\"x\"] = []\n    assert g.bfs(\"x\") == [\"x\"]\n\n\ndef test_dfs_simple():\n    g = Graph()\n    g.add_edge(\"a\", \"b\")\n    g.add_edge(\"a\", \"c\")\n    g.add_edge(\"b\", \"d\")\n    result = g.dfs(\"a\")\n    assert result[0] == \"a\"\n    assert set(result) == {\"a\", \"b\", \"c\", \"d\"}\n    assert len(result) == 4\n\n\ndef test_dfs_no_duplicates():\n    g = Graph()\n    g.add_edge(\"a\", \"b\")\n    g.add_edge(\"b\", \"c\")\n    g.add_edge(\"a\", \"c\")\n    result = g.dfs(\"a\")\n    assert len(result) == len(set(result))\n\n\ndef test_has_path_direct():\n    g = Graph()\n    g.add_edge(\"a\", \"b\")\n    assert g.has_path(\"a\", \"b\") is True\n\n\ndef test_has_path_indirect():\n    g = Graph()\n    g.add_edge(\"a\", \"b\")\n    g.add_edge(\"b\", \"c\")\n    assert g.has_path(\"a\", \"c\") is True\n\n\ndef test_has_path_false():\n    g = Graph()\n    g.add_edge(\"a\", \"b\")\n    g._adj[\"c\"] = []\n    assert g.has_path(\"a\", \"c\") is False\n\n\ndef test_has_path_same_node():\n    g = Graph()\n    g.add_edge(\"a\", \"b\")\n    assert g.has_path(\"a\", \"a\") is True\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The `bfs()` method in `graph.py` has a visited-set bug: it enqueues neighbors without checking if they're already visited, causing duplicates. Fix `bfs()` so nodes appear exactly once in the result. Run `uv run pytest tests/test_graph.py::test_bfs_simple tests/test_graph.py::test_bfs_no_duplicates -v` to check just the BFS tests.",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what you fixed in BFS. Now fix `dfs()` too — it has no visited set in the recursive helper, which causes infinite loops on cyclic graphs. Fix it, then run the full test suite.",
+      "Final step: implement `has_path(src, dst)` — return True if a path exists from src to dst (use BFS or DFS). Also handle the case where src == dst. Run `uv run pytest tests/ -q` — all 9 tests must pass."
+    ],
+    "success_criteria": [
+      "BFS returns each node exactly once (no duplicates)",
+      "DFS returns each node exactly once (visited set prevents infinite loop)",
+      "has_path returns True for connected nodes",
+      "has_path returns False for disconnected nodes",
+      "has_path(x, x) returns True",
+      "All 9 pytest tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "uv run pytest tests/ -q"}
+  },
+  "duration_hint_minutes": 15
+}

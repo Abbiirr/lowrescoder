@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "520-go-mt-retry-client",
+  "title": "Build HTTP client with retry in Go — 3 turns",
+  "category": "backend_feature",
+  "difficulty": "medium",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "Build an HTTP client with configurable retry: basic retry turn 1, exponential backoff turn 2, context cancellation turn 3.",
+  "repo_seed": {
+    "files": {
+      "go.mod": "module github.com/ai-verification/retry-client\n\ngo 1.22\n",
+      "client/client.go": "package client\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\t\"net/http\"\n\t\"time\"\n)\n\n// Config configures retry behavior.\ntype Config struct {\n\tMaxRetries  int\n\tInitialWait time.Duration\n\tBackoffMult float64 // multiplier per retry (e.g. 2.0 = exponential)\n}\n\n// DefaultConfig provides sensible defaults.\nvar DefaultConfig = Config{\n\tMaxRetries:  3,\n\tInitialWait: 100 * time.Millisecond,\n\tBackoffMult: 2.0,\n}\n\n// Client wraps http.Client with retry logic.\ntype Client struct {\n\thc  *http.Client\n\tcfg Config\n}\n\n// New creates a retrying HTTP client.\nfunc New(hc *http.Client, cfg Config) *Client {\n\treturn &Client{hc: hc, cfg: cfg}\n}\n\n// Get performs a GET request with retry on 5xx or network error.\n// Returns the last response (or error) after all retries are exhausted.\nfunc (c *Client) Get(ctx context.Context, url string) (*http.Response, error) {\n\t// TODO: implement with retry\n\treturn c.hc.Get(url)\n}\n",
+      "client/client_test.go": "package client_test\n\nimport (\n\t\"context\"\n\t\"net/http\"\n\t\"net/http/httptest\"\n\t\"sync/atomic\"\n\t\"testing\"\n\t\"time\"\n\n\t\"github.com/ai-verification/retry-client/client\"\n)\n\nfunc TestGetSuccessFirstTry(t *testing.T) {\n\ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {\n\t\tw.WriteHeader(200)\n\t}))\n\tdefer s.Close()\n\tc := client.New(s.Client(), client.Config{MaxRetries: 3, InitialWait: 0, BackoffMult: 1})\n\tresp, err := c.Get(context.Background(), s.URL)\n\tif err != nil || resp.StatusCode != 200 {\n\t\tt.Fatalf(\"expected 200 nil, got %v %v\", resp, err)\n\t}\n}\n\nfunc TestRetryOn500(t *testing.T) {\n\tvar calls atomic.Int32\n\ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {\n\t\tif calls.Add(1) < 3 {\n\t\t\tw.WriteHeader(500)\n\t\t} else {\n\t\t\tw.WriteHeader(200)\n\t\t}\n\t}))\n\tdefer s.Close()\n\tc := client.New(s.Client(), client.Config{MaxRetries: 3, InitialWait: 0, BackoffMult: 1})\n\tresp, err := c.Get(context.Background(), s.URL)\n\tif err != nil || resp.StatusCode != 200 {\n\t\tt.Fatalf(\"expected 200, got %v %v\", resp, err)\n\t}\n\tif calls.Load() != 3 {\n\t\tt.Fatalf(\"expected 3 calls, got %d\", calls.Load())\n\t}\n}\n\nfunc TestExhaustedRetriesReturnsLastResponse(t *testing.T) {\n\ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {\n\t\tw.WriteHeader(503)\n\t}))\n\tdefer s.Close()\n\tc := client.New(s.Client(), client.Config{MaxRetries: 2, InitialWait: 0, BackoffMult: 1})\n\tresp, _ := c.Get(context.Background(), s.URL)\n\tif resp == nil || resp.StatusCode != 503 {\n\t\tt.Fatalf(\"expected 503 response, got %v\", resp)\n\t}\n}\n\nfunc TestContextCancellation(t *testing.T) {\n\ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {\n\t\tw.WriteHeader(500)\n\t}))\n\tdefer s.Close()\n\tctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)\n\tdefer cancel()\n\tc := client.New(s.Client(), client.Config{MaxRetries: 10, InitialWait: 20 * time.Millisecond, BackoffMult: 1})\n\t_, err := c.Get(ctx, s.URL)\n\tif err == nil {\n\t\tt.Fatal(\"expected context cancellation error\")\n\t}\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `Get(ctx, url)` in `client/client.go` with basic retry: loop up to `c.cfg.MaxRetries+1` attempts total, retry if response status >= 500 or there's a network error. For now, use `time.Sleep(0)` between retries (no backoff). Return the last response/error. Run `go test ./...`.",
+    "followup_prompts": [
+      "Good. Now add exponential backoff: between retries, sleep `currentWait` seconds, then multiply by `c.cfg.BackoffMult`. Start at `c.cfg.InitialWait`. Run `go test ./...` and fix any failures.",
+      "Run `go test ./...` to verify everything including context cancellation. Before sleeping, check if `ctx.Err() != nil` and return immediately if the context is done. Fix any failures and confirm all 4 tests pass."
+    ],
+    "success_criteria": [
+      "Successful first response returned without retry",
+      "5xx responses trigger retry up to MaxRetries times",
+      "Exhausted retries returns the last response",
+      "Exponential backoff uses InitialWait * BackoffMult^n",
+      "Context cancellation stops retries immediately",
+      "go test ./... passes (4 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "go test ./..."}
+  },
+  "duration_hint_minutes": 20
+}

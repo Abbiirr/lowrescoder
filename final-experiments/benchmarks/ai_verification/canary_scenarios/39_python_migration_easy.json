@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-migration-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "easy",
+  "duration_hint_minutes": 12,
+  "title": "Migrate Python file-utility module from os.path to pathlib.Path",
+  "description": "A small Python file-utility module uses os.path for all path operations. Migrate the three functions to use pathlib.Path while keeping the same external interface and all 5 tests green.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_path_migration",
+    "injections": [],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "The module src/file_utils.py implements three functions using os.path and os.listdir:\n  - list_text_files(directory: str) -> list[str]: returns sorted .txt filenames in a directory\n  - read_if_exists(path: str) -> str | None: returns file contents, or None if missing\n  - ensure_dir(path: str) -> str: creates directory tree if absent, returns path\n\nMigrate all three functions to use pathlib.Path internally. Keep the function signatures identical (accept str, return str/list[str]/None). The 5 existing tests must still pass after the migration.\n\nRules:\n- Remove 'import os' when it is no longer needed (keep only what is used)\n- Use Path() to wrap the input strings inside each function\n- Use Path methods (.iterdir(), .exists(), .is_file(), .is_dir(), .mkdir(), .read_text(), .suffix, etc.) instead of os.path calls\n- Do not change the public API (parameter names, return types, behaviour)\n\nRun uv run pytest tests/ -q to confirm all 5 tests still pass.",
+    "required_artifacts": [
+      "list_text_files uses Path.iterdir() instead of os.listdir",
+      "read_if_exists uses Path.exists() and Path.read_text() instead of open()",
+      "ensure_dir uses Path.mkdir(parents=True, exist_ok=True) instead of os.makedirs",
+      "import os removed or reduced to only used symbols",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "All os.path calls replaced by pathlib equivalents",
+      "Public API unchanged",
+      "All 5 tests pass"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

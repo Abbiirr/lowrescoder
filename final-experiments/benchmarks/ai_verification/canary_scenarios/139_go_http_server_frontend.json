@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-frontend-007",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add HTML item list endpoint to Go HTTP server",
+  "description": "Brownfield Go task: add an in-memory item store and an HTML listing endpoint to the go-http-server.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_http_server",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Extend internal/handler/items.go. The existing test must still pass.\n\n  type Item struct {\n      ID    int\n      Name  string\n      Price float64\n  }\n\n  var items = []Item{\n      {ID: 1, Name: \"Widget A\", Price: 9.99},\n      {ID: 2, Name: \"Widget B\", Price: 19.99},\n  }\n\n  — Update ListItems to return {\"items\": items} (JSON, same key as before)\n  — Add HTMLListItems(w http.ResponseWriter, r *http.Request)\n      * GET only; 405 for other methods\n      * Content-Type: text/html; charset=utf-8\n      * Renders an HTML table with columns: ID, Name, Price\n      * Use html/template with a package-level var for the template\n      * Price formatted as $X.XX (use fmt.Sprintf or template action)\n\nAll existing tests must still pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Item struct defined with ID, Name, Price fields",
+      "ListItems returns JSON with 'items' key containing Item slice",
+      "HTMLListItems returns 200 with text/html content type",
+      "HTML table contains ID, Name, Price columns",
+      "HTMLListItems returns 405 for non-GET requests",
+      "All existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `go test ./...` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

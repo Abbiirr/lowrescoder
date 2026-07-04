@@ -1,0 +1,57 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-worker-pool-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Greenfield Go bounded worker pool",
+  "description": "Build a bounded goroutine worker pool package from scratch. Pool accepts N workers, processes submitted jobs concurrently, and shuts down cleanly on Close.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module github.com/ai-verification/go-worker-pool\n\ngo 1.21\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Build a bounded worker pool in Go from scratch.\n\nPackage: pool (in pool/pool.go)\n\nExport:\n  type Pool struct { ... }\n  func New(workers int) *Pool  — creates a pool with workers goroutines\n  func (p *Pool) Submit(job func())  — enqueues a job; blocks if queue is full\n  func (p *Pool) Close()  — drains pending jobs, waits for all goroutines to finish, idempotent\n\nRequirements:\n  - Internal job channel with buffer size = workers * 2\n  - Each worker goroutine processes jobs from the channel until it is closed\n  - Close() is idempotent (safe to call multiple times)\n  - All submitted jobs complete before Close() returns\n\nAdd tests in pool/pool_test.go:\n  - TestPoolProcessesAllJobs: submit 10 jobs, verify all 10 complete\n  - TestPoolConcurrency: submit 20 jobs across 4 workers; verify total time is less than sequential\n  - TestPoolCloseIdempotent: call Close() twice without panic\n  - TestPoolOrder: jobs complete (possibly out of order) but no jobs lost\n\nRun go test ./... to confirm.",
+    "required_artifacts": [
+      "pool/pool.go with Pool struct, New, Submit, Close",
+      "pool/pool_test.go with 4 tests",
+      "go test ./... passes"
+    ],
+    "success_criteria": [
+      "All 4 tests pass",
+      "Close() is idempotent",
+      "All submitted jobs execute before Close() returns"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

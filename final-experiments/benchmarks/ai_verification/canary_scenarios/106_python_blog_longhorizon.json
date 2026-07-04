@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-longhorizon-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "medium",
+  "duration_hint_minutes": 35,
+  "title": "Extend Flask blog: update/delete posts and full-text search API",
+  "description": "Multi-step Python task: extend the Flask blog app with update and delete endpoints, plus a full-text search API. The create endpoint already exists in the fixture.",
+  "target_stack": {
+    "language": "python",
+    "framework": "flask",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_blog_app",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Extend src/app.py in two steps. All existing tests must still pass.\n\nStep 1 — Update and delete:\n  PUT /api/posts/<int:post_id>  (JSON body: any subset of {title, body, tags, published})\n  — 404 if post not found\n  — updates only provided fields; returns 200 + updated post\n\n  DELETE /api/posts/<int:post_id>\n  — 404 if not found\n  — removes post from _posts; returns 204\n\nStep 2 — Search:\n  GET /api/search?q=<keyword>\n  — case-insensitive substring match in title or body\n  — returns only published posts that match\n  — 400 if q param is missing or empty\n  — returns 200 + JSON list\n\nAll existing tests plus solution-only tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "PUT /api/posts/<id> partial update returns 200",
+      "PUT /api/posts/<id> returns 404 when not found",
+      "DELETE /api/posts/<id> removes post and returns 204",
+      "DELETE /api/posts/<id> returns 404 when not found",
+      "GET /api/search?q= searches title and body case-insensitively",
+      "GET /api/search excludes unpublished posts",
+      "All existing tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ passes",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `uv run pytest tests/ -v` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `uv run pytest tests/ -v` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

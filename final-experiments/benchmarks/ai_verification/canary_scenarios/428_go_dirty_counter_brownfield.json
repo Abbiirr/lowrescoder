@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-brownfield-028",
+  "title": "Fix three bugs in a Go Counter struct",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Fix bugs in Counter: Add decrements instead of increments, Get adds 1 (off by one), Total starts at 1 instead of 0.",
+  "repo_seed": {
+    "files": {
+      "counter.go": "package counter\n\ntype Counter struct {\n\tcounts map[string]int\n}\n\nfunc NewCounter() *Counter {\n\treturn &Counter{counts: make(map[string]int)}\n}\n\n// BUG 1: decrements instead of increments\nfunc (c *Counter) Add(key string) {\n\tc.counts[key] -= 1\n}\n\n// BUG 2: adds 1 to result (off by one)\nfunc (c *Counter) Get(key string) int {\n\treturn c.counts[key] + 1\n}\n\n// BUG 3: starts total at 1 instead of 0\nfunc (c *Counter) Total() int {\n\ttotal := 1\n\tfor _, v := range c.counts {\n\t\ttotal += v\n\t}\n\treturn total\n}\n",
+      "counter_test.go": "package counter\n\nimport \"testing\"\n\nfunc TestAddGet(t *testing.T) {\n\tc := NewCounter()\n\tc.Add(\"a\")\n\tc.Add(\"a\")\n\tif got := c.Get(\"a\"); got != 2 {\n\t\tt.Errorf(\"Get(a) = %d, want 2\", got)\n\t}\n}\n\nfunc TestGetMissing(t *testing.T) {\n\tc := NewCounter()\n\tif got := c.Get(\"x\"); got != 0 {\n\t\tt.Errorf(\"Get(missing) = %d, want 0\", got)\n\t}\n}\n\nfunc TestTotal(t *testing.T) {\n\tc := NewCounter()\n\tc.Add(\"a\")\n\tc.Add(\"a\")\n\tc.Add(\"b\")\n\tif got := c.Total(); got != 3 {\n\t\tt.Errorf(\"Total() = %d, want 3\", got)\n\t}\n}\n",
+      "go.mod": "module counter\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in counter.go:\n1. Add: change `-= 1` to `+= 1` so the counter increments\n2. Get: remove `+ 1` so it returns the raw count (missing key correctly returns 0 from Go map)\n3. Total: change `total := 1` to `total := 0` so the accumulator starts at zero\nAll 3 tests must pass.",
+    "entry_point": "counter.go",
+    "success_criteria": "All 3 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-030",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Implement channel-based pipeline stages in Go",
+  "description": "Greenfield Go task: implement Generator (emits integers into a channel), Filter (passes values matching a predicate), and MapInt (transforms values) as composable pipeline stages.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module pipeline\n\ngo 1.21\n"
+      },
+      {
+        "path": "pipeline.go",
+        "content": "package pipeline\n\n// TODO: implement Generator, Filter, MapInt\n"
+      },
+      {
+        "path": "pipeline_test.go",
+        "content": "package pipeline\n\nimport \"testing\"\n\nfunc TestGenerator(t *testing.T) {\n\tch := Generator(1, 2, 3, 4, 5)\n\tvar got []int\n\tfor v := range ch {\n\t\tgot = append(got, v)\n\t}\n\tif len(got) != 5 || got[0] != 1 || got[4] != 5 {\n\t\tt.Fatalf(\"want [1..5] got %v\", got)\n\t}\n}\n\nfunc TestFilter(t *testing.T) {\n\tch := Generator(1, 2, 3, 4, 5, 6)\n\tevens := Filter(ch, func(n int) bool { return n%2 == 0 })\n\tvar got []int\n\tfor v := range evens {\n\t\tgot = append(got, v)\n\t}\n\tif len(got) != 3 || got[0] != 2 || got[2] != 6 {\n\t\tt.Fatalf(\"want [2,4,6] got %v\", got)\n\t}\n}\n\nfunc TestMapInt(t *testing.T) {\n\tch := Generator(1, 2, 3)\n\tsquared := MapInt(ch, func(n int) int { return n * n })\n\tvar got []int\n\tfor v := range squared {\n\t\tgot = append(got, v)\n\t}\n\tif len(got) != 3 || got[0] != 1 || got[1] != 4 || got[2] != 9 {\n\t\tt.Fatalf(\"want [1,4,9] got %v\", got)\n\t}\n}\n\nfunc TestPipeline(t *testing.T) {\n\t// Compose: generate 1..10, filter evens, square\n\tch := Generator(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)\n\tch = Filter(ch, func(n int) bool { return n%2 == 0 })\n\tch = MapInt(ch, func(n int) int { return n * n })\n\tvar got []int\n\tfor v := range ch {\n\t\tgot = append(got, v)\n\t}\n\t// evens: 2,4,6,8,10 -> squared: 4,16,36,64,100\n\tif len(got) != 5 || got[0] != 4 || got[4] != 100 {\n\t\tt.Fatalf(\"want [4,16,36,64,100] got %v\", got)\n\t}\n}\n\nfunc TestEmptyGenerator(t *testing.T) {\n\tch := Generator()\n\tvar got []int\n\tfor v := range ch {\n\t\tgot = append(got, v)\n\t}\n\tif len(got) != 0 {\n\t\tt.Fatalf(\"want empty got %v\", got)\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement pipeline stages in pipeline.go.\n\nfunc Generator(vals ...int) <-chan int\n    // Spawn a goroutine that sends each val to a buffered channel, then closes it.\n    // Return the channel.\n\nfunc Filter(in <-chan int, pred func(int) bool) <-chan int\n    // Spawn a goroutine that reads from in, sends to out only if pred(val) is true.\n    // Close out when in is closed.\n\nfunc MapInt(in <-chan int, f func(int) int) <-chan int\n    // Spawn a goroutine that reads from in, applies f, sends result to out.\n    // Close out when in is closed.\n\nAll 5 tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Generator closes its output channel after emitting all values",
+      "Filter passes only values satisfying pred",
+      "MapInt applies the transform function to each value",
+      "Stages compose correctly (Generator -> Filter -> MapInt)",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

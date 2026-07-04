@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-ts-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "medium",
+  "duration_hint_minutes": 20,
+  "title": "Complete missing GET/:id and DELETE/:id in TypeScript Todo API",
+  "description": "A TypeScript/Express todo API has GET /todos and POST /todos implemented and tested. The tests for GET /todos/:id and DELETE /todos/:id already exist and are failing. Implement both endpoints so all tests pass.",
+  "target_stack": {
+    "language": "typescript",
+    "framework": "express",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "ts_todo_api",
+    "injections": [],
+    "setup_commands": [
+      "npm install --silent"
+    ]
+  },
+  "task_spec": {
+    "prompt": "The TypeScript/Express todo API in src/app.ts is missing two endpoints that the tests in tests/todos.test.ts already cover:\n  - GET /todos/:id — return 200 + todo or 404\n  - DELETE /todos/:id — return 204 or 404\n\nBoth operations already have implementations in src/store.ts. Wire them up in src/app.ts. Do not modify tests or store.ts. All 7 tests must pass.",
+    "required_artifacts": [
+      "GET /todos/:id returns 200 with todo",
+      "GET /todos/:id returns 404 for unknown id",
+      "DELETE /todos/:id returns 204",
+      "npm test passes all 7 tests"
+    ],
+    "success_criteria": [
+      "GET /todos/:id route added, uses store.getById",
+      "DELETE /todos/:id route added, uses store logic",
+      "Proper 404 handling for both routes",
+      "No modifications to tests or store.ts"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `npm test -- --forceExit` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "typecheck"
+    ],
+    "check_commands": {
+      "run_tests": "npm test -- --forceExit",
+      "typecheck": "npx tsc --noEmit"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

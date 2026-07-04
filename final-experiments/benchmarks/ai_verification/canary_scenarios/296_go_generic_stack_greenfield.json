@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-031",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Implement a generic stack in Go",
+  "description": "Greenfield Go task: implement a generic Stack[T any] with Push, Pop (returns value and ok bool), Peek (returns value and ok bool), IsEmpty, and Len methods.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module gstack\n\ngo 1.21\n"
+      },
+      {
+        "path": "stack.go",
+        "content": "package gstack\n\n// TODO: implement generic Stack[T any]\n"
+      },
+      {
+        "path": "stack_test.go",
+        "content": "package gstack\n\nimport \"testing\"\n\nfunc TestPushPop(t *testing.T) {\n\tvar s Stack[int]\n\ts.Push(1)\n\ts.Push(2)\n\ts.Push(3)\n\tv, ok := s.Pop()\n\tif !ok || v != 3 {\n\t\tt.Fatalf(\"want 3 true, got %v %v\", v, ok)\n\t}\n}\n\nfunc TestPeek(t *testing.T) {\n\tvar s Stack[string]\n\ts.Push(\"hello\")\n\tv, ok := s.Peek()\n\tif !ok || v != \"hello\" {\n\t\tt.Fatalf(\"want hello true, got %v %v\", v, ok)\n\t}\n\tif s.Len() != 1 {\n\t\tt.Fatalf(\"Peek should not remove element, len=%d\", s.Len())\n\t}\n}\n\nfunc TestIsEmpty(t *testing.T) {\n\tvar s Stack[float64]\n\tif !s.IsEmpty() {\n\t\tt.Fatal(\"new stack should be empty\")\n\t}\n\ts.Push(1.0)\n\tif s.IsEmpty() {\n\t\tt.Fatal(\"non-empty stack should not be empty\")\n\t}\n}\n\nfunc TestPopEmpty(t *testing.T) {\n\tvar s Stack[int]\n\t_, ok := s.Pop()\n\tif ok {\n\t\tt.Fatal(\"Pop on empty stack should return false\")\n\t}\n}\n\nfunc TestLen(t *testing.T) {\n\tvar s Stack[int]\n\tfor i := 0; i < 5; i++ {\n\t\ts.Push(i)\n\t}\n\tif s.Len() != 5 {\n\t\tt.Fatalf(\"want 5, got %d\", s.Len())\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement generic Stack[T any] in stack.go.\n\npackage gstack\n\ntype Stack[T any] struct {\n    items []T\n}\n\nfunc (s *Stack[T]) Push(v T) {\n    s.items = append(s.items, v)\n}\n\nfunc (s *Stack[T]) Pop() (T, bool) {\n    if len(s.items) == 0 {\n        var zero T\n        return zero, false\n    }\n    top := s.items[len(s.items)-1]\n    s.items = s.items[:len(s.items)-1]\n    return top, true\n}\n\nfunc (s *Stack[T]) Peek() (T, bool) {\n    if len(s.items) == 0 {\n        var zero T\n        return zero, false\n    }\n    return s.items[len(s.items)-1], true\n}\n\nfunc (s *Stack[T]) IsEmpty() bool { return len(s.items) == 0 }\n\nfunc (s *Stack[T]) Len() int { return len(s.items) }\n\nAll 5 tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Stack[T any] uses a slice internally",
+      "Pop removes and returns the top element (LIFO)",
+      "Peek returns the top without removing it",
+      "Pop and Peek return (zero, false) on empty stack",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

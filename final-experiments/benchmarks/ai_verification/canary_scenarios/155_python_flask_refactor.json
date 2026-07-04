@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-refactor-006",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Introduce ItemStore class in Flask app",
+  "description": "Brownfield Python/Flask refactor: extract item management into an ItemStore class and update routes to use it.",
+  "target_stack": {
+    "language": "python",
+    "framework": "flask",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_flask_app",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Refactor src/app.py to introduce an ItemStore class. All 2 existing tests must still pass.\n\nAdd a class ItemStore with:\n  def all(self) -> list[dict]\n    — returns all items\n  def add(self, name: str, price: float) -> dict\n    — creates a new item with auto-incremented id, appends to internal list, returns the item\n  def find(self, item_id: int) -> dict | None\n    — returns item with matching id, or None if not found\n  def reset(self) -> None\n    — resets items to the original two fixture items and resets the id counter\n\nCreate a module-level instance: _store = ItemStore()\nUpdate GET /api/items to call _store.all() instead of returning _items directly.\nUpdate GET / to pass _store.all() to the template.\nThe GET / and GET /api/items routes must behave identically to before.\nDo not add new routes.\nAll 2 existing tests must still pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "ItemStore class with all(), add(), find(), reset() methods",
+      "Module-level _store = ItemStore() instance",
+      "GET /api/items uses _store.all()",
+      "GET / passes _store.all() to template",
+      "All 2 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `uv run pytest tests/ -v` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

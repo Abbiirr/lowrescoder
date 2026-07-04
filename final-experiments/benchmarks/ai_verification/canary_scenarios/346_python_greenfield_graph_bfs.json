@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-greenfield-037",
+  "title": "Implement an undirected graph with BFS path-finding",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement a Graph class with add_edge, neighbors, and has_path (BFS) for undirected graphs.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/graph.py": "from collections import deque\n\nclass Graph:\n    def __init__(self):\n        raise NotImplementedError\n\n    def add_edge(self, u: str, v: str) -> None:\n        raise NotImplementedError\n\n    def neighbors(self, node: str) -> list[str]:\n        raise NotImplementedError\n\n    def has_path(self, start: str, end: str) -> bool:\n        raise NotImplementedError\n",
+      "tests/test_graph.py": "from src.graph import Graph\n\ndef test_direct_edge():\n    g = Graph()\n    g.add_edge('A', 'B')\n    assert g.has_path('A', 'B')\n    assert g.has_path('B', 'A')\n\ndef test_no_path():\n    g = Graph()\n    g.add_edge('A', 'B')\n    g.add_edge('C', 'D')\n    assert not g.has_path('A', 'C')\n\ndef test_indirect_path():\n    g = Graph()\n    g.add_edge('A', 'B')\n    g.add_edge('B', 'C')\n    g.add_edge('C', 'D')\n    assert g.has_path('A', 'D')\n\ndef test_self_path():\n    g = Graph()\n    g.add_edge('A', 'B')\n    assert g.has_path('A', 'A')\n\ndef test_neighbors():\n    g = Graph()\n    g.add_edge('X', 'Y')\n    g.add_edge('X', 'Z')\n    assert set(g.neighbors('X')) == {'Y', 'Z'}\n    assert g.neighbors('W') == []\n",
+      "pyproject.toml": "[project]\nname = \"graph\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npythonpath = [\".\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement Graph in src/graph.py:\n- `__init__`: store `self._adj: dict[str, list[str]] = {}`\n- `add_edge(u, v)`: append v to u's adjacency list and u to v's (undirected); use `setdefault`\n- `neighbors(node)`: return `self._adj.get(node, [])`\n- `has_path(start, end)`: if start==end return True; BFS with a visited set and deque; return True when end is dequeued, False if queue empties\nAll 5 tests must pass.",
+    "entry_point": "src/graph.py",
+    "success_criteria": "All 5 pytest tests pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -q` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

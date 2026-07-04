@@ -1,0 +1,38 @@
+# Terminal-Bench 2.0 Submission Metadata
+# AutoCode Agent — harbor adapter v0.3.1
+
+agent_url: "https://github.com/user/autocode"
+agent_display_name: "AutoCode"
+agent_org_display_name: "AutoCode Project"
+
+models:
+  - model_name: "terminal_bench"
+    model_provider: "litellm-gateway"
+    model_display_name: "Terminal Bench (Multi-Provider)"
+    model_org_display_name: "Multi-Provider Gateway"
+    # The terminal_bench alias routes through a litellm gateway
+    # aggregating multiple providers. For official submission,
+    # pin to a single model and update this metadata.
+    #
+    # Known providers behind the alias:
+    #   - cerebras/qwen-3-235b-a22b-instruct-2507
+    #   - nvidia_nim/nvidia/nemotron-3-super-120b-a12b
+    #   - mistral/codestral-latest
+    #   - gemini/gemini-3-flash-preview
+    #   - gemini/gemini-3.1-pro-preview
+    #   - groq/moonshotai/kimi-k2-instruct-0905
+    #   - groq/meta-llama/llama-4-scout-17b-16e-instruct
+    #   - nvidia_nim/openai/gpt-oss-120b
+
+# Submission notes:
+# - Best score: 40% (4/9) with xAI Grok models (removed from gateway)
+# - Current score: 20% (2/10) without xAI
+# - Adapter: harbor_adapter.py v0.3.1
+# - Tools: run_command, write_file, read_file
+# - Harness features: planning enforcement, verification injection,
+#   binary file detection, post-error recovery, doom-loop detection
+#
+# For official submission:
+# 1. Run with -k 5 (5 trials per task)
+# 2. Pin terminal_bench to a single model
+# 3. Update agent_url to public repo

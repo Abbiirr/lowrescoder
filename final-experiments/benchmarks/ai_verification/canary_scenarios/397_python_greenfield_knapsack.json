@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-greenfield-046",
+  "title": "Implement 0/1 knapsack in Python",
+  "category": "repo_init",
+  "difficulty": "hard",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement knapsack(capacity, weights, values) -> int that returns the maximum value achievable with the given capacity, using dynamic programming.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/knapsack.py": "def knapsack(capacity: int, weights: list[int], values: list[int]) -> int:\n    raise NotImplementedError\n",
+      "tests/test_knapsack.py": "from src.knapsack import knapsack\n\ndef test_basic():\n    # weights [1,3,4,5], values [1,4,5,7], capacity 7 -> 9 (items 1+3 or 0+2)\n    assert knapsack(7, [1, 3, 4, 5], [1, 4, 5, 7]) == 9\n\ndef test_single_item_fits():\n    assert knapsack(10, [5], [42]) == 42\n\ndef test_single_item_too_heavy():\n    assert knapsack(4, [5], [42]) == 0\n\ndef test_zero_capacity():\n    assert knapsack(0, [1, 2], [10, 20]) == 0\n\ndef test_all_items_fit():\n    assert knapsack(100, [1, 2, 3], [10, 20, 30]) == 60\n",
+      "pyproject.toml": "[project]\nname = \"knapsack\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npythonpath = [\".\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement knapsack(capacity, weights, values) in src/knapsack.py using bottom-up DP:\n- Create dp table: dp[i][w] = max value using first i items with weight capacity w\n- dp[0][w] = 0 for all w\n- For each item i (1-indexed): if weights[i-1] <= w, dp[i][w] = max(dp[i-1][w], dp[i-1][w-weights[i-1]] + values[i-1]); else dp[i][w] = dp[i-1][w]\n- Return dp[n][capacity]\nAll 5 tests must pass.",
+    "entry_point": "src/knapsack.py",
+    "success_criteria": "All 5 pytest tests pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -q` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

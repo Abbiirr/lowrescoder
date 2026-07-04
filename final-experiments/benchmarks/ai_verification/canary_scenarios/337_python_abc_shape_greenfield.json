@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-035",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement Shape ABC with Circle and Rectangle subclasses",
+  "description": "Greenfield Python task: define an abstract Shape class with abstract area() and perimeter() methods, implement Circle and Rectangle concrete subclasses, and a total_area helper.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"shapes\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/shapes.py",
+        "content": "# TODO: implement Shape ABC, Circle, Rectangle, total_area\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_shapes.py",
+        "content": "import math\nimport pytest\nfrom src.shapes import Shape, Circle, Rectangle, total_area\n\n\ndef test_circle_area():\n    c = Circle(radius=5)\n    assert abs(c.area() - math.pi * 25) < 1e-9\n\n\ndef test_circle_perimeter():\n    c = Circle(radius=3)\n    assert abs(c.perimeter() - 2 * math.pi * 3) < 1e-9\n\n\ndef test_rectangle_area():\n    r = Rectangle(width=4, height=6)\n    assert r.area() == 24.0\n\n\ndef test_rectangle_perimeter():\n    r = Rectangle(width=3, height=5)\n    assert r.perimeter() == 16.0\n\n\ndef test_total_area():\n    shapes = [Circle(radius=1), Rectangle(width=2, height=3)]\n    assert abs(total_area(shapes) - (math.pi + 6.0)) < 1e-9\n\n\ndef test_shape_is_abstract():\n    with pytest.raises(TypeError):\n        Shape()  # Cannot instantiate abstract class\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement Shape ABC, Circle, Rectangle, and total_area in src/shapes.py.\n\nimport math\nfrom abc import ABC, abstractmethod\n\n\nclass Shape(ABC):\n    @abstractmethod\n    def area(self) -> float:\n        ...\n\n    @abstractmethod\n    def perimeter(self) -> float:\n        ...\n\n\nclass Circle(Shape):\n    def __init__(self, radius: float):\n        self.radius = radius\n\n    def area(self) -> float:\n        return math.pi * self.radius ** 2\n\n    def perimeter(self) -> float:\n        return 2 * math.pi * self.radius\n\n\nclass Rectangle(Shape):\n    def __init__(self, width: float, height: float):\n        self.width = width\n        self.height = height\n\n    def area(self) -> float:\n        return self.width * self.height\n\n    def perimeter(self) -> float:\n        return 2 * (self.width + self.height)\n\n\ndef total_area(shapes: list[Shape]) -> float:\n    return sum(s.area() for s in shapes)\n\nAll 6 tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "Shape is abstract — cannot be instantiated directly",
+      "Circle.area() = π r², Circle.perimeter() = 2πr",
+      "Rectangle.area() = w*h, Rectangle.perimeter() = 2*(w+h)",
+      "total_area sums area() of all shapes",
+      "All 6 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (6 tests)",
+      "uv run python -c \"from src.shapes import Shape, Circle, Rectangle\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.shapes import Shape, Circle, Rectangle\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-refactor-007",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Introduce Service struct wrapping rust_panic_service free functions",
+  "description": "Brownfield Rust refactor: add a Service unit struct whose methods delegate to the existing package-level functions.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_panic_service",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add a Service struct to src/lib.rs. All 5 existing tests must still pass.\n\nAdd:\n  pub struct Service;\n\n  impl Service {\n    pub fn new() -> Self { Service }\n\n    pub fn divide(&self, a: f64, b: f64) -> f64\n      — delegates to the package-level divide(a, b)\n\n    pub fn get_value<'a>(&self, map: &'a std::collections::HashMap<String, i32>, key: &str) -> i32\n      — delegates to the package-level get_value(map, key)\n\n    pub fn parse_age(&self, s: &str) -> u32\n      — delegates to the package-level parse_age(s)\n\n    pub fn first_element(&self, v: &[i32]) -> i32\n      — delegates to the package-level first_element(v)\n\n    pub fn find_user<'a>(&self, users: &'a [&str], name: &str) -> usize\n      — delegates to the package-level find_user(users, name)\n  }\n\nAlso implement Default for Service.\nAdd tests for the Service struct methods.\nDo not modify the existing functions or tests.\nAll 5 existing tests must still pass.\nRun: cargo test",
+    "required_artifacts": [
+      "Service unit struct with new() constructor",
+      "Service::divide delegates to free divide",
+      "Service::get_value delegates to free get_value",
+      "Service::parse_age delegates to free parse_age",
+      "Service::first_element delegates to free first_element",
+      "Service::find_user delegates to free find_user",
+      "Default implemented for Service",
+      "Tests for Service methods added",
+      "All 5 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `cargo test` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

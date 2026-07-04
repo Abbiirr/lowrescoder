@@ -1,0 +1,62 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-bst-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Implement a Binary Search Tree in Go",
+  "description": "Build a BST in Go with Insert, Search, InOrder traversal, and Height. Tests are provided via injection.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module github.com/ai-verification/go-bst\n\ngo 1.22\n"
+      },
+      {
+        "path": "internal/bst/bst_test.go",
+        "content": "package bst_test\n\nimport (\n\t\"testing\"\n\n\t\"github.com/ai-verification/go-bst/internal/bst\"\n)\n\nfunc TestInsertAndSearch(t *testing.T) {\n\ttree := bst.New()\n\ttree.Insert(5)\n\ttree.Insert(3)\n\ttree.Insert(7)\n\tif !tree.Search(3) {\n\t\tt.Fatal(\"expected to find 3\")\n\t}\n\tif tree.Search(99) {\n\t\tt.Fatal(\"expected 99 not found\")\n\t}\n}\n\nfunc TestInOrder(t *testing.T) {\n\ttree := bst.New()\n\tfor _, v := range []int{5, 3, 7, 1, 4} {\n\t\ttree.Insert(v)\n\t}\n\tgot := tree.InOrder()\n\twant := []int{1, 3, 4, 5, 7}\n\tif len(got) != len(want) {\n\t\tt.Fatalf(\"expected %v, got %v\", want, got)\n\t}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Fatalf(\"index %d: expected %d got %d\", i, want[i], got[i])\n\t\t}\n\t}\n}\n\nfunc TestHeight(t *testing.T) {\n\ttree := bst.New()\n\tif tree.Height() != 0 {\n\t\tt.Fatalf(\"expected height 0 for empty tree, got %d\", tree.Height())\n\t}\n\ttree.Insert(5)\n\tif tree.Height() != 1 {\n\t\tt.Fatalf(\"expected height 1 after one insert, got %d\", tree.Height())\n\t}\n\ttree.Insert(3)\n\ttree.Insert(7)\n\tif tree.Height() != 2 {\n\t\tt.Fatalf(\"expected height 2 after balanced insert, got %d\", tree.Height())\n\t}\n\ttree.Insert(1)\n\tif tree.Height() != 3 {\n\t\tt.Fatalf(\"expected height 3, got %d\", tree.Height())\n\t}\n}\n\nfunc TestDuplicateInsert(t *testing.T) {\n\ttree := bst.New()\n\ttree.Insert(5)\n\ttree.Insert(5)\n\tgot := tree.InOrder()\n\tif len(got) != 1 {\n\t\tt.Fatalf(\"expected 1 node after duplicate insert, got %d\", len(got))\n\t}\n}\n\nfunc TestSearchEmpty(t *testing.T) {\n\ttree := bst.New()\n\tif tree.Search(1) {\n\t\tt.Fatal(\"expected false on empty tree\")\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Create internal/bst/bst.go implementing a Binary Search Tree (BST).\n\nThe package is `bst` and must export:\n  func New() *BST                    — create an empty BST\n  func (t *BST) Insert(val int)      — insert val; ignore duplicates\n  func (t *BST) Search(val int) bool — return true if val is in the tree\n  func (t *BST) InOrder() []int      — return all values in ascending order\n  func (t *BST) Height() int         — return tree height (0 for empty, 1 for single node)\n\nAll 5 tests in internal/bst/bst_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "internal/bst/bst.go with BST type and New/Insert/Search/InOrder/Height",
+      "Duplicates are ignored",
+      "InOrder returns sorted slice",
+      "Height is 0 for empty tree, 1 for single node",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

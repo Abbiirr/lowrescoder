@@ -1,0 +1,59 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-dirty-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "duration_hint_minutes": 20,
+  "title": "Fix broken Go middleware server — wrong status codes and unused imports",
+  "description": "A Go todo server was damaged by a bad commit: ListTodos returns plain text instead of JSON, CreateTodo returns 200 instead of 201, and there is a dummy strconv usage hiding an unused import.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "mutate",
+    "fixture_ref": "go_middleware_server",
+    "injections": [
+      {
+        "path": "internal/handler/todos.go",
+        "content": "package handler\n\nimport (\n\t\"encoding/json\"\n\t\"fmt\"\n\t\"net/http\"\n\t\"strconv\"\n\t\"sync\"\n)\n\ntype Todo struct {\n\tID    int    `json:\"id\"`\n\tTitle string `json:\"title\"`\n\tDone  bool   `json:\"done\"`\n}\n\nvar (\n\tmu     sync.Mutex\n\ttodos  []Todo\n\tnextID = 1\n)\n\nfunc ListTodos(w http.ResponseWriter, r *http.Request) {\n\tif r.Method != http.MethodGet {\n\t\thttp.Error(w, \"method not allowed\", http.StatusMethodNotAllowed)\n\t\treturn\n\t}\n\tmu.Lock()\n\tdefer mu.Unlock()\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tfmt.Fprintln(w, \"not implemented\")\n}\n\nfunc CreateTodo(w http.ResponseWriter, r *http.Request) {\n\tif r.Method != http.MethodPost {\n\t\thttp.Error(w, \"method not allowed\", http.StatusMethodNotAllowed)\n\t\treturn\n\t}\n\tvar body struct {\n\t\tTitle string `json:\"title\"`\n\t}\n\tif err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Title == \"\" {\n\t\thttp.Error(w, \"bad request\", http.StatusBadRequest)\n\t\treturn\n\t}\n\tmu.Lock()\n\tdefer mu.Unlock()\n\tt := Todo{ID: nextID, Title: body.Title, Done: false}\n\tnextID++\n\ttodos = append(todos, t)\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tw.WriteHeader(http.StatusOK)\n\tjson.NewEncoder(w).Encode(t)\n\t_ = strconv.Itoa(0)\n}\n\nfunc ResetTodos() {\n\tmu.Lock()\n\tdefer mu.Unlock()\n\ttodos = nil\n\tnextID = 1\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Go todo server in internal/handler/todos.go was broken by a bad commit. Fix three issues: (1) ListTodos calls fmt.Fprintln(w, \"not implemented\") instead of json.NewEncoder(w).Encode(todos) — restore the proper JSON encoding. (2) CreateTodo uses w.WriteHeader(http.StatusOK) — change to w.WriteHeader(http.StatusCreated) (201). (3) Remove the dummy _ = strconv.Itoa(0) line and the now-unused fmt and strconv imports so go vet and go build produce no errors. Run go test ./... to confirm all three tests pass.",
+    "required_artifacts": [
+      "ListTodos returns JSON-encoded todos array",
+      "CreateTodo returns HTTP 201",
+      "No unused imports (fmt and strconv removed)",
+      "go test ./... passes all 3 tests",
+      "go build ./... succeeds"
+    ],
+    "success_criteria": [
+      "Server behaviour restored to original design",
+      "Clean Go code with no dead imports",
+      "All tests green"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

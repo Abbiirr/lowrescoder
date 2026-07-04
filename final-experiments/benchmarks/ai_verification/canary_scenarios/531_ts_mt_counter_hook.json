@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "531-ts-mt-counter-hook",
+  "title": "Build React useCounter hook — 3 turns",
+  "category": "repo_init",
+  "difficulty": "easy",
+  "target_stack": {"language": "typescript", "framework": "react", "extra": {}},
+  "description": "Three turns build a useCounter React hook: turn 1 increment/decrement, turn 2 reset/setValue, turn 3 step option.",
+  "repo_seed": {
+    "files": {
+      "package.json": "{\n  \"name\": \"use-counter\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"test\": \"jest --forceExit\"\n  },\n  \"dependencies\": {\n    \"react\": \"^18.0.0\"\n  },\n  \"devDependencies\": {\n    \"@testing-library/react\": \"^14.0.0\",\n    \"@testing-library/react-hooks\": \"^8.0.1\",\n    \"@types/react\": \"^18.0.0\",\n    \"jest\": \"^29.0.0\",\n    \"jest-environment-jsdom\": \"^29.0.0\",\n    \"ts-jest\": \"^29.0.0\",\n    \"typescript\": \"^5.0.0\"\n  },\n  \"jest\": {\n    \"preset\": \"ts-jest\",\n    \"testEnvironment\": \"jsdom\"\n  }\n}\n",
+      "src/useCounter.ts": "import { useState } from 'react';\n\ninterface UseCounterOptions {\n  initialValue?: number;\n  step?: number;  // increment/decrement step size, default 1\n}\n\ninterface UseCounterReturn {\n  count: number;\n  increment: () => void;\n  decrement: () => void;\n  reset: () => void;\n  setValue: (value: number) => void;\n}\n\nexport function useCounter(options: UseCounterOptions = {}): UseCounterReturn {\n  const { initialValue = 0, step = 1 } = options;\n  const [count, setCount] = useState(initialValue);\n\n  // TODO: implement\n  const increment = () => {};\n  const decrement = () => {};\n  const reset = () => {};\n  const setValue = (_value: number) => {};\n\n  return { count, increment, decrement, reset, setValue };\n}\n",
+      "src/useCounter.test.ts": "import { renderHook, act } from '@testing-library/react';\nimport { useCounter } from './useCounter';\n\ntest('starts at initialValue', () => {\n  const { result } = renderHook(() => useCounter({ initialValue: 5 }));\n  expect(result.current.count).toBe(5);\n});\n\ntest('defaults to 0', () => {\n  const { result } = renderHook(() => useCounter());\n  expect(result.current.count).toBe(0);\n});\n\ntest('increment adds step', () => {\n  const { result } = renderHook(() => useCounter());\n  act(() => result.current.increment());\n  expect(result.current.count).toBe(1);\n});\n\ntest('decrement subtracts step', () => {\n  const { result } = renderHook(() => useCounter({ initialValue: 5 }));\n  act(() => result.current.decrement());\n  expect(result.current.count).toBe(4);\n});\n\ntest('reset returns to initialValue', () => {\n  const { result } = renderHook(() => useCounter({ initialValue: 10 }));\n  act(() => result.current.increment());\n  act(() => result.current.reset());\n  expect(result.current.count).toBe(10);\n});\n\ntest('setValue sets exact value', () => {\n  const { result } = renderHook(() => useCounter());\n  act(() => result.current.setValue(42));\n  expect(result.current.count).toBe(42);\n});\n\ntest('custom step', () => {\n  const { result } = renderHook(() => useCounter({ step: 5 }));\n  act(() => result.current.increment());\n  expect(result.current.count).toBe(5);\n  act(() => result.current.decrement());\n  expect(result.current.count).toBe(0);\n});\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `increment` and `decrement` in `src/useCounter.ts`. increment should call `setCount(c => c + step)` and decrement should call `setCount(c => c - step)`. Run `npm test -- --forceExit`.",
+    "followup_prompts": [
+      "Good. Now implement `reset` (set count back to initialValue) and `setValue` (set to any provided value). Run `npm test -- --forceExit` and fix any failures.",
+      "Final check: run `npm test -- --forceExit` one more time. All 7 tests must pass. Make sure the `custom step` test works — increment/decrement should use the step from options."
+    ],
+    "success_criteria": [
+      "increment adds step to count",
+      "decrement subtracts step from count",
+      "reset returns count to initialValue",
+      "setValue sets count to exact value",
+      "Custom step option works for both increment and decrement",
+      "All 7 tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "npm test -- --forceExit"}
+  },
+  "duration_hint_minutes": 10
+}

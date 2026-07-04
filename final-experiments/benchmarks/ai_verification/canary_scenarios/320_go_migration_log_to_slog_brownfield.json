@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-brownfield-009",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Migrate Go logging from log package to slog",
+  "description": "Brownfield Go migration: replace stdlib log calls in a service module with slog structured logging. The function signatures and behavior must remain identical; only the logging calls change.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module logsvc\n\ngo 1.21\n"
+      },
+      {
+        "path": "service.go",
+        "content": "package logsvc\n\nimport \"log\"\n\nfunc ProcessOrder(id int, amount float64) error {\n\tif id <= 0 {\n\t\tlog.Printf(\"invalid order id: %d\", id)\n\t\treturn ErrInvalidID\n\t}\n\tif amount <= 0 {\n\t\tlog.Printf(\"invalid amount: %f\", amount)\n\t\treturn ErrInvalidAmount\n\t}\n\tlog.Printf(\"processing order id=%d amount=%.2f\", id, amount)\n\treturn nil\n}\n\nvar ErrInvalidID = errorf(\"invalid id\")\nvar ErrInvalidAmount = errorf(\"invalid amount\")\n\ntype appError struct{ msg string }\n\nfunc (e *appError) Error() string { return e.msg }\n\nfunc errorf(msg string) error { return &appError{msg: msg} }\n"
+      },
+      {
+        "path": "service_test.go",
+        "content": "package logsvc\n\nimport \"testing\"\n\nfunc TestProcessOrderValid(t *testing.T) {\n\tif err := ProcessOrder(1, 99.99); err != nil {\n\t\tt.Fatalf(\"expected nil, got %v\", err)\n\t}\n}\n\nfunc TestProcessOrderInvalidID(t *testing.T) {\n\tif err := ProcessOrder(0, 10.0); err != ErrInvalidID {\n\t\tt.Fatalf(\"expected ErrInvalidID, got %v\", err)\n\t}\n}\n\nfunc TestProcessOrderInvalidAmount(t *testing.T) {\n\tif err := ProcessOrder(1, -5.0); err != ErrInvalidAmount {\n\t\tt.Fatalf(\"expected ErrInvalidAmount, got %v\", err)\n\t}\n}\n\nfunc TestProcessOrderZeroAmount(t *testing.T) {\n\tif err := ProcessOrder(1, 0); err != ErrInvalidAmount {\n\t\tt.Fatalf(\"expected ErrInvalidAmount, got %v\", err)\n\t}\n}\n\nfunc TestProcessOrderNegativeID(t *testing.T) {\n\tif err := ProcessOrder(-1, 10.0); err != ErrInvalidID {\n\t\tt.Fatalf(\"expected ErrInvalidID, got %v\", err)\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Migrate service.go from log to slog.\n\nReplace:\n  import \"log\"\n  log.Printf(...)\n\nWith:\n  import \"log/slog\"\n  slog.Info(\"message\", \"key\", value, ...)\n  slog.Warn(\"message\", \"key\", value, ...)\n\nFor errors/invalid cases use slog.Warn; for success use slog.Info.\nKeep all function signatures, error variables, and return behavior unchanged.\nAll 5 tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "import log replaced with import log/slog",
+      "log.Printf replaced with slog.Info or slog.Warn calls",
+      "Function signatures unchanged",
+      "Error variables and return values unchanged",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `go test ./...` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

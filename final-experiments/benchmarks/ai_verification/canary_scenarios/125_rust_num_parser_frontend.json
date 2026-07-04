@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-frontend-005",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add HTML rendering helpers to Rust num-parser library",
+  "description": "Brownfield Rust task: add a pub mod html with format_parse_html and format_list_html functions inline in src/lib.rs.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_num_parser",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add a pub mod html block inside src/lib.rs with two public functions. All 3 existing tests must still pass.\n\n  pub fn format_parse_html(s: &str) -> String\n    — tries to parse s.trim() as i32\n    — on Ok(n):  returns <span class=\"ok\">{n}</span>\n    — on Err(e): returns <span class=\"error\">{e}</span>\n\n  pub fn format_list_html(values: &[i32]) -> String\n    — if values is empty: returns <ul><li><em>empty</em></li></ul>\n    — otherwise: returns <ul> with one <li>{v}</li> per value\n\nDo not add any new files; add the module inline in src/lib.rs.\nAll 3 existing tests must still pass.\nRun: cargo test",
+    "required_artifacts": [
+      "format_parse_html returns span with class='ok' and parsed value for valid integer strings",
+      "format_parse_html returns span with class='error' for invalid strings",
+      "format_list_html returns empty-state ul for empty slice",
+      "format_list_html wraps each value in a li element",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `cargo test` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

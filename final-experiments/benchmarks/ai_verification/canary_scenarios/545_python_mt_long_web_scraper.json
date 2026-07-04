@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "545-python-mt-long-web-scraper",
+  "title": "Build a web scraper framework in Python — 4 turns",
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "target_stack": {"language": "python", "framework": null, "extra": {}},
+  "description": "Four-turn web scraper: turn 1 fetch page, turn 2 parse HTML, turn 3 extract links, turn 4 rate-limited crawl.",
+  "repo_seed": {
+    "files": {
+      "scraper/__init__.py": "",
+      "scraper/fetcher.py": "\"\"\"HTTP page fetcher.\"\"\"\nimport urllib.request\nimport urllib.error\nfrom dataclasses import dataclass\nfrom typing import Optional\n\n\n@dataclass\nclass Page:\n    url: str\n    html: str\n    status: int\n\n\ndef fetch(url: str, timeout: float = 10.0) -> Optional[Page]:\n    \"\"\"Fetch URL and return Page, or None on error.\"\"\"\n    raise NotImplementedError\n",
+      "scraper/parser.py": "\"\"\"HTML link extractor.\"\"\"\nfrom html.parser import HTMLParser\nfrom urllib.parse import urljoin, urlparse\nfrom typing import List\n\n\nclass LinkExtractor(HTMLParser):\n    def __init__(self):\n        super().__init__()\n        self.links: List[str] = []\n\n    def handle_starttag(self, tag: str, attrs: list) -> None:\n        \"\"\"Collect href attributes from <a> tags.\"\"\"\n        raise NotImplementedError\n\n\ndef extract_links(html: str, base_url: str) -> List[str]:\n    \"\"\"Extract all absolute URLs from <a href> tags in html.\"\"\"\n    raise NotImplementedError\n",
+      "scraper/crawler.py": "\"\"\"Rate-limited crawler.\"\"\"\nimport time\nfrom typing import Callable, Set\nfrom scraper.fetcher import fetch, Page\nfrom scraper.parser import extract_links\n\n\ndef crawl(\n    start_url: str,\n    max_pages: int = 10,\n    delay: float = 0.0,\n    on_page: Callable[[Page], None] = lambda _: None,\n) -> Set[str]:\n    \"\"\"BFS crawl from start_url.\n    \n    Args:\n        start_url: Starting URL.\n        max_pages: Maximum pages to fetch.\n        delay: Seconds to sleep between requests.\n        on_page: Callback invoked for each fetched page.\n    \n    Returns:\n        Set of all URLs visited.\n    \"\"\"\n    raise NotImplementedError\n",
+      "tests/__init__.py": "",
+      "tests/test_scraper.py": "import pytest\nfrom unittest.mock import patch, MagicMock\nfrom scraper.fetcher import fetch, Page\nfrom scraper.parser import extract_links\nfrom scraper.crawler import crawl\n\n\ndef test_fetch_success():\n    \"\"\"fetch returns Page on success.\"\"\"\n    html = b\"<html><body>hello</body></html>\"\n    mock_resp = MagicMock()\n    mock_resp.read.return_value = html\n    mock_resp.getcode.return_value = 200\n    mock_resp.__enter__ = lambda s: s\n    mock_resp.__exit__ = MagicMock(return_value=False)\n    with patch(\"urllib.request.urlopen\", return_value=mock_resp):\n        page = fetch(\"http://example.com\")\n    assert page is not None\n    assert page.status == 200\n    assert \"hello\" in page.html\n\n\ndef test_fetch_error_returns_none():\n    import urllib.error\n    with patch(\"urllib.request.urlopen\", side_effect=urllib.error.URLError(\"fail\")):\n        page = fetch(\"http://bad.url\")\n    assert page is None\n\n\ndef test_extract_links_absolute():\n    html = '<html><body><a href=\"http://example.com/page\">link</a></body></html>'\n    links = extract_links(html, \"http://example.com\")\n    assert \"http://example.com/page\" in links\n\n\ndef test_extract_links_relative():\n    html = '<html><body><a href=\"/about\">about</a></body></html>'\n    links = extract_links(html, \"http://example.com\")\n    assert \"http://example.com/about\" in links\n\n\ndef test_extract_links_ignores_empty():\n    html = '<html><body><a href=\"\">empty</a><a>no href</a></body></html>'\n    links = extract_links(html, \"http://example.com\")\n    assert links == []\n\n\ndef test_crawl_visits_pages():\n    pages = {\n        \"http://example.com\": \"<html><a href='http://example.com/a'>a</a></html>\",\n        \"http://example.com/a\": \"<html><body>no links</body></html>\",\n    }\n    def fake_fetch(url, timeout=10):\n        if url in pages:\n            return Page(url=url, html=pages[url], status=200)\n        return None\n    \n    visited = []\n    with patch(\"scraper.crawler.fetch\", side_effect=fake_fetch):\n        result = crawl(\"http://example.com\", max_pages=5, on_page=lambda p: visited.append(p.url))\n    assert \"http://example.com\" in result\n    assert \"http://example.com/a\" in result\n    assert len(visited) == 2\n\n\ndef test_crawl_respects_max_pages():\n    def fake_fetch(url, timeout=10):\n        return Page(url=url, html=\"<a href='http://other.com'>x</a>\", status=200)\n    with patch(\"scraper.crawler.fetch\", side_effect=fake_fetch):\n        result = crawl(\"http://example.com\", max_pages=1)\n    assert len(result) == 1\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `fetch(url, timeout)` in `scraper/fetcher.py` — use `urllib.request.urlopen` with a timeout, read the response body, decode as UTF-8, and return a `Page(url=url, html=html, status=resp.getcode())`. Return None on `urllib.error.URLError`. Run `uv run pytest tests/test_scraper.py::test_fetch_success tests/test_scraper.py::test_fetch_error_returns_none -v`.",
+    "followup_prompts": [
+      "Good progress. Run `uv run pytest tests/ -q` to see where we stand. Now implement `LinkExtractor.handle_starttag` and `extract_links()` in `scraper/parser.py`. handle_starttag: if tag is 'a', find 'href' in attrs and append it to self.links. extract_links: create a LinkExtractor, feed it the html, then use urljoin(base_url, href) to resolve relative links; skip empty hrefs. Continue with the remaining steps.",
+      "Good. Now implement `crawl()` in `scraper/crawler.py` — BFS from start_url: use a queue of URLs to visit and a visited set. For each URL, call fetch(), call on_page() if successful, extract links, add unvisited links to queue, sleep(delay). Stop when max_pages is reached. Run `uv run pytest tests/ -q`.",
+      "Final push: run `uv run pytest tests/ -q` and fix any remaining failures. All 7 tests must pass — fetch, error handling, link extraction (absolute/relative/empty), crawl, and max_pages limit."
+    ],
+    "success_criteria": [
+      "fetch() returns Page on success, None on error",
+      "extract_links handles absolute, relative, and empty hrefs",
+      "crawl() does BFS respecting max_pages",
+      "on_page callback called for each visited page",
+      "All 7 pytest tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "uv run pytest tests/ -q"}
+  },
+  "duration_hint_minutes": 35
+}

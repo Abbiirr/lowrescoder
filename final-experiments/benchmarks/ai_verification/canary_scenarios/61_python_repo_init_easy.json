@@ -1,0 +1,60 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-003",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Greenfield Python temperature-converter library",
+  "description": "Build a simple Python library from scratch that converts between Celsius, Fahrenheit, and Kelvin.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": "",
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"temp-converter\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.uv]\ndev-dependencies = [\"pytest>=8\", \"ruff>=0.4\"]\n\n[tool.pytest.ini_options]\npythonpath = [\".\"]\n"
+      }
+    ],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "Create a temperature converter library in src/temp_converter.py.\n\nImplement:\n  def celsius_to_fahrenheit(c: float) -> float  — formula: (c * 9/5) + 32\n  def fahrenheit_to_celsius(f: float) -> float  — formula: (f - 32) * 5/9\n  def celsius_to_kelvin(c: float) -> float      — formula: c + 273.15\n  def kelvin_to_celsius(k: float) -> float      — formula: k - 273.15\n\nCreate a tests/test_temp.py with 5+ tests:\n  test_boiling_point — celsius_to_fahrenheit(100) == 212.0\n  test_freezing_point — celsius_to_fahrenheit(0) == 32.0\n  test_body_temp — fahrenheit_to_celsius(98.6) is close to 37.0 (within 0.01)\n  test_absolute_zero — celsius_to_kelvin(-273.15) == 0.0\n  test_roundtrip — fahrenheit_to_celsius(celsius_to_fahrenheit(25)) is close to 25.0 (within 1e-9)\n\nRun uv run pytest tests/ -q to confirm. Run uv run ruff check src/ to confirm.",
+    "required_artifacts": [
+      "src/temp_converter.py with all 4 functions",
+      "tests/test_temp.py with 5+ tests",
+      "uv run pytest tests/ -q passes",
+      "uv run ruff check src/ passes"
+    ],
+    "success_criteria": [
+      "All 4 conversion functions correct",
+      "5+ tests pass",
+      "Ruff lint passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -q` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

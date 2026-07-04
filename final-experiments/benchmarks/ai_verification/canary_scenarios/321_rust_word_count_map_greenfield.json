@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-038",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Implement a word frequency counter in Rust",
+  "description": "Greenfield Rust task: implement word_count that splits text on whitespace and returns a HashMap<String, usize> with lowercased word frequencies, and top_words that returns the N most frequent words sorted by count desc then alpha asc.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"wordcount\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement word_count and top_words\n"
+      },
+      {
+        "path": "tests/wordcount_test.rs",
+        "content": "use wordcount::{word_count, top_words};\nuse std::collections::HashMap;\n\n#[test]\nfn test_word_count_basic() {\n    let counts = word_count(\"hello world hello\");\n    assert_eq!(counts.get(\"hello\"), Some(&2));\n    assert_eq!(counts.get(\"world\"), Some(&1));\n}\n\n#[test]\nfn test_word_count_case_insensitive() {\n    let counts = word_count(\"Hello HELLO hello\");\n    assert_eq!(counts.get(\"hello\"), Some(&3));\n}\n\n#[test]\nfn test_word_count_empty() {\n    let counts = word_count(\"\");\n    assert!(counts.is_empty());\n}\n\n#[test]\nfn test_top_words_basic() {\n    let top = top_words(\"a b a c a b\", 2);\n    assert_eq!(top[0], \"a\");\n    assert_eq!(top[1], \"b\");\n}\n\n#[test]\nfn test_top_words_alpha_tiebreak() {\n    // \"apple\" and \"banana\" both appear once; alpha order: apple < banana\n    let top = top_words(\"apple banana\", 2);\n    assert_eq!(top[0], \"apple\");\n    assert_eq!(top[1], \"banana\");\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement word_count and top_words in src/lib.rs.\n\nuse std::collections::HashMap;\n\npub fn word_count(text: &str) -> HashMap<String, usize> {\n    let mut map = HashMap::new();\n    for word in text.split_whitespace() {\n        *map.entry(word.to_lowercase()).or_insert(0) += 1;\n    }\n    map\n}\n\npub fn top_words(text: &str, n: usize) -> Vec<String> {\n    let counts = word_count(text);\n    let mut pairs: Vec<(String, usize)> = counts.into_iter().collect();\n    pairs.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));\n    pairs.into_iter().take(n).map(|(w, _)| w).collect()\n}\n\nAll 5 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "word_count splits on whitespace and lowercases",
+      "word_count returns HashMap<String, usize>",
+      "top_words returns top N words by count desc, alpha asc on ties",
+      "Empty string returns empty map",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

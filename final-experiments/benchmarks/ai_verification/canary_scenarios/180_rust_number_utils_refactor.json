@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-refactor-008",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Wrap rust_number_utils in a NumberUtils struct",
+  "description": "Brownfield Rust refactor: introduce a NumberUtils struct whose methods delegate to the existing abs free function.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_number_utils",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add a NumberUtils struct to src/lib.rs. All 3 existing tests must still pass.\n\n  pub struct NumberUtils;\n\n  impl NumberUtils {\n    pub fn new() -> Self\n\n    pub fn abs_val(&self, n: i64) -> i64\n      — delegates to the package-level abs function\n\n    pub fn is_positive(&self, n: i64) -> bool\n      — returns true if n > 0\n\n    pub fn is_negative(&self, n: i64) -> bool\n      — returns true if n < 0\n  }\n\n  impl Default for NumberUtils {\n    fn default() -> Self { Self::new() }\n  }\n\nDo not modify the existing free function abs or the existing tests.\nAdd at least 4 tests for NumberUtils methods.\nAll 3 existing fixture tests must still pass.\nRun: cargo test",
+    "required_artifacts": [
+      "NumberUtils struct with new() constructor",
+      "Default impl for NumberUtils",
+      "abs_val delegates to free function abs",
+      "is_positive returns true for n > 0",
+      "is_negative returns true for n < 0",
+      "At least 4 tests for NumberUtils",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `cargo test` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

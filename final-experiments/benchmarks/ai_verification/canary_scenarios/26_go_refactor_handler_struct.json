@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-refactor-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Refactor Go items handler from global state to Server struct",
+  "description": "A Go HTTP items handler uses package-level global variables and standalone functions. Refactor to a Server struct with an injected store and receiver methods, preserving all behaviour.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_items_handler",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The items handler in internal/items/handler.go uses package-level global variables (store, nextID, mu) and standalone handler functions (ListItems, CreateItem, GetItem). Refactor it:\n\n1. Define a Store interface with methods Set(item Item), GetByID(id int) (Item, bool), List() []Item, and Reset().\n\n2. Create an InMemoryStore struct that implements Store using the same sync.Mutex + slice logic, but as receiver methods instead of globals.\n\n3. Create a Server struct with a Store field and a constructor func NewServer(s Store) *Server.\n\n4. Move ListItems, CreateItem, GetItem to receiver methods on *Server (func (srv *Server) ListItems(w, r), etc.).\n\n5. Remove all package-level global variables. The package should now be side-effect free at import time.\n\n6. Update the test file to construct a Server via NewServer(NewInMemoryStore()) instead of calling ResetStore(). All four existing tests must continue to pass.\n\nRun go test ./... to confirm. Run go vet ./... to confirm no issues.",
+    "required_artifacts": [
+      "Store interface defined",
+      "InMemoryStore struct implements Store",
+      "Server struct with NewServer constructor",
+      "No package-level global variables",
+      "All 4 existing tests pass with updated test setup",
+      "go test ./... passes",
+      "go vet ./... clean"
+    ],
+    "success_criteria": [
+      "Global state eliminated — tests create their own Server instances",
+      "Interface enables future test injection of a mock store",
+      "Behaviour unchanged: same HTTP status codes and response shapes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `go test ./...` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

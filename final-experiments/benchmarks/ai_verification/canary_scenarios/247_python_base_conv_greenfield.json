@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-015",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Implement number base conversion functions in Python",
+  "description": "Greenfield Python task: implement to_base(n, base) -> str (convert non-negative int to digit string in given base 2-36) and from_base(s, base) -> int (parse digit string back to int).",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"base_conv\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/base_conv.py",
+        "content": "# TODO: implement to_base and from_base\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_base_conv.py",
+        "content": "from src.base_conv import to_base, from_base\n\n\ndef test_to_base_binary():\n    assert to_base(10, 2) == \"1010\"\n    assert to_base(0, 2) == \"0\"\n    assert to_base(255, 2) == \"11111111\"\n\n\ndef test_to_base_hex():\n    assert to_base(255, 16) == \"ff\"\n    assert to_base(26, 16) == \"1a\"\n    assert to_base(0, 16) == \"0\"\n\n\ndef test_from_base_binary():\n    assert from_base(\"1010\", 2) == 10\n    assert from_base(\"11111111\", 2) == 255\n    assert from_base(\"0\", 2) == 0\n\n\ndef test_from_base_hex():\n    assert from_base(\"ff\", 16) == 255\n    assert from_base(\"1a\", 16) == 26\n\n\ndef test_roundtrip():\n    for n in [0, 1, 42, 255, 1000]:\n        for base in [2, 8, 16, 36]:\n            assert from_base(to_base(n, base), base) == n\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement two base-conversion functions in src/base_conv.py.\n\nDIGITS = '0123456789abcdefghijklmnopqrstuvwxyz'  # 36 digits\n\ndef to_base(n: int, base: int) -> str:\n    # Convert non-negative integer n to lowercase digit string in given base (2-36).\n    # Special case: to_base(0, base) == \"0\".\n    # Algorithm: repeatedly divide n by base, collect remainders in reverse.\n\ndef from_base(s: str, base: int) -> int:\n    # Parse a lowercase digit string s (base 2-36) back to an integer.\n    # Hint: int(s, base) works for bases 2-36 but is not required.\n\nAll 5 tests in tests/test_base_conv.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "DIGITS constant string '0123456789abcde...' (36 chars)",
+      "to_base handles n=0 returning '0'",
+      "to_base divides repeatedly and reverses digit list",
+      "from_base decodes each digit via DIGITS.index or int(s, base)",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.base_conv import to_base, from_base\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.base_conv import to_base, from_base\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-py-longhorizon-refactor-001",
+  "title": "Refactor a Python CLI tool: extract config, add validation, update tests",
+  "category": "repo_init",
+  "difficulty": "hard",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Python CLI tool has hardcoded configuration mixed with business logic. Multi-step task: (1) extract config to a dataclass, (2) add input validation, (3) update tests. Requires reading multiple files, planning the work, and making coordinated changes. Tests verify all three steps.",
+  "repo_seed": {
+    "files": {
+      "cli_tool.py": "\"\"\"CSV processing CLI tool.\"\"\"\nimport csv\nimport sys\n\n# Hardcoded config mixed into logic\nMAX_ROWS = 1000\nDELIMITER = ','\nENCODING = 'utf-8'\nSKIP_HEADER = True\n\n\ndef process_file(path: str) -> list:\n    \"\"\"Read a CSV file and return list of dicts.\"\"\"\n    rows = []\n    with open(path, encoding=ENCODING) as f:\n        reader = csv.reader(f, delimiter=DELIMITER)\n        if SKIP_HEADER:\n            next(reader, None)\n        for i, row in enumerate(reader):\n            if i >= MAX_ROWS:\n                break\n            rows.append(row)\n    return rows\n\n\ndef summarize(rows: list) -> dict:\n    \"\"\"Return summary stats for parsed rows.\"\"\"\n    return {\n        'total_rows': len(rows),\n        'avg_cols': sum(len(r) for r in rows) / len(rows) if rows else 0,\n    }\n\n\ndef main(argv=None):\n    argv = argv or sys.argv[1:]\n    if not argv:\n        print('Usage: cli_tool <file>')\n        sys.exit(1)\n    rows = process_file(argv[0])\n    stats = summarize(rows)\n    print(f\"Rows: {stats['total_rows']}, Avg cols: {stats['avg_cols']:.1f}\")\n",
+      "test_cli_tool.py": "\"\"\"Tests for the refactored CLI tool.\"\"\"\nimport io\nimport csv\nimport pytest\nfrom cli_tool import process_file, summarize, ProcessConfig\n\n\ndef make_csv(rows, header=None):\n    \"\"\"Helper: write a temp CSV file and return path.\"\"\"\n    import tempfile, os\n    f = tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False, newline='')\n    writer = csv.writer(f)\n    if header:\n        writer.writerow(header)\n    writer.writerows(rows)\n    f.close()\n    return f.name\n\n\ndef test_process_file_with_config():\n    \"\"\"process_file should accept a ProcessConfig parameter.\"\"\"\n    path = make_csv([['a', '1'], ['b', '2'], ['c', '3']], header=['name', 'val'])\n    config = ProcessConfig(max_rows=1000, delimiter=',', encoding='utf-8', skip_header=True)\n    rows = process_file(path, config=config)\n    assert len(rows) == 3\n    assert rows[0] == ['a', '1']\n\n\ndef test_max_rows_respected():\n    \"\"\"ProcessConfig.max_rows should limit rows returned.\"\"\"\n    path = make_csv([['a'], ['b'], ['c'], ['d'], ['e']])\n    config = ProcessConfig(max_rows=2, delimiter=',', encoding='utf-8', skip_header=False)\n    rows = process_file(path, config=config)\n    assert len(rows) == 2\n\n\ndef test_skip_header_false():\n    \"\"\"skip_header=False should include all rows.\"\"\"\n    path = make_csv([['h1', 'h2'], ['a', 'b']])\n    config = ProcessConfig(max_rows=100, delimiter=',', encoding='utf-8', skip_header=False)\n    rows = process_file(path, config=config)\n    assert len(rows) == 2\n    assert rows[0] == ['h1', 'h2']\n\n\ndef test_summarize():\n    rows = [['a', 'b', 'c'], ['d', 'e', 'f']]\n    stats = summarize(rows)\n    assert stats['total_rows'] == 2\n    assert stats['avg_cols'] == 3.0\n\n\ndef test_config_validation_max_rows():\n    \"\"\"ProcessConfig should raise ValueError if max_rows <= 0.\"\"\"\n    with pytest.raises(ValueError, match='max_rows'):\n        ProcessConfig(max_rows=0, delimiter=',', encoding='utf-8', skip_header=True)\n\n\ndef test_config_validation_delimiter():\n    \"\"\"ProcessConfig should raise ValueError if delimiter is empty.\"\"\"\n    with pytest.raises(ValueError, match='delimiter'):\n        ProcessConfig(max_rows=100, delimiter='', encoding='utf-8', skip_header=True)\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Refactor cli_tool.py to:\n\n1. Add a `ProcessConfig` dataclass (in cli_tool.py) with fields: `max_rows: int`, `delimiter: str`, `encoding: str`, `skip_header: bool`. Add `__post_init__` validation: raise ValueError if max_rows <= 0 (message must contain 'max_rows'), raise ValueError if delimiter is empty (message must contain 'delimiter').\n\n2. Update `process_file(path, config=None)` to accept an optional `ProcessConfig`. When config is None, use the module-level defaults to build one.\n\n3. All 6 tests in test_cli_tool.py must pass.\n\nRun `pytest test_cli_tool.py -v --rootdir=.` to verify.",
+    "entry_point": "cli_tool.py",
+    "success_criteria": [
+      "All 6 pytest tests pass",
+      "ProcessConfig dataclass exists in cli_tool.py",
+      "process_file accepts a config parameter",
+      "Validation raises ValueError for invalid config"
+    ],
+    "followup_prompts": [
+      "Run `pytest test_cli_tool.py -v --rootdir=.` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `pytest test_cli_tool.py -v --rootdir=.` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "pytest test_cli_tool.py -v --rootdir=."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 10
+}

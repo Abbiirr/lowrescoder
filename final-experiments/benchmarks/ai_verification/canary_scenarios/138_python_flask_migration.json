@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-migration-008",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Migrate Flask items from dict to dataclass",
+  "description": "Brownfield Python/Flask migration: replace the dict-based _items list with a dataclass Item and keep all endpoints working.",
+  "target_stack": {
+    "language": "python",
+    "framework": "flask",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_flask_app",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Migrate src/app.py to use a dataclass instead of raw dicts for items. All 2 existing tests must still pass.\n\n  import dataclasses\n\n  @dataclasses.dataclass\n  class Item:\n      id: int\n      name: str\n      price: float\n\n  _items: list[Item] = [\n      Item(id=1, name='Widget A', price=9.99),\n      Item(id=2, name='Widget B', price=19.99),\n  ]\n\n  — GET / must pass items to template (template uses item.id, item.name, item.price)\n  — GET /api/items must return [dataclasses.asdict(i) for i in _items]\n  — Keep the route signatures and URL paths identical\n  — Do not modify templates/index.html or tests/\n\nAll 2 existing tests must still pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "Item dataclass defined with id, name, price fields",
+      "_items initialized with Item instances",
+      "GET /api/items returns list of dicts via dataclasses.asdict()",
+      "GET / passes Item instances to template",
+      "All 2 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

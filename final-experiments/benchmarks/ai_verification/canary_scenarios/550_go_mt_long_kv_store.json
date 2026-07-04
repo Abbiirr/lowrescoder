@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "550-go-mt-long-kv-store",
+  "title": "Build an in-memory KV store server in Go — 4 turns",
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "Four-turn KV store: turn 1 set/get, turn 2 delete/list, turn 3 TTL, turn 4 persistence snapshot and tests.",
+  "repo_seed": {
+    "files": {
+      "go.mod": "module github.com/ai-verification/kv-store\n\ngo 1.22\n",
+      "kv/store.go": "package kv\n\nimport (\n\t\"encoding/json\"\n\t\"os\"\n\t\"sync\"\n\t\"time\"\n)\n\ntype entry struct {\n\tValue     string\n\tExpiresAt *time.Time // nil = no expiry\n}\n\n// Store is a thread-safe in-memory key-value store.\ntype Store struct {\n\tmu    sync.RWMutex\n\tdata  map[string]entry\n}\n\nfunc New() *Store {\n\treturn &Store{data: make(map[string]entry)}\n}\n\n// Set stores value under key with optional TTL (0 = no expiry).\nfunc (s *Store) Set(key, value string, ttl time.Duration) {\n\t// TODO\n}\n\n// Get returns (value, true) for non-expired key, or (\"\", false).\nfunc (s *Store) Get(key string) (string, bool) {\n\t// TODO\n\treturn \"\", false\n}\n\n// Delete removes key. Returns true if existed.\nfunc (s *Store) Delete(key string) bool {\n\t// TODO\n\treturn false\n}\n\n// List returns all non-expired keys.\nfunc (s *Store) List() []string {\n\t// TODO\n\treturn nil\n}\n\n// Snapshot writes all non-expired entries to a JSON file.\nfunc (s *Store) Snapshot(path string) error {\n\t// TODO\n\treturn nil\n}\n\n// LoadSnapshot restores entries from a JSON file.\nfunc (s *Store) LoadSnapshot(path string) error {\n\t// TODO\n\treturn nil\n}\n",
+      "kv/store_test.go": "package kv_test\n\nimport (\n\t\"os\"\n\t\"testing\"\n\t\"time\"\n\n\t\"github.com/ai-verification/kv-store/kv\"\n)\n\nfunc TestSetGet(t *testing.T) {\n\ts := kv.New()\n\ts.Set(\"k\", \"v\", 0)\n\tval, ok := s.Get(\"k\")\n\tif !ok || val != \"v\" {\n\t\tt.Fatalf(\"expected (v, true), got (%s, %v)\", val, ok)\n\t}\n}\n\nfunc TestGetMissing(t *testing.T) {\n\ts := kv.New()\n\t_, ok := s.Get(\"missing\")\n\tif ok {\n\t\tt.Fatal(\"expected false\")\n\t}\n}\n\nfunc TestDelete(t *testing.T) {\n\ts := kv.New()\n\ts.Set(\"k\", \"v\", 0)\n\tif !s.Delete(\"k\") {\n\t\tt.Fatal(\"expected true\")\n\t}\n\t_, ok := s.Get(\"k\")\n\tif ok {\n\t\tt.Fatal(\"expected key gone\")\n\t}\n}\n\nfunc TestList(t *testing.T) {\n\ts := kv.New()\n\ts.Set(\"a\", \"1\", 0)\n\ts.Set(\"b\", \"2\", 0)\n\tkeys := s.List()\n\tif len(keys) != 2 {\n\t\tt.Fatalf(\"expected 2 keys, got %d\", len(keys))\n\t}\n}\n\nfunc TestTTLExpiry(t *testing.T) {\n\ts := kv.New()\n\ts.Set(\"temp\", \"val\", 20*time.Millisecond)\n\ttime.Sleep(30 * time.Millisecond)\n\t_, ok := s.Get(\"temp\")\n\tif ok {\n\t\tt.Fatal(\"expected key to be expired\")\n\t}\n}\n\nfunc TestSnapshot(t *testing.T) {\n\ts := kv.New()\n\ts.Set(\"x\", \"1\", 0)\n\ts.Set(\"y\", \"2\", 0)\n\ttmp, _ := os.CreateTemp(\"\", \"snapshot*.json\")\n\ttmp.Close()\n\tdefer os.Remove(tmp.Name())\n\tif err := s.Snapshot(tmp.Name()); err != nil {\n\t\tt.Fatal(err)\n\t}\n\ts2 := kv.New()\n\tif err := s2.LoadSnapshot(tmp.Name()); err != nil {\n\t\tt.Fatal(err)\n\t}\n\tval, ok := s2.Get(\"x\")\n\tif !ok || val != \"1\" {\n\t\tt.Fatalf(\"expected x=1, got %s %v\", val, ok)\n\t}\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `Set(key, value string, ttl time.Duration)` and `Get(key string) (string, bool)` in `kv/store.go`. Set: store `entry{Value: value, ExpiresAt: nil}` (ignore TTL for now). Get: look up the entry under a read lock and return (value, true) or (\"\", false). Run `go test ./...`.",
+    "followup_prompts": [
+      "Good progress. Run `go test ./...` to see where we stand. Now implement `Delete(key string) bool` and `List() []string`. Also add TTL to Set: if ttl > 0, compute `expiresAt = time.Now().Add(ttl)` and store a pointer to it. In Get, check if ExpiresAt is non-nil and time.Now().After(*ExpiresAt) — if so return (\"\", false). Continue with the remaining steps.",
+      "Good. Now implement `Snapshot(path string) error` — serialize non-expired entries to JSON. Implement `LoadSnapshot(path string) error` — read and deserialize. Run `go test ./...` and fix any failures.",
+      "Final push: run `go test ./...` and fix any remaining failures. All 6 tests must pass — set/get, missing, delete, list, TTL, and snapshot."
+    ],
+    "success_criteria": [
+      "Set/Get work for non-expired keys",
+      "Get returns false for expired keys",
+      "Delete removes key and returns bool",
+      "List returns all non-expired keys",
+      "Snapshot serializes to JSON and LoadSnapshot restores",
+      "go test ./... passes (6 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "go test ./..."}
+  },
+  "duration_hint_minutes": 35
+}

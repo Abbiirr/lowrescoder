@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-refactor-struct-001",
+  "title": "Extract global state into a Go struct",
+  "category": "backend_feature",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Go counter package uses package-level globals and bare functions. Refactor to use a Counter struct with methods. Tests verify the struct API.",
+  "repo_seed": {
+    "files": {
+      "counter.go": "package counter\n\n// Package-level globals — refactor these into a Counter struct.\nvar count int\nvar step int = 1\n\n// Increment adds step to the counter.\nfunc Increment() {\n\tcount += step\n}\n\n// Decrement subtracts step from the counter.\nfunc Decrement() {\n\tcount -= step\n}\n\n// Reset sets the counter back to zero.\nfunc Reset() {\n\tcount = 0\n}\n\n// Value returns the current counter value.\nfunc Value() int {\n\treturn count\n}\n\n// SetStep changes the increment/decrement step size.\nfunc SetStep(s int) {\n\tstep = s\n}\n",
+      "counter_test.go": "package counter\n\nimport \"testing\"\n\nfunc TestCounterBasic(t *testing.T) {\n\tc := NewCounter(1)\n\tc.Increment()\n\tc.Increment()\n\tif c.Value() != 2 {\n\t\tt.Errorf(\"want 2, got %d\", c.Value())\n\t}\n\tc.Decrement()\n\tif c.Value() != 1 {\n\t\tt.Errorf(\"want 1 after decrement, got %d\", c.Value())\n\t}\n\tc.Reset()\n\tif c.Value() != 0 {\n\t\tt.Errorf(\"want 0 after reset, got %d\", c.Value())\n\t}\n}\n\nfunc TestCounterStep(t *testing.T) {\n\tc := NewCounter(5)\n\tc.Increment()\n\tif c.Value() != 5 {\n\t\tt.Errorf(\"want 5 with step=5, got %d\", c.Value())\n\t}\n\tc.Decrement()\n\tif c.Value() != 0 {\n\t\tt.Errorf(\"want 0 after decrement with step=5, got %d\", c.Value())\n\t}\n}\n\nfunc TestCounterIsolation(t *testing.T) {\n\tc1 := NewCounter(1)\n\tc2 := NewCounter(1)\n\tc1.Increment()\n\tc1.Increment()\n\tif c2.Value() != 0 {\n\t\tt.Errorf(\"counters should be independent: c2=%d, want 0\", c2.Value())\n\t}\n}\n",
+      "go.mod": "module counter\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Refactor counter.go to use a Counter struct instead of package-level globals.\n\n1. Define a Counter struct with private fields for the count value and step size.\n2. Add a NewCounter(step int) *Counter constructor.\n3. Move Increment, Decrement, Reset, Value as methods on *Counter.\n4. Remove all package-level var declarations.\n\nThe tests use NewCounter(step) — make that constructor work correctly.\n\nRun `go test ./...` to verify all 3 tests pass.",
+    "entry_point": "counter.go",
+    "success_criteria": [
+      "All 3 go tests pass",
+      "Counter struct with NewCounter constructor",
+      "No package-level globals remain"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `go test ./...` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./..."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 8
+}

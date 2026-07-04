@@ -1,0 +1,69 @@
+{
+  "_meta": {
+    "description": "B20: Terminal, Git, and Ops Recovery — shell-native recovery work",
+    "comparison_validity": "internal",
+    "parity_claim": "forbidden",
+    "note": "Multi-task lane: git recovery, merge conflicts, branch recovery, symlinks, log rotation.",
+    "last_verified": "2026-03-21"
+  },
+  "tasks": [
+    {
+      "task_id": "b20-fix-git-state",
+      "category": "version_control",
+      "difficulty": "medium",
+      "language": "bash",
+      "description": "Recover a detached HEAD repo with uncommitted changes and leave it clean on the main branch.",
+      "fixture_dir": "fixtures/b9/tb-002-fix-git",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "build_deps_profile": "git-only"
+    },
+    {
+      "task_id": "b20-merge-conflict",
+      "category": "version_control",
+      "difficulty": "medium",
+      "language": "bash",
+      "description": "Resolve git merge conflicts in config.py and app.py, keeping changes from both branches.",
+      "fixture_dir": "fixtures/b20/b20-merge-conflict",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "build_deps_profile": "git-only"
+    },
+    {
+      "task_id": "b20-recover-deleted-branch",
+      "category": "version_control",
+      "difficulty": "medium",
+      "language": "bash",
+      "description": "Recover a deleted git branch using reflog.",
+      "fixture_dir": "fixtures/b20/b20-recover-deleted-branch",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "build_deps_profile": "git-only"
+    },
+    {
+      "task_id": "b20-fix-broken-symlinks",
+      "category": "file_operations",
+      "difficulty": "easy",
+      "language": "bash",
+      "description": "Find and fix broken symlinks after a directory was moved.",
+      "fixture_dir": "fixtures/b20/b20-fix-broken-symlinks",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b20-process-log-rotation",
+      "category": "file_operations",
+      "difficulty": "medium",
+      "language": "bash",
+      "description": "Rotate application logs — compress current, truncate, keep last 3 rotations.",
+      "fixture_dir": "fixtures/b20/b20-process-log-rotation",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    }
+  ]
+}

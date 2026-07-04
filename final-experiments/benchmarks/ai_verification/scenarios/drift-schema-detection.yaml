@@ -1,0 +1,18 @@
+title: Drift schema detection invariant
+category: backend_feature
+difficulty: medium
+target_stack:
+  language: python
+task_spec:
+  prompt: |
+    Deterministic check: P3a schema drift detects column renames within one
+    turn. This scenario uses a custom grading check command that directly
+    exercises SchemaDriftDetector and asserts the >=90% rename-detection gate.
+repo_seed:
+  mode: fresh
+grading:
+  checks:
+    - snapshot
+  check_commands:
+    snapshot: "uv run python -m benchmarks.ai_verification.checks.check_drift_schema_detection"
+  expect_fixture_failure: false

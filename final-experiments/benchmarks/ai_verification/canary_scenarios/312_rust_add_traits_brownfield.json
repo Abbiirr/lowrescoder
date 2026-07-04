@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-brownfield-005",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add Default and Display trait implementations to Rust structs",
+  "description": "Brownfield Rust refactor: add Default and Display trait implementations to existing Color and Point structs so they can be used with default() and format!().",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"shapes\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "#[derive(Debug, PartialEq)]\npub struct Color {\n    pub r: u8,\n    pub g: u8,\n    pub b: u8,\n}\n\nimpl Color {\n    pub fn new(r: u8, g: u8, b: u8) -> Self {\n        Color { r, g, b }\n    }\n}\n\n#[derive(Debug, PartialEq)]\npub struct Point {\n    pub x: f64,\n    pub y: f64,\n}\n\nimpl Point {\n    pub fn new(x: f64, y: f64) -> Self {\n        Point { x, y }\n    }\n\n    pub fn distance(&self, other: &Point) -> f64 {\n        ((self.x - other.x).powi(2) + (self.y - other.y).powi(2)).sqrt()\n    }\n}\n"
+      },
+      {
+        "path": "tests/shapes_test.rs",
+        "content": "use shapes::{Color, Point};\n\n#[test]\nfn test_color_new() {\n    let c = Color::new(255, 128, 0);\n    assert_eq!(c.r, 255);\n    assert_eq!(c.g, 128);\n    assert_eq!(c.b, 0);\n}\n\n#[test]\nfn test_point_distance() {\n    let p1 = Point::new(0.0, 0.0);\n    let p2 = Point::new(3.0, 4.0);\n    assert_eq!(p1.distance(&p2), 5.0);\n}\n\n#[test]\nfn test_point_equality() {\n    assert_eq!(Point::new(1.0, 2.0), Point::new(1.0, 2.0));\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Add Default and Display trait implementations to src/lib.rs.\n\n// Color: default is black (0, 0, 0)\nimpl Default for Color {\n    fn default() -> Self { Color { r: 0, g: 0, b: 0 } }\n}\n\n// Color: display as \"rgb(r, g, b)\"\nimpl std::fmt::Display for Color {\n    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n        write!(f, \"rgb({}, {}, {})\", self.r, self.g, self.b)\n    }\n}\n\n// Point: default is origin (0.0, 0.0)\nimpl Default for Point {\n    fn default() -> Self { Point { x: 0.0, y: 0.0 } }\n}\n\n// Point: display as \"(x, y)\"\nimpl std::fmt::Display for Point {\n    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n        write!(f, \"({}, {})\", self.x, self.y)\n    }\n}\n\nAll 5 tests in the solution test file must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "Color::default() returns Color { r: 0, g: 0, b: 0 }",
+      "Color Display formats as \"rgb(r, g, b)\"",
+      "Point::default() returns Point { x: 0.0, y: 0.0 }",
+      "Point Display formats as \"(x, y)\"",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `cargo test` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,70 @@
+title: Tool trajectory git workflow
+category: backend_feature
+difficulty: medium
+target_stack:
+  language: python
+task_spec:
+  prompt: |
+    Check the git status and git diff of this repository to understand the current state,
+    then fix the bug in math_utils.py so that all tests pass.
+    The bug is in the divide function.
+repo_seed:
+  mode: fresh
+  files:
+    math_utils.py: |
+      def add(a, b):
+          return a + b
+
+      def subtract(a, b):
+          return a - b
+
+      def multiply(a, b):
+          return a * b
+
+      def divide(a, b):
+          if b != 0:
+              return a / b
+          return float("inf")
+    test_math_utils.py: |
+      import pytest
+      from math_utils import add, subtract, multiply, divide
+
+      def test_add():
+          assert add(2, 3) == 5
+
+      def test_subtract():
+          assert subtract(5, 3) == 2
+
+      def test_multiply():
+          assert multiply(4, 3) == 12
+
+      def test_divide():
+          assert divide(10, 2) == 5.0
+
+      def test_divide_by_zero():
+          with pytest.raises(ZeroDivisionError):
+              divide(1, 0)
+expected_outcomes:
+  must_have:
+    - "item_completed event present"
+  must_not_have:
+    - "error event"
+trajectory_assertions:
+  in_order_tools:
+    - "git_status"
+    - "git_diff"
+  must_use_tools:
+    - "edit_file"
+  min_tool_calls: 3
+artifact_assertions:
+  require_non_empty_diff: true
+  forbid_noop_pass: true
+  must_change_files:
+    - "math_utils.py"
+  must_not_change_files:
+    - "test_math_utils.py"
+grading:
+  checks:
+    - run_tests
+  check_commands:
+    run_tests: "python -m pytest test_math_utils.py -v"

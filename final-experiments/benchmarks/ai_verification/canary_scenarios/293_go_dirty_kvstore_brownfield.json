@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-brownfield-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Fix bugs in a Go key-value store serializer",
+  "description": "Brownfield Go dirty_cleanup: fix three intentional bugs in a simple key-value store: Set overwrites the wrong key, Keys returns keys in wrong order (should be sorted), and Delete does not remove the entry.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module kvstore\n\ngo 1.21\n"
+      },
+      {
+        "path": "kv.go",
+        "content": "package kvstore\n\nimport \"sort\"\n\ntype Store struct {\n\tdata map[string]string\n}\n\nfunc NewStore() *Store {\n\treturn &Store{data: make(map[string]string)}\n}\n\n// BUG: sets key \"fixed\" instead of the provided key\nfunc (s *Store) Set(key, value string) {\n\ts.data[\"fixed\"] = value\n}\n\nfunc (s *Store) Get(key string) (string, bool) {\n\tv, ok := s.data[key]\n\treturn v, ok\n}\n\n// BUG: returns keys in reverse sorted order instead of ascending\nfunc (s *Store) Keys() []string {\n\tkeys := make([]string, 0, len(s.data))\n\tfor k := range s.data {\n\t\tkeys = append(keys, k)\n\t}\n\tsort.Sort(sort.Reverse(sort.StringSlice(keys)))\n\treturn keys\n}\n\n// BUG: deletes \"fixed\" instead of the provided key\nfunc (s *Store) Delete(key string) {\n\tdelete(s.data, \"fixed\")\n}\n"
+      },
+      {
+        "path": "kv_test.go",
+        "content": "package kvstore\n\nimport (\n\t\"reflect\"\n\t\"testing\"\n)\n\nfunc TestSetGet(t *testing.T) {\n\ts := NewStore()\n\ts.Set(\"name\", \"alice\")\n\tv, ok := s.Get(\"name\")\n\tif !ok || v != \"alice\" {\n\t\tt.Fatalf(\"want alice, got %q ok=%v\", v, ok)\n\t}\n}\n\nfunc TestKeys(t *testing.T) {\n\ts := NewStore()\n\ts.Set(\"b\", \"2\")\n\ts.Set(\"a\", \"1\")\n\ts.Set(\"c\", \"3\")\n\tif !reflect.DeepEqual(s.Keys(), []string{\"a\", \"b\", \"c\"}) {\n\t\tt.Fatalf(\"want [a b c], got %v\", s.Keys())\n\t}\n}\n\nfunc TestDelete(t *testing.T) {\n\ts := NewStore()\n\ts.Set(\"x\", \"1\")\n\ts.Delete(\"x\")\n\t_, ok := s.Get(\"x\")\n\tif ok {\n\t\tt.Fatal(\"x should be deleted\")\n\t}\n}\n\nfunc TestGetMissing(t *testing.T) {\n\ts := NewStore()\n\t_, ok := s.Get(\"missing\")\n\tif ok {\n\t\tt.Fatal(\"should not find missing key\")\n\t}\n}\n\nfunc TestSetOverwrite(t *testing.T) {\n\ts := NewStore()\n\ts.Set(\"k\", \"v1\")\n\ts.Set(\"k\", \"v2\")\n\tv, _ := s.Get(\"k\")\n\tif v != \"v2\" {\n\t\tt.Fatalf(\"want v2, got %q\", v)\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in kv.go.\n\nBug 1 — Set: uses hardcoded key \"fixed\" instead of the parameter.\n  Fix: change `s.data[\"fixed\"] = value` to `s.data[key] = value`\n\nBug 2 — Keys: sorts in reverse order instead of ascending.\n  Fix: change `sort.Sort(sort.Reverse(sort.StringSlice(keys)))` to `sort.Strings(keys)`\n\nBug 3 — Delete: deletes hardcoded key \"fixed\" instead of the parameter.\n  Fix: change `delete(s.data, \"fixed\")` to `delete(s.data, key)`\n\nAll 5 tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Set stores value under the correct key parameter",
+      "Keys returns keys in ascending sorted order",
+      "Delete removes the correct key parameter",
+      "GetMissing returns false for absent keys",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

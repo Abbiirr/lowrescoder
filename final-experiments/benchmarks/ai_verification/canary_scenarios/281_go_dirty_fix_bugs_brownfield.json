@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-brownfield-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Fix bugs in a Go math utility module",
+  "description": "Brownfield Go dirty_cleanup: fix three intentional bugs in math utility functions (Factorial, GCD, IsPrime). The repo_seed has broken code; the agent must fix all bugs so tests pass.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module mathutil\n\ngo 1.21\n"
+      },
+      {
+        "path": "mathutil.go",
+        "content": "package mathutil\n\n// BUG: off-by-one — should return 1 for n==0 and n==1\nfunc Factorial(n int) int {\n\tif n <= 0 {\n\t\treturn 0\n\t}\n\tresult := 1\n\tfor i := 2; i <= n; i++ {\n\t\tresult *= i\n\t}\n\treturn result\n}\n\n// BUG: wrong base case — GCD(0,b) should return b, not 0\nfunc GCD(a, b int) int {\n\tfor b != 0 {\n\t\ta, b = b, a%b\n\t}\n\tif a == 0 {\n\t\treturn 0\n\t}\n\treturn a\n}\n\n// BUG: wrong condition — should return false when n%i==0, not when n%i!=0\nfunc IsPrime(n int) bool {\n\tif n < 2 {\n\t\treturn false\n\t}\n\tfor i := 2; i*i <= n; i++ {\n\t\tif n%i != 0 {\n\t\t\treturn false\n\t\t}\n\t}\n\treturn true\n}\n"
+      },
+      {
+        "path": "mathutil_test.go",
+        "content": "package mathutil\n\nimport \"testing\"\n\nfunc TestFactorial(t *testing.T) {\n\tif Factorial(0) != 1 {\n\t\tt.Fatalf(\"Factorial(0) want 1 got %d\", Factorial(0))\n\t}\n\tif Factorial(5) != 120 {\n\t\tt.Fatalf(\"Factorial(5) want 120 got %d\", Factorial(5))\n\t}\n}\n\nfunc TestGCD(t *testing.T) {\n\tif GCD(12, 8) != 4 {\n\t\tt.Fatalf(\"GCD(12,8) want 4 got %d\", GCD(12, 8))\n\t}\n\tif GCD(0, 5) != 5 {\n\t\tt.Fatalf(\"GCD(0,5) want 5 got %d\", GCD(0, 5))\n\t}\n}\n\nfunc TestIsPrime(t *testing.T) {\n\tif !IsPrime(7) {\n\t\tt.Fatal(\"7 should be prime\")\n\t}\n\tif IsPrime(9) {\n\t\tt.Fatal(\"9 should not be prime\")\n\t}\n}\n\nfunc TestFactorialOne(t *testing.T) {\n\tif Factorial(1) != 1 {\n\t\tt.Fatalf(\"Factorial(1) want 1 got %d\", Factorial(1))\n\t}\n}\n\nfunc TestIsPrimeTwo(t *testing.T) {\n\tif !IsPrime(2) {\n\t\tt.Fatal(\"2 should be prime\")\n\t}\n\tif IsPrime(4) {\n\t\tt.Fatal(\"4 should not be prime\")\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in mathutil.go.\n\nBug 1 — Factorial: base case should return 1 for n==0 (not 0).\n  Fix: change `if n <= 0 { return 0 }` to `if n <= 0 { return 1 }`\n\nBug 2 — GCD: remove the wrong check `if a == 0 { return 0 }` after the loop.\n  The Euclidean algorithm already handles GCD(0, b) == b correctly via the loop.\n  Simply return a after the loop.\n\nBug 3 — IsPrime: the divisibility check condition is inverted.\n  Fix: change `if n%i != 0` to `if n%i == 0`\n\nAll 5 tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Factorial(0) returns 1, Factorial(5) returns 120",
+      "GCD(0, 5) returns 5 (Euclidean base case)",
+      "IsPrime(7) returns true, IsPrime(9) returns false",
+      "IsPrime(2) returns true, IsPrime(4) returns false",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

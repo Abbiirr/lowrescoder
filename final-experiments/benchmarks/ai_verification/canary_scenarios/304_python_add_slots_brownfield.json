@@ -1,0 +1,73 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-brownfield-006",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Add __slots__ to a Python data class for memory efficiency",
+  "description": "Brownfield Python refactor: add __slots__ to a Vector3 class to reduce per-instance memory overhead. All existing tests must continue to pass; the class must no longer have a __dict__ attribute.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"vector3\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/vector3.py",
+        "content": "import math\n\n\nclass Vector3:\n    def __init__(self, x: float, y: float, z: float):\n        self.x = x\n        self.y = y\n        self.z = z\n\n    def magnitude(self) -> float:\n        return math.sqrt(self.x**2 + self.y**2 + self.z**2)\n\n    def dot(self, other: 'Vector3') -> float:\n        return self.x * other.x + self.y * other.y + self.z * other.z\n\n    def __add__(self, other: 'Vector3') -> 'Vector3':\n        return Vector3(self.x + other.x, self.y + other.y, self.z + other.z)\n\n    def __eq__(self, other: object) -> bool:\n        if not isinstance(other, Vector3):\n            return NotImplemented\n        return self.x == other.x and self.y == other.y and self.z == other.z\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_vector3.py",
+        "content": "from src.vector3 import Vector3\nimport math\n\n\ndef test_magnitude():\n    v = Vector3(1, 2, 2)\n    assert v.magnitude() == 3.0\n\n\ndef test_dot_product():\n    a = Vector3(1, 0, 0)\n    b = Vector3(0, 1, 0)\n    assert a.dot(b) == 0.0\n\n\ndef test_add():\n    a = Vector3(1, 2, 3)\n    b = Vector3(4, 5, 6)\n    assert a + b == Vector3(5, 7, 9)\n\n\ndef test_equality():\n    assert Vector3(1, 2, 3) == Vector3(1, 2, 3)\n    assert Vector3(1, 2, 3) != Vector3(1, 2, 4)\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Add __slots__ to Vector3 in src/vector3.py.\n\nclass Vector3:\n    __slots__ = ('x', 'y', 'z')\n\n    def __init__(self, x: float, y: float, z: float):\n        self.x = x\n        self.y = y\n        self.z = z\n    # ... rest unchanged\n\nAll 4 original tests must continue to pass.\nThe solution test file adds a 5th test to verify __slots__ is in effect:\n\ndef test_has_slots():\n    v = Vector3(1, 2, 3)\n    assert hasattr(Vector3, '__slots__')\n    assert not hasattr(v, '__dict__')\n\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "__slots__ = ('x', 'y', 'z') declared on Vector3",
+      "Vector3 instances no longer have __dict__",
+      "All original methods (magnitude, dot, __add__, __eq__) still work",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.vector3 import Vector3\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `uv run pytest tests/ -v` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.vector3 import Vector3\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

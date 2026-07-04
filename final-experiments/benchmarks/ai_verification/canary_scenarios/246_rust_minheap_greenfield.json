@@ -1,0 +1,67 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-019",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Implement a binary min-heap from scratch in Rust",
+  "description": "Greenfield Rust task: implement MinHeap<T: Ord> with push, pop (returns Option<T>), peek (returns Option<&T>), len, and is_empty using a Vec-backed binary heap with sift-up and sift-down.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"minheap\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement MinHeap\n"
+      },
+      {
+        "path": "tests/minheap_test.rs",
+        "content": "use minheap::MinHeap;\n\n#[test]\nfn test_push_pop_basic() {\n    let mut h = MinHeap::new();\n    h.push(3);\n    h.push(1);\n    h.push(2);\n    assert_eq!(h.pop(), Some(1));\n    assert_eq!(h.pop(), Some(2));\n    assert_eq!(h.pop(), Some(3));\n}\n\n#[test]\nfn test_peek() {\n    let mut h = MinHeap::new();\n    h.push(5);\n    h.push(1);\n    h.push(3);\n    assert_eq!(h.peek(), Some(&1));\n    assert_eq!(h.len(), 3);\n}\n\n#[test]\nfn test_empty() {\n    let h: MinHeap<i32> = MinHeap::new();\n    assert!(h.is_empty());\n    assert_eq!(h.peek(), None);\n}\n\n#[test]\nfn test_pop_empty() {\n    let mut h: MinHeap<i32> = MinHeap::new();\n    assert_eq!(h.pop(), None);\n}\n\n#[test]\nfn test_sorted_output() {\n    let mut h = MinHeap::new();\n    for v in [5, 2, 8, 1, 9, 3, 7] {\n        h.push(v);\n    }\n    let mut result = vec![];\n    while let Some(v) = h.pop() {\n        result.push(v);\n    }\n    assert_eq!(result, vec![1, 2, 3, 5, 7, 8, 9]);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement MinHeap<T: Ord> in src/lib.rs backed by a Vec.\n\npub struct MinHeap<T: Ord> { data: Vec<T> }\n\nimpl<T: Ord> MinHeap<T> {\n    pub fn new() -> Self\n    pub fn push(&mut self, val: T)       // add element, sift up\n    pub fn pop(&mut self) -> Option<T>   // remove min, sift down\n    pub fn peek(&self) -> Option<&T>     // return &min without removing\n    pub fn len(&self) -> usize\n    pub fn is_empty(&self) -> bool\n\n    fn sift_up(&mut self, i: usize)      // swap with parent while smaller\n    fn sift_down(&mut self, i: usize)    // swap with smallest child while larger\n}\n\nPop: swap root with last, pop last, sift_down from 0.\nAll 5 tests in tests/minheap_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "MinHeap<T: Ord> with Vec<T> data field",
+      "sift_up: while i>0, parent=(i-1)/2, swap if data[i]<data[parent]",
+      "sift_down: find smallest child, swap if data[child]<data[i], repeat",
+      "pop swaps index 0 with last, pops, then sift_down(0)",
+      "peek returns data.first()",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

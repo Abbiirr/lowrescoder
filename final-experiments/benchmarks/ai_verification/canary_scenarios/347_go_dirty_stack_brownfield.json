@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-brownfield-015",
+  "title": "Fix three bugs in a Go integer stack",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Go Stack has three bugs: Peek returns the bottom element, Pop doesn't shrink the slice, and IsEmpty condition is negated.",
+  "repo_seed": {
+    "files": {
+      "stack.go": "package stack\n\ntype Stack struct {\n\tdata []int\n}\n\nfunc NewStack() *Stack {\n\treturn &Stack{}\n}\n\nfunc (s *Stack) Push(v int) {\n\ts.data = append(s.data, v)\n}\n\nfunc (s *Stack) Pop() int {\n\tif s.IsEmpty() {\n\t\tpanic(\"empty stack\")\n\t}\n\ttop := s.data[len(s.data)-1]\n\t// bug: slice not shrunk after pop\n\treturn top\n}\n\nfunc (s *Stack) Peek() int {\n\tif s.IsEmpty() {\n\t\tpanic(\"empty stack\")\n\t}\n\treturn s.data[0] // bug: should be data[len-1]\n}\n\nfunc (s *Stack) IsEmpty() bool {\n\treturn len(s.data) > 0 // bug: negated, should be ==0\n}\n\nfunc (s *Stack) Size() int {\n\treturn len(s.data)\n}\n",
+      "stack_test.go": "package stack\n\nimport \"testing\"\n\nfunc TestPushPop(t *testing.T) {\n\ts := NewStack()\n\ts.Push(1)\n\ts.Push(2)\n\ts.Push(3)\n\tif got := s.Pop(); got != 3 {\n\t\tt.Fatalf(\"want 3, got %d\", got)\n\t}\n\tif got := s.Pop(); got != 2 {\n\t\tt.Fatalf(\"want 2, got %d\", got)\n\t}\n}\n\nfunc TestPeek(t *testing.T) {\n\ts := NewStack()\n\ts.Push(10)\n\ts.Push(20)\n\tif got := s.Peek(); got != 20 {\n\t\tt.Fatalf(\"want 20, got %d\", got)\n\t}\n\tif s.Size() != 2 {\n\t\tt.Fatal(\"peek should not change size\")\n\t}\n}\n\nfunc TestIsEmpty(t *testing.T) {\n\ts := NewStack()\n\tif !s.IsEmpty() {\n\t\tt.Fatal(\"new stack should be empty\")\n\t}\n\ts.Push(1)\n\tif s.IsEmpty() {\n\t\tt.Fatal(\"non-empty stack should not report empty\")\n\t}\n}\n\nfunc TestSizeAfterPop(t *testing.T) {\n\ts := NewStack()\n\ts.Push(1)\n\ts.Push(2)\n\ts.Pop()\n\tif s.Size() != 1 {\n\t\tt.Fatalf(\"want size 1 after pop, got %d\", s.Size())\n\t}\n}\n",
+      "go.mod": "module stack\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in stack.go:\n1. `Pop`: add `s.data = s.data[:len(s.data)-1]` after capturing top, before returning\n2. `Peek`: change `s.data[0]` to `s.data[len(s.data)-1]`\n3. `IsEmpty`: change `len(s.data) > 0` to `len(s.data) == 0`\nAll 4 tests must pass.",
+    "entry_point": "stack.go",
+    "success_criteria": "All 4 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

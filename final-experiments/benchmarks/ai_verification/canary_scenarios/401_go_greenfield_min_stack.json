@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-greenfield-047",
+  "title": "Implement a min-stack in Go",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement a stack with O(1) Push, Pop, Top, and GetMin using an auxiliary min-tracking stack.",
+  "repo_seed": {
+    "files": {
+      "minstack.go": "package minstack\n\n// MinStack supports O(1) Push, Pop, Top, and GetMin.\ntype MinStack struct {\n\t// TODO: implement\n}\n\nfunc NewMinStack() *MinStack {\n\tpanic(\"not implemented\")\n}\n\nfunc (s *MinStack) Push(val int) {\n\tpanic(\"not implemented\")\n}\n\nfunc (s *MinStack) Pop() {\n\tpanic(\"not implemented\")\n}\n\nfunc (s *MinStack) Top() int {\n\tpanic(\"not implemented\")\n}\n\nfunc (s *MinStack) GetMin() int {\n\tpanic(\"not implemented\")\n}\n",
+      "minstack_test.go": "package minstack\n\nimport \"testing\"\n\nfunc TestMinStackBasic(t *testing.T) {\n\ts := NewMinStack()\n\ts.Push(5)\n\ts.Push(3)\n\ts.Push(7)\n\tif s.GetMin() != 3 {\n\t\tt.Errorf(\"expected min=3, got %d\", s.GetMin())\n\t}\n\ts.Pop()\n\tif s.GetMin() != 3 {\n\t\tt.Errorf(\"after popping 7 min should still be 3, got %d\", s.GetMin())\n\t}\n\ts.Pop()\n\tif s.GetMin() != 5 {\n\t\tt.Errorf(\"after popping 3 min should be 5, got %d\", s.GetMin())\n\t}\n}\n\nfunc TestMinStackOrder(t *testing.T) {\n\ts := NewMinStack()\n\ts.Push(3)\n\ts.Push(1)\n\ts.Push(2)\n\ts.Pop()\n\tif s.GetMin() != 1 {\n\t\tt.Errorf(\"expected min=1 after popping 2, got %d\", s.GetMin())\n\t}\n\ts.Pop()\n\tif s.GetMin() != 3 {\n\t\tt.Errorf(\"expected min=3 after popping 1, got %d\", s.GetMin())\n\t}\n}\n\nfunc TestMinStackSameValues(t *testing.T) {\n\ts := NewMinStack()\n\ts.Push(1)\n\ts.Push(1)\n\ts.Pop()\n\tif s.GetMin() != 1 {\n\t\tt.Errorf(\"expected min=1 after popping duplicate, got %d\", s.GetMin())\n\t}\n\tif s.Top() != 1 {\n\t\tt.Errorf(\"expected top=1, got %d\", s.Top())\n\t}\n}\n",
+      "go.mod": "module minstack\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement MinStack in minstack.go:\n- Fields: `stack []int` (main stack) and `minStack []int` (parallel min tracker)\n- NewMinStack: return &MinStack{} with empty slices\n- Push(val): append val to stack; append val to minStack only if minStack is empty or val <= current min\n- Pop: remove top from stack; if top equals current min, also remove from minStack\n- Top: return last element of stack\n- GetMin: return last element of minStack\nAll 3 test cases must pass.",
+    "entry_point": "minstack.go",
+    "success_criteria": "All 3 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "535-ts-mt-router",
+  "title": "Build a client-side router in TypeScript — 3 turns",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {"language": "typescript", "framework": null, "extra": {}},
+  "description": "Three turns build a client-side router: turn 1 addRoute/navigate, turn 2 params extraction, turn 3 nested routes.",
+  "repo_seed": {
+    "files": {
+      "package.json": "{\n  \"name\": \"client-router\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"test\": \"jest --forceExit\"\n  },\n  \"devDependencies\": {\n    \"@types/jest\": \"^29.0.0\",\n    \"jest\": \"^29.0.0\",\n    \"ts-jest\": \"^29.0.0\",\n    \"typescript\": \"^5.0.0\"\n  },\n  \"jest\": {\n    \"preset\": \"ts-jest\",\n    \"testEnvironment\": \"node\"\n  }\n}\n",
+      "src/router.ts": "export interface RouteMatch {\n  path: string;\n  params: Record<string, string>;\n  handler: RouteHandler;\n}\n\nexport type RouteHandler = (params: Record<string, string>) => void;\n\nexport class Router {\n  private routes: Array<{ pattern: string; handler: RouteHandler }> = [];\n  private lastMatch: RouteMatch | null = null;\n\n  /** Register a route pattern and handler.\n   * Patterns can include :param segments, e.g. '/users/:id'\n   */\n  addRoute(pattern: string, handler: RouteHandler): void {\n    // TODO\n  }\n\n  /** Navigate to path. Finds matching route and calls handler with params. */\n  navigate(path: string): boolean {\n    // TODO: returns true if a route matched, false if no match\n    return false;\n  }\n\n  /** Return the last successful match (for testing). */\n  getLastMatch(): RouteMatch | null {\n    return this.lastMatch;\n  }\n}\n",
+      "src/router.test.ts": "import { Router } from './router';\n\ntest('exact route match', () => {\n  const router = new Router();\n  const calls: string[] = [];\n  router.addRoute('/home', () => calls.push('home'));\n  router.addRoute('/about', () => calls.push('about'));\n  router.navigate('/home');\n  expect(calls).toEqual(['home']);\n});\n\ntest('no match returns false', () => {\n  const router = new Router();\n  router.addRoute('/home', () => {});\n  expect(router.navigate('/missing')).toBe(false);\n});\n\ntest('single param extraction', () => {\n  const router = new Router();\n  let capturedParams: Record<string, string> = {};\n  router.addRoute('/users/:id', (params) => { capturedParams = params; });\n  router.navigate('/users/42');\n  expect(capturedParams).toEqual({ id: '42' });\n});\n\ntest('multiple params', () => {\n  const router = new Router();\n  let capturedParams: Record<string, string> = {};\n  router.addRoute('/orgs/:org/repos/:repo', (params) => { capturedParams = params; });\n  router.navigate('/orgs/acme/repos/widget');\n  expect(capturedParams).toEqual({ org: 'acme', repo: 'widget' });\n});\n\ntest('first matching route wins', () => {\n  const router = new Router();\n  const calls: string[] = [];\n  router.addRoute('/items/:id', () => calls.push('param'));\n  router.addRoute('/items/special', () => calls.push('exact'));\n  router.navigate('/items/special');\n  // First registered route should win\n  expect(calls[0]).toBe('param');\n});\n\ntest('navigate returns true on match', () => {\n  const router = new Router();\n  router.addRoute('/test', () => {});\n  expect(router.navigate('/test')).toBe(true);\n});\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `addRoute(pattern, handler)` in `src/router.ts` — push `{ pattern, handler }` to `this.routes`. Then implement `navigate(path)`: iterate routes, check if path exactly matches the pattern (for now ignore params), call the handler if matched, store in lastMatch, and return true. Return false if nothing matched. Run `npm test -- --forceExit`.",
+    "followup_prompts": [
+      "Good. Now add `:param` extraction to `navigate()`. Convert the pattern to a regex by replacing `:paramName` segments with `([^/]+)` capture groups (escape slashes with anchors `^...$`). Extract param names from the pattern, then use the regex to extract values from the path. Build a params object and pass it to the handler. Run `npm test -- --forceExit` and fix any failures.",
+      "Final check: run `npm test -- --forceExit` one more time. All 6 tests must pass. The 'first matching route wins' test verifies that routes are checked in registration order."
+    ],
+    "success_criteria": [
+      "Exact routes match and call handler",
+      "No match returns false",
+      "Single :param extracted correctly",
+      "Multiple :params extracted correctly",
+      "First registered matching route wins",
+      "navigate returns true on match",
+      "All 6 tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "npm test -- --forceExit"}
+  },
+  "duration_hint_minutes": 20
+}

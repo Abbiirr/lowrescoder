@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-py-dirty-config-001",
+  "title": "Fix bugs in a Python config parser",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Python config parser has three bugs: wrong default for missing keys, type conversion not applied, and section separator wrong. Fix all three.",
+  "repo_seed": {
+    "files": {
+      "config_parser.py": "\"\"\"Simple INI-style config parser.\"\"\"\n\n\nclass Config:\n    def __init__(self):\n        self._data = {}\n\n    def load(self, text: str) -> None:\n        \"\"\"Parse INI-style text into sections and keys.\"\"\"\n        current_section = None\n        for line in text.strip().splitlines():\n            line = line.strip()\n            if not line or line.startswith('#'):\n                continue\n            # BUG 1: section header check uses wrong bracket — checks for '{' not '['\n            if line.startswith('{') and line.endswith('}'):\n                current_section = line[1:-1].strip()\n                self._data[current_section] = {}\n            elif '=' in line and current_section is not None:\n                key, _, value = line.partition('=')\n                self._data[current_section][key.strip()] = value.strip()\n\n    def get(self, section: str, key: str, default=None) -> str | None:\n        \"\"\"Return value for section.key, or default if not found.\"\"\"\n        # BUG 2: returns None instead of default when section missing\n        return self._data.get(section, {}).get(key)\n\n    def get_int(self, section: str, key: str, default: int = 0) -> int:\n        \"\"\"Return int value for section.key, or default if not found or not an int.\"\"\"\n        val = self.get(section, key)\n        if val is None:\n            return default\n        # BUG 3: forgets to convert — returns val (str) instead of int(val)\n        try:\n            return val\n        except (ValueError, TypeError):\n            return default\n",
+      "test_config_parser.py": "import pytest\nfrom config_parser import Config\n\nINI_TEXT = \"\"\"\n[database]\nhost = localhost\nport = 5432\nname = mydb\n\n[server]\nhost = 0.0.0.0\nport = 8080\n\"\"\"\n\n\ndef test_load_and_get():\n    cfg = Config()\n    cfg.load(INI_TEXT)\n    assert cfg.get('database', 'host') == 'localhost'\n    assert cfg.get('database', 'port') == '5432'\n    assert cfg.get('server', 'port') == '8080'\n\n\ndef test_get_missing_returns_default():\n    cfg = Config()\n    cfg.load(INI_TEXT)\n    assert cfg.get('database', 'missing_key', default='fallback') == 'fallback'\n    assert cfg.get('nosection', 'key', default='x') == 'x'\n\n\ndef test_get_int():\n    cfg = Config()\n    cfg.load(INI_TEXT)\n    assert cfg.get_int('database', 'port') == 5432\n    assert cfg.get_int('server', 'port') == 8080\n\n\ndef test_get_int_missing_returns_default():\n    cfg = Config()\n    cfg.load(INI_TEXT)\n    assert cfg.get_int('database', 'missing', default=99) == 99\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix the three bugs in config_parser.py:\n\n1. BUG 1 in load(): Section headers are INI-style `[section]`, not `{section}`. Change `line.startswith('{')` to `line.startswith('[')` and `line.endswith('}')` to `line.endswith(']')`.\n2. BUG 2 in get(): The method ignores the `default` param. Change `.get(key)` to `.get(key, default)`.\n3. BUG 3 in get_int(): The method returns `val` (str) instead of converting. Change `return val` to `return int(val)`.\n\nRun `pytest test_config_parser.py -v --rootdir=.` to verify all 4 tests pass.",
+    "entry_point": "config_parser.py",
+    "success_criteria": [
+      "All 4 pytest tests pass",
+      "Section headers parsed with [ ] not { }",
+      "get() returns the default parameter",
+      "get_int() returns an int"
+    ],
+    "followup_prompts": [
+      "Run `pytest test_config_parser.py -v --rootdir=.` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `pytest test_config_parser.py -v --rootdir=.` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "pytest test_config_parser.py -v --rootdir=."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 5
+}

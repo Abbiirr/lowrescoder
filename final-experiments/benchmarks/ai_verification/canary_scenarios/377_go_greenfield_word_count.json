@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-greenfield-042",
+  "title": "Implement word frequency counter in Go",
+  "category": "repo_init",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement WordCount(s string) map[string]int that returns a word frequency map (case-insensitive, strips punctuation), and TopN(counts map[string]int, n int) []string that returns the top-n words sorted by frequency descending then alphabetically.",
+  "repo_seed": {
+    "files": {
+      "wordcount.go": "package wordcount\n\nfunc WordCount(s string) map[string]int { panic(\"not implemented\") }\nfunc TopN(counts map[string]int, n int) []string { panic(\"not implemented\") }\n",
+      "wordcount_test.go": "package wordcount\n\nimport (\n\t\"reflect\"\n\t\"testing\"\n)\n\nfunc TestWordCount(t *testing.T) {\n\tcounts := WordCount(\"hello world hello\")\n\tif counts[\"hello\"] != 2 || counts[\"world\"] != 1 {\n\t\tt.Errorf(\"unexpected counts: %v\", counts)\n\t}\n}\n\nfunc TestWordCountCaseInsensitive(t *testing.T) {\n\tcounts := WordCount(\"Go go GO\")\n\tif counts[\"go\"] != 3 {\n\t\tt.Errorf(\"expected go=3, got %v\", counts)\n\t}\n}\n\nfunc TestWordCountPunctuation(t *testing.T) {\n\tcounts := WordCount(\"hello, world!\")\n\tif _, ok := counts[\"hello,\"]; ok {\n\t\tt.Error(\"punctuation should be stripped\")\n\t}\n\tif counts[\"hello\"] != 1 || counts[\"world\"] != 1 {\n\t\tt.Errorf(\"unexpected counts: %v\", counts)\n\t}\n}\n\nfunc TestTopN(t *testing.T) {\n\tcounts := map[string]int{\"apple\": 5, \"banana\": 3, \"cherry\": 5, \"date\": 1}\n\ttop := TopN(counts, 2)\n\t// apple and cherry both have 5; tie broken alphabetically\n\tif !reflect.DeepEqual(top, []string{\"apple\", \"cherry\"}) {\n\t\tt.Errorf(\"TopN got %v, want [apple cherry]\", top)\n\t}\n}\n",
+      "go.mod": "module wordcount\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement WordCount and TopN in wordcount.go:\n- `WordCount(s string)`: split on whitespace, lowercase each word, strip leading/trailing non-letter runes (use strings.TrimFunc + unicode.IsLetter), count in map\n- `TopN(counts, n)`: sort keys by (-count, name) ascending; return first n\nAll 4 tests must pass.",
+    "entry_point": "wordcount.go",
+    "success_criteria": "All 4 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

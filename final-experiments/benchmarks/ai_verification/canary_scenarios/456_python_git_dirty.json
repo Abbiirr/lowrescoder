@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-py-git-dirty-001",
+  "title": "Fix uncommitted buggy Python math functions",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A developer left buggy working-tree changes uncommitted. The agent should use git_status/git_diff to discover what changed, understand the bugs from the diff, then fix them. Tests cover the fixed behavior.",
+  "repo_seed": {
+    "files": {
+      "math_utils.py": "def clamp(value, lo, hi):\n    \"\"\"Return value clamped between lo and hi.\"\"\"\n    # BUG: clamps in wrong direction\n    if value < lo:\n        return hi\n    if value > hi:\n        return lo\n    return value\n\n\ndef safe_divide(a, b, default=0):\n    \"\"\"Divide a by b; return default if b is zero.\"\"\"\n    # BUG: ignores default, always raises\n    return a / b\n\n\ndef moving_average(values, window):\n    \"\"\"Compute trailing moving average with given window size.\"\"\"\n    if not values or window <= 0:\n        return []\n    result = []\n    for i in range(len(values)):\n        start = max(0, i - window + 1)\n        # BUG: off-by-one, uses start-1\n        chunk = values[start - 1:i + 1]\n        result.append(sum(chunk) / len(chunk))\n    return result\n",
+      "test_math_utils.py": "import pytest\nfrom math_utils import clamp, safe_divide, moving_average\n\ndef test_clamp_below():\n    assert clamp(1, 5, 10) == 5\n\ndef test_clamp_above():\n    assert clamp(15, 5, 10) == 10\n\ndef test_clamp_within():\n    assert clamp(7, 5, 10) == 7\n\ndef test_safe_divide_normal():\n    assert safe_divide(10, 2) == 5.0\n\ndef test_safe_divide_zero():\n    assert safe_divide(10, 0) == 0\n    assert safe_divide(10, 0, default=-1) == -1\n\ndef test_moving_average_basic():\n    result = moving_average([1, 2, 3, 4, 5], 3)\n    assert result[2] == pytest.approx(2.0)  # avg of 1,2,3\n    assert result[4] == pytest.approx(4.0)  # avg of 3,4,5\n\ndef test_moving_average_empty():\n    assert moving_average([], 3) == []\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Use git_diff or git_status to see what changed in this repo, then fix the bugs.\n\nThere are 3 bugs in math_utils.py:\n1. clamp() returns wrong boundary — fix the lo/hi return values\n2. safe_divide() ignores the default — add a zero-division check\n3. moving_average() has an off-by-one index — use start not start-1\n\nRun `pytest test_math_utils.py -v --rootdir=.` to verify.",
+    "entry_point": "math_utils.py",
+    "success_criteria": [
+      "All 7 pytest tests pass",
+      "clamp returns lo when value < lo",
+      "safe_divide returns default on zero divisor",
+      "moving_average uses correct window slice"
+    ],
+    "followup_prompts": [
+      "Run `pytest test_math_utils.py -v --rootdir=.` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `pytest test_math_utils.py -v --rootdir=.` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "pytest test_math_utils.py -v --rootdir=."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 6
+}

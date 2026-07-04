@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-backend-feature-001",
+  "title": "Add a pagination feature to a Go HTTP handler",
+  "category": "backend_feature",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Go HTTP handler returns all items but doesn't support pagination. Add ?page=N&limit=N query param support.",
+  "repo_seed": {
+    "files": {
+      "handler.go": "package handler\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n)\n\ntype Item struct {\n\tID   int    `json:\"id\"`\n\tName string `json:\"name\"`\n}\n\nvar items = []Item{\n\t{1, \"apple\"}, {2, \"banana\"}, {3, \"cherry\"},\n\t{4, \"date\"}, {5, \"elderberry\"}, {6, \"fig\"},\n\t{7, \"grape\"}, {8, \"honeydew\"}, {9, \"kiwi\"}, {10, \"lemon\"},\n}\n\n// ListItems returns all items. TODO: add pagination with ?page=N&limit=N\nfunc ListItems(w http.ResponseWriter, r *http.Request) {\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tjson.NewEncoder(w).Encode(items)\n}\n",
+      "handler_test.go": "package handler\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n\t\"net/http/httptest\"\n\t\"testing\"\n)\n\nfunc TestListAllItems(t *testing.T) {\n\treq := httptest.NewRequest(\"GET\", \"/items\", nil)\n\trr := httptest.NewRecorder()\n\tListItems(rr, req)\n\tvar result []Item\n\tif err := json.NewDecoder(rr.Body).Decode(&result); err != nil {\n\t\tt.Fatalf(\"decode: %v\", err)\n\t}\n\tif len(result) != 10 {\n\t\tt.Errorf(\"want 10 items, got %d\", len(result))\n\t}\n}\n\nfunc TestPaginationFirstPage(t *testing.T) {\n\treq := httptest.NewRequest(\"GET\", \"/items?page=1&limit=3\", nil)\n\trr := httptest.NewRecorder()\n\tListItems(rr, req)\n\tvar result []Item\n\tif err := json.NewDecoder(rr.Body).Decode(&result); err != nil {\n\t\tt.Fatalf(\"decode: %v\", err)\n\t}\n\tif len(result) != 3 {\n\t\tt.Errorf(\"page=1 limit=3: want 3 items, got %d\", len(result))\n\t}\n\tif result[0].ID != 1 {\n\t\tt.Errorf(\"first item should have ID=1, got %d\", result[0].ID)\n\t}\n}\n\nfunc TestPaginationSecondPage(t *testing.T) {\n\treq := httptest.NewRequest(\"GET\", \"/items?page=2&limit=3\", nil)\n\trr := httptest.NewRecorder()\n\tListItems(rr, req)\n\tvar result []Item\n\tif err := json.NewDecoder(rr.Body).Decode(&result); err != nil {\n\t\tt.Fatalf(\"decode: %v\", err)\n\t}\n\tif len(result) != 3 {\n\t\tt.Errorf(\"page=2 limit=3: want 3 items, got %d\", len(result))\n\t}\n\tif result[0].ID != 4 {\n\t\tt.Errorf(\"second page first item should have ID=4, got %d\", result[0].ID)\n\t}\n}\n\nfunc TestPaginationLastPage(t *testing.T) {\n\treq := httptest.NewRequest(\"GET\", \"/items?page=4&limit=3\", nil)\n\trr := httptest.NewRecorder()\n\tListItems(rr, req)\n\tvar result []Item\n\tif err := json.NewDecoder(rr.Body).Decode(&result); err != nil {\n\t\tt.Fatalf(\"decode: %v\", err)\n\t}\n\tif len(result) != 1 {\n\t\tt.Errorf(\"last page (page=4 limit=3): want 1 item, got %d\", len(result))\n\t}\n}\n",
+      "go.mod": "module handler\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Add pagination support to the ListItems handler in handler.go.\n\nRead the query params `page` (default 1) and `limit` (default 0 = all). When limit > 0:\n- Compute offset = (page - 1) * limit\n- Return items[offset : offset+limit] (handle out-of-bounds gracefully by returning up to the end)\n\nWhen no limit is given (limit=0 or missing), return all items as before.\n\nRun `go test ./...` to verify all 4 tests pass.",
+    "entry_point": "handler.go",
+    "success_criteria": [
+      "All 4 go tests pass",
+      "page and limit query params supported",
+      "Default (no params) returns all items"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `go test ./...` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./..."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 8
+}

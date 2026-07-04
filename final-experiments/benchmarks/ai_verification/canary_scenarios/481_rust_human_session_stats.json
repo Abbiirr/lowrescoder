@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "human-session-rust-stats-001",
+  "title": "Human-like session: build a Rust statistics library in three turns",
+  "category": "repo_init",
+  "difficulty": "easy",
+  "target_stack": {"language": "rust", "framework": null, "extra": {}},
+  "description": "Three scripted turns build a Rust stats library incrementally: turn 1 implements mean/sum, turn 2 implements min/max, turn 3 implements median and runs tests. All tests provided upfront; scripted prompts guide incremental implementation.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "//! Simple statistics library.\n\n/// Compute the sum of a slice. Returns 0.0 for empty input.\npub fn sum(data: &[f64]) -> f64 {\n    unimplemented!()\n}\n\n/// Compute the mean of a slice. Returns None for empty input.\npub fn mean(data: &[f64]) -> Option<f64> {\n    unimplemented!()\n}\n\n/// Return the minimum value in a slice. Returns None for empty input.\npub fn min(data: &[f64]) -> Option<f64> {\n    unimplemented!()\n}\n\n/// Return the maximum value in a slice. Returns None for empty input.\npub fn max(data: &[f64]) -> Option<f64> {\n    unimplemented!()\n}\n\n/// Return the median of a slice. Returns None for empty input.\n/// For even-length slices, return the average of the two middle values.\npub fn median(data: &[f64]) -> Option<f64> {\n    unimplemented!()\n}\n",
+      "tests/stats_tests.rs": "#[cfg(test)]\nmod tests {\n    use rust_human_session_stats::{sum, mean, min, max, median};\n\n    // sum\n    #[test]\n    fn test_sum_basic() {\n        assert_eq!(sum(&[1.0, 2.0, 3.0]), 6.0);\n    }\n\n    #[test]\n    fn test_sum_empty() {\n        assert_eq!(sum(&[]), 0.0);\n    }\n\n    // mean\n    #[test]\n    fn test_mean_basic() {\n        assert_eq!(mean(&[2.0, 4.0, 6.0]), Some(4.0));\n    }\n\n    #[test]\n    fn test_mean_empty() {\n        assert_eq!(mean(&[]), None);\n    }\n\n    // min\n    #[test]\n    fn test_min_basic() {\n        assert_eq!(min(&[3.0, 1.0, 4.0, 1.5]), Some(1.0));\n    }\n\n    #[test]\n    fn test_min_empty() {\n        assert_eq!(min(&[]), None);\n    }\n\n    // max\n    #[test]\n    fn test_max_basic() {\n        assert_eq!(max(&[3.0, 1.0, 4.0, 1.5]), Some(4.0));\n    }\n\n    #[test]\n    fn test_max_empty() {\n        assert_eq!(max(&[]), None);\n    }\n\n    // median\n    #[test]\n    fn test_median_odd() {\n        assert_eq!(median(&[3.0, 1.0, 2.0]), Some(2.0));\n    }\n\n    #[test]\n    fn test_median_even() {\n        // sorted: [1,2,3,4] -> (2+3)/2 = 2.5\n        assert_eq!(median(&[4.0, 1.0, 3.0, 2.0]), Some(2.5));\n    }\n\n    #[test]\n    fn test_median_empty() {\n        assert_eq!(median(&[]), None);\n    }\n}\n",
+      "Cargo.toml": "[package]\nname = \"rust_human_session_stats\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\nname = \"rust_human_session_stats\"\npath = \"src/lib.rs\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `sum(data: &[f64]) -> f64` and `mean(data: &[f64]) -> Option<f64>` in src/lib.rs. sum should return 0.0 for empty input; mean should return None for empty input. Do not implement the other functions yet.",
+    "followup_prompts": [
+      "Good. Now implement `min(data: &[f64]) -> Option<f64>` and `max(data: &[f64]) -> Option<f64>`. Both should return None for empty input. Use f64::partial_cmp or fold to find the extremes.",
+      "Now implement `median(data: &[f64]) -> Option<f64>`. Sort a copy of the slice; for odd length return the middle element; for even length return the average of the two middle elements. Then run `cargo test` to verify all 11 tests pass and fix any remaining failures."
+    ],
+    "success_criteria": [
+      "All 11 cargo tests pass",
+      "sum returns 0.0 for empty slice",
+      "mean/min/max return None for empty slice",
+      "median handles both odd and even length slices"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {
+      "run_tests": "cargo test"
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 15
+}

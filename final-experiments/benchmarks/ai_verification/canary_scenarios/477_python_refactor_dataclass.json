@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-py-refactor-dataclass-001",
+  "title": "Refactor Python namedtuple to dataclass",
+  "category": "refactor",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Python module uses collections.namedtuple for Point, Rectangle, and Circle. Refactor each to a @dataclass while preserving all existing test behavior.",
+  "repo_seed": {
+    "files": {
+      "shapes.py": "\"\"\"2D geometry primitives.\"\"\"\nfrom collections import namedtuple\nimport math\n\n\nPoint = namedtuple('Point', ['x', 'y'])\n\nRectangle = namedtuple('Rectangle', ['width', 'height'])\n\nCircle = namedtuple('Circle', ['radius'])\n\n\ndef distance(p1: Point, p2: Point) -> float:\n    \"\"\"Euclidean distance between two points.\"\"\"\n    return math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2)\n\n\ndef rect_area(r: Rectangle) -> float:\n    \"\"\"Area of a rectangle.\"\"\"\n    return r.width * r.height\n\n\ndef rect_perimeter(r: Rectangle) -> float:\n    \"\"\"Perimeter of a rectangle.\"\"\"\n    return 2 * (r.width + r.height)\n\n\ndef circle_area(c: Circle) -> float:\n    \"\"\"Area of a circle.\"\"\"\n    return math.pi * c.radius ** 2\n\n\ndef circle_circumference(c: Circle) -> float:\n    \"\"\"Circumference of a circle.\"\"\"\n    return 2 * math.pi * c.radius\n",
+      "test_shapes.py": "import math\nimport pytest\nfrom shapes import Point, Rectangle, Circle, distance, rect_area, rect_perimeter, circle_area, circle_circumference\n\n\ndef test_point_fields():\n    p = Point(x=1.0, y=2.0)\n    assert p.x == 1.0\n    assert p.y == 2.0\n\n\ndef test_distance():\n    p1 = Point(0.0, 0.0)\n    p2 = Point(3.0, 4.0)\n    assert distance(p1, p2) == pytest.approx(5.0)\n\n\ndef test_rect_area():\n    r = Rectangle(width=4.0, height=5.0)\n    assert rect_area(r) == 20.0\n\n\ndef test_rect_perimeter():\n    r = Rectangle(width=3.0, height=6.0)\n    assert rect_perimeter(r) == 18.0\n\n\ndef test_circle_area():\n    c = Circle(radius=1.0)\n    assert circle_area(c) == pytest.approx(math.pi)\n\n\ndef test_circle_circumference():\n    c = Circle(radius=1.0)\n    assert circle_circumference(c) == pytest.approx(2 * math.pi)\n\n\ndef test_point_keyword_args():\n    p = Point(y=10.0, x=5.0)\n    assert p.x == 5.0\n    assert p.y == 10.0\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Refactor shapes.py to replace the three namedtuple definitions with @dataclass equivalents:\n\n1. Remove `from collections import namedtuple`\n2. Add `from dataclasses import dataclass` import\n3. Replace `Point = namedtuple('Point', ['x', 'y'])` with a @dataclass class with x: float and y: float fields\n4. Replace `Rectangle = namedtuple('Rectangle', ['width', 'height'])` with a @dataclass with width: float and height: float\n5. Replace `Circle = namedtuple('Circle', ['radius'])` with a @dataclass with radius: float\n\nAll functions (distance, rect_area, etc.) should remain unchanged. The dataclasses should support keyword-argument construction just like namedtuples.\n\nRun `pytest test_shapes.py -v --rootdir=.` to verify all 7 tests pass.",
+    "entry_point": "shapes.py",
+    "success_criteria": [
+      "All 7 pytest tests pass",
+      "namedtuple removed, @dataclass used for all three types",
+      "Field access by attribute name works (p.x, r.width, c.radius)",
+      "Keyword argument construction works"
+    ],
+    "followup_prompts": [
+      "Run `pytest test_shapes.py -v --rootdir=.` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `pytest test_shapes.py -v --rootdir=.` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "pytest test_shapes.py -v --rootdir=."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 5
+}

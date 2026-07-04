@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-longhorizon-006",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "medium",
+  "duration_hint_minutes": 35,
+  "title": "Extend legacy report generator with metadata sidecar and search in 3 steps",
+  "description": "Multi-step Python task: add ReportMeta dataclass, JSON sidecar support, and a full-text search function to the legacy report generator.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_legacy_report",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Extend src/report_gen.py in three steps. All 5 existing tests must still pass.\n\nStep 1 — ReportMeta dataclass + write with metadata:\n  @dataclasses.dataclass\n  class ReportMeta:\n      title: str\n      created_at: str   # ISO-8601 datetime string\n      row_count: int\n\n  def write_report_with_meta(report_dir: str, title: str, rows: list[list[str]]) -> tuple[str, str]\n    — calls write_html_report to produce report.html\n    — writes a JSON sidecar at report_dir/report.meta.json containing title, created_at (datetime.datetime.now().isoformat()), row_count\n    — returns (html_path, meta_path)\n\nStep 2 — Read metadata + list with metadata:\n  def read_meta(report_dir: str) -> ReportMeta | None\n    — reads report_dir/report.meta.json and returns a ReportMeta; returns None if file not found\n\n  def list_reports_with_meta(base_dir: str) -> list[tuple[str, ReportMeta]]\n    — returns sorted list of (report_name, meta) for reports that have a .meta.json sidecar\n\nStep 3 — Full-text search:\n  def search_reports(base_dir: str, query: str) -> list[str]\n    — returns sorted list of report names whose report.html contains query (case-insensitive)\n    — reports without a report.html are skipped\n\nAll 5 existing tests must still pass.\nRun: pytest",
+    "required_artifacts": [
+      "write_report_with_meta creates both HTML and .meta.json sidecar",
+      "read_meta returns ReportMeta with correct fields, None when file missing",
+      "list_reports_with_meta returns only reports that have a sidecar",
+      "search_reports returns sorted names with case-insensitive match",
+      "All 5 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "pytest passes",
+      "ruff check passes"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `pytest` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `pytest` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "pytest",
+      "lint": "ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

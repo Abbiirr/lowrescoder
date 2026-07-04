@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-brownfield-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Fix bugs in a Python string utility module",
+  "description": "Brownfield Python dirty_cleanup: fix three intentional bugs in string utility functions (reverse_words, count_vowels, is_palindrome). The repo_seed has the broken code; the agent must identify and fix the bugs so all tests pass.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"strutils\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/strutils.py",
+        "content": "def reverse_words(s: str) -> str:\n    # BUG: should reverse the list of words, not each word\n    return ' '.join(w[::-1] for w in s.split())\n\n\ndef count_vowels(s: str) -> int:\n    # BUG: missing 'u' from vowel set\n    return sum(1 for c in s.lower() if c in 'aeioy')\n\n\ndef is_palindrome(s: str) -> bool:\n    # BUG: does not ignore case or spaces\n    cleaned = s\n    return cleaned == cleaned[::-1]\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_strutils.py",
+        "content": "from src.strutils import reverse_words, count_vowels, is_palindrome\n\n\ndef test_reverse_words():\n    assert reverse_words(\"hello world\") == \"world hello\"\n    assert reverse_words(\"one two three\") == \"three two one\"\n\n\ndef test_count_vowels():\n    assert count_vowels(\"hello\") == 2\n    assert count_vowels(\"aeiou\") == 5\n\n\ndef test_is_palindrome_basic():\n    assert is_palindrome(\"racecar\")\n    assert not is_palindrome(\"hello\")\n\n\ndef test_is_palindrome_case():\n    assert is_palindrome(\"Racecar\")\n    assert is_palindrome(\"A man a plan a canal Panama\")\n\n\ndef test_count_vowels_uppercase():\n    assert count_vowels(\"HELLO WORLD\") == 3\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/strutils.py.\n\nBug 1 — reverse_words: should reverse the ORDER of words, not reverse each word.\n  Fix: return ' '.join(reversed(s.split()))\n\nBug 2 — count_vowels: missing 'u' from vowel set.\n  Fix: check 'aeiou' (add u)\n\nBug 3 — is_palindrome: should ignore case and spaces.\n  Fix: cleaned = ''.join(s.lower().split()); return cleaned == cleaned[::-1]\n\nAll 5 tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "reverse_words reverses word ORDER not individual characters",
+      "count_vowels includes all five vowels including u",
+      "is_palindrome ignores case and spaces",
+      "is_palindrome('A man a plan a canal Panama') returns True",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.strutils import reverse_words, count_vowels, is_palindrome\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.strutils import reverse_words, count_vowels, is_palindrome\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

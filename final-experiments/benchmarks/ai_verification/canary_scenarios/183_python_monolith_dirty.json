@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-dirty-006",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 bugs in python_monolith_api",
+  "description": "Brownfield Python dirty scenario: create_user, get_post, and delete_post each have a bug. Fix them so all 7 tests pass.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_monolith_api",
+    "injections": [
+      {
+        "path": "src/app.py",
+        "content": "from fastapi import FastAPI, HTTPException\n\napp = FastAPI()\n\n# ── Users ────────────────────────────────────────────────────────────────────────\nusers: dict[int, dict] = {}\n_next_user_id = 1\n\n\n# BUG: missing status_code=201 so create_user returns 200\n@app.post(\"/users\")\ndef create_user(body: dict) -> dict:\n    global _next_user_id\n    if not body.get(\"username\"):\n        raise HTTPException(400, \"username required\")\n    uid = _next_user_id\n    _next_user_id += 1\n    users[uid] = {\"id\": uid, \"username\": body[\"username\"], \"email\": body.get(\"email\", \"\")}\n    return users[uid]\n\n\n@app.get(\"/users/{user_id}\")\ndef get_user(user_id: int) -> dict:\n    if user_id not in users:\n        raise HTTPException(404, \"user not found\")\n    return users[user_id]\n\n\n@app.get(\"/users\")\ndef list_users() -> list[dict]:\n    return list(users.values())\n\n\n# ── Posts ────────────────────────────────────────────────────────────────────────\n_posts: dict[int, dict] = {}\n_next_post_id = 1\n\n\n@app.post(\"/posts\", status_code=201)\ndef create_post(body: dict) -> dict:\n    global _next_post_id\n    if not body.get(\"title\"):\n        raise HTTPException(400, \"title required\")\n    pid = _next_post_id\n    _next_post_id += 1\n    _posts[pid] = {\n        \"id\": pid,\n        \"title\": body[\"title\"],\n        \"body\": body.get(\"body\", \"\"),\n        \"author_id\": body.get(\"author_id\"),\n    }\n    return _posts[pid]\n\n\n@app.get(\"/posts/{post_id}\")\ndef get_post(post_id: int) -> dict:\n    # BUG: checks wrong dict — should be _posts not users\n    if post_id not in users:\n        raise HTTPException(404, \"post not found\")\n    return _posts[post_id]\n\n\n@app.get(\"/posts\")\ndef list_posts() -> list[dict]:\n    return list(_posts.values())\n\n\n@app.delete(\"/posts/{post_id}\", status_code=204)\ndef delete_post(post_id: int) -> None:\n    # BUG: checks wrong dict — should be _posts not _comments\n    if post_id not in _comments:\n        raise HTTPException(404, \"post not found\")\n    del _posts[post_id]\n\n\n# ── Comments ───────────────────────────────────────────────────────────────────\ncomments: dict[int, dict] = {}\n_comments: dict[int, dict] = comments\n_next_comment_id = 1\n\n\n@app.post(\"/posts/{post_id}/comments\", status_code=201)\ndef create_comment(post_id: int, body: dict) -> dict:\n    global _next_comment_id\n    if post_id not in _posts:\n        raise HTTPException(404, \"post not found\")\n    if not body.get(\"text\"):\n        raise HTTPException(400, \"text required\")\n    cid = _next_comment_id\n    _next_comment_id += 1\n    _comments[cid] = {\"id\": cid, \"post_id\": post_id, \"text\": body[\"text\"]}\n    return _comments[cid]\n\n\n@app.get(\"/posts/{post_id}/comments\")\ndef list_comments(post_id: int) -> list[dict]:\n    if post_id not in _posts:\n        raise HTTPException(404, \"post not found\")\n    return [c for c in _comments.values() if c[\"post_id\"] == post_id]\n\n\n_users = users\n\n\ndef reset() -> None:\n    global _next_user_id, _next_post_id, _next_comment_id\n    users.clear()\n    _posts.clear()\n    _comments.clear()\n    _next_user_id = _next_post_id = _next_comment_id = 1\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 bugs in src/app.py so all 7 tests pass.\n\n  create_user:\n    — missing status_code=201 on the @app.post decorator\n    — fix: change @app.post(\"/users\") to @app.post(\"/users\", status_code=201)\n\n  get_post:\n    — checks post_id in wrong dict (users instead of _posts)\n    — fix: change 'if post_id not in users' to 'if post_id not in _posts'\n\n  delete_post:\n    — checks existence in wrong dict (_comments instead of _posts)\n    — fix: change 'if post_id not in _comments' to 'if post_id not in _posts'\n\nDo not modify the test file.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "create_user returns status_code=201",
+      "get_post checks _posts not users",
+      "delete_post checks _posts not _comments",
+      "All 7 existing tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run python -c \"from src.app import app\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.app import app\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,4 @@
+[
+  {"name":"on_tool_request","method":"on_tool_request","params_model":"ToolRequestParams","message":{"jsonrpc":"2.0","id":9001,"method":"on_tool_request","params":{"tool":"write_file","args":"{\"path\":\"demo.txt\"}"}}},
+  {"name":"on_ask_user","method":"on_ask_user","params_model":"AskUserRequestParams","message":{"jsonrpc":"2.0","id":9003,"method":"on_ask_user","params":{"question":"Proceed?","options":["yes","no"],"allow_text":false}}}
+]

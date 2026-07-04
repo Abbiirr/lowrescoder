@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-greenfield-046",
+  "title": "Implement a Trie in Go",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement a Trie with Insert(word string), Search(word string) bool, and StartsWith(prefix string) bool.",
+  "repo_seed": {
+    "files": {
+      "trie.go": "package trie\n\ntype Trie struct {\n\t// TODO: implement\n}\n\nfunc New() *Trie { panic(\"not implemented\") }\nfunc (t *Trie) Insert(word string) { panic(\"not implemented\") }\nfunc (t *Trie) Search(word string) bool { panic(\"not implemented\") }\nfunc (t *Trie) StartsWith(prefix string) bool { panic(\"not implemented\") }\n",
+      "trie_test.go": "package trie\n\nimport \"testing\"\n\nfunc TestInsertSearch(t *testing.T) {\n\ttr := New()\n\ttr.Insert(\"apple\")\n\tif !tr.Search(\"apple\") {\n\t\tt.Error(\"Search(apple) should be true\")\n\t}\n\tif tr.Search(\"app\") {\n\t\tt.Error(\"Search(app) should be false — not inserted\")\n\t}\n}\n\nfunc TestStartsWith(t *testing.T) {\n\ttr := New()\n\ttr.Insert(\"apple\")\n\ttr.Insert(\"app\")\n\tif !tr.StartsWith(\"app\") {\n\t\tt.Error(\"StartsWith(app) should be true\")\n\t}\n\tif tr.StartsWith(\"xyz\") {\n\t\tt.Error(\"StartsWith(xyz) should be false\")\n\t}\n}\n\nfunc TestMultipleWords(t *testing.T) {\n\ttr := New()\n\twords := []string{\"cat\", \"car\", \"card\", \"care\", \"careful\"}\n\tfor _, w := range words {\n\t\ttr.Insert(w)\n\t}\n\tfor _, w := range words {\n\t\tif !tr.Search(w) {\n\t\t\tt.Errorf(\"Search(%s) should be true\", w)\n\t\t}\n\t}\n\tif tr.Search(\"ca\") {\n\t\tt.Error(\"Search(ca) should be false\")\n\t}\n\tif !tr.StartsWith(\"ca\") {\n\t\tt.Error(\"StartsWith(ca) should be true\")\n\t}\n}\n",
+      "go.mod": "module trie\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement Trie in trie.go:\n- Node struct with `children map[rune]*Node` and `isEnd bool`\n- `New()`: return &Trie{root: &Node{children: make(map[rune]*Node)}}\n- `Insert`: walk runes, create nodes as needed, mark last node isEnd=true\n- `Search`: walk runes; return false if any node missing; return node.isEnd\n- `StartsWith`: walk runes; return false if any node missing; return true\nAll 3 tests must pass.",
+    "entry_point": "trie.go",
+    "success_criteria": "All 3 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

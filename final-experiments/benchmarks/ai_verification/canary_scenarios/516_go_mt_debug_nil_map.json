@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "516-go-mt-debug-nil-map",
+  "title": "Debug nil map panic and concurrent write race in Go — 3 turns",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "Go map operations panic on nil map write. Fix nil map initialization, fix concurrent write race, confirm all tests pass.",
+  "repo_seed": {
+    "files": {
+      "go.mod": "module github.com/ai-verification/nil-map\n\ngo 1.22\n",
+      "store/store.go": "package store\n\nimport \"sync\"\n\n// Store is a thread-safe string map.\ntype Store struct {\n\t// BUG: mu declared but data is never initialized\n\tmu   sync.Mutex\n\tdata map[string]string\n}\n\nfunc New() *Store {\n\t// BUG: does not initialize data — map is nil\n\treturn &Store{}\n}\n\nfunc (s *Store) Set(key, value string) {\n\t// BUG: no mutex lock — concurrent writes will race\n\ts.data[key] = value\n}\n\nfunc (s *Store) Get(key string) (string, bool) {\n\ts.mu.Lock()\n\tdefer s.mu.Unlock()\n\tv, ok := s.data[key]\n\treturn v, ok\n}\n\nfunc (s *Store) Delete(key string) {\n\ts.mu.Lock()\n\tdefer s.mu.Unlock()\n\tdelete(s.data, key)\n}\n",
+      "store/store_test.go": "package store_test\n\nimport (\n\t\"sync\"\n\t\"testing\"\n\n\t\"github.com/ai-verification/nil-map/store\"\n)\n\nfunc TestSetAndGet(t *testing.T) {\n\ts := store.New()\n\ts.Set(\"k\", \"v\")\n\tv, ok := s.Get(\"k\")\n\tif !ok || v != \"v\" {\n\t\tt.Fatalf(\"expected (v, true), got (%s, %v)\", v, ok)\n\t}\n}\n\nfunc TestGetMissing(t *testing.T) {\n\ts := store.New()\n\t_, ok := s.Get(\"nope\")\n\tif ok {\n\t\tt.Fatal(\"expected false\")\n\t}\n}\n\nfunc TestDelete(t *testing.T) {\n\ts := store.New()\n\ts.Set(\"k\", \"v\")\n\ts.Delete(\"k\")\n\t_, ok := s.Get(\"k\")\n\tif ok {\n\t\tt.Fatal(\"expected key deleted\")\n\t}\n}\n\nfunc TestConcurrentSafe(t *testing.T) {\n\ts := store.New()\n\tvar wg sync.WaitGroup\n\tfor i := 0; i < 100; i++ {\n\t\twg.Add(1)\n\t\tgo func(n int) {\n\t\t\tdefer wg.Done()\n\t\t\ts.Set(\"key\", \"value\")\n\t\t}(i)\n\t}\n\twg.Wait()\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The `Store` in `store/store.go` panics on `Set` because `data` is nil (never initialized in `New()`). Fix `New()` to initialize `data` with `make(map[string]string)`. Then run `go test ./...`.",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what you fixed. Now also fix `Set()` — it writes to the map without holding the mutex, which will cause a data race in the concurrent test. Add `s.mu.Lock()/s.mu.Unlock()` around the map write. Run `go test -race ./...` to confirm no races.",
+      "Final verification: run `go test -race ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ],
+    "success_criteria": [
+      "New() initializes data map with make()",
+      "Set() holds mutex before writing to map",
+      "All 4 tests pass",
+      "go test -race ./... reports no data races"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "go test -race ./..."}
+  },
+  "duration_hint_minutes": 10
+}

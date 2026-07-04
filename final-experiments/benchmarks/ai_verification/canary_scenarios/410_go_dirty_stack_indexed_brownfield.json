@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-brownfield-025",
+  "title": "Fix three bugs in a Go index-based Stack",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Fix bugs in Stack: Peek accesses data[top+1] (OOB) instead of data[top], Size returns top instead of top+1, IsEmpty checks top==0 instead of top==-1.",
+  "repo_seed": {
+    "files": {
+      "stack.go": "package stackpkg\n\ntype Stack struct {\n\tdata []int\n\ttop  int\n}\n\nfunc NewStack() *Stack {\n\treturn &Stack{data: make([]int, 0), top: -1}\n}\n\nfunc (s *Stack) Push(val int) {\n\ts.data = append(s.data, val)\n\ts.top++\n}\n\nfunc (s *Stack) Pop() (int, bool) {\n\tif s.top < 0 {\n\t\treturn 0, false\n\t}\n\tval := s.data[s.top]\n\ts.data = s.data[:s.top]\n\ts.top--\n\treturn val, true\n}\n\nfunc (s *Stack) Peek() (int, bool) {\n\tif s.top < 0 {\n\t\treturn 0, false\n\t}\n\treturn s.data[s.top+1], true // BUG 1: should be s.data[s.top]\n}\n\nfunc (s *Stack) Size() int {\n\treturn s.top // BUG 2: should be s.top + 1\n}\n\nfunc (s *Stack) IsEmpty() bool {\n\treturn s.top == 0 // BUG 3: should be s.top == -1 (or s.top < 0)\n}\n",
+      "stack_test.go": "package stackpkg\n\nimport \"testing\"\n\nfunc TestPushPopLIFO(t *testing.T) {\n\ts := NewStack()\n\ts.Push(1)\n\ts.Push(2)\n\ts.Push(3)\n\tif v, ok := s.Pop(); !ok || v != 3 {\n\t\tt.Errorf(\"expected 3, got %d\", v)\n\t}\n\tif v, ok := s.Pop(); !ok || v != 2 {\n\t\tt.Errorf(\"expected 2, got %d\", v)\n\t}\n}\n\nfunc TestPeek(t *testing.T) {\n\ts := NewStack()\n\ts.Push(5)\n\tif v, ok := s.Peek(); !ok || v != 5 {\n\t\tt.Errorf(\"Peek expected 5, got %d\", v)\n\t}\n\tif s.Size() != 1 {\n\t\tt.Errorf(\"Peek should not remove, size expected 1 got %d\", s.Size())\n\t}\n}\n\nfunc TestSizeAndIsEmpty(t *testing.T) {\n\ts := NewStack()\n\tif !s.IsEmpty() {\n\t\tt.Error(\"new stack should be empty\")\n\t}\n\ts.Push(10)\n\ts.Push(20)\n\ts.Push(30)\n\tif s.Size() != 3 {\n\t\tt.Errorf(\"Size expected 3, got %d\", s.Size())\n\t}\n\tif s.IsEmpty() {\n\t\tt.Error(\"stack with elements should not be empty\")\n\t}\n}\n",
+      "go.mod": "module stackpkg\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in stack.go:\n1. Peek: change `s.data[s.top+1]` to `s.data[s.top]`\n2. Size: change `return s.top` to `return s.top + 1`\n3. IsEmpty: change `s.top == 0` to `s.top == -1` (or `s.top < 0`)\nAll 3 test cases must pass.",
+    "entry_point": "stack.go",
+    "success_criteria": "All 3 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

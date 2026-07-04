@@ -1,0 +1,67 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-019",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement Union-Find (Disjoint Set Union) in Go",
+  "description": "Greenfield Go task: implement DSU (Disjoint Set Union) with path-compressed Find, union-by-rank Union, Connected, and Components methods.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module dsu\n\ngo 1.21\n"
+      },
+      {
+        "path": "dsu.go",
+        "content": "package dsu\n\n// TODO: implement DSU\n"
+      },
+      {
+        "path": "dsu_test.go",
+        "content": "package dsu\n\nimport \"testing\"\n\nfunc TestBasicUnion(t *testing.T) {\n\td := NewDSU(5)\n\td.Union(0, 1)\n\td.Union(2, 3)\n\tif !d.Connected(0, 1) {\n\t\tt.Error(\"0 and 1 should be connected\")\n\t}\n\tif d.Connected(0, 2) {\n\t\tt.Error(\"0 and 2 should not be connected\")\n\t}\n}\n\nfunc TestComponents(t *testing.T) {\n\td := NewDSU(5)\n\tif d.Components() != 5 {\n\t\tt.Errorf(\"initially want 5 components, got %d\", d.Components())\n\t}\n\td.Union(0, 1)\n\tif d.Components() != 4 {\n\t\tt.Errorf(\"after union(0,1) want 4, got %d\", d.Components())\n\t}\n\td.Union(2, 3)\n\td.Union(0, 2)\n\tif d.Components() != 2 {\n\t\tt.Errorf(\"after all unions want 2, got %d\", d.Components())\n\t}\n}\n\nfunc TestTransitive(t *testing.T) {\n\td := NewDSU(4)\n\td.Union(0, 1)\n\td.Union(1, 2)\n\td.Union(2, 3)\n\tif !d.Connected(0, 3) {\n\t\tt.Error(\"0 and 3 should be connected transitively\")\n\t}\n}\n\nfunc TestSelfConnection(t *testing.T) {\n\td := NewDSU(3)\n\tif !d.Connected(0, 0) {\n\t\tt.Error(\"node should be connected to itself\")\n\t}\n}\n\nfunc TestZeroNodes(t *testing.T) {\n\td := NewDSU(0)\n\tif d.Components() != 0 {\n\t\tt.Errorf(\"0 nodes want 0 components, got %d\", d.Components())\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement Union-Find in dsu.go.\n\ntype DSU struct { parent, rank []int; components int }\n\nfunc NewDSU(n int) *DSU\n  // Initialize parent[i]=i, rank[i]=0, components=n.\n\nfunc (d *DSU) Find(x int) int\n  // Path-compressed find: if parent[x]!=x, set parent[x]=Find(parent[x]).\n\nfunc (d *DSU) Union(x, y int)\n  // Union by rank: merge smaller-rank tree under larger-rank root.\n  // Decrement components when two different sets are merged.\n\nfunc (d *DSU) Connected(x, y int) bool\n  // Return Find(x)==Find(y).\n\nfunc (d *DSU) Components() int\n  // Return current number of connected components.\n\nAll 5 tests in dsu_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "parent slice initialized to identity, rank to zeros",
+      "Find uses path compression (recursive or iterative)",
+      "Union by rank: higher-rank root becomes parent, components decremented on merge",
+      "Connected returns Find(x)==Find(y)",
+      "Components() returns the running count",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-refactor-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "easy",
+  "duration_hint_minutes": 10,
+  "title": "Extract duplicated validation logic into a shared helper",
+  "description": "A Python module has the same email-validation regex duplicated in three places. Extract it into a shared validate_email(email: str) -> bool helper in a utils.py module. Behavior must be identical.",
+  "target_stack": {
+    "language": "python",
+    "framework": "",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "refactor_extract_function",
+    "injections": [],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "This codebase has the same email-validation regex copy-pasted in three places (see src/handlers.py, src/models.py, src/cli.py). Extract it into src/utils.py as validate_email(email: str) -> bool. Update all three callers. Do not change the regex or the public behavior. All tests must still pass.",
+    "required_artifacts": [
+      "src/utils.py exists with validate_email function",
+      "all three callers updated",
+      "all tests pass",
+      "no raw regex duplication remaining"
+    ],
+    "success_criteria": [
+      "validate_email extracted to utils.py",
+      "handlers.py, models.py, cli.py all import from utils",
+      "Regex not duplicated anywhere in the codebase",
+      "Existing tests unbroken"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `uv run pytest tests/ -q` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q",
+      "lint": "uv run ruff check src/ tests/"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

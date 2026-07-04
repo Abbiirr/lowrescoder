@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-018",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement glob-style pattern matching in Go",
+  "description": "Greenfield Go task: implement Match(pattern, text string) bool using DP. '*' matches any sequence (including empty), '?' matches exactly one character, all other chars match literally.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module glob\n\ngo 1.21\n"
+      },
+      {
+        "path": "glob.go",
+        "content": "package glob\n\n// TODO: implement Match\n"
+      },
+      {
+        "path": "glob_test.go",
+        "content": "package glob\n\nimport \"testing\"\n\nfunc TestExactMatch(t *testing.T) {\n\tif !Match(\"hello\", \"hello\") {\n\t\tt.Error(\"expected exact match\")\n\t}\n\tif Match(\"hello\", \"world\") {\n\t\tt.Error(\"expected no match\")\n\t}\n}\n\nfunc TestStar(t *testing.T) {\n\tif !Match(\"*.go\", \"main.go\") {\n\t\tt.Error(\"*.go should match main.go\")\n\t}\n\tif Match(\"*.go\", \"main.py\") {\n\t\tt.Error(\"*.go should not match main.py\")\n\t}\n\tif !Match(\"*\", \"anything\") {\n\t\tt.Error(\"* should match anything\")\n\t}\n\tif !Match(\"*\", \"\") {\n\t\tt.Error(\"* should match empty string\")\n\t}\n}\n\nfunc TestQuestion(t *testing.T) {\n\tif !Match(\"h?llo\", \"hello\") {\n\t\tt.Error(\"h?llo should match hello\")\n\t}\n\tif !Match(\"h?llo\", \"hxllo\") {\n\t\tt.Error(\"h?llo should match hxllo\")\n\t}\n\tif Match(\"h?llo\", \"hllo\") {\n\t\tt.Error(\"h?llo should not match hllo (? requires 1 char)\")\n\t}\n}\n\nfunc TestCombined(t *testing.T) {\n\tif !Match(\"*_test.go\", \"foo_test.go\") {\n\t\tt.Error(\"expected match\")\n\t}\n\tif !Match(\"?oo*\", \"foobar\") {\n\t\tt.Error(\"?oo* should match foobar\")\n\t}\n\tif Match(\"?oo*\", \"oobar\") {\n\t\tt.Error(\"?oo* should not match oobar\")\n\t}\n}\n\nfunc TestEdgeCases(t *testing.T) {\n\tif !Match(\"\", \"\") {\n\t\tt.Error(\"empty pattern should match empty text\")\n\t}\n\tif Match(\"\", \"a\") {\n\t\tt.Error(\"empty pattern should not match non-empty text\")\n\t}\n\tif !Match(\"**\", \"hello\") {\n\t\tt.Error(\"** should match hello\")\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement glob-style pattern matching in glob.go.\n\nfunc Match(pattern, text string) bool\n  // '*' matches any sequence of characters (including empty).\n  // '?' matches exactly one character.\n  // All other characters match literally.\n\nRecommended approach: 2D DP table dp[i][j] = pattern[:i] matches text[:j].\n  - dp[0][0] = true\n  - dp[i][0] = true if pattern[:i] is all '*'\n  - dp[i][j] = dp[i-1][j-1] if pattern[i-1] matches text[j-1] (literal or ?)\n  - dp[i][j] = dp[i-1][j] || dp[i][j-1] if pattern[i-1] == '*'\n\nAll 5 tests in glob_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "2D DP table of size (len(pattern)+1) x (len(text)+1)",
+      "Base case: dp[0][0]=true, dp[i][0]=true while pattern[i-1]=='*'",
+      "Literal/? case: dp[i][j] = dp[i-1][j-1] && (pattern[i-1]=='?' || chars match)",
+      "Star case: dp[i][j] = dp[i-1][j] || dp[i][j-1]",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

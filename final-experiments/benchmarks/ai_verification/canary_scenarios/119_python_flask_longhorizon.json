@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-longhorizon-005",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "medium",
+  "duration_hint_minutes": 35,
+  "title": "Extend Flask items app with full CRUD and search in 3 steps",
+  "description": "Multi-step Python/Flask task: evolve the minimal items app into a full CRUD API with search and price filtering.",
+  "target_stack": {
+    "language": "python",
+    "framework": "flask",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_flask_app",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Extend src/app.py in three steps. Both existing tests must still pass.\n\nStep 1 — State management + create + get by id:\n  Convert _items from a static list to a managed store. Add a module-level reset() that restores the two initial items (Widget A $9.99, Widget B $19.99) and resets the id counter to 3.\n  POST /api/items\n    — body: {\"name\": str, \"price\": float}\n    — 400 if name is missing or empty\n    — 400 if price is missing\n    — 201 + JSON item on success\n  GET /api/items/<int:item_id>\n    — 200 + JSON item if found\n    — 404 if not found\n\nStep 2 — Update + delete:\n  PUT /api/items/<int:item_id>\n    — body: {\"name\"?: str, \"price\"?: float} (partial update)\n    — 200 + JSON updated item\n    — 404 if not found\n  DELETE /api/items/<int:item_id>\n    — 204 No Content\n    — 404 if not found\n\nStep 3 — Filtering on GET /api/items:\n  Accept optional query params: search=<str>, min_price=<float>, max_price=<float>\n  — search filters by case-insensitive substring match on name\n  — min_price/max_price filter by price range (inclusive)\n  — params can be combined; no params returns all items\n  — both existing fixture tests must still pass (no params: returns all items, len==2)\n\nRun: pytest",
+    "required_artifacts": [
+      "POST /api/items returns 201 with new item",
+      "POST /api/items returns 400 when name is missing",
+      "GET /api/items/<id> returns 200 for existing, 404 for missing",
+      "PUT /api/items/<id> updates name and/or price, 404 for missing",
+      "DELETE /api/items/<id> returns 204, item no longer accessible",
+      "GET /api/items?search=... filters by name substring",
+      "GET /api/items?min_price=...&max_price=... filters by price range",
+      "Both existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "pytest passes",
+      "ruff check passes"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `pytest` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `pytest` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "pytest",
+      "lint": "ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

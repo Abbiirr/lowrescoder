@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-refactor-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Refactor Go CSV utilities from package-level functions to CSVReader struct",
+  "description": "Brownfield Go refactor: extract the package-level CSV functions into a CSVReader struct with configurable separator; keep free functions as thin wrappers to preserve the existing public API.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_csv_reader",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Refactor internal/csvutil/csvutil.go: introduce a CSVReader struct and move parsing/filtering logic to method receivers while keeping free functions as thin wrappers.\n\nAdd:\n  type CSVReader struct {\n      Separator rune  // field separator; defaults to ','\n      LazyQuotes bool  // if true, relaxes CSV quoting rules\n  }\n\n  func NewCSVReader() *CSVReader  // returns CSVReader with Separator=',', LazyQuotes=false\n  func (r *CSVReader) Parse(path string) ([][]string, error)   // reads file, returns all records\n  func (r *CSVReader) Count(path string) (int, error)          // returns data rows (excl. header)\n  func (r *CSVReader) Filter(path string, pred func([]string) bool) ([][]string, error)\n\nKeep existing free functions as thin delegating wrappers:\n  func ParseCSV(path string) ([][]string, error)           { return NewCSVReader().Parse(path) }\n  func CountRows(path string) (int, error)                 { return NewCSVReader().Count(path) }\n  func FilterCSV(path string, pred func([]string) bool) ([][]string, error) { return NewCSVReader().Filter(path, pred) }\n  func WriteCSV(path string, rows [][]string) error        // keep existing implementation unchanged\n\nAll 4 existing tests must pass without modification.\nRun: go test ./...",
+    "required_artifacts": [
+      "CSVReader struct with Separator and LazyQuotes fields",
+      "NewCSVReader constructor returning defaults",
+      "Parse/Count/Filter as CSVReader methods",
+      "Free functions delegate to NewCSVReader() methods",
+      "Custom separator respected by CSVReader.Parse",
+      "All 4 existing tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `go test ./...` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

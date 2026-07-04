@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-node-dirty-express-001",
+  "title": "Fix bugs in a Node.js Express-style router",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "typescript",
+    "framework": "node",
+    "extra": {}
+  },
+  "description": "A simple Node.js router class has three bugs: wrong HTTP method check, missing route parameter extraction, and error handler not called on throw. Fix all three.",
+  "repo_seed": {
+    "files": {
+      "router.js": "/**\n * Minimal HTTP router for Node.js.\n */\nclass Router {\n  constructor() {\n    this._routes = [];\n  }\n\n  get(path, handler) {\n    this._routes.push({ method: 'GET', path, handler });\n  }\n\n  post(path, handler) {\n    this._routes.push({ method: 'POST', path, handler });\n  }\n\n  /**\n   * Match a request against registered routes.\n   * Returns { handler, params } or null if no match.\n   */\n  match(method, url) {\n    for (const route of this._routes) {\n      // BUG 1: compares method case-sensitively but input may be lowercase\n      if (route.method !== method) continue;\n\n      const routeParts = route.path.split('/');\n      const urlParts = url.split('/');\n      if (routeParts.length !== urlParts.length) continue;\n\n      const params = {};\n      let matched = true;\n      for (let i = 0; i < routeParts.length; i++) {\n        if (routeParts[i].startsWith(':')) {\n          // BUG 2: stores the pattern name with the colon, not without\n          params[routeParts[i]] = urlParts[i];\n        } else if (routeParts[i] !== urlParts[i]) {\n          matched = false;\n          break;\n        }\n      }\n      if (matched) return { handler: route.handler, params };\n    }\n    return null;\n  }\n\n  /**\n   * Dispatch a request. Calls errorHandler(err, req, res) on synchronous throw.\n   */\n  dispatch(method, url, req, res, errorHandler) {\n    const result = this.match(method, url);\n    if (!result) {\n      res.statusCode = 404;\n      res.end('Not Found');\n      return;\n    }\n    req.params = result.params;\n    // BUG 3: does not wrap handler in try/catch — errors propagate uncaught\n    result.handler(req, res);\n  }\n}\n\nmodule.exports = Router;\n",
+      "test_router.js": "const assert = require('assert');\nconst Router = require('./router');\n\nconst router = new Router();\nrouter.get('/users/:id', (req, res) => { res.end('user:' + req.params.id); });\nrouter.post('/items', (req, res) => { res.end('created'); });\n\n// test case-insensitive method matching\nlet matched = router.match('get', '/users/42');\nassert.ok(matched, 'should match lowercase get');\nassert.strictEqual(matched.params.id, '42', 'param id should be 42 without colon');\n\n// test POST\nlet postMatch = router.match('POST', '/items');\nassert.ok(postMatch, 'should match POST /items');\n\n// test no match\nassert.strictEqual(router.match('GET', '/other'), null);\n\n// test dispatch with error handler\nconst errRouter = new Router();\nerrRouter.get('/boom', () => { throw new Error('oops'); });\nlet caught = null;\nconst fakeReq = {};\nconst fakeRes = { end: () => {} };\nerrRouter.dispatch('get', '/boom', fakeReq, fakeRes, (err) => { caught = err; });\nassert.ok(caught instanceof Error, 'error handler should be called on throw');\nassert.strictEqual(caught.message, 'oops');\n\nconsole.log('All tests passed!');\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix the three bugs in router.js:\n\n1. BUG 1 in match(): Method comparison is case-sensitive but callers may use lowercase. Fix: `route.method !== method.toUpperCase()`\n2. BUG 2 in match(): Param key includes the colon. Fix: `params[routeParts[i].slice(1)] = urlParts[i]`\n3. BUG 3 in dispatch(): Handler throws are not caught. Wrap `result.handler(req, res)` in try/catch and call `errorHandler(err, req, res)` in the catch.\n\nRun `node test_router.js` to verify (should print 'All tests passed!').",
+    "entry_point": "router.js",
+    "success_criteria": [
+      "node test_router.js exits 0",
+      "Method matching is case-insensitive",
+      "Route params extracted without colon",
+      "Error handler called on throw"
+    ],
+    "followup_prompts": [
+      "Run `node test_router.js` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `node test_router.js` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "node test_router.js"
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 6
+}

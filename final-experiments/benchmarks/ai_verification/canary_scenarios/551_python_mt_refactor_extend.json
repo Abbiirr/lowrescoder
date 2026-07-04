@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "551-python-mt-refactor-extend",
+  "title": "Refactor monolith function then add feature in Python — 3 turns",
+  "category": "refactor",
+  "difficulty": "medium",
+  "target_stack": {"language": "python", "framework": null, "extra": {}},
+  "description": "Monolith function does everything. Extract helpers, keep tests green, then add a new feature using the helpers.",
+  "repo_seed": {
+    "files": {
+      "stats.py": "\"\"\"Statistics — monolith function that does too much.\"\"\"\nfrom typing import Sequence\n\n\ndef analyze(data: Sequence[float]) -> dict:\n    \"\"\"Compute mean, median, std dev, min, max all in one monolith.\n    \n    This function is too long and should be refactored.\n    \"\"\"\n    if not data:\n        return {\"count\": 0, \"mean\": 0.0, \"median\": 0.0, \"std_dev\": 0.0, \"min\": 0.0, \"max\": 0.0}\n    \n    n = len(data)\n    total = sum(data)\n    mean = total / n\n    \n    sorted_data = sorted(data)\n    if n % 2 == 0:\n        median = (sorted_data[n//2 - 1] + sorted_data[n//2]) / 2\n    else:\n        median = sorted_data[n//2]\n    \n    variance = sum((x - mean) ** 2 for x in data) / n\n    import math\n    std_dev = math.sqrt(variance)\n    \n    minimum = sorted_data[0]\n    maximum = sorted_data[-1]\n    \n    return {\n        \"count\": n,\n        \"mean\": mean,\n        \"median\": median,\n        \"std_dev\": std_dev,\n        \"min\": minimum,\n        \"max\": maximum,\n    }\n",
+      "tests/test_stats.py": "import pytest\nfrom stats import analyze\n\n\ndef test_basic():\n    result = analyze([1, 2, 3, 4, 5])\n    assert result[\"mean\"] == 3.0\n    assert result[\"median\"] == 3.0\n    assert result[\"min\"] == 1.0\n    assert result[\"max\"] == 5.0\n    assert result[\"count\"] == 5\n\n\ndef test_empty():\n    result = analyze([])\n    assert result[\"count\"] == 0\n\n\ndef test_even_median():\n    result = analyze([1, 2, 3, 4])\n    assert result[\"median\"] == 2.5\n\n\ndef test_std_dev():\n    result = analyze([2, 4, 4, 4, 5, 5, 7, 9])\n    assert abs(result[\"std_dev\"] - 2.0) < 0.01\n\n\ndef test_mode():\n    \"\"\"Test the mode feature added after refactor.\"\"\"\n    from stats import mode\n    assert mode([1, 2, 2, 3]) == 2\n    assert mode([1, 1, 2, 2, 3]) in [1, 2]  # tie — either is ok\n    assert mode([5]) == 5\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Refactor `analyze()` in `stats.py` by extracting at least 3 helper functions: `compute_mean(data)`, `compute_median(data)`, and `compute_std_dev(data, mean)`. Update `analyze()` to call these helpers. Keep the same return structure. Run `uv run pytest tests/ -q` to confirm no regressions.",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to confirm no regressions from your refactor. Also review the code you changed — are there any remaining pieces of `analyze()` that could be cleaner?",
+      "Final pass: using the helper functions from your refactor, add a new `mode(data: Sequence[float]) -> float` function that returns the most frequent value in the sequence. Then run `uv run pytest tests/ -q` and confirm everything is green."
+    ],
+    "success_criteria": [
+      "analyze() refactored into at least 3 helper functions",
+      "All existing tests still pass after refactor",
+      "mode() function added and works for test cases",
+      "All 5 pytest tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "uv run pytest tests/ -q"}
+  },
+  "duration_hint_minutes": 15
+}

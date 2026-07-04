@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-refactor-006",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Refactor global todo state into a TodoStore struct",
+  "description": "Brownfield Go refactor: extract the package-level mu/todos/nextID globals into a TodoStore struct with Add, All, and Reset methods. Keep all exported function signatures unchanged.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_middleware_server",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Refactor internal/handler/todos.go. All 3 existing tests must still pass.\n\n1. Define a TodoStore struct (unexported fields) with a sync.Mutex, a []Todo slice, and an int nextID.\n2. Add three methods on *TodoStore:\n     func (s *TodoStore) Add(title string) Todo\n       — locks, creates Todo{ID: s.nextID, Title: title, Done: false}, increments nextID, appends, returns it\n     func (s *TodoStore) All() []Todo\n       — locks, returns a copy of the slice (never return the internal slice directly)\n     func (s *TodoStore) Reset()\n       — locks, sets todos to nil and nextID to 1\n3. Replace the three package-level vars (mu, todos, nextID) with a single package-level var:\n     var store = &TodoStore{nextID: 1}\n4. Rewrite ListTodos, CreateTodo, and ResetTodos to delegate to store methods.\n   Keep all three function signatures exactly as they are — they are called by tests.\n\nAll 3 existing tests must still pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "TodoStore.Add creates todo with correct ID and Done=false",
+      "TodoStore.All returns a copy of the todos slice",
+      "TodoStore.Reset clears todos and resets nextID to 1",
+      "ListTodos, CreateTodo, ResetTodos signatures unchanged",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `go test ./...` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

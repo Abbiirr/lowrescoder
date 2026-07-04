@@ -1,0 +1,63 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-long-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "hard",
+  "duration_hint_minutes": 60,
+  "title": "Build an in-memory task scheduler in Go with status transitions and filtering",
+  "description": "Multi-step Go task: implement a task store with CRUD, then add status transitions (pending→running→done/failed), then add priority-based listing. All tests are injected.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module github.com/ai-verification/go-scheduler\n\ngo 1.22\n"
+      },
+      {
+        "path": "internal/scheduler/scheduler_test.go",
+        "content": "package scheduler_test\n\nimport (\n\t\"testing\"\n\n\t\"github.com/ai-verification/go-scheduler/internal/scheduler\"\n)\n\n// --- Step 1: Basic CRUD ---\n\nfunc TestCreateAndGet(t *testing.T) {\n\ts := scheduler.New()\n\tid := s.Create(\"send-email\", 1)\n\ttask, ok := s.Get(id)\n\tif !ok {\n\t\tt.Fatal(\"expected task to exist\")\n\t}\n\tif task.Name != \"send-email\" {\n\t\tt.Fatalf(\"expected name send-email, got %q\", task.Name)\n\t}\n\tif task.Status != scheduler.StatusPending {\n\t\tt.Fatalf(\"expected pending status, got %v\", task.Status)\n\t}\n}\n\nfunc TestGetMissing(t *testing.T) {\n\ts := scheduler.New()\n\t_, ok := s.Get(999)\n\tif ok {\n\t\tt.Fatal(\"expected false for missing task\")\n\t}\n}\n\nfunc TestListAll(t *testing.T) {\n\ts := scheduler.New()\n\ts.Create(\"a\", 1)\n\ts.Create(\"b\", 2)\n\ts.Create(\"c\", 3)\n\tif s.Len() != 3 {\n\t\tt.Fatalf(\"expected 3 tasks, got %d\", s.Len())\n\t}\n}\n\n// --- Step 2: Status transitions ---\n\nfunc TestStartTask(t *testing.T) {\n\ts := scheduler.New()\n\tid := s.Create(\"job\", 1)\n\tif err := s.Start(id); err != nil {\n\t\tt.Fatalf(\"Start failed: %v\", err)\n\t}\n\ttask, _ := s.Get(id)\n\tif task.Status != scheduler.StatusRunning {\n\t\tt.Fatalf(\"expected running, got %v\", task.Status)\n\t}\n}\n\nfunc TestCompleteTask(t *testing.T) {\n\ts := scheduler.New()\n\tid := s.Create(\"job\", 1)\n\ts.Start(id)\n\tif err := s.Complete(id); err != nil {\n\t\tt.Fatalf(\"Complete failed: %v\", err)\n\t}\n\ttask, _ := s.Get(id)\n\tif task.Status != scheduler.StatusDone {\n\t\tt.Fatalf(\"expected done, got %v\", task.Status)\n\t}\n}\n\nfunc TestFailTask(t *testing.T) {\n\ts := scheduler.New()\n\tid := s.Create(\"job\", 1)\n\ts.Start(id)\n\tif err := s.Fail(id); err != nil {\n\t\tt.Fatalf(\"Fail failed: %v\", err)\n\t}\n\ttask, _ := s.Get(id)\n\tif task.Status != scheduler.StatusFailed {\n\t\tt.Fatalf(\"expected failed, got %v\", task.Status)\n\t}\n}\n\nfunc TestInvalidTransition(t *testing.T) {\n\ts := scheduler.New()\n\tid := s.Create(\"job\", 1)\n\t// Cannot complete a pending task directly\n\tif err := s.Complete(id); err == nil {\n\t\tt.Fatal(\"expected error completing a pending task\")\n\t}\n}\n\n// --- Step 3: Priority listing ---\n\nfunc TestListByPriority(t *testing.T) {\n\ts := scheduler.New()\n\ts.Create(\"low\", 1)\n\ts.Create(\"high\", 10)\n\ts.Create(\"med\", 5)\n\ttasks := s.ListByPriority()\n\tif len(tasks) != 3 {\n\t\tt.Fatalf(\"expected 3 tasks, got %d\", len(tasks))\n\t}\n\tif tasks[0].Priority != 10 {\n\t\tt.Fatalf(\"expected highest priority first, got %d\", tasks[0].Priority)\n\t}\n\tif tasks[2].Priority != 1 {\n\t\tt.Fatalf(\"expected lowest priority last, got %d\", tasks[2].Priority)\n\t}\n}\n\nfunc TestFilterByStatus(t *testing.T) {\n\ts := scheduler.New()\n\tid1 := s.Create(\"a\", 1)\n\ts.Create(\"b\", 2)\n\ts.Start(id1)\n\trunning := s.FilterByStatus(scheduler.StatusRunning)\n\tif len(running) != 1 {\n\t\tt.Fatalf(\"expected 1 running task, got %d\", len(running))\n\t}\n\tpending := s.FilterByStatus(scheduler.StatusPending)\n\tif len(pending) != 1 {\n\t\tt.Fatalf(\"expected 1 pending task, got %d\", len(pending))\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Create internal/scheduler/scheduler.go implementing a task scheduler in three steps.\n\nStep 1 — Basic CRUD:\n  type Status string constants: StatusPending, StatusRunning, StatusDone, StatusFailed\n  type Task struct { ID int; Name string; Priority int; Status Status }\n  func New() *Scheduler\n  func (s *Scheduler) Create(name string, priority int) int  // returns new task ID\n  func (s *Scheduler) Get(id int) (Task, bool)\n  func (s *Scheduler) Len() int\n\nStep 2 — Status transitions:\n  func (s *Scheduler) Start(id int) error    // pending → running; error if wrong state\n  func (s *Scheduler) Complete(id int) error // running → done; error if wrong state\n  func (s *Scheduler) Fail(id int) error     // running → failed; error if wrong state\n\nStep 3 — Priority listing:\n  func (s *Scheduler) ListByPriority() []Task   // all tasks, highest priority first\n  func (s *Scheduler) FilterByStatus(s Status) []Task\n\nAll 10 tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Task struct with ID/Name/Priority/Status",
+      "Status constants: pending/running/done/failed",
+      "Start/Complete/Fail enforce valid transitions",
+      "ListByPriority returns highest priority first",
+      "FilterByStatus returns tasks matching status",
+      "All 10 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (10 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

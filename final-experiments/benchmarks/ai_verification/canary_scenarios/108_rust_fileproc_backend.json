@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-backend-003",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add filter_lines, parse_key_value, and validate_password to Rust file-processor library",
+  "description": "Brownfield Rust task: extend the file-processor/validator library with three new utility functions covering line filtering, key-value parsing, and password validation.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_boxed_errors",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Extend src/lib.rs with three new public functions. All 7 existing tests must still pass.\n\n1. pub fn filter_lines(path: &Path, prefix: &str) -> Result<Vec<String>, Box<dyn std::error::Error>>\n   — reads the file at path\n   — returns lines (not empty after trim) that start with prefix\n   — if prefix is empty, returns all non-empty lines\n   — preserves original line content (not trimmed)\n\n2. pub fn parse_key_value(s: &str) -> Result<(String, String), Box<dyn std::error::Error>>\n   — splits on the first '=' character\n   — trims whitespace from both key and value\n   — returns Err if '=' is absent or key is empty after trim\n   — value may be empty string\n\n3. pub fn validate_password(pw: &str) -> Result<(), Box<dyn std::error::Error>>\n   — Err if length < 8\n   — Err if no ASCII digit (0-9)\n   — Err if no ASCII letter (a-z or A-Z)\n   — Ok(()) otherwise\n\nAdd at least 2 tests per function (6 new tests total). All 7 original tests + 6 new tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "filter_lines returns lines starting with prefix",
+      "filter_lines with empty prefix returns all non-empty lines",
+      "parse_key_value splits on first = and trims whitespace",
+      "parse_key_value returns Err when no = present",
+      "validate_password rejects short passwords",
+      "validate_password rejects passwords missing digits or letters",
+      "All 7 existing tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (13 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `cargo test` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

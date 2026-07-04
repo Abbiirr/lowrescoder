@@ -1,0 +1,104 @@
+# Anvil copycat — authorization registry (PLAN_05 §1, the hard gate).
+#
+# No copycat channel runs against a target not listed here, nor a channel not
+# enabled for that target. `reuse_scope` decides what is allowed; `weights` is
+# the most ToS-sensitive scope and requires a recorded per-provider ToS check.
+# This file is intentionally OUTSIDE Anvil's action space — the loop must never
+# be able to weaken its own authorization gates.
+
+targets:
+  - id: puku-cli
+    channel: [structural]            # Channel A — structural imitation only
+    source: "puku-cli --help (local @puku/puku-cli binary; bundled snapshot fallback)"
+    license: "review-before-use"     # observable CLI surface only
+    reuse_scope: structure_only      # port the IDEA, never vendor puku-cli code
+    notes: >-
+      Claude-Code-compatible headless coding-agent CLI; already used in this
+      workspace as the harness-tester's known-good control. Channel A reads only
+      its public `--help` surface and proposes clean-room AutoCode components
+      evaluated on AutoCode's own oracle. Do NOT ship verbatim puku-cli code.
+
+  - id: codex
+    channel: [structural]            # Channel A — structural imitation only
+    source: "codex --help (local OpenAI Codex CLI binary; bundled snapshot fallback)"
+    license: "review-before-use"     # observable CLI surface only
+    reuse_scope: structure_only      # port the IDEA, never vendor codex code
+    notes: >-
+      OpenAI Codex CLI. A second structural target demonstrating the
+      census/gap-diff/propose system generalizes beyond puku-cli. Read only its
+      public `--help` surface; do NOT ship verbatim codex code.
+
+  # --- Reference source-map targets (PLAN_05 §5.2) -------------------------- #
+  # The seven harnesses the `research-components/` corpus already mirrors. They
+  # are registered at `reuse_scope: weights` per §5.2, the most ToS-sensitive
+  # grant. CAVEAT: the registry's `assert_reuse_scope` refuses a `weights` run
+  # until a per-provider ToS check is recorded (`tos_check:` block), and no
+  # `tos-check` CLI command exists yet to write that record (PLAN_05 §5.1, still
+  # open). So these targets VALIDATE and can be listed/structurally censused
+  # (Channel A reads only the public source map), but a `weights`-scope channel
+  # run against them is correctly blocked until the ToS read is recorded. Channel
+  # A produces clean-room AutoCode components evaluated on AutoCode's own oracle;
+  # never ship vendored source from these mirrors.
+
+  - id: claude-code
+    channel: [structural]
+    source: research-components/claude-code-sourcemap   # local mirror only
+    license: "review-before-use"     # confirm the mirror's license permits study
+    reuse_scope: weights             # ToS-gated; no tos_check recorded yet (un-runnable)
+    notes: >-
+      Public source map. Structural study only. Do NOT ship verbatim code.
+      `weights` scope is blocked until a per-provider ToS check is recorded.
+
+  - id: openai-codex
+    channel: [structural]
+    source: research-components/openai-codex
+    license: "review-before-use"
+    reuse_scope: weights
+    notes: >-
+      OpenAI Codex source mirror. Structural study only; do NOT vendor code.
+      `weights` scope is ToS-gated and un-runnable until a tos_check is recorded.
+
+  - id: opencode
+    channel: [structural]
+    source: research-components/opencode
+    license: "review-before-use"
+    reuse_scope: weights
+    notes: >-
+      opencode source mirror (`/sandbox` mode + broader LSP op surface — §2.4).
+      Structural study only; `weights` scope is ToS-gated and un-runnable yet.
+
+  - id: aider
+    channel: [structural]
+    source: research-components/aider
+    license: "review-before-use"
+    reuse_scope: weights
+    notes: >-
+      aider source mirror. Structural study only; do NOT vendor code.
+      `weights` scope is ToS-gated and un-runnable until a tos_check is recorded.
+
+  - id: pi-mono
+    channel: [structural]
+    source: research-components/pi-mono
+    license: "review-before-use"
+    reuse_scope: weights
+    notes: >-
+      pi-mono source mirror. Structural study only; do NOT vendor code.
+      `weights` scope is ToS-gated and un-runnable until a tos_check is recorded.
+
+  - id: open-swe
+    channel: [structural]
+    source: research-components/open-swe
+    license: "review-before-use"
+    reuse_scope: weights
+    notes: >-
+      open-swe source mirror. Structural study only; do NOT vendor code.
+      `weights` scope is ToS-gated and un-runnable until a tos_check is recorded.
+
+  - id: goose
+    channel: [structural]
+    source: research-components/goose
+    license: "review-before-use"
+    reuse_scope: weights
+    notes: >-
+      goose source mirror. Structural study only; do NOT vendor code.
+      `weights` scope is ToS-gated and un-runnable until a tos_check is recorded.

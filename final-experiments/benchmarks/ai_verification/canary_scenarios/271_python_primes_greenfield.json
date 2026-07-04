@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-023",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement prime number utilities in Python",
+  "description": "Greenfield Python task: implement sieve_of_eratosthenes, prime_factorization, and is_prime.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"primes\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/primes.py",
+        "content": "# TODO: implement sieve_of_eratosthenes, prime_factorization, is_prime\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_primes.py",
+        "content": "from src.primes import sieve_of_eratosthenes, prime_factorization, is_prime\n\n\ndef test_sieve_basic():\n    assert sieve_of_eratosthenes(10) == [2, 3, 5, 7]\n    assert sieve_of_eratosthenes(2) == [2]\n    assert sieve_of_eratosthenes(1) == []\n\n\ndef test_is_prime():\n    assert is_prime(2)\n    assert is_prime(13)\n    assert not is_prime(1)\n    assert not is_prime(15)\n    assert not is_prime(0)\n\n\ndef test_prime_factorization_basic():\n    assert prime_factorization(12) == [2, 2, 3]\n    assert prime_factorization(30) == [2, 3, 5]\n    assert prime_factorization(7) == [7]\n\n\ndef test_prime_factorization_power_of_two():\n    assert prime_factorization(8) == [2, 2, 2]\n\n\ndef test_sieve_primes_correct():\n    primes = sieve_of_eratosthenes(50)\n    for p in primes:\n        assert is_prime(p)\n    assert all(not is_prime(n) for n in range(2, 51) if n not in primes)\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement prime utilities in src/primes.py.\n\ndef sieve_of_eratosthenes(n: int) -> list[int]:\n    # Return all primes <= n.\n    # Boolean sieve: mark composites starting from p*p.\n    # Return sorted list of primes.\n\ndef is_prime(n: int) -> bool:\n    # Return True if n is prime.\n    # n < 2: False. n == 2: True. Even n > 2: False.\n    # Trial division up to sqrt(n), step 2.\n\ndef prime_factorization(n: int) -> list[int]:\n    # Return sorted list of prime factors (with repetition).\n    # Divide out 2s, then odd divisors from 3 to sqrt(n).\n    # If n > 1 at end, append n.\n\nAll 5 tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "sieve_of_eratosthenes returns correct primes for n=10 and n=50",
+      "is_prime correctly handles 0, 1, 2, primes, and composites",
+      "prime_factorization returns factors in sorted order with repetition",
+      "prime_factorization(8) == [2, 2, 2]",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.primes import sieve_of_eratosthenes, prime_factorization, is_prime\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.primes import sieve_of_eratosthenes, prime_factorization, is_prime\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

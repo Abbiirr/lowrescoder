@@ -1,0 +1,67 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-015",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement a generic ring buffer in Go",
+  "description": "Greenfield Go task: implement a generic fixed-capacity ring buffer (circular buffer) with Push, Pop, IsEmpty, and IsFull operations.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module ringbuf\n\ngo 1.21\n"
+      },
+      {
+        "path": "ringbuf.go",
+        "content": "package ringbuf\n\n// TODO: implement RingBuffer\n"
+      },
+      {
+        "path": "ringbuf_test.go",
+        "content": "package ringbuf\n\nimport \"testing\"\n\nfunc TestPushPopBasic(t *testing.T) {\n\trb := New[int](3)\n\tif err := rb.Push(1); err != nil {\n\t\tt.Fatal(err)\n\t}\n\tif err := rb.Push(2); err != nil {\n\t\tt.Fatal(err)\n\t}\n\tv, err := rb.Pop()\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\tif v != 1 {\n\t\tt.Errorf(\"want 1 got %d\", v)\n\t}\n}\n\nfunc TestFull(t *testing.T) {\n\trb := New[int](2)\n\trb.Push(1)\n\trb.Push(2)\n\tif err := rb.Push(3); err == nil {\n\t\tt.Fatal(\"expected error on push to full buffer\")\n\t}\n}\n\nfunc TestEmpty(t *testing.T) {\n\trb := New[int](2)\n\tif _, err := rb.Pop(); err == nil {\n\t\tt.Fatal(\"expected error on pop from empty buffer\")\n\t}\n}\n\nfunc TestIsFullIsEmpty(t *testing.T) {\n\trb := New[string](2)\n\tif !rb.IsEmpty() {\n\t\tt.Fatal(\"should be empty initially\")\n\t}\n\trb.Push(\"a\")\n\trb.Push(\"b\")\n\tif !rb.IsFull() {\n\t\tt.Fatal(\"should be full after 2 pushes\")\n\t}\n}\n\nfunc TestWrapAround(t *testing.T) {\n\trb := New[int](3)\n\trb.Push(1)\n\trb.Push(2)\n\trb.Push(3)\n\trb.Pop()\n\trb.Push(4)\n\tv, _ := rb.Pop()\n\tif v != 2 {\n\t\tt.Errorf(\"want 2 got %d\", v)\n\t}\n\tv, _ = rb.Pop()\n\tif v != 3 {\n\t\tt.Errorf(\"want 3 got %d\", v)\n\t}\n\tv, _ = rb.Pop()\n\tif v != 4 {\n\t\tt.Errorf(\"want 4 got %d\", v)\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement RingBuffer[T any] in ringbuf.go.\n\ntype RingBuffer[T any] struct { ... }\n\nfunc New[T any](capacity int) *RingBuffer[T]\nfunc (rb *RingBuffer[T]) Push(v T) error   // error if full\nfunc (rb *RingBuffer[T]) Pop() (T, error)  // error if empty\nfunc (rb *RingBuffer[T]) IsEmpty() bool\nfunc (rb *RingBuffer[T]) IsFull() bool\n\nUse a fixed-size slice with head/tail indices and a count.\nAll 5 tests in ringbuf_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "RingBuffer struct with data slice, head int, tail int, count int",
+      "New allocates data slice of given capacity",
+      "Push returns error when full, otherwise stores and advances tail mod cap",
+      "Pop returns error when empty, otherwise reads head and advances head mod cap",
+      "Wrap-around test passes (head/tail cross boundary correctly)",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

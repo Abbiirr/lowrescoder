@@ -1,0 +1,147 @@
+{
+  "_meta": {
+    "description": "B14-PROXY: LiveCodeBench Equivalent — 15 coding problems with test cases",
+    "selection_criteria": "LeetCode-style problems, mixed difficulty, deterministic test suites",
+    "comparison_validity": "proxy-only",
+    "parity_claim": "forbidden",
+    "note": "PROXY lane — custom fixtures inspired by LiveCodeBench. NOT comparable to published LiveCodeBench numbers.",
+    "last_verified": "2026-03-04"
+  },
+  "tasks": [
+    {
+      "task_id": "lcb-001-reverse-integer",
+      "category": "math",
+      "difficulty": "easy",
+      "description": "Reverse digits of a 32-bit signed integer, return 0 on overflow",
+      "fixture_dir": "fixtures/b14/lcb-001-reverse-integer",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
+    },
+    {
+      "task_id": "lcb-002-valid-sudoku",
+      "category": "arrays",
+      "difficulty": "medium",
+      "description": "Determine if a 9x9 Sudoku board is valid",
+      "fixture_dir": "fixtures/b14/lcb-002-valid-sudoku",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
+    },
+    {
+      "task_id": "lcb-003-group-anagrams",
+      "category": "hashing",
+      "difficulty": "medium",
+      "description": "Group strings that are anagrams of each other",
+      "fixture_dir": "fixtures/b14/lcb-003-group-anagrams",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
+    },
+    {
+      "task_id": "lcb-004-trapping-rain-water",
+      "category": "stacks",
+      "difficulty": "hard",
+      "description": "Calculate how much water can be trapped between bars",
+      "fixture_dir": "fixtures/b14/lcb-004-trapping-rain-water",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
+    },
+    {
+      "task_id": "lcb-005-climbing-stairs",
+      "category": "dynamic_programming",
+      "difficulty": "easy",
+      "description": "Count distinct ways to climb n stairs taking 1 or 2 steps",
+      "fixture_dir": "fixtures/b14/lcb-005-climbing-stairs",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
+    },
+    {
+      "task_id": "lcb-006-rotting-oranges",
+      "category": "bfs",
+      "difficulty": "medium",
+      "description": "Determine minimum time for all oranges to rot via BFS spread",
+      "fixture_dir": "fixtures/b14/lcb-006-rotting-oranges",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
+    },
+    {
+      "task_id": "lcb-007-longest-increasing-subsequence",
+      "category": "dynamic_programming",
+      "difficulty": "medium",
+      "description": "Find length of longest strictly increasing subsequence",
+      "fixture_dir": "fixtures/b14/lcb-007-longest-increasing-subsequence",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
+    },
+    {
+      "task_id": "lcb-008-kth-largest",
+      "category": "heaps",
+      "difficulty": "medium",
+      "description": "Find the kth largest element in an unsorted array",
+      "fixture_dir": "fixtures/b14/lcb-008-kth-largest",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
+    },
+    {
+      "task_id": "lcb-009-decode-ways",
+      "category": "dynamic_programming",
+      "difficulty": "medium",
+      "description": "Count number of ways to decode a digit string to letters",
+      "fixture_dir": "fixtures/b14/lcb-009-decode-ways",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
+    },
+    {
+      "task_id": "lcb-010-number-of-islands",
+      "category": "dfs",
+      "difficulty": "medium",
+      "description": "Count number of islands in a 2D grid",
+      "fixture_dir": "fixtures/b14/lcb-010-number-of-islands",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
+    },
+    {
+      "task_id": "lcb-011-binary-tree-level-order",
+      "category": "trees",
+      "difficulty": "medium",
+      "description": "Return level order traversal of a binary tree",
+      "fixture_dir": "fixtures/b14/lcb-011-binary-tree-level-order",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
+    },
+    {
+      "task_id": "lcb-012-edit-distance",
+      "category": "dynamic_programming",
+      "difficulty": "hard",
+      "description": "Find minimum edit distance between two strings",
+      "fixture_dir": "fixtures/b14/lcb-012-edit-distance",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
+    },
+    {
+      "task_id": "lcb-013-max-subarray",
+      "category": "arrays",
+      "difficulty": "easy",
+      "description": "Find the contiguous subarray with the largest sum",
+      "fixture_dir": "fixtures/b14/lcb-013-max-subarray",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
+    },
+    {
+      "task_id": "lcb-014-word-search",
+      "category": "backtracking",
+      "difficulty": "medium",
+      "description": "Determine if a word exists in a 2D character grid",
+      "fixture_dir": "fixtures/b14/lcb-014-word-search",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
+    },
+    {
+      "task_id": "lcb-015-alien-dictionary",
+      "category": "graphs",
+      "difficulty": "hard",
+      "description": "Determine character order from a sorted alien dictionary",
+      "fixture_dir": "fixtures/b14/lcb-015-alien-dictionary",
+      "grading_command": "python grader.py",
+      "entry_file": "solution.py"
+    }
+  ]
+}

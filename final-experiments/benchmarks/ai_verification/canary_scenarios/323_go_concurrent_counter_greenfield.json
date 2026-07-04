@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-035",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement a concurrent safe counter map in Go",
+  "description": "Greenfield Go task: implement CounterMap — a goroutine-safe map that increments string counters using sync.RWMutex. Supports Increment, Get, Reset, and TopN.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module countermap\n\ngo 1.21\n"
+      },
+      {
+        "path": "countermap.go",
+        "content": "// TODO: implement CounterMap\npackage countermap\n"
+      },
+      {
+        "path": "countermap_test.go",
+        "content": "package countermap\n\nimport (\n\t\"sync\"\n\t\"testing\"\n)\n\nfunc TestIncrementAndGet(t *testing.T) {\n\tcm := NewCounterMap()\n\tcm.Increment(\"a\")\n\tcm.Increment(\"a\")\n\tcm.Increment(\"b\")\n\tif cm.Get(\"a\") != 2 {\n\t\tt.Fatalf(\"want 2, got %d\", cm.Get(\"a\"))\n\t}\n\tif cm.Get(\"b\") != 1 {\n\t\tt.Fatalf(\"want 1, got %d\", cm.Get(\"b\"))\n\t}\n\tif cm.Get(\"z\") != 0 {\n\t\tt.Fatalf(\"want 0 for missing key\")\n\t}\n}\n\nfunc TestReset(t *testing.T) {\n\tcm := NewCounterMap()\n\tcm.Increment(\"x\")\n\tcm.Reset(\"x\")\n\tif cm.Get(\"x\") != 0 {\n\t\tt.Fatalf(\"want 0 after reset, got %d\", cm.Get(\"x\"))\n\t}\n}\n\nfunc TestTopN(t *testing.T) {\n\tcm := NewCounterMap()\n\tcm.Increment(\"a\")\n\tcm.Increment(\"a\")\n\tcm.Increment(\"a\")\n\tcm.Increment(\"b\")\n\tcm.Increment(\"b\")\n\tcm.Increment(\"c\")\n\ttop := cm.TopN(2)\n\tif top[0] != \"a\" || top[1] != \"b\" {\n\t\tt.Fatalf(\"want [a b], got %v\", top)\n\t}\n}\n\nfunc TestConcurrentIncrement(t *testing.T) {\n\tcm := NewCounterMap()\n\tvar wg sync.WaitGroup\n\tfor i := 0; i < 1000; i++ {\n\t\twg.Add(1)\n\t\tgo func() {\n\t\t\tdefer wg.Done()\n\t\t\tcm.Increment(\"key\")\n\t\t}()\n\t}\n\twg.Wait()\n\tif cm.Get(\"key\") != 1000 {\n\t\tt.Fatalf(\"want 1000, got %d\", cm.Get(\"key\"))\n\t}\n}\n\nfunc TestTopNEmpty(t *testing.T) {\n\tcm := NewCounterMap()\n\tif top := cm.TopN(5); len(top) != 0 {\n\t\tt.Fatalf(\"want empty, got %v\", top)\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement CounterMap in countermap.go.\n\npackage countermap\n\nimport (\n    \"sort\"\n    \"sync\"\n)\n\ntype CounterMap struct {\n    mu      sync.RWMutex\n    counts  map[string]int\n}\n\nfunc NewCounterMap() *CounterMap {\n    return &CounterMap{counts: make(map[string]int)}\n}\n\nfunc (cm *CounterMap) Increment(key string) {\n    cm.mu.Lock()\n    defer cm.mu.Unlock()\n    cm.counts[key]++\n}\n\nfunc (cm *CounterMap) Get(key string) int {\n    cm.mu.RLock()\n    defer cm.mu.RUnlock()\n    return cm.counts[key]\n}\n\nfunc (cm *CounterMap) Reset(key string) {\n    cm.mu.Lock()\n    defer cm.mu.Unlock()\n    delete(cm.counts, key)\n}\n\nfunc (cm *CounterMap) TopN(n int) []string {\n    cm.mu.RLock()\n    defer cm.mu.RUnlock()\n    type kv struct {\n        key   string\n        count int\n    }\n    var pairs []kv\n    for k, v := range cm.counts {\n        pairs = append(pairs, kv{k, v})\n    }\n    sort.Slice(pairs, func(i, j int) bool {\n        if pairs[i].count != pairs[j].count {\n            return pairs[i].count > pairs[j].count\n        }\n        return pairs[i].key < pairs[j].key\n    })\n    result := make([]string, 0, n)\n    for i := 0; i < n && i < len(pairs); i++ {\n        result = append(result, pairs[i].key)\n    }\n    return result\n}\n\nAll 5 tests must pass.\nRun: go test -race ./...",
+    "required_artifacts": [
+      "CounterMap uses sync.RWMutex for goroutine safety",
+      "Increment, Get, Reset, TopN methods implemented",
+      "TopN returns top N keys sorted by count desc then alpha asc",
+      "Missing keys return 0",
+      "All 5 tests pass under -race"
+    ],
+    "success_criteria": [
+      "go test -race ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test -race ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test -race ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test -race ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

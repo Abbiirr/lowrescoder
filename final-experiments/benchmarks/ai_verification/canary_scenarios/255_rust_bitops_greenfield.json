@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-022",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Implement bit manipulation utilities in Rust",
+  "description": "Greenfield Rust task: implement count_ones, reverse_bits, is_power_of_two, and next_power_of_two for u32 integers.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"bitops\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement count_ones, reverse_bits, is_power_of_two, next_power_of_two\n"
+      },
+      {
+        "path": "tests/bitops_test.rs",
+        "content": "use bitops::{count_ones, reverse_bits, is_power_of_two, next_power_of_two};\n\n#[test]\nfn test_count_ones() {\n    assert_eq!(count_ones(0), 0);\n    assert_eq!(count_ones(1), 1);\n    assert_eq!(count_ones(0b1011), 3);\n    assert_eq!(count_ones(u32::MAX), 32);\n}\n\n#[test]\nfn test_reverse_bits() {\n    assert_eq!(reverse_bits(1u32), 1u32 << 31);\n    assert_eq!(reverse_bits(1u32 << 31), 1u32);\n    assert_eq!(reverse_bits(0u32), 0u32);\n}\n\n#[test]\nfn test_is_power_of_two() {\n    assert!(is_power_of_two(1));\n    assert!(is_power_of_two(2));\n    assert!(is_power_of_two(4));\n    assert!(!is_power_of_two(0));\n    assert!(!is_power_of_two(3));\n    assert!(!is_power_of_two(6));\n}\n\n#[test]\nfn test_next_power_of_two() {\n    assert_eq!(next_power_of_two(1), 1);\n    assert_eq!(next_power_of_two(3), 4);\n    assert_eq!(next_power_of_two(4), 4);\n    assert_eq!(next_power_of_two(5), 8);\n}\n\n#[test]\nfn test_count_ones_pattern() {\n    assert_eq!(count_ones(0b1010_1010), 4);\n    assert_eq!(count_ones(0b1111_1111), 8);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement four bit manipulation functions in src/lib.rs.\n\npub fn count_ones(n: u32) -> u32\n  // Count the number of set bits. Use n.count_ones() or a manual loop.\n\npub fn reverse_bits(n: u32) -> u32\n  // Reverse all 32 bits. Use n.reverse_bits() or a manual loop.\n\npub fn is_power_of_two(n: u32) -> bool\n  // True if n > 0 and exactly one bit is set. Hint: n & (n-1) == 0.\n\npub fn next_power_of_two(n: u32) -> u32\n  // Return smallest power of 2 >= n (n > 0).\n  // If n is already a power of 2, return n.\n  // Hint: use leading_zeros() on (n-1) to find the exponent.\n\nAll 5 tests in tests/bitops_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "count_ones uses n.count_ones() or manual popcount",
+      "reverse_bits uses n.reverse_bits() or manual bit reversal",
+      "is_power_of_two checks n>0 && (n&(n-1))==0",
+      "next_power_of_two returns n for powers of 2, else 1<<(32-(n-1).leading_zeros())",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

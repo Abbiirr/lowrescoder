@@ -1,0 +1,67 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-005",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Build a generic frequency counter in Rust: Counter<T>",
+  "description": "Greenfield Rust task: implement a generic Counter<T> struct that counts occurrences of items, supports batch ingestion, and can return the most common items in descending order.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"counter\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement Counter<T>\n"
+      },
+      {
+        "path": "tests/counter_test.rs",
+        "content": "use counter::Counter;\n\n#[test]\nfn test_add_and_count() {\n    let mut c: Counter<&str> = Counter::new();\n    c.add(\"apple\");\n    c.add(\"banana\");\n    c.add(\"apple\");\n    assert_eq!(c.count(&\"apple\"), 2);\n    assert_eq!(c.count(&\"banana\"), 1);\n    assert_eq!(c.count(&\"cherry\"), 0);\n}\n\n#[test]\nfn test_add_many() {\n    let mut c: Counter<i32> = Counter::new();\n    c.add_many([1, 2, 2, 3, 3, 3]);\n    assert_eq!(c.count(&3), 3);\n    assert_eq!(c.count(&2), 2);\n    assert_eq!(c.count(&1), 1);\n}\n\n#[test]\nfn test_total() {\n    let mut c: Counter<char> = Counter::new();\n    c.add_many(['a', 'b', 'a', 'c']);\n    assert_eq!(c.total(), 4);\n}\n\n#[test]\nfn test_most_common() {\n    let mut c: Counter<&str> = Counter::new();\n    c.add_many([\"x\", \"y\", \"x\", \"z\", \"x\", \"y\"]);\n    let top = c.most_common(2);\n    assert_eq!(top.len(), 2);\n    assert_eq!(top[0], (\"x\", 3));\n    assert_eq!(top[1], (\"y\", 2));\n}\n\n#[test]\nfn test_most_common_fewer_than_n() {\n    let mut c: Counter<u8> = Counter::new();\n    c.add(1);\n    c.add(2);\n    // asking for top-5 when only 2 distinct items exist\n    let top = c.most_common(5);\n    assert_eq!(top.len(), 2);\n}\n\n#[test]\nfn test_empty_counter() {\n    let c: Counter<i32> = Counter::new();\n    assert_eq!(c.total(), 0);\n    assert_eq!(c.count(&42), 0);\n    assert!(c.most_common(3).is_empty());\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Create src/lib.rs implementing a generic frequency counter.\n\nuse std::collections::HashMap;\n\npub struct Counter<T> { ... }\n\nimpl<T: Eq + std::hash::Hash + Clone + Ord> Counter<T> {\n    pub fn new() -> Self\n    pub fn add(&mut self, item: T)\n    pub fn add_many(&mut self, items: impl IntoIterator<Item = T>)\n    pub fn count(&self, item: &T) -> usize     // 0 for unseen items\n    pub fn most_common(&self, n: usize) -> Vec<(T, usize)>  // descending by count; ties broken by item Ord ascending; truncated to n\n    pub fn total(&self) -> usize               // sum of all counts\n}\n\nAll 6 tests in tests/counter_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "Counter<T> struct backed by HashMap",
+      "add_many accepts any IntoIterator<Item=T>",
+      "count returns 0 for unseen items",
+      "most_common returns top-n by descending count (ties by item Ord ascending)",
+      "total returns sum of all counts",
+      "All 6 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (6 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

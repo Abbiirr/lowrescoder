@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head><title>Admin</title></head>
+<body>
+<h1>Admin</h1>
+<table>
+{% for post in posts %}
+<tr>
+  <td>{{ post.id }}</td>
+  <td>{{ post.title }}</td>
+  <td>{{ 'published' if post.published else 'draft' }}</td>
+</tr>
+{% endfor %}
+</table>
+</body>
+</html>

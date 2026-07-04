@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-brownfield-024",
+  "title": "Fix three bugs in a Go string utilities package",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Fix bugs in strutil: IsPalindrome compares s[i] to itself, Reverse swaps element with itself, CountVowels missing 'u'.",
+  "repo_seed": {
+    "files": {
+      "strutil.go": "package strutil\n\nimport \"strings\"\n\n// IsPalindrome returns true if s reads the same forwards and backwards.\nfunc IsPalindrome(s string) bool {\n\tn := len(s)\n\tfor i := 0; i < n/2; i++ {\n\t\tif s[i] != s[i] { // BUG: should compare s[i] with s[n-1-i]\n\t\t\treturn false\n\t\t}\n\t}\n\treturn true\n}\n\n// Reverse returns the string with characters in reverse order.\nfunc Reverse(s string) string {\n\trunes := []rune(s)\n\tn := len(runes)\n\tfor i := 0; i < n/2; i++ {\n\t\trunes[i], runes[i] = runes[i], runes[n-1-i] // BUG: left side should be runes[n-1-i]\n\t}\n\treturn string(runes)\n}\n\n// CountVowels returns the count of vowels (a, e, i, o, u) in s (case-insensitive).\nfunc CountVowels(s string) int {\n\tcount := 0\n\tvowels := \"aeio\" // BUG: missing 'u'\n\tfor _, c := range strings.ToLower(s) {\n\t\tif strings.ContainsRune(vowels, c) {\n\t\t\tcount++\n\t\t}\n\t}\n\treturn count\n}\n",
+      "strutil_test.go": "package strutil\n\nimport \"testing\"\n\nfunc TestIsPalindrome(t *testing.T) {\n\tif !IsPalindrome(\"racecar\") {\n\t\tt.Error(\"racecar should be a palindrome\")\n\t}\n\tif IsPalindrome(\"hello\") {\n\t\tt.Error(\"hello should not be a palindrome\")\n\t}\n\tif !IsPalindrome(\"abba\") {\n\t\tt.Error(\"abba should be a palindrome\")\n\t}\n}\n\nfunc TestReverse(t *testing.T) {\n\tif got := Reverse(\"hello\"); got != \"olleh\" {\n\t\tt.Errorf(\"Reverse(hello) = %q, want %q\", got, \"olleh\")\n\t}\n\tif got := Reverse(\"abc\"); got != \"cba\" {\n\t\tt.Errorf(\"Reverse(abc) = %q, want %q\", got, \"cba\")\n\t}\n}\n\nfunc TestCountVowels(t *testing.T) {\n\tif got := CountVowels(\"Hello World\"); got != 3 {\n\t\tt.Errorf(\"CountVowels(Hello World) = %d, want 3\", got)\n\t}\n\tif got := CountVowels(\"aeiou\"); got != 5 {\n\t\tt.Errorf(\"CountVowels(aeiou) = %d, want 5\", got)\n\t}\n}\n",
+      "go.mod": "module strutil\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in strutil.go:\n1. IsPalindrome: change `s[i] != s[i]` to `s[i] != s[n-1-i]`\n2. Reverse: change `runes[i], runes[i] = ...` to `runes[i], runes[n-1-i] = runes[n-1-i], runes[i]`\n3. CountVowels: change `\"aeio\"` to `\"aeiou\"`\nAll 3 test cases must pass.",
+    "entry_point": "strutil.go",
+    "success_criteria": "All 3 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

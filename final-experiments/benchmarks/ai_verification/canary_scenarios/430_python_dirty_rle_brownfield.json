@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-026",
+  "title": "Fix three bugs in a Python RunLengthEncoder class",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Fix bugs in RunLengthEncoder: encode initializes count at 0 (should be 1), encode resets count to 0 on boundary (should be 1), decode repeats the digit char instead of the letter char.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/rle.py": "class RunLengthEncoder:\n    @staticmethod\n    def encode(s: str) -> str:\n        if not s:\n            return \"\"\n        result = []\n        count = 0  # BUG 1: should be 1\n        for i in range(1, len(s)):\n            if s[i] == s[i - 1]:\n                count += 1\n            else:\n                result.append(f\"{count}{s[i - 1]}\")\n                count = 0  # BUG 2: should be 1\n        result.append(f\"{count}{s[-1]}\")\n        return \"\".join(result)\n\n    @staticmethod\n    def decode(s: str) -> str:\n        result = []\n        i = 0\n        while i < len(s):\n            count = int(s[i])\n            result.append(s[i] * count)  # BUG 3: should be s[i + 1]\n            i += 2\n        return \"\".join(result)\n",
+      "tests/test_rle.py": "import sys\nsys.path.insert(0, '.')\nfrom src.rle import RunLengthEncoder\n\n\ndef test_encode_run():\n    assert RunLengthEncoder.encode('aaa') == '3a'\n\n\ndef test_encode_mixed():\n    assert RunLengthEncoder.encode('aab') == '2a1b'\n\n\ndef test_decode_simple():\n    assert RunLengthEncoder.decode('3a') == 'aaa'\n\n\ndef test_decode_mixed():\n    assert RunLengthEncoder.decode('2a1b') == 'aab'\n",
+      "pyproject.toml": "[project]\nname = \"rle\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = []\n\n[tool.pytest.ini_options]\npythonpath = [\".\"]\n\n[dependency-groups]\ndev = [\"pytest>=8.0\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/rle.py:\n1. encode: change initial `count = 0` to `count = 1` (first character is already one occurrence)\n2. encode: change reset `count = 0` to `count = 1` inside the else branch (each new group starts at 1)\n3. decode: change `s[i] * count` to `s[i + 1] * count` so the letter (not the digit) is repeated\nAll 4 tests must pass.",
+    "entry_point": "src/rle.py",
+    "success_criteria": "All 4 pytest test cases pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

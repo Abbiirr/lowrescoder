@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-shell-formatter-001",
+  "title": "Implement Rust string utility functions with shell test verification",
+  "category": "repo_init",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Rust crate needs three string utility functions implemented. The agent must implement them AND run `cargo test` to verify. Exercises both file editing and shell command execution.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "/// Reverse a string.\npub fn reverse(s: &str) -> String {\n    todo!(\"reverse: implement me\")\n}\n\n/// Count the number of vowels (a, e, i, o, u) in a string (case-insensitive).\npub fn count_vowels(s: &str) -> usize {\n    todo!(\"count_vowels: implement me\")\n}\n\n/// Check if a string is a palindrome (ignores case and non-alphanumeric chars).\npub fn is_palindrome(s: &str) -> bool {\n    todo!(\"is_palindrome: implement me\")\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_reverse() {\n        assert_eq!(reverse(\"hello\"), \"olleh\");\n        assert_eq!(reverse(\"\"), \"\");\n        assert_eq!(reverse(\"a\"), \"a\");\n    }\n\n    #[test]\n    fn test_count_vowels() {\n        assert_eq!(count_vowels(\"hello\"), 2);\n        assert_eq!(count_vowels(\"AEIOU\"), 5);\n        assert_eq!(count_vowels(\"rhythm\"), 0);\n    }\n\n    #[test]\n    fn test_is_palindrome() {\n        assert!(is_palindrome(\"racecar\"));\n        assert!(is_palindrome(\"A man a plan a canal Panama\"));\n        assert!(!is_palindrome(\"hello\"));\n    }\n}\n",
+      "Cargo.toml": "[package]\nname = \"strutils\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement the three string utility functions in src/lib.rs:\n1. `reverse(s)` — reverse a string\n2. `count_vowels(s)` — count vowels (a,e,i,o,u), case-insensitive\n3. `is_palindrome(s)` — true if palindrome, ignoring case and non-alphanumeric characters\n\nRun `cargo test` to verify all tests pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": [
+      "All 3 cargo tests pass",
+      "reverse, count_vowels, is_palindrome all implemented"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test"
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 5
+}

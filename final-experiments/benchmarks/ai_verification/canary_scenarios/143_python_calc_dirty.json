@@ -1,0 +1,72 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-dirty-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 buggy Python math functions",
+  "description": "Greenfield Python dirty scenario: a calc module has 3 broken implementations. Fix divide, is_prime, and factorial so all tests pass.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"sample-calc\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = [\n    \"pytest>=8.0\",\n]\n\n[tool.pytest.ini_options]\npythonpath = [\".\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/calc.py",
+        "content": "def divide(a: float, b: float) -> float:\n    \"\"\"Return a divided by b.\"\"\"\n    return a * b  # BUG: multiplies instead of divides\n\n\ndef is_prime(n: int) -> bool:\n    \"\"\"Return True if n is a prime number.\"\"\"\n    return n > 1  # BUG: only checks n > 1, not actual primality\n\n\ndef factorial(n: int) -> int:\n    \"\"\"Return n! for non-negative integer n.\"\"\"\n    return n  # BUG: returns n instead of computing factorial\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_calc.py",
+        "content": "from src.calc import divide, is_prime, factorial\n\n\ndef test_divide():\n    assert divide(10, 2) == 5.0\n    assert divide(7, 2) == 3.5\n\n\ndef test_divide_by_one():\n    assert divide(42, 1) == 42.0\n\n\ndef test_is_prime_true():\n    assert is_prime(2)\n    assert is_prime(3)\n    assert is_prime(7)\n    assert is_prime(13)\n\n\ndef test_is_prime_false():\n    assert not is_prime(1)\n    assert not is_prime(4)\n    assert not is_prime(9)\n    assert not is_prime(0)\n\n\ndef test_factorial():\n    assert factorial(0) == 1\n    assert factorial(1) == 1\n    assert factorial(5) == 120\n    assert factorial(6) == 720\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 buggy functions in src/calc.py so all tests pass.\n\n  def divide(a: float, b: float) -> float\n    — return a / b\n\n  def is_prime(n: int) -> bool\n    — return True iff n is a prime number\n    — 0 and 1 are not prime; 2, 3, 5, 7, 11, 13 are prime\n    — 4, 6, 9 are not prime\n\n  def factorial(n: int) -> int\n    — return n! for non-negative integer n\n    — factorial(0) == 1, factorial(5) == 120\n\nDo not modify the test file.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "divide returns a / b",
+      "is_prime returns True for primes, False for non-primes and n < 2",
+      "factorial returns correct n! (0! == 1)",
+      "All tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

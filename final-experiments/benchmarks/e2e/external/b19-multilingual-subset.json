@@ -1,0 +1,81 @@
+{
+  "_meta": {
+    "description": "B19: Multilingual Repository Work — mixed-language bugfix and build tasks",
+    "comparison_validity": "internal",
+    "parity_claim": "forbidden",
+    "note": "Multi-task lane: shell pipeline, Dockerfile, YAML config, bash script, Makefile.",
+    "last_verified": "2026-03-21"
+  },
+  "tasks": [
+    {
+      "task_id": "b19-fix-shell-pipeline",
+      "category": "scripting",
+      "difficulty": "medium",
+      "language": "bash",
+      "description": "Fix a broken CSV-to-JSON shell pipeline — grep flags, missing sort, broken awk.",
+      "fixture_dir": "fixtures/b19/b19-fix-shell-pipeline",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "force_host": true
+      }
+    },
+    {
+      "task_id": "b19-fix-dockerfile",
+      "category": "scripting",
+      "difficulty": "medium",
+      "language": "docker",
+      "description": "Fix a Dockerfile with wrong base image, missing WORKDIR, bad layer order.",
+      "fixture_dir": "fixtures/b19/b19-fix-dockerfile",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "force_host": true
+      }
+    },
+    {
+      "task_id": "b19-fix-yaml-config",
+      "category": "file_operations",
+      "difficulty": "easy",
+      "language": "yaml",
+      "description": "Fix YAML config with indentation errors, type mismatches, and missing keys.",
+      "fixture_dir": "fixtures/b19/b19-fix-yaml-config",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "force_host": true
+      }
+    },
+    {
+      "task_id": "b19-bash-script-fix",
+      "category": "scripting",
+      "difficulty": "medium",
+      "language": "bash",
+      "description": "Fix a broken bash build script — quoting, backticks, mkdir flags.",
+      "fixture_dir": "fixtures/b19/b19-bash-script-fix",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "force_host": true
+      }
+    },
+    {
+      "task_id": "b19-makefile-fix",
+      "category": "scripting",
+      "difficulty": "medium",
+      "language": "make",
+      "description": "Fix a broken Makefile — tabs, rm flags, PHONY, package name.",
+      "fixture_dir": "fixtures/b19/b19-makefile-fix",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "force_host": true
+      }
+    }
+  ]
+}

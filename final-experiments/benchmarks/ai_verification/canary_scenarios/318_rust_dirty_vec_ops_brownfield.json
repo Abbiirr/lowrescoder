@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-brownfield-006",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Fix bugs in Rust vector utility functions",
+  "description": "Brownfield Rust dirty_cleanup: fix three intentional bugs in vector utility functions (sum uses product, max returns min, dedup keeps duplicates).",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"vecutils\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// BUG: uses product instead of sum\npub fn sum(nums: &[i64]) -> i64 {\n    nums.iter().copied().product()\n}\n\n// BUG: returns the minimum instead of the maximum\npub fn max(nums: &[i64]) -> Option<i64> {\n    nums.iter().copied().reduce(|a, b| if a < b { a } else { b })\n}\n\n// BUG: returns the original vec instead of deduplicating\npub fn dedup(nums: Vec<i64>) -> Vec<i64> {\n    nums\n}\n"
+      },
+      {
+        "path": "tests/vecutils_test.rs",
+        "content": "use vecutils::{sum, max, dedup};\n\n#[test]\nfn test_sum() {\n    assert_eq!(sum(&[1, 2, 3, 4]), 10);\n}\n\n#[test]\nfn test_sum_empty() {\n    assert_eq!(sum(&[]), 0);\n}\n\n#[test]\nfn test_max() {\n    assert_eq!(max(&[3, 1, 4, 1, 5, 9]), Some(9));\n}\n\n#[test]\nfn test_max_empty() {\n    assert_eq!(max(&[]), None);\n}\n\n#[test]\nfn test_dedup() {\n    let mut v = dedup(vec![1, 2, 2, 3, 3, 3, 4]);\n    v.sort();\n    assert_eq!(v, vec![1, 2, 3, 4]);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/lib.rs.\n\nBug 1 — sum: uses .product() instead of .sum().\n  Fix: change nums.iter().copied().product() to nums.iter().copied().sum()\n\nBug 2 — max: returns the minimum (uses a < b to keep a).\n  Fix: change `if a < b { a }` to `if a > b { a }`\n\nBug 3 — dedup: returns the original vec unchanged.\n  Fix: use a seen HashSet to filter: only keep elements not yet seen.\n\nAll 5 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "sum returns the arithmetic sum of all elements",
+      "max returns Some(maximum) or None for empty slice",
+      "dedup removes duplicate values (order of first occurrence preserved)",
+      "All edge cases (empty inputs) handled",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

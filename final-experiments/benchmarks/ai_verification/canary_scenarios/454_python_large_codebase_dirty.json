@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-py-large-codebase-dirty-001",
+  "title": "Fix a bug in a Python package spread across 6 modules",
+  "category": "dirty_cleanup",
+  "difficulty": "hard",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Python data-processing pipeline has 6 modules. A bug in the config module causes wrong default values that propagate through the pipeline. Agent must use semantic_search/grep to find where the bug manifests and fix it. Tests cover the full pipeline.",
+  "repo_seed": {
+    "files": {
+      "config.py": "\"\"\"Pipeline configuration.\"\"\"\n\nDEFAULT_BATCH_SIZE = 10\nDEFAULT_THRESHOLD = 0.5\n# BUG: should be True (enable normalization by default)\nDEFAULT_NORMALIZE = False\nDEFAULT_MAX_RETRIES = 3\n",
+      "normalizer.py": "\"\"\"Data normalization utilities.\"\"\"\nfrom config import DEFAULT_NORMALIZE\n\n\ndef normalize(values: list, enabled: bool = DEFAULT_NORMALIZE) -> list:\n    \"\"\"Normalize values to [0, 1] range if enabled.\"\"\"\n    if not enabled:\n        return values\n    if not values:\n        return values\n    min_v = min(values)\n    max_v = max(values)\n    if max_v == min_v:\n        return [0.5] * len(values)\n    return [(v - min_v) / (max_v - min_v) for v in values]\n",
+      "filter_stage.py": "\"\"\"Filter stage: removes values below threshold.\"\"\"\nfrom config import DEFAULT_THRESHOLD\n\n\ndef filter_values(values: list, threshold: float = DEFAULT_THRESHOLD) -> list:\n    \"\"\"Return only values >= threshold.\"\"\"\n    return [v for v in values if v >= threshold]\n",
+      "batcher.py": "\"\"\"Batches input data.\"\"\"\nfrom config import DEFAULT_BATCH_SIZE\n\n\ndef batch(data: list, size: int = DEFAULT_BATCH_SIZE) -> list:\n    \"\"\"Split data into batches of given size.\"\"\"\n    return [data[i:i+size] for i in range(0, len(data), size)]\n",
+      "pipeline.py": "\"\"\"Full data processing pipeline.\"\"\"\nfrom normalizer import normalize\nfrom filter_stage import filter_values\nfrom batcher import batch\nfrom config import DEFAULT_BATCH_SIZE\n\n\ndef run_pipeline(raw_data: list, batch_size: int = DEFAULT_BATCH_SIZE) -> list:\n    \"\"\"Normalize → filter → batch the input data.\"\"\"\n    normalized = normalize(raw_data)\n    filtered = filter_values(normalized)\n    batches = batch(filtered, batch_size)\n    return batches\n",
+      "stats.py": "\"\"\"Statistics helpers.\"\"\"\n\n\ndef mean(values: list) -> float:\n    if not values:\n        return 0.0\n    return sum(values) / len(values)\n\n\ndef count_above(values: list, threshold: float) -> int:\n    return sum(1 for v in values if v > threshold)\n",
+      "test_pipeline.py": "\"\"\"Integration tests for the full pipeline.\"\"\"\nimport pytest\nfrom normalizer import normalize\nfrom filter_stage import filter_values\nfrom pipeline import run_pipeline\nfrom stats import mean, count_above\n\n\ndef test_normalize_enabled_by_default():\n    \"\"\"normalize() with default args should normalize the data.\"\"\"\n    result = normalize([10, 20, 30])\n    # After normalization: [0.0, 0.5, 1.0]\n    assert result == [0.0, 0.5, 1.0], f\"Expected [0.0, 0.5, 1.0] but got {result}\"\n\n\ndef test_pipeline_normalizes_data():\n    \"\"\"Full pipeline should normalize data before filtering.\"\"\"\n    # Input: [0, 1, 2, 3, 4] -> normalized: [0, 0.25, 0.5, 0.75, 1.0]\n    # filtered (>=0.5): [0.5, 0.75, 1.0]\n    batches = run_pipeline([0, 1, 2, 3, 4], batch_size=10)\n    assert len(batches) == 1\n    flat = batches[0]\n    assert len(flat) == 3, f\"Expected 3 items after filter but got {len(flat)}: {flat}\"\n    assert abs(flat[0] - 0.5) < 1e-9\n\n\ndef test_normalize_disabled_explicitly():\n    \"\"\"normalize() should be passthrough when disabled.\"\"\"\n    result = normalize([10, 20, 30], enabled=False)\n    assert result == [10, 20, 30]\n\n\ndef test_mean_and_count():\n    values = [0.1, 0.5, 0.8, 0.9]\n    assert mean(values) == pytest.approx(0.575)\n    assert count_above(values, 0.5) == 2\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The pipeline tests are failing. The root cause is in config.py: `DEFAULT_NORMALIZE` is set to `False` but it should be `True` — normalization must be enabled by default.\n\nUse search tools to find all places in the codebase that depend on `DEFAULT_NORMALIZE`, understand the data flow, then fix the config.\n\nRun `pytest test_pipeline.py -v` to verify all 4 tests pass.",
+    "entry_point": "config.py",
+    "success_criteria": [
+      "All 4 pytest tests pass",
+      "DEFAULT_NORMALIZE is True in config.py",
+      "normalize() with default args returns normalized values"
+    ],
+    "followup_prompts": [
+      "Run `pytest test_pipeline.py -v` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `pytest test_pipeline.py -v` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "pytest test_pipeline.py -v"
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 8
+}

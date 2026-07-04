@@ -1,0 +1,60 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 12,
+  "title": "Greenfield Rust parsing library: parse_int, parse_csv_row, parse_key_value",
+  "description": "Start from an empty Rust module and implement three simple text-parsing functions with tests.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": "",
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"parser-utils\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dev-dependencies]\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Create src/lib.rs in this Rust project with three parsing functions:\n\n1. pub fn parse_int(s: &str) -> Result<i64, String>\n   Parses s as a base-10 integer. Returns Ok(n) on success, Err(msg) on failure.\n   Examples: parse_int(\"42\") == Ok(42), parse_int(\"-7\") == Ok(-7), parse_int(\"abc\") == Err(...).\n\n2. pub fn parse_csv_row(s: &str) -> Vec<String>\n   Splits s on commas and returns each field trimmed of whitespace. Empty string returns vec![\"\"]. \n   Examples: parse_csv_row(\"a, b, c\") == [\"a\", \"b\", \"c\"], parse_csv_row(\"\") == [\"\"].\n\n3. pub fn parse_key_value(s: &str) -> Option<(String, String)>\n   Expects the format KEY=VALUE (first '=' splits key and value). Returns None if no '=' present.\n   Examples: parse_key_value(\"name=Alice\") == Some((\"name\", \"Alice\")), parse_key_value(\"url=http://x=y\") == Some((\"url\", \"http://x=y\")), parse_key_value(\"noequals\") == None.\n\nWrite 2 tests per function (6 total). cargo test must show 6 tests passing. cargo build must succeed.",
+    "required_artifacts": [
+      "parse_int with 2 tests",
+      "parse_csv_row with 2 tests",
+      "parse_key_value with 2 tests",
+      "cargo test passes all 6 tests",
+      "cargo build succeeds"
+    ],
+    "success_criteria": [
+      "parse_int returns descriptive Err message",
+      "parse_csv_row splits on commas and trims whitespace",
+      "parse_key_value splits on first = only",
+      "6 tests pass"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

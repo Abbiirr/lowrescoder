@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "559-python-mt-long-debugging",
+  "title": "Multi-bug Python debugging session — 4 turns",
+  "category": "dirty_cleanup",
+  "difficulty": "hard",
+  "target_stack": {"language": "python", "framework": null, "extra": {}},
+  "description": "Three distinct bugs: wrong algorithm (uses sort instead of correct approach), off-by-one, missing edge case. Each fixed in a separate turn.",
+  "repo_seed": {
+    "files": {
+      "algorithms.py": "\"\"\"Algorithms with 3 distinct bugs.\"\"\"\nfrom typing import List, Optional\n\n\ndef find_two_sum(nums: List[int], target: int) -> Optional[tuple[int, int]]:\n    \"\"\"Find two indices i,j where nums[i] + nums[j] == target.\n    \n    BUG 1: Wrong algorithm — sorts the list, destroying the original indices.\n    Should use a hash map for O(n) lookup with correct indices.\n    \"\"\"\n    sorted_nums = sorted(enumerate(nums), key=lambda x: x[1])\n    left, right = 0, len(sorted_nums) - 1\n    while left < right:\n        s = sorted_nums[left][1] + sorted_nums[right][1]\n        if s == target:\n            return (sorted_nums[left][0], sorted_nums[right][0])  # returns wrong indices\n        elif s < target:\n            left += 1\n        else:\n            right -= 1\n    return None\n\n\ndef longest_common_prefix(strs: List[str]) -> str:\n    \"\"\"Find longest common prefix among all strings.\n    \n    BUG 2: Off-by-one — uses range(len(strs[0])) but should stop\n    when any string runs out of characters, causing IndexError.\n    \"\"\"\n    if not strs:\n        return \"\"\n    prefix = []\n    for i in range(len(strs[0])):\n        char = strs[0][i]\n        for s in strs[1:]:  # BUG: no bounds check — s[i] raises IndexError if s is shorter\n            if s[i] != char:\n                return \"\".join(prefix)\n        prefix.append(char)\n    return \"\".join(prefix)\n\n\ndef rotate_list(nums: List[int], k: int) -> List[int]:\n    \"\"\"Rotate list right by k positions.\n    \n    BUG 3: Missing edge case — doesn't handle empty list or k=0,\n    and modular reduction is wrong for large k.\n    \"\"\"\n    n = len(nums)\n    k = k % n  # BUG: ZeroDivisionError when nums is empty\n    return nums[n - k:] + nums[:n - k]\n",
+      "tests/test_algorithms.py": "import pytest\nfrom algorithms import find_two_sum, longest_common_prefix, rotate_list\n\n\n# --- two_sum ---\ndef test_two_sum_basic():\n    result = find_two_sum([2, 7, 11, 15], 9)\n    assert result is not None\n    i, j = result\n    assert i == 0 and j == 1\n\n\ndef test_two_sum_not_first_indices():\n    result = find_two_sum([3, 2, 4], 6)\n    assert result is not None\n    i, j = sorted(result)\n    assert i == 1 and j == 2\n\n\ndef test_two_sum_no_solution():\n    assert find_two_sum([1, 2, 3], 10) is None\n\n\n# --- longest_common_prefix ---\ndef test_lcp_basic():\n    assert longest_common_prefix([\"flower\", \"flow\", \"flight\"]) == \"fl\"\n\n\ndef test_lcp_no_prefix():\n    assert longest_common_prefix([\"dog\", \"racecar\", \"car\"]) == \"\"\n\n\ndef test_lcp_empty_list():\n    assert longest_common_prefix([]) == \"\"\n\n\ndef test_lcp_shorter_string():\n    assert longest_common_prefix([\"ab\", \"a\"]) == \"a\"\n\n\n# --- rotate_list ---\ndef test_rotate_basic():\n    assert rotate_list([1, 2, 3, 4, 5], 2) == [4, 5, 1, 2, 3]\n\n\ndef test_rotate_empty():\n    assert rotate_list([], 3) == []\n\n\ndef test_rotate_k_zero():\n    assert rotate_list([1, 2, 3], 0) == [1, 2, 3]\n\n\ndef test_rotate_large_k():\n    assert rotate_list([1, 2, 3], 9) == [1, 2, 3]  # k=9 is same as k=0 for len 3\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The `find_two_sum` function has Bug 1: it sorts the list and returns sorted indices instead of original indices. Fix it using a hash map: iterate through nums, for each element check if `target - element` is already in the map, if yes return the pair of indices, otherwise add element to map. Run `uv run pytest tests/test_algorithms.py -k two_sum -v`.",
+    "followup_prompts": [
+      "Good. Now fix Bug 2 in `longest_common_prefix`: when iterating character positions, add a bounds check — if `i >= len(s)` for any string, stop and return the prefix collected so far. Run `uv run pytest tests/test_algorithms.py -k lcp -v` to verify the LCP tests pass.",
+      "Good. Now fix Bug 3 in `rotate_list`: add a guard for empty list or k=0 at the start, returning early. Run `uv run pytest tests/ -q` to verify all 11 tests pass.",
+      "Final push: run `uv run pytest tests/ -q` and fix any remaining failures. All 11 tests must be green."
+    ],
+    "success_criteria": [
+      "find_two_sum uses hash map and returns correct original indices",
+      "longest_common_prefix handles shorter strings without IndexError",
+      "rotate_list handles empty list and k=0 edge cases",
+      "All 11 pytest tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "uv run pytest tests/ -q"}
+  },
+  "duration_hint_minutes": 25
+}

@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "541-python-mt-long-etl-pipeline",
+  "title": "Build an ETL pipeline in Python — 4 turns",
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "target_stack": {"language": "python", "framework": null, "extra": {}},
+  "description": "Four-turn ETL pipeline: turn 1 CSV reading, turn 2 transform/validate, turn 3 write output + error report, turn 4 full integration test.",
+  "repo_seed": {
+    "files": {
+      "data/input.csv": "id,name,age,email\n1,Alice,30,alice@example.com\n2,Bob,25,bob@example.com\n3,Charlie,,charlie@example.com\n4,Dave,200,dave@example.com\n5,Eve,22,notanemail\n6,Frank,28,frank@example.com\n",
+      "pipeline/__init__.py": "",
+      "pipeline/reader.py": "\"\"\"CSV reader for ETL pipeline.\"\"\"\nimport csv\nfrom pathlib import Path\nfrom typing import Iterator\n\n\ndef read_csv(path: str | Path) -> Iterator[dict]:\n    \"\"\"Yield rows as dicts from a CSV file.\"\"\"\n    raise NotImplementedError\n",
+      "pipeline/transform.py": "\"\"\"Transform and validate ETL rows.\"\"\"\nfrom typing import TypedDict\nimport re\n\n\nclass Row(TypedDict):\n    id: int\n    name: str\n    age: int\n    email: str\n\n\nclass ValidationError(TypedDict):\n    row_id: int\n    field: str\n    message: str\n\n\ndef transform(row: dict) -> tuple[Row | None, ValidationError | None]:\n    \"\"\"Validate and coerce a raw dict row.\n    \n    Rules:\n    - id: must be present and convertible to int\n    - name: required, non-empty string\n    - age: must be int between 0 and 150\n    - email: must match basic email pattern\n    \n    Returns (Row, None) on success or (None, ValidationError) on failure.\n    \"\"\"\n    raise NotImplementedError\n",
+      "pipeline/writer.py": "\"\"\"Write ETL output and error report.\"\"\"\nimport csv\nfrom pathlib import Path\nfrom typing import Sequence\n\n\ndef write_output(rows: Sequence[dict], path: str | Path) -> None:\n    \"\"\"Write valid rows to CSV.\"\"\"\n    raise NotImplementedError\n\n\ndef write_error_report(errors: Sequence[dict], path: str | Path) -> None:\n    \"\"\"Write validation errors to CSV.\"\"\"\n    raise NotImplementedError\n",
+      "tests/__init__.py": "",
+      "tests/test_pipeline.py": "import csv\nimport pytest\nfrom pathlib import Path\nfrom pipeline.reader import read_csv\nfrom pipeline.transform import transform\nfrom pipeline.writer import write_output, write_error_report\n\n\ndef test_read_csv(tmp_path):\n    f = tmp_path / \"test.csv\"\n    f.write_text(\"a,b\\n1,2\\n3,4\\n\")\n    rows = list(read_csv(f))\n    assert len(rows) == 2\n    assert rows[0] == {\"a\": \"1\", \"b\": \"2\"}\n\n\ndef test_transform_valid():\n    row, err = transform({\"id\": \"1\", \"name\": \"Alice\", \"age\": \"30\", \"email\": \"a@b.com\"})\n    assert err is None\n    assert row[\"id\"] == 1\n    assert row[\"age\"] == 30\n\n\ndef test_transform_missing_age():\n    row, err = transform({\"id\": \"3\", \"name\": \"Charlie\", \"age\": \"\", \"email\": \"c@d.com\"})\n    assert row is None\n    assert err[\"field\"] == \"age\"\n\n\ndef test_transform_invalid_age():\n    row, err = transform({\"id\": \"4\", \"name\": \"Dave\", \"age\": \"200\", \"email\": \"d@e.com\"})\n    assert row is None\n    assert err[\"field\"] == \"age\"\n\n\ndef test_transform_invalid_email():\n    row, err = transform({\"id\": \"5\", \"name\": \"Eve\", \"age\": \"22\", \"email\": \"notanemail\"})\n    assert row is None\n    assert err[\"field\"] == \"email\"\n\n\ndef test_write_output(tmp_path):\n    rows = [{\"id\": 1, \"name\": \"Alice\", \"age\": 30, \"email\": \"a@b.com\"}]\n    out = tmp_path / \"out.csv\"\n    write_output(rows, out)\n    content = list(csv.DictReader(out.read_text().splitlines()))\n    assert len(content) == 1\n    assert content[0][\"name\"] == \"Alice\"\n\n\ndef test_write_error_report(tmp_path):\n    errors = [{\"row_id\": 3, \"field\": \"age\", \"message\": \"missing\"}]\n    out = tmp_path / \"errors.csv\"\n    write_error_report(errors, out)\n    content = list(csv.DictReader(out.read_text().splitlines()))\n    assert len(content) == 1\n    assert content[0][\"field\"] == \"age\"\n\n\ndef test_full_pipeline(tmp_path):\n    \"\"\"End-to-end: read input.csv, transform, write output and errors.\"\"\"\n    from pathlib import Path\n    input_csv = Path(\"data/input.csv\")\n    if not input_csv.exists():\n        pytest.skip(\"data/input.csv not found\")\n    \n    valid_rows = []\n    errors = []\n    for raw in read_csv(input_csv):\n        row, err = transform(raw)\n        if row:\n            valid_rows.append(row)\n        elif err:\n            errors.append(err)\n    \n    out = tmp_path / \"output.csv\"\n    err_out = tmp_path / \"errors.csv\"\n    write_output(valid_rows, out)\n    write_error_report(errors, err_out)\n    \n    assert len(valid_rows) == 3  # Alice, Bob, Frank\n    assert len(errors) == 3     # Charlie (no age), Dave (age > 150), Eve (bad email)\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `read_csv(path)` in `pipeline/reader.py` — open the file with `csv.DictReader` and yield each row as a dict. Run `uv run pytest tests/test_pipeline.py::test_read_csv -v`.",
+    "followup_prompts": [
+      "Good progress. Run `uv run pytest tests/ -q` to see where we stand. Now implement `transform(row)` in `pipeline/transform.py`: validate id (must convert to int), name (non-empty), age (0-150), email (basic regex). Return (Row, None) on success or (None, ValidationError) on failure.",
+      "Good. Implement `write_output(rows, path)` and `write_error_report(errors, path)` in `pipeline/writer.py`. Both should write dicts to CSV using csv.DictWriter with the dict keys as fieldnames. Run `uv run pytest tests/ -q` to check.",
+      "Final push: run `uv run pytest tests/ -q` and fix any remaining failures. The full pipeline test processes data/input.csv and should find 3 valid rows (Alice, Bob, Frank) and 3 errors (Charlie=missing age, Dave=age>150, Eve=bad email). Make sure all 8 tests pass."
+    ],
+    "success_criteria": [
+      "read_csv yields rows as dicts from CSV file",
+      "transform validates all 4 fields with correct rules",
+      "write_output and write_error_report produce valid CSVs",
+      "Full pipeline produces correct valid/error counts from input.csv",
+      "All 8 pytest tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "uv run pytest tests/ -q"}
+  },
+  "duration_hint_minutes": 30
+}

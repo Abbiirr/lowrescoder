@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "537-ts-mt-debug-stale-closure",
+  "title": "Debug stale closure in React useEffect — 3 turns",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {"language": "typescript", "framework": "react", "extra": {}},
+  "description": "useEffect has stale closure due to empty dependency array. Fix deps array, run tests, extract to custom hook.",
+  "repo_seed": {
+    "files": {
+      "package.json": "{\n  \"name\": \"stale-closure-fix\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"test\": \"jest --forceExit\"\n  },\n  \"dependencies\": {\n    \"react\": \"^18.0.0\"\n  },\n  \"devDependencies\": {\n    \"@testing-library/react\": \"^14.0.0\",\n    \"@types/react\": \"^18.0.0\",\n    \"@types/jest\": \"^29.0.0\",\n    \"jest\": \"^29.0.0\",\n    \"jest-environment-jsdom\": \"^29.0.0\",\n    \"ts-jest\": \"^29.0.0\",\n    \"typescript\": \"^5.0.0\"\n  },\n  \"jest\": {\n    \"preset\": \"ts-jest\",\n    \"testEnvironment\": \"jsdom\"\n  }\n}\n",
+      "src/useAutoSave.ts": "import { useState, useEffect, useRef } from 'react';\n\n/** Auto-saves content after a debounce delay. */\nexport function useAutoSave(\n  content: string,\n  onSave: (content: string) => void,\n  delayMs: number = 1000\n) {\n  const [saveCount, setSaveCount] = useState(0);\n  const [lastSaved, setLastSaved] = useState<string | null>(null);\n\n  useEffect(() => {\n    // BUG: stale closure — content is captured at mount time only\n    // because deps array is empty []\n    const timer = setTimeout(() => {\n      onSave(content); // BUG: uses stale content from first render\n      setSaveCount(c => c + 1);\n      setLastSaved(content);\n    }, delayMs);\n    return () => clearTimeout(timer);\n  }, []); // BUG: should include [content, onSave, delayMs]\n\n  return { saveCount, lastSaved };\n}\n",
+      "src/useLatestRef.ts": "import { useRef, useEffect } from 'react';\n\n/** Returns a ref that always holds the latest value of value. */\nexport function useLatestRef<T>(value: T) {\n  const ref = useRef(value);\n  // TODO: implement — update ref.current whenever value changes\n  return ref;\n}\n",
+      "src/hooks.test.ts": "import { renderHook, act } from '@testing-library/react';\nimport { useAutoSave } from './useAutoSave';\nimport { useLatestRef } from './useLatestRef';\n\nbeforeEach(() => {\n  jest.useFakeTimers();\n});\n\nafterEach(() => {\n  jest.useRealTimers();\n});\n\ntest('useAutoSave saves with latest content', async () => {\n  const onSave = jest.fn();\n  const { rerender } = renderHook(\n    ({ content }) => useAutoSave(content, onSave, 500),\n    { initialProps: { content: 'initial' } }\n  );\n  // Change content\n  rerender({ content: 'updated' });\n  act(() => jest.advanceTimersByTime(600));\n  // Should save with 'updated', not 'initial'\n  expect(onSave).toHaveBeenCalledWith('updated');\n});\n\ntest('useAutoSave debounces — only saves once for rapid changes', () => {\n  const onSave = jest.fn();\n  const { rerender } = renderHook(\n    ({ content }) => useAutoSave(content, onSave, 500),\n    { initialProps: { content: 'a' } }\n  );\n  rerender({ content: 'ab' });\n  rerender({ content: 'abc' });\n  act(() => jest.advanceTimersByTime(600));\n  expect(onSave).toHaveBeenCalledTimes(1);\n  expect(onSave).toHaveBeenCalledWith('abc');\n});\n\ntest('useLatestRef always returns latest value', () => {\n  const { result, rerender } = renderHook(\n    ({ value }) => useLatestRef(value),\n    { initialProps: { value: 1 } }\n  );\n  expect(result.current.current).toBe(1);\n  rerender({ value: 99 });\n  expect(result.current.current).toBe(99);\n});\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The `useAutoSave` hook has a stale closure bug — the useEffect dependency array is `[]` so it captures `content`, `onSave`, and `delayMs` only at mount time. Fix it by changing the dependency array to `[content, onSave, delayMs]`. Run `npm test -- --forceExit`.",
+    "followup_prompts": [
+      "Run `npm test -- --forceExit` to check the current state. Walk me through what you fixed. Now implement `useLatestRef<T>(value: T)` in `src/useLatestRef.ts` — add a useEffect that sets `ref.current = value` whenever value changes (dep array: [value]). Run `npm test -- --forceExit` and fix any failures.",
+      "Final verification: run `npm test -- --forceExit` and confirm a completely clean build. Every test must pass — fix any failures now."
+    ],
+    "success_criteria": [
+      "useAutoSave dep array includes content, onSave, delayMs",
+      "Auto-save debounces correctly and saves with latest content",
+      "useLatestRef updates ref.current on each render",
+      "All 3 tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "npm test -- --forceExit"}
+  },
+  "duration_hint_minutes": 15
+}

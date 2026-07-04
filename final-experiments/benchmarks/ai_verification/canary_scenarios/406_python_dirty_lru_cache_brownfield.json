@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-022",
+  "title": "Fix three bugs in a Python LRU cache",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Fix bugs in LRUCache using OrderedDict: get() doesn't mark key as recently used, put() evicts MRU instead of LRU, size() has off-by-one.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/lru_cache.py": "from collections import OrderedDict\n\n\nclass LRUCache:\n    def __init__(self, capacity):\n        self.capacity = capacity\n        self._cache = OrderedDict()\n\n    def get(self, key):\n        if key not in self._cache:\n            return -1\n        # BUG 1: missing self._cache.move_to_end(key) to mark as recently used\n        return self._cache[key]\n\n    def put(self, key, value):\n        if key in self._cache:\n            self._cache.move_to_end(key)\n        self._cache[key] = value\n        if len(self._cache) > self.capacity:\n            self._cache.popitem(last=True)  # BUG 2: should be last=False (evict LRU, not MRU)\n\n    def size(self):\n        return len(self._cache) + 1  # BUG 3: off by one\n",
+      "tests/test_lru_cache.py": "import sys\nsys.path.insert(0, '.')\nfrom src.lru_cache import LRUCache\n\n\ndef test_basic_evict():\n    cache = LRUCache(2)\n    cache.put(1, 1)\n    cache.put(2, 2)\n    cache.put(3, 3)  # evicts key 1\n    assert cache.get(1) == -1\n    assert cache.get(2) == 2\n    assert cache.get(3) == 3\n\n\ndef test_lru_order():\n    cache = LRUCache(2)\n    cache.put(1, 1)\n    cache.put(2, 2)\n    cache.get(1)   # mark 1 as recently used\n    cache.put(3, 3)  # evicts 2 (LRU)\n    assert cache.get(2) == -1\n    assert cache.get(1) == 1\n    assert cache.get(3) == 3\n\n\ndef test_size():\n    cache = LRUCache(3)\n    cache.put('a', 1)\n    cache.put('b', 2)\n    cache.put('c', 3)\n    assert cache.size() == 3\n",
+      "pyproject.toml": "[project]\nname = \"lru_cache\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = []\n\n[tool.pytest.ini_options]\npythonpath = [\".\"]\n\n[dependency-groups]\ndev = [\"pytest>=8.0\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/lru_cache.py:\n1. get: add `self._cache.move_to_end(key)` before the return to mark as recently used\n2. put: change `popitem(last=True)` to `popitem(last=False)` to evict the least-recently-used (front)\n3. size: return `len(self._cache)` not `len(self._cache) + 1`\nAll 3 tests must pass.",
+    "entry_point": "src/lru_cache.py",
+    "success_criteria": "All 3 pytest test cases pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

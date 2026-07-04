@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Greenfield Python CLI web scraper with file-based cache",
+  "description": "Build a Python CLI tool from scratch that fetches a URL, extracts hyperlinks, and caches results to disk.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Create a Python CLI tool from scratch. Structure: src/scraper.py with a main() entry point and an extract_links(html: str) -> list[str] function, tests/test_scraper.py with at least 3 tests, and pyproject.toml with requires-python>=3.11 and pytest as a dev dependency. Requirements: (1) Accept --url <URL> via argparse. (2) Fetch with urllib.request.urlopen (stdlib only, no requests/httpx). (3) extract_links() returns unique hrefs found in <a href=\"...\"> tags using a simple regex. (4) File-based cache: store raw HTML at .cache/<hostname>.html; read from cache on repeat calls for same hostname instead of fetching. (5) Print each unique href on its own line to stdout. Tests must mock urllib.request.urlopen and verify: (a) extract_links returns expected list, (b) cache file is written on first call, (c) second call reads from cache without calling urlopen again. Run uv run pytest tests/ -v to confirm all tests pass.",
+    "required_artifacts": [
+      "src/scraper.py with extract_links() and main()",
+      "Cache written to .cache/<hostname>.html",
+      "tests/test_scraper.py with 3+ tests",
+      "pyproject.toml present",
+      "uv run pytest tests/ -v passes"
+    ],
+    "success_criteria": [
+      "extract_links() correctly parses hrefs from HTML",
+      "Cache read/write logic works as specified",
+      "All 3+ tests pass"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

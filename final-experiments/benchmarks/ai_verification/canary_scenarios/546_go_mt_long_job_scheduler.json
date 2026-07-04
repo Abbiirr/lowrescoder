@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "546-go-mt-long-job-scheduler",
+  "title": "Build a job scheduler in Go — 4 turns",
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "Four-turn job scheduler: turn 1 define job, turn 2 schedule/queue, turn 3 retry on failure, turn 4 metrics and tests.",
+  "repo_seed": {
+    "files": {
+      "go.mod": "module github.com/ai-verification/job-scheduler\n\ngo 1.22\n",
+      "scheduler/scheduler.go": "package scheduler\n\nimport (\n\t\"context\"\n\t\"sync\"\n\t\"sync/atomic\"\n\t\"time\"\n)\n\n// Job defines a unit of work.\ntype Job struct {\n\tID         string\n\tFn         func(ctx context.Context) error\n\tMaxRetries int           // 0 = no retry\n\tDelay      time.Duration // initial delay before first run\n}\n\n// JobResult records the outcome of a job run.\ntype JobResult struct {\n\tJobID    string\n\tAttempts int\n\tErr      error\n}\n\n// Metrics tracks scheduler statistics.\ntype Metrics struct {\n\tSucceeded atomic.Int64\n\tFailed    atomic.Int64\n\tRetried   atomic.Int64\n}\n\n// Scheduler runs jobs concurrently with retry and metrics.\ntype Scheduler struct {\n\tctx       context.Context\n\tcancel    context.CancelFunc\n\twg        sync.WaitGroup\n\tworkers   int\n\tjobs      chan Job\n\tresults   chan JobResult\n\tmetrics   Metrics\n}\n\n// New creates a scheduler with n worker goroutines.\nfunc New(ctx context.Context, workers int) *Scheduler {\n\tctx2, cancel := context.WithCancel(ctx)\n\treturn &Scheduler{\n\t\tctx:     ctx2,\n\t\tcancel:  cancel,\n\t\tworkers: workers,\n\t\tjobs:    make(chan Job, 64),\n\t\tresults: make(chan JobResult, 64),\n\t}\n}\n\n// Start launches worker goroutines.\nfunc (s *Scheduler) Start() {\n\t// TODO\n}\n\n// Submit adds a job to the queue.\nfunc (s *Scheduler) Submit(job Job) {\n\ts.jobs <- job\n}\n\n// Stop signals all workers to finish and waits.\nfunc (s *Scheduler) Stop() {\n\ts.cancel()\n\tclose(s.jobs)\n\ts.wg.Wait()\n\tclose(s.results)\n}\n\n// Results returns the results channel.\nfunc (s *Scheduler) Results() <-chan JobResult {\n\treturn s.results\n}\n\n// GetMetrics returns a copy of current metrics.\nfunc (s *Scheduler) GetMetrics() (succeeded, failed, retried int64) {\n\treturn s.metrics.Succeeded.Load(), s.metrics.Failed.Load(), s.metrics.Retried.Load()\n}\n",
+      "scheduler/scheduler_test.go": "package scheduler_test\n\nimport (\n\t\"context\"\n\t\"errors\"\n\t\"testing\"\n\t\"time\"\n\n\t\"github.com/ai-verification/job-scheduler/scheduler\"\n)\n\nfunc TestSuccessfulJob(t *testing.T) {\n\ts := scheduler.New(context.Background(), 2)\n\ts.Start()\n\tcalled := make(chan struct{}, 1)\n\ts.Submit(scheduler.Job{\n\t\tID: \"j1\",\n\t\tFn: func(ctx context.Context) error {\n\t\t\tcalled <- struct{}{}\n\t\t\treturn nil\n\t\t},\n\t})\n\tselect {\n\tcase <-called:\n\tcase <-time.After(time.Second):\n\t\tt.Fatal(\"job not called\")\n\t}\n\ts.Stop()\n\tsucceeded, _, _ := s.GetMetrics()\n\tif succeeded != 1 {\n\t\tt.Fatalf(\"expected 1 succeeded, got %d\", succeeded)\n\t}\n}\n\nfunc TestJobRetry(t *testing.T) {\n\ts := scheduler.New(context.Background(), 1)\n\ts.Start()\n\tattempts := 0\n\ts.Submit(scheduler.Job{\n\t\tID:         \"retry\",\n\t\tMaxRetries: 2,\n\t\tFn: func(ctx context.Context) error {\n\t\t\tattempts++\n\t\t\tif attempts < 3 {\n\t\t\t\treturn errors.New(\"not yet\")\n\t\t\t}\n\t\t\treturn nil\n\t\t},\n\t})\n\ts.Stop()\n\tfor range s.Results() {} // drain\n\tif attempts != 3 {\n\t\tt.Fatalf(\"expected 3 attempts, got %d\", attempts)\n\t}\n\t_, _, retried := s.GetMetrics()\n\tif retried != 2 {\n\t\tt.Fatalf(\"expected 2 retries, got %d\", retried)\n\t}\n}\n\nfunc TestJobFailsAfterMaxRetries(t *testing.T) {\n\ts := scheduler.New(context.Background(), 1)\n\ts.Start()\n\ts.Submit(scheduler.Job{\n\t\tID:         \"fail\",\n\t\tMaxRetries: 1,\n\t\tFn: func(ctx context.Context) error { return errors.New(\"always\") },\n\t})\n\ts.Stop()\n\tvar results []scheduler.JobResult\n\tfor r := range s.Results() {\n\t\tresults = append(results, r)\n\t}\n\tif len(results) != 1 || results[0].Err == nil {\n\t\tt.Fatal(\"expected failed result\")\n\t}\n\t_, failed, _ := s.GetMetrics()\n\tif failed != 1 {\n\t\tt.Fatalf(\"expected 1 failed, got %d\", failed)\n\t}\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `Start()` in `scheduler/scheduler.go` — launch `s.workers` goroutines. Each worker should read from `s.jobs` channel, call `job.Fn(s.ctx)`, send a `JobResult` to `s.results`, and increment `s.metrics.Succeeded`. Add each goroutine to `s.wg`. Run `go test ./...`.",
+    "followup_prompts": [
+      "Good progress. Run `go test ./...` to see where we stand. Now add retry logic: if `job.Fn` returns an error and `attempts < job.MaxRetries + 1`, retry. Increment `s.metrics.Retried` for each retry. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Good. Now handle the final failure case: after all retries exhausted, send a `JobResult{Err: err}` to `s.results` and increment `s.metrics.Failed`. Make sure the drain loop in TestJobFailsAfterMaxRetries works (Stop() closes results after Wait). Run `go test ./...`.",
+      "Final push: run `go test ./...` and fix any remaining failures. All 3 tests must pass — successful job, retry logic, and fail-after-max-retries."
+    ],
+    "success_criteria": [
+      "Worker goroutines execute submitted jobs",
+      "Successful jobs increment Succeeded metric",
+      "Failed jobs are retried up to MaxRetries times",
+      "Retried count equals number of extra attempts",
+      "Failed count incremented when all retries exhausted",
+      "go test ./... passes (3 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "go test ./..."}
+  },
+  "duration_hint_minutes": 35
+}

@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-refactor-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Extract a TextTransformer trait from Rust string-utils free functions",
+  "description": "A Rust library exposes text utilities as free functions. Refactor them behind a TextTransformer trait implemented by a DefaultTransformer struct, enabling alternative implementations.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_string_utils",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The library in src/lib.rs has two public free functions: word_count(s: &str) -> usize and capitalize_words(s: &str) -> String. Refactor as follows:\n\n1. Define a trait TextTransformer with two methods: fn word_count(&self, s: &str) -> usize and fn capitalize_words(&self, s: &str) -> String.\n\n2. Create a struct DefaultTransformer (unit struct or empty struct) that implements TextTransformer by delegating to the existing logic.\n\n3. Keep the original free functions (word_count and capitalize_words) as public free functions for backwards compatibility — they can delegate to DefaultTransformer or contain the original logic.\n\n4. Add a constructor pub fn new_transformer() -> impl TextTransformer that returns a DefaultTransformer.\n\n5. Update or add tests: add test_transformer_word_count and test_transformer_capitalize that construct a DefaultTransformer and call its trait methods. All original tests must still pass.\n\nRun cargo test to confirm all tests pass. Run cargo clippy -- -D warnings to confirm no warnings.",
+    "required_artifacts": [
+      "TextTransformer trait with word_count and capitalize_words methods",
+      "DefaultTransformer struct implementing the trait",
+      "Original free functions preserved for backwards compatibility",
+      "new_transformer() constructor returning impl TextTransformer",
+      "test_transformer_word_count and test_transformer_capitalize tests pass",
+      "All original tests pass",
+      "cargo clippy -- -D warnings clean"
+    ],
+    "success_criteria": [
+      "Trait enables mock implementations in downstream tests",
+      "Backwards-compatible: existing callers using free functions still compile",
+      "All tests green"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `cargo test` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

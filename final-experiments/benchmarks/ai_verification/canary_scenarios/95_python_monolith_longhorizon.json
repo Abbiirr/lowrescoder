@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-longhorizon-003",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "medium",
+  "duration_hint_minutes": 45,
+  "title": "Extend Python social blog API with user updates, post likes, and author filtering",
+  "description": "Multi-step Python task: extend a working FastAPI social blog app with user management improvements, a like system for posts, and author-based post filtering.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_monolith_api",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "The existing blog API has users, posts, and comments. Add three groups of features to src/app.py.\n\nStep 1 — User management improvements:\n  PUT /users/{user_id}  — update username and/or email (partial update OK); 404 if not found\n  DELETE /users/{user_id} — delete user; 404 if not found; 204 on success\n\nStep 2 — Like system for posts:\n  POST /posts/{post_id}/like   — add a like to the post; 404 if post not found; 200 {\"likes\": N}\n  DELETE /posts/{post_id}/like — remove a like (floor at 0); 404 if not found; 200 {\"likes\": N}\n  GET /posts/{post_id}/likes   — return {\"likes\": N}; 404 if not found\n  Store likes as a dict _post_likes: dict[int, int] = {} in module scope.\n  Add likes reset to the existing reset() function.\n\nStep 3 — Author filtering on post list:\n  GET /posts?author_id=X — return only posts where post[\"author_id\"] == X (integer)\n  If ?author_id is absent, return all posts as before.\n\nAll 7 existing tests plus new solution tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "PUT /users/{user_id} updates username/email with 404 guard",
+      "DELETE /users/{user_id} with 204 success and 404 guard",
+      "POST/DELETE /posts/{post_id}/like track like count",
+      "GET /posts/{post_id}/likes returns current count",
+      "GET /posts?author_id= filters by author_id",
+      "reset() clears _post_likes",
+      "All tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ passes",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `uv run pytest tests/ -v` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `uv run pytest tests/ -v` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

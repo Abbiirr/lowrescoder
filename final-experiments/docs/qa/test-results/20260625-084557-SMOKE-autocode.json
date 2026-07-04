@@ -1,0 +1,379 @@
+{
+  "contract": {
+    "harness_version": "1.0.0",
+    "harness_commit_sha": "unknown",
+    "agent": "autocode",
+    "agent_version": "0.1.0",
+    "model": "fast",
+    "provider_mode": "local_free",
+    "lane": "SMOKE",
+    "run_id": "supervisor-20260625-143425",
+    "manifest_hash": "sha256:ec4fdeea8b272954",
+    "budget_profile": {
+      "wall_time_s": 600,
+      "token_cap": 30000,
+      "max_tool_calls": 60
+    },
+    "budget_profile_id": "wt600_tc30000_mc60",
+    "command_trace": "../benchmarks/benchmark_runner.py --agent autocode --lane SMOKE --model fast --run-id supervisor-20260625-143425",
+    "timestamp": "2026-06-25T08:45:57.994251+00:00",
+    "comparison_validity": "internal",
+    "seed": null,
+    "image_digests": {
+      "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+    }
+  },
+  "lane": "SMOKE",
+  "lane_name": "Smoke Tier (curated, fast)",
+  "agent": "autocode",
+  "model": "fast",
+  "provider_mode": "local_free",
+  "aggregate": {
+    "total_tasks": 6,
+    "resolved": 6,
+    "resolve_rate": 1.0,
+    "infra_fails": 0,
+    "infra_fail_rate": 0.0,
+    "total_wall_time_s": 390.2,
+    "avg_wall_time_s": 65.0
+  },
+  "results": [
+    {
+      "task_id": "b27-minimal-config-change",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 46.0,
+      "tool_calls": 18,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 46.0,
+            "changed_files": [
+              "config.yaml"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "195ae1ac",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b27-minimal-config-change_20260625_083426/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 6,
+              "todo_write": 7,
+              "edit_file": 1,
+              "run_command": 3
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 3,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b27-minimal-config-change_20260625_083426/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "b24-hardcoded-secrets",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 174.3,
+      "tool_calls": 58,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 1,
+            "resolved": false,
+            "elapsed_s": 61.9,
+            "changed_files": [
+              "app/.env.example",
+              "app/config.py",
+              "app/notifications.py",
+              "app/payments.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "c68f7199",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b24-hardcoded-secrets_20260625_083611/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 2,
+              "read_file": 8,
+              "todo_write": 7,
+              "edit_file": 4,
+              "search_text": 2,
+              "run_command": 3
+            },
+            "tool_call_errors": 0
+          },
+          {
+            "attempt": 2,
+            "returncode": 1,
+            "resolved": false,
+            "elapsed_s": 88.3,
+            "changed_files": [],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "284161ef",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b24-hardcoded-secrets_20260625_083611/grading_attempt_2.txt",
+            "tool_mix": {
+              "write_file": 1,
+              "run_command": 7,
+              "todo_write": 1,
+              "todo_read": 1
+            },
+            "tool_call_errors": 0
+          },
+          {
+            "attempt": 3,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 174.3,
+            "changed_files": [
+              "app/config.py",
+              "app/notifications.py",
+              "app/payments.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "f32fa43a",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b24-hardcoded-secrets_20260625_083611/grading_attempt_3.txt",
+            "tool_mix": {
+              "read_file": 8,
+              "todo_write": 5,
+              "edit_file": 3,
+              "search_text": 4,
+              "write_file": 1,
+              "run_command": 1
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b24-hardcoded-secrets_20260625_083611/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "b20-fix-broken-symlinks",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 53.6,
+      "tool_calls": 30,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 53.6,
+            "changed_files": [
+              "project/bin/run",
+              "project/config/auth.conf",
+              "project/config/cache.conf",
+              "project/config/db.conf",
+              "project/config/logging.conf",
+              "project/config/routes.conf"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "5bb2f32f",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b20-fix-broken-symlinks_20260625_084003/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 1,
+              "todo_write": 7,
+              "run_command": 21
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": true,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b20-fix-broken-symlinks_20260625_084003/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "b28-deterministic-sort",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 25.2,
+      "tool_calls": 8,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 25.2,
+            "changed_files": [
+              "project/sorter.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "bed307b0",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b28-deterministic-sort_20260625_084158/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 1,
+              "todo_write": 3,
+              "edit_file": 1,
+              "run_command": 2
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0
+      }
+    },
+    {
+      "task_id": "b21-refactor-preserve-api",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 35.1,
+      "tool_calls": 11,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 35.1,
+            "changed_files": [
+              "mathutils.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "8dbd573e",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b21-refactor-preserve-api_20260625_084223/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 2,
+              "todo_write": 4,
+              "edit_file": 1,
+              "run_command": 3
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b21-refactor-preserve-api_20260625_084223/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "b18-fix-date-parsing",
+      "resolved": true,
+      "score": 0.0,
+      "wall_time_s": 56.0,
+      "tool_calls": 21,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "",
+      "artifacts": {
+        "grade_attempts": [
+          {
+            "attempt": 1,
+            "returncode": 0,
+            "resolved": true,
+            "elapsed_s": 56.0,
+            "changed_files": [
+              "project/dateparser.py"
+            ],
+            "test_files_changed": false,
+            "protected_path_violation": [],
+            "diff_hash": "ee57b5fb",
+            "grading_output_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b18-fix-date-parsing_20260625_084358/grading_attempt_1.txt",
+            "tool_mix": {
+              "list_files": 1,
+              "read_file": 3,
+              "todo_write": 5,
+              "write_file": 1,
+              "run_command": 8,
+              "edit_file": 1,
+              "todo_read": 2
+            },
+            "tool_call_errors": 0
+          }
+        ],
+        "failure_type": "RESOLVED",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_SMOKE_b18-fix-date-parsing_20260625_084358/setup_log.txt"
+      }
+    }
+  ],
+  "image_digests": {
+    "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+  },
+  "halted": false
+}

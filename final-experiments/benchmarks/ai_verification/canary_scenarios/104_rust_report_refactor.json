@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-refactor-003",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Extract Rust report-gen free functions into a Report struct with method receivers",
+  "description": "The rust report-gen library has three free functions (sum, max_item, min_item). Refactor to a Report struct with method receivers while keeping the free functions as thin wrappers so all existing tests still pass.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_report_gen",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Refactor src/lib.rs: introduce a Report struct and move computation logic to method receivers.\n\nKeep the Item struct and its impl unchanged.\n\nAdd:\n  pub struct Report<'a> {\n      items: &'a [Item],\n  }\n\n  impl<'a> Report<'a> {\n      pub fn new(items: &'a [Item]) -> Self\n      pub fn sum(&self) -> f64\n      pub fn max_item(&self) -> Option<&'a Item>  // note: 'a, not &self lifetime\n      pub fn min_item(&self) -> Option<&'a Item>  // ties return to items slice lifetime\n  }\n\nKeep the existing free functions as thin delegating wrappers:\n  pub fn sum(items: &[Item]) -> f64        { Report::new(items).sum() }\n  pub fn max_item(items: &[Item]) -> Option<&Item> { Report::new(items).max_item() }\n  pub fn min_item(items: &[Item]) -> Option<&Item> { Report::new(items).min_item() }\n\nNote: max_item and min_item must return Option<&'a Item> (tied to the items slice lifetime,\nnot to &self), otherwise the wrapper functions cannot return the borrowed reference after\nthe temporary Report is dropped.\n\nAll 4 existing tests must pass without modification.\nRun: cargo test",
+    "required_artifacts": [
+      "Report<'a> struct holding &'a [Item]",
+      "Report::new constructor",
+      "sum/max_item/min_item as Report methods",
+      "Free functions delegate to Report methods",
+      "All 4 existing tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (4 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `cargo test` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

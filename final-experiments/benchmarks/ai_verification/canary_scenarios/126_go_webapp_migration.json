@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-migration-005",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Migrate Go web app Index handler from ParseFiles to inline html/template",
+  "description": "Brownfield Go migration: replace the fragile runtime.Caller path-discovery + template.ParseFiles pattern with a package-level html/template variable parsed from an inline string.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_web_app",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Migrate internal/handler/items.go. All existing tests must still pass.\n\n1. Remove the templateDir() function and its imports (path/filepath, runtime).\n2. Add a package-level var:\n     var indexTmpl = template.Must(template.New(\"index\").Parse(`...`))\n   with an inline template string that produces the same HTML structure:\n     — DOCTYPE html, <head><title>Items</title></head>\n     — <h1>Item Catalogue</h1>\n     — <ul> with {{range .}}<li>{{.Name}} — ${{.Price}}</li>{{end}}</ul>\n3. Rewrite Index() to use indexTmpl.Execute(w, Store) instead of ParseFiles.\n   Keep Content-Type: text/html.\n4. APIItems() is unchanged.\n\nAll existing tests must still pass (Content-Type, status codes, JSON shape).\nRun: go test ./...",
+    "required_artifacts": [
+      "Index() uses package-level template variable, not ParseFiles",
+      "runtime and path/filepath imports removed from items.go",
+      "Index() still sets Content-Type: text/html and returns 200",
+      "Template renders Item Name and Price",
+      "APIItems unchanged — all existing JSON tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `go test ./...` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-dirty-011",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 buggy Rust string utility functions",
+  "description": "Greenfield Rust dirty scenario: a string-utils library has 3 broken implementations. Fix reverse, is_palindrome, and capitalize so all tests pass.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"string-utils\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\nname = \"string_utils\"\npath = \"src/lib.rs\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "/// Returns the characters of s in reverse order.\npub fn reverse(s: &str) -> String {\n    s.to_string() // BUG: should reverse, not clone\n}\n\n/// Returns true if s reads the same forwards and backwards.\npub fn is_palindrome(s: &str) -> bool {\n    true // BUG: should compare s to its reverse\n}\n\n/// Returns s with the first character uppercased and the rest unchanged.\npub fn capitalize(s: &str) -> String {\n    s.to_uppercase() // BUG: should uppercase only the first char\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_reverse_basic() {\n        assert_eq!(reverse(\"hello\"), \"olleh\");\n    }\n\n    #[test]\n    fn test_reverse_empty() {\n        assert_eq!(reverse(\"\"), \"\");\n    }\n\n    #[test]\n    fn test_reverse_single() {\n        assert_eq!(reverse(\"a\"), \"a\");\n    }\n\n    #[test]\n    fn test_is_palindrome_true() {\n        assert!(is_palindrome(\"racecar\"));\n        assert!(is_palindrome(\"level\"));\n    }\n\n    #[test]\n    fn test_is_palindrome_false() {\n        assert!(!is_palindrome(\"hello\"));\n        assert!(!is_palindrome(\"world\"));\n    }\n\n    #[test]\n    fn test_capitalize_basic() {\n        assert_eq!(capitalize(\"hello world\"), \"Hello world\");\n    }\n\n    #[test]\n    fn test_capitalize_empty() {\n        assert_eq!(capitalize(\"\"), \"\");\n    }\n\n    #[test]\n    fn test_capitalize_already_upper() {\n        assert_eq!(capitalize(\"Hello\"), \"Hello\");\n    }\n}\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 buggy functions in src/lib.rs so all tests pass.\n\n  pub fn reverse(s: &str) -> String\n    — return the characters of s in reverse order\n\n  pub fn is_palindrome(s: &str) -> bool\n    — return true if s reads the same forwards and backwards\n\n  pub fn capitalize(s: &str) -> String\n    — return s with only the first character uppercased, the rest unchanged\n\nDo not modify the test functions.\nRun: cargo test",
+    "required_artifacts": [
+      "reverse returns characters in reverse order",
+      "is_palindrome returns true for palindromes, false otherwise",
+      "capitalize uppercases only the first character",
+      "All 8 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

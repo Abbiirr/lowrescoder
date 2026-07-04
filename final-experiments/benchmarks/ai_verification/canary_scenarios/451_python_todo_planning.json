@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-py-todo-planning-001",
+  "title": "Multi-step Python implementation with task planning",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Python banking module needs three classes implemented across two files. The task is complex enough to benefit from todo_write/task planning. Exercises both implementation and planner behavior (todo_write tool usage).",
+  "repo_seed": {
+    "files": {
+      "bank.py": "\"\"\"Simple banking module.\"\"\"\nfrom dataclasses import dataclass, field\nfrom typing import List\n\n\n@dataclass\nclass Account:\n    account_id: str\n    owner: str\n    balance: float = 0.0\n\n    def deposit(self, amount: float) -> None:\n        \"\"\"Deposit amount. Raises ValueError if amount <= 0.\"\"\"\n        raise NotImplementedError\n\n    def withdraw(self, amount: float) -> None:\n        \"\"\"Withdraw amount. Raises ValueError if amount <= 0 or insufficient funds.\"\"\"\n        raise NotImplementedError\n\n\n@dataclass\nclass Bank:\n    name: str\n    _accounts: dict = field(default_factory=dict)\n\n    def create_account(self, account_id: str, owner: str, initial_balance: float = 0.0) -> Account:\n        \"\"\"Create and store a new account. Raises ValueError if account_id already exists.\"\"\"\n        raise NotImplementedError\n\n    def get_account(self, account_id: str) -> Account:\n        \"\"\"Retrieve account by id. Raises KeyError if not found.\"\"\"\n        raise NotImplementedError\n\n    def transfer(self, from_id: str, to_id: str, amount: float) -> None:\n        \"\"\"Transfer amount between accounts. Uses withdraw + deposit.\"\"\"\n        raise NotImplementedError\n\n    def total_assets(self) -> float:\n        \"\"\"Sum of all account balances.\"\"\"\n        raise NotImplementedError\n",
+      "test_bank.py": "import pytest\nfrom bank import Account, Bank\n\n\ndef test_account_deposit():\n    a = Account(\"A1\", \"Alice\")\n    a.deposit(100.0)\n    assert a.balance == 100.0\n\n\ndef test_account_deposit_invalid():\n    a = Account(\"A1\", \"Alice\")\n    with pytest.raises(ValueError):\n        a.deposit(-50)\n\n\ndef test_account_withdraw():\n    a = Account(\"A1\", \"Alice\", balance=100.0)\n    a.withdraw(30.0)\n    assert a.balance == 70.0\n\n\ndef test_account_withdraw_insufficient():\n    a = Account(\"A1\", \"Alice\", balance=10.0)\n    with pytest.raises(ValueError):\n        a.withdraw(50.0)\n\n\ndef test_bank_create_account():\n    b = Bank(\"TestBank\")\n    acc = b.create_account(\"A1\", \"Alice\", 500.0)\n    assert acc.balance == 500.0\n    assert b.get_account(\"A1\") is acc\n\n\ndef test_bank_duplicate_account():\n    b = Bank(\"TestBank\")\n    b.create_account(\"A1\", \"Alice\")\n    with pytest.raises(ValueError):\n        b.create_account(\"A1\", \"Bob\")\n\n\ndef test_bank_transfer():\n    b = Bank(\"TestBank\")\n    b.create_account(\"A1\", \"Alice\", 200.0)\n    b.create_account(\"A2\", \"Bob\", 100.0)\n    b.transfer(\"A1\", \"A2\", 50.0)\n    assert b.get_account(\"A1\").balance == 150.0\n    assert b.get_account(\"A2\").balance == 150.0\n\n\ndef test_bank_total_assets():\n    b = Bank(\"TestBank\")\n    b.create_account(\"A1\", \"Alice\", 300.0)\n    b.create_account(\"A2\", \"Bob\", 200.0)\n    assert b.total_assets() == 500.0\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement all the methods in bank.py that currently raise NotImplementedError:\n\n- Account.deposit(amount): add amount to balance, raise ValueError if amount <= 0\n- Account.withdraw(amount): subtract amount from balance, raise ValueError if amount <= 0 or balance insufficient\n- Bank.create_account(id, owner, initial_balance): create and store Account, raise ValueError if id already exists\n- Bank.get_account(id): return Account by id, raise KeyError if not found\n- Bank.transfer(from_id, to_id, amount): use withdraw + deposit\n- Bank.total_assets(): sum all account balances\n\nRun `pytest test_bank.py -v` to verify.",
+    "entry_point": "bank.py",
+    "success_criteria": [
+      "All 8 pytest tests pass",
+      "All NotImplementedError stubs replaced with working code"
+    ],
+    "followup_prompts": [
+      "Run `pytest test_bank.py -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `pytest test_bank.py -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "pytest test_bank.py -v"
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 8
+}

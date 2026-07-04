@@ -1,0 +1,36 @@
+title: Write-read round-trip probe
+category: backend_feature
+difficulty: easy
+target_stack:
+  language: python
+task_spec:
+  prompt: |
+    Write a file called state.txt containing the text "verification-checkpoint".
+    Then read it back to verify it was written correctly.
+    Report the content you read.
+repo_seed:
+  mode: fresh
+expected_outcomes:
+  must_have:
+    - "item_started with kind=tool_execution"
+    - "item_completed event present"
+    - "turn_completed event with usage"
+  must_not_have:
+    - "error event"
+trajectory_assertions:
+  must_use_tool_families:
+    - "file_write"
+    - "file_read"
+  min_tool_calls: 2
+artifact_assertions:
+  require_non_empty_diff: true
+  must_change_files:
+    - "state.txt"
+  must_contain_text:
+    state.txt:
+      - "verification-checkpoint"
+grading:
+  checks:
+    - snapshot
+  check_commands:
+    snapshot: "test -f state.txt && grep -q 'verification-checkpoint' state.txt"

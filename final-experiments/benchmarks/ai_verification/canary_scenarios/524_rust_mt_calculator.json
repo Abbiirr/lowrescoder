@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "524-rust-mt-calculator",
+  "title": "Build an RPN calculator in Rust — 3 turns",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {"language": "rust", "framework": null, "extra": {}},
+  "description": "Three turns build an RPN (Reverse Polish Notation) calculator: turn 1 push/add/sub, turn 2 mul/div with zero-div error, turn 3 dup/swap.",
+  "repo_seed": {
+    "files": {
+      "Cargo.toml": "[package]\nname = \"rpn-calc\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+      "src/lib.rs": "//! RPN (Reverse Polish Notation) calculator.\n\n/// Errors from calculator operations.\n#[derive(Debug, PartialEq)]\npub enum CalcError {\n    StackUnderflow,\n    DivisionByZero,\n}\n\n/// RPN calculator with an internal stack.\npub struct Calculator {\n    stack: Vec<f64>,\n}\n\nimpl Calculator {\n    pub fn new() -> Self {\n        Calculator { stack: Vec::new() }\n    }\n\n    /// Push a number onto the stack.\n    pub fn push(&mut self, value: f64) {\n        unimplemented!()\n    }\n\n    /// Pop the top value.\n    pub fn pop(&mut self) -> Result<f64, CalcError> {\n        unimplemented!()\n    }\n\n    /// Peek at the top value without removing it.\n    pub fn peek(&self) -> Result<f64, CalcError> {\n        self.stack.last().copied().ok_or(CalcError::StackUnderflow)\n    }\n\n    /// Add top two values (a + b where b is top).\n    pub fn add(&mut self) -> Result<(), CalcError> {\n        unimplemented!()\n    }\n\n    /// Subtract top two values (a - b where b is top).\n    pub fn sub(&mut self) -> Result<(), CalcError> {\n        unimplemented!()\n    }\n\n    /// Multiply top two values.\n    pub fn mul(&mut self) -> Result<(), CalcError> {\n        unimplemented!()\n    }\n\n    /// Divide (a / b where b is top). Returns DivisionByZero if b == 0.\n    pub fn div(&mut self) -> Result<(), CalcError> {\n        unimplemented!()\n    }\n\n    /// Duplicate the top value.\n    pub fn dup(&mut self) -> Result<(), CalcError> {\n        unimplemented!()\n    }\n\n    /// Swap top two values.\n    pub fn swap(&mut self) -> Result<(), CalcError> {\n        unimplemented!()\n    }\n\n    /// Return current stack depth.\n    pub fn depth(&self) -> usize {\n        self.stack.len()\n    }\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_push_pop() {\n        let mut c = Calculator::new();\n        c.push(1.0);\n        c.push(2.0);\n        assert_eq!(c.pop(), Ok(2.0));\n        assert_eq!(c.pop(), Ok(1.0));\n        assert_eq!(c.pop(), Err(CalcError::StackUnderflow));\n    }\n\n    #[test]\n    fn test_add_sub() {\n        let mut c = Calculator::new();\n        c.push(3.0);\n        c.push(4.0);\n        c.add().unwrap(); // 3+4 = 7\n        assert_eq!(c.peek(), Ok(7.0));\n        c.push(2.0);\n        c.sub().unwrap(); // 7-2 = 5\n        assert_eq!(c.peek(), Ok(5.0));\n    }\n\n    #[test]\n    fn test_mul_div() {\n        let mut c = Calculator::new();\n        c.push(6.0);\n        c.push(3.0);\n        c.mul().unwrap(); // 6*3 = 18\n        assert_eq!(c.peek(), Ok(18.0));\n        c.push(2.0);\n        c.div().unwrap(); // 18/2 = 9\n        assert_eq!(c.peek(), Ok(9.0));\n    }\n\n    #[test]\n    fn test_div_by_zero() {\n        let mut c = Calculator::new();\n        c.push(5.0);\n        c.push(0.0);\n        assert_eq!(c.div(), Err(CalcError::DivisionByZero));\n    }\n\n    #[test]\n    fn test_dup_swap() {\n        let mut c = Calculator::new();\n        c.push(1.0);\n        c.push(2.0);\n        c.dup().unwrap(); // stack: [1, 2, 2]\n        assert_eq!(c.depth(), 3);\n        c.pop().unwrap(); // remove dup\n        c.swap().unwrap(); // stack: [2, 1]\n        assert_eq!(c.pop(), Ok(1.0));\n        assert_eq!(c.pop(), Ok(2.0));\n    }\n\n    #[test]\n    fn test_underflow_on_operations() {\n        let mut c = Calculator::new();\n        assert_eq!(c.add(), Err(CalcError::StackUnderflow));\n        c.push(1.0);\n        assert_eq!(c.sub(), Err(CalcError::StackUnderflow));\n    }\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `push(&mut self, value: f64)`, `pop(&mut self) -> Result<f64, CalcError>`, `add(&mut self) -> Result<(), CalcError>`, and `sub(&mut self) -> Result<(), CalcError>` in `src/lib.rs`. push: self.stack.push(value). pop: self.stack.pop().ok_or(CalcError::StackUnderflow). add: pop two values b and a, push a+b. sub: pop b and a, push a-b. Run `cargo test --quiet`.",
+    "followup_prompts": [
+      "Good. Now implement `mul()` (a*b) and `div()` (a/b with DivisionByZero error when b==0). Run `cargo test --quiet` and fix any failures.",
+      "Final step: implement `dup()` — peek at the top value and push a copy — and `swap()` — pop two values and push them back in swapped order. Run `cargo test --quiet` — all 6 tests must pass."
+    ],
+    "success_criteria": [
+      "push/pop work; pop returns StackUnderflow when empty",
+      "add/sub pop two operands and push result",
+      "mul/div work; div returns DivisionByZero when divisor is 0",
+      "dup duplicates top value",
+      "swap swaps top two values",
+      "cargo test passes (6 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "cargo test --quiet"}
+  },
+  "duration_hint_minutes": 20
+}

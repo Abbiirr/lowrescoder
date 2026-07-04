@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-dirty-parser-001",
+  "title": "Fix bugs in a Rust CSV parser",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Rust CSV parsing library has three bugs: wrong delimiter split, incorrect header skipping logic, and an integer parsing bug. Fix all three to make tests pass.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "/// Parse a CSV string into rows of strings.\n/// If skip_header is true, the first row is omitted from results.\npub fn parse_csv(input: &str, delimiter: char, skip_header: bool) -> Vec<Vec<String>> {\n    let mut rows: Vec<Vec<String>> = input\n        .lines()\n        .filter(|l| !l.trim().is_empty())\n        .map(|line| {\n            // BUG 1: splits on ',' always instead of the given delimiter\n            line.split(',')\n                .map(|s| s.trim().to_string())\n                .collect()\n        })\n        .collect();\n\n    if skip_header {\n        // BUG 2: removes the LAST row instead of the first\n        rows.pop();\n    }\n    rows\n}\n\n/// Parse a row of strings as integers, skipping non-numeric values.\npub fn row_to_ints(row: &[String]) -> Vec<i64> {\n    row.iter()\n        .filter_map(|s| {\n            // BUG 3: parses as u32 which can't handle negatives or large numbers\n            s.parse::<u32>().ok().map(|n| n as i64)\n        })\n        .collect()\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_parse_csv_comma() {\n        let result = parse_csv(\"a,b,c\\n1,2,3\", ',', false);\n        assert_eq!(result.len(), 2);\n        assert_eq!(result[0], vec![\"a\", \"b\", \"c\"]);\n        assert_eq!(result[1], vec![\"1\", \"2\", \"3\"]);\n    }\n\n    #[test]\n    fn test_parse_csv_pipe_delimiter() {\n        let result = parse_csv(\"x|y|z\\n4|5|6\", '|', false);\n        assert_eq!(result.len(), 2);\n        assert_eq!(result[0], vec![\"x\", \"y\", \"z\"]);\n    }\n\n    #[test]\n    fn test_skip_header_removes_first() {\n        let result = parse_csv(\"name,age\\nalice,30\\nbob,25\", ',', true);\n        assert_eq!(result.len(), 2);\n        assert_eq!(result[0], vec![\"alice\", \"30\"]);\n        assert_eq!(result[1], vec![\"bob\", \"25\"]);\n    }\n\n    #[test]\n    fn test_row_to_ints_negatives() {\n        let row: Vec<String> = vec![\"-5\".to_string(), \"10\".to_string(), \"abc\".to_string()];\n        let result = row_to_ints(&row);\n        assert_eq!(result, vec![-5, 10]);\n    }\n}\n",
+      "Cargo.toml": "[package]\nname = \"csvparser\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix the three bugs in src/lib.rs:\n\n1. parse_csv BUG 1: the split uses ',' always — change it to split on the given `delimiter` parameter\n2. parse_csv BUG 2: skip_header removes the last row (pop) — change it to remove the first row (use drain or remove index 0)\n3. row_to_ints BUG 3: parses as u32 which can't handle negative numbers — change to parse as i64\n\nRun `cargo test` to verify all 4 tests pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": [
+      "All 4 cargo tests pass",
+      "parse_csv uses the delimiter parameter",
+      "skip_header removes the first row",
+      "row_to_ints parses as i64"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test"
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 6
+}

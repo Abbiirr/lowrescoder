@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-brownfield-003",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Add mutex protection to a non-thread-safe counter in Go",
+  "description": "Brownfield Go refactor: add sync.Mutex protection to a Counter struct that is accessed concurrently. The existing single-threaded tests must pass, and new concurrent tests must also pass without data races.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module counter\n\ngo 1.21\n"
+      },
+      {
+        "path": "counter.go",
+        "content": "package counter\n\ntype Counter struct {\n\tvalue int\n}\n\nfunc NewCounter() *Counter {\n\treturn &Counter{}\n}\n\nfunc (c *Counter) Increment() {\n\tc.value++\n}\n\nfunc (c *Counter) Decrement() {\n\tc.value--\n}\n\nfunc (c *Counter) Value() int {\n\treturn c.value\n}\n\nfunc (c *Counter) Reset() {\n\tc.value = 0\n}\n"
+      },
+      {
+        "path": "counter_test.go",
+        "content": "package counter\n\nimport \"testing\"\n\nfunc TestCounterBasic(t *testing.T) {\n\tc := NewCounter()\n\tc.Increment()\n\tc.Increment()\n\tc.Increment()\n\tif c.Value() != 3 {\n\t\tt.Fatalf(\"want 3 got %d\", c.Value())\n\t}\n}\n\nfunc TestCounterDecrement(t *testing.T) {\n\tc := NewCounter()\n\tc.Increment()\n\tc.Decrement()\n\tif c.Value() != 0 {\n\t\tt.Fatalf(\"want 0 got %d\", c.Value())\n\t}\n}\n\nfunc TestCounterReset(t *testing.T) {\n\tc := NewCounter()\n\tc.Increment()\n\tc.Reset()\n\tif c.Value() != 0 {\n\t\tt.Fatalf(\"want 0 got %d\", c.Value())\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Add sync.Mutex protection to counter.go. Keep the same API.\n\nimport \"sync\"\n\ntype Counter struct {\n    mu    sync.Mutex\n    value int\n}\n\n// Wrap each method with mu.Lock() / defer mu.Unlock():\nfunc (c *Counter) Increment() { c.mu.Lock(); defer c.mu.Unlock(); c.value++ }\nfunc (c *Counter) Decrement() { c.mu.Lock(); defer c.mu.Unlock(); c.value-- }\nfunc (c *Counter) Value() int { c.mu.Lock(); defer c.mu.Unlock(); return c.value }\nfunc (c *Counter) Reset() { c.mu.Lock(); defer c.mu.Unlock(); c.value = 0 }\n\nAll 5 tests (3 original + 2 new concurrent) in the solution test file must pass with -race.\nRun: go test -race ./...",
+    "required_artifacts": [
+      "Counter struct has sync.Mutex field",
+      "All four methods acquire the mutex before accessing value",
+      "Original 3 tests still pass",
+      "New concurrent tests pass without data race",
+      "All 5 tests pass under -race"
+    ],
+    "success_criteria": [
+      "go test -race ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test -race ./...` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `go test -race ./...` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test -race ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

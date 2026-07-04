@@ -1,0 +1,18 @@
+title: Large tool output offload invariant
+category: backend_feature
+difficulty: medium
+target_stack:
+  language: python
+task_spec:
+  prompt: |
+    List a large directory and then read the scratch file path if tool output is offloaded.
+repo_seed:
+  mode: fresh
+expected_outcomes:
+  must_have:
+    - "item_completed result contains [Tool output offloaded"
+  must_not_have:
+    - "error event"
+grading:
+  checks:
+    - snapshot

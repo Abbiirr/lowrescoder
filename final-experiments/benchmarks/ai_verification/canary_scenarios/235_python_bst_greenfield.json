@@ -1,0 +1,75 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-011",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 25,
+  "title": "Build a Binary Search Tree in Python",
+  "description": "Greenfield Python task: implement a BST class with insert, search, inorder traversal, minimum, maximum, and height operations.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"bst\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/bst.py",
+        "content": "# TODO: implement BST\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_bst.py",
+        "content": "from src.bst import BST\n\n\ndef test_insert_and_search():\n    t = BST()\n    for v in [5, 3, 7, 1, 4]:\n        t.insert(v)\n    assert t.search(3) is True\n    assert t.search(6) is False\n\n\ndef test_inorder():\n    t = BST()\n    for v in [5, 3, 7, 1, 4]:\n        t.insert(v)\n    assert t.inorder() == [1, 3, 4, 5, 7]\n\n\ndef test_min_max():\n    t = BST()\n    for v in [5, 3, 7, 1, 4]:\n        t.insert(v)\n    assert t.minimum() == 1\n    assert t.maximum() == 7\n\n\ndef test_height():\n    t = BST()\n    assert t.height() == 0\n    t.insert(5)\n    assert t.height() == 1\n    t.insert(3)\n    t.insert(7)\n    assert t.height() == 2\n\n\ndef test_empty():\n    t = BST()\n    assert t.search(1) is False\n    assert t.inorder() == []\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement the BST class in src/bst.py.\n\nRequired methods:\n- insert(val) — insert value into the BST (ignore duplicates)\n- search(val) -> bool — return True if val exists\n- inorder() -> list — return sorted list of all values (left-root-right)\n- minimum() -> int | None — return smallest value\n- maximum() -> int | None — return largest value\n- height() -> int — return tree height (0 for empty tree, 1 for root only)\n\nAll 5 tests in tests/test_bst.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "BST class with internal _Node helper",
+      "insert uses recursive or iterative BST insertion",
+      "search walks left/right based on comparison",
+      "inorder returns values in sorted ascending order",
+      "height returns 0 for empty, 1+max(left,right) recursively",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.bst import BST\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.bst import BST\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

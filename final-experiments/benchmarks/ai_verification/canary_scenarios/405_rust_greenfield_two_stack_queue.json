@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-greenfield-056",
+  "title": "Implement a queue using two stacks in Rust",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement Queue<T> with amortized O(1) enqueue/dequeue using two Vec<T> (inbox/outbox). Transfer inbox to outbox when outbox is empty.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "pub struct Queue<T> {\n    // TODO: implement with two Vecs: inbox and outbox\n}\n\nimpl<T> Queue<T> {\n    pub fn new() -> Self { panic!(\"not implemented\") }\n    pub fn enqueue(&mut self, val: T) { panic!(\"not implemented\") }\n    pub fn dequeue(&mut self) -> Option<T> { panic!(\"not implemented\") }\n    pub fn peek(&self) -> Option<&T> { panic!(\"not implemented\") }\n    pub fn is_empty(&self) -> bool { panic!(\"not implemented\") }\n    pub fn len(&self) -> usize { panic!(\"not implemented\") }\n}\n",
+      "tests/queue_test.rs": "use two_stack_queue::Queue;\n\n#[test]\nfn test_basic_fifo() {\n    let mut q: Queue<i32> = Queue::new();\n    q.enqueue(1);\n    q.enqueue(2);\n    q.enqueue(3);\n    assert_eq!(q.dequeue(), Some(1));\n    assert_eq!(q.dequeue(), Some(2));\n    assert_eq!(q.dequeue(), Some(3));\n    assert_eq!(q.dequeue(), None);\n}\n\n#[test]\nfn test_interleaved() {\n    let mut q: Queue<i32> = Queue::new();\n    q.enqueue(1);\n    q.enqueue(2);\n    assert_eq!(q.dequeue(), Some(1));\n    q.enqueue(3);\n    q.enqueue(4);\n    assert_eq!(q.dequeue(), Some(2));\n    assert_eq!(q.dequeue(), Some(3));\n    assert_eq!(q.dequeue(), Some(4));\n}\n\n#[test]\nfn test_empty_and_len_peek() {\n    let mut q: Queue<i32> = Queue::new();\n    assert!(q.is_empty());\n    assert_eq!(q.dequeue(), None);\n    q.enqueue(5);\n    q.enqueue(6);\n    assert_eq!(q.len(), 2);\n    assert_eq!(q.peek(), Some(&5));\n    q.dequeue();\n    assert_eq!(q.peek(), Some(&6));\n}\n",
+      "Cargo.toml": "[package]\nname = \"two_stack_queue\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement Queue<T> in src/lib.rs using two Vec<T> fields `inbox` and `outbox`:\n- new: return Queue with empty inbox/outbox\n- enqueue: push val to inbox\n- dequeue: if outbox is empty, drain inbox into outbox (pop from inbox, push to outbox); then pop from outbox\n- peek: if outbox non-empty return outbox.last(); else return inbox.first()\n- is_empty: inbox.is_empty() && outbox.is_empty()\n- len: inbox.len() + outbox.len()\nAll 3 cargo test cases must pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": "All 3 cargo test cases pass",
+    "followup_prompts": [
+      "Run `cargo test --quiet` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test --quiet` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "cargo test",
+    "expected_exit_code": 0
+  }
+}

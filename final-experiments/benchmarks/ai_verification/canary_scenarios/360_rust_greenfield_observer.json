@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-greenfield-047",
+  "title": "Implement the observer pattern in Rust",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement a Subject that holds subscribers (Box<dyn Fn(i32)>) and notifies them all when notify() is called.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "pub struct Subject {\n    // your implementation\n}\n\nimpl Subject {\n    pub fn new() -> Self { panic!(\"not implemented\") }\n    pub fn subscribe(&mut self, f: impl Fn(i32) + 'static) { panic!(\"not implemented\") }\n    pub fn notify(&self, value: i32) { panic!(\"not implemented\") }\n    pub fn subscriber_count(&self) -> usize { panic!(\"not implemented\") }\n}\n",
+      "tests/observer_test.rs": "use observer::Subject;\nuse std::sync::{Arc, Mutex};\n\n#[test]\nfn test_single_subscriber() {\n    let mut s = Subject::new();\n    let received = Arc::new(Mutex::new(vec![]));\n    let r = received.clone();\n    s.subscribe(move |v| r.lock().unwrap().push(v));\n    s.notify(42);\n    assert_eq!(*received.lock().unwrap(), vec![42]);\n}\n\n#[test]\nfn test_multiple_subscribers() {\n    let mut s = Subject::new();\n    let a = Arc::new(Mutex::new(0i32));\n    let b = Arc::new(Mutex::new(0i32));\n    let ac = a.clone(); s.subscribe(move |v| *ac.lock().unwrap() += v);\n    let bc = b.clone(); s.subscribe(move |v| *bc.lock().unwrap() += v * 2);\n    s.notify(5);\n    assert_eq!(*a.lock().unwrap(), 5);\n    assert_eq!(*b.lock().unwrap(), 10);\n}\n\n#[test]\nfn test_notify_multiple_times() {\n    let mut s = Subject::new();\n    let sum = Arc::new(Mutex::new(0i32));\n    let sc = sum.clone();\n    s.subscribe(move |v| *sc.lock().unwrap() += v);\n    s.notify(1);\n    s.notify(2);\n    s.notify(3);\n    assert_eq!(*sum.lock().unwrap(), 6);\n}\n\n#[test]\nfn test_subscriber_count() {\n    let mut s = Subject::new();\n    assert_eq!(s.subscriber_count(), 0);\n    s.subscribe(|_| {});\n    s.subscribe(|_| {});\n    assert_eq!(s.subscriber_count(), 2);\n}\n\n#[test]\nfn test_no_subscribers() {\n    let s = Subject::new();\n    s.notify(99); // should not panic\n}\n",
+      "Cargo.toml": "[package]\nname = \"observer\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement Subject in src/lib.rs:\n- Field: `subscribers: Vec<Box<dyn Fn(i32)>>`\n- `new()`: Subject { subscribers: Vec::new() }\n- `subscribe(f)`: self.subscribers.push(Box::new(f))\n- `notify(value)`: for each sub in &self.subscribers { sub(value) }\n- `subscriber_count()`: self.subscribers.len()\nAll 5 tests must pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": "All 5 cargo test cases pass",
+    "followup_prompts": [
+      "Run `cargo test --quiet` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test --quiet` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "cargo test",
+    "expected_exit_code": 0
+  }
+}

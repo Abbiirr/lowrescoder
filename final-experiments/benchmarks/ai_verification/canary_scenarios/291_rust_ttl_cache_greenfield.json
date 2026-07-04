@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-032",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "hard",
+  "duration_hint_minutes": 35,
+  "title": "Implement a TTL cache in Rust",
+  "description": "Greenfield Rust task: implement a TtlCache that stores key-value pairs with per-entry expiry tracked by insertion order, supporting get (returns None if expired), insert, and remove_expired.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"ttlcache\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement TtlCache\n"
+      },
+      {
+        "path": "tests/ttl_test.rs",
+        "content": "use ttlcache::TtlCache;\n\n#[test]\nfn test_basic_insert_get() {\n    let mut cache: TtlCache<&str, i32> = TtlCache::new();\n    cache.insert(\"a\", 1, 100);\n    assert_eq!(cache.get(\"a\", 50), Some(&1)); // not expired at t=50\n}\n\n#[test]\nfn test_expired_get() {\n    let mut cache: TtlCache<&str, i32> = TtlCache::new();\n    cache.insert(\"a\", 1, 100);\n    assert_eq!(cache.get(\"a\", 150), None); // expired at t=150\n}\n\n#[test]\nfn test_missing_key() {\n    let cache: TtlCache<&str, i32> = TtlCache::new();\n    assert_eq!(cache.get(\"x\", 0), None);\n}\n\n#[test]\nfn test_remove_expired() {\n    let mut cache: TtlCache<&str, i32> = TtlCache::new();\n    cache.insert(\"a\", 1, 10);\n    cache.insert(\"b\", 2, 12);\n    cache.insert(\"c\", 3, 30);\n    cache.remove_expired(15); // removes a (expires_at=10) and b (expires_at=12)\n    assert_eq!(cache.get(\"a\", 15), None);\n    assert_eq!(cache.get(\"b\", 15), None);\n    assert_eq!(cache.get(\"c\", 15), Some(&3));\n}\n\n#[test]\nfn test_overwrite() {\n    let mut cache: TtlCache<&str, i32> = TtlCache::new();\n    cache.insert(\"a\", 1, 10);\n    cache.insert(\"a\", 2, 100); // overwrite with longer TTL\n    assert_eq!(cache.get(\"a\", 50), Some(&2));\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement TtlCache in src/lib.rs.\n\nuse std::collections::HashMap;\n\nstruct Entry<V> { value: V, expires_at: u64 }\n\npub struct TtlCache<K, V> { entries: HashMap<K, Entry<V>> }\n\nimpl<K: Eq + std::hash::Hash, V> TtlCache<K, V> {\n    pub fn new() -> Self { TtlCache { entries: HashMap::new() } }\n\n    pub fn insert(&mut self, key: K, value: V, ttl: u64)\n        // Store Entry { value, expires_at: ttl } (expires_at = current_time + ttl,\n        // but for simplicity: expires_at = ttl, meaning the entry expires when\n        // the 'now' argument passed to get() >= expires_at).\n        // This means insert(key, val, 100) expires when now >= 100.\n\n    pub fn get(&self, key: K, now: u64) -> Option<&V>\n        // Return Some(&value) if entry exists and now < expires_at.\n        // Return None if missing or now >= expires_at.\n\n    pub fn remove_expired(&mut self, now: u64)\n        // Remove all entries where now >= expires_at.\n}\n\nAll 5 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "insert stores Entry with expires_at = ttl argument",
+      "get returns None if now >= expires_at",
+      "get returns None for missing keys",
+      "remove_expired evicts all entries with expires_at <= now",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

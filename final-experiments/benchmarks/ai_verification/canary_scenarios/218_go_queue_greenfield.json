@@ -1,0 +1,67 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-010",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Build a generic FIFO queue in Go using generics",
+  "description": "Greenfield Go task: implement a generic Queue[T any] backed by a slice with Push, Pop (bool ok), Peek, Len, and IsEmpty methods. No concurrency required.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module queue\n\ngo 1.21\n"
+      },
+      {
+        "path": "queue.go",
+        "content": "package queue\n\n// TODO: implement Queue[T any]\n"
+      },
+      {
+        "path": "queue_test.go",
+        "content": "package queue\n\nimport \"testing\"\n\nfunc TestPushPop(t *testing.T) {\n\tq := NewQueue[int]()\n\tq.Push(1)\n\tq.Push(2)\n\tq.Push(3)\n\tv, ok := q.Pop()\n\tif !ok || v != 1 {\n\t\tt.Fatalf(\"expected 1 ok=true, got %d ok=%v\", v, ok)\n\t}\n\tv, ok = q.Pop()\n\tif !ok || v != 2 {\n\t\tt.Fatalf(\"expected 2 ok=true, got %d ok=%v\", v, ok)\n\t}\n}\n\nfunc TestPopEmpty(t *testing.T) {\n\tq := NewQueue[string]()\n\t_, ok := q.Pop()\n\tif ok {\n\t\tt.Fatal(\"expected ok=false for empty queue\")\n\t}\n}\n\nfunc TestPeek(t *testing.T) {\n\tq := NewQueue[int]()\n\tq.Push(42)\n\tv, ok := q.Peek()\n\tif !ok || v != 42 {\n\t\tt.Fatalf(\"expected 42 ok=true, got %d ok=%v\", v, ok)\n\t}\n\tif q.Len() != 1 {\n\t\tt.Fatalf(\"Peek must not remove element\")\n\t}\n}\n\nfunc TestLenAndIsEmpty(t *testing.T) {\n\tq := NewQueue[float64]()\n\tif !q.IsEmpty() {\n\t\tt.Fatal(\"expected empty\")\n\t}\n\tq.Push(1.0)\n\tq.Push(2.0)\n\tif q.Len() != 2 {\n\t\tt.Fatalf(\"expected 2, got %d\", q.Len())\n\t}\n\tif q.IsEmpty() {\n\t\tt.Fatal(\"expected not empty\")\n\t}\n}\n\nfunc TestFIFOOrder(t *testing.T) {\n\tq := NewQueue[int]()\n\tfor i := 0; i < 5; i++ {\n\t\tq.Push(i)\n\t}\n\tfor i := 0; i < 5; i++ {\n\t\tv, ok := q.Pop()\n\t\tif !ok || v != i {\n\t\t\tt.Fatalf(\"expected %d got %d ok=%v\", i, v, ok)\n\t\t}\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement Queue[T any] in queue.go.\n\ntype Queue[T any] struct { ... }\n\nfunc NewQueue[T any]() *Queue[T]\nfunc (q *Queue[T]) Push(v T)           // enqueue at back\nfunc (q *Queue[T]) Pop() (T, bool)     // dequeue from front; zero + false if empty\nfunc (q *Queue[T]) Peek() (T, bool)    // view front without removing; zero + false if empty\nfunc (q *Queue[T]) Len() int\nfunc (q *Queue[T]) IsEmpty() bool\n\nAll 5 tests in queue_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Queue[T any] generic struct",
+      "NewQueue returns initialized *Queue[T]",
+      "Push enqueues at back",
+      "Pop dequeues from front and returns (zero, false) when empty",
+      "Peek returns front without removing; (zero, false) when empty",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

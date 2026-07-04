@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-002",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "medium",
+  "duration_hint_minutes": 20,
+  "title": "Add request-logging and CORS middleware to Go todo server",
+  "description": "A Go HTTP todo server handles GET and POST /todos with no middleware. Add a logging middleware (logs method + path + status + duration) and a CORS middleware (adds Access-Control-Allow-Origin: * for all responses). Wire both into main.go.",
+  "target_stack": {
+    "language": "go",
+    "framework": "net/http",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_middleware_server",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Add middleware to the Go HTTP server:\n\n1. Create internal/middleware/logger.go with func Logger(next http.Handler) http.Handler that wraps next, records start time, calls next via a response-capturing writer, and logs: METHOD PATH STATUS DURATIONms to stdout.\n\n2. Create internal/middleware/cors.go with func CORS(next http.Handler) http.Handler that adds Access-Control-Allow-Origin: * to every response. Handle OPTIONS preflight with 204.\n\n3. Wire both in cmd/server/main.go: chain as CORS(Logger(mux)).\n\n4. Add tests in internal/middleware/logger_test.go and cors_test.go using httptest. At least 2 tests each.\n\nAll existing tests must still pass: go test ./...",
+    "required_artifacts": [
+      "internal/middleware/logger.go",
+      "internal/middleware/cors.go",
+      "internal/middleware/logger_test.go",
+      "internal/middleware/cors_test.go",
+      "go test ./... passes"
+    ],
+    "success_criteria": [
+      "Logger middleware records method, path, status, duration",
+      "CORS middleware adds Access-Control-Allow-Origin header",
+      "OPTIONS preflight returns 204",
+      "Both middlewares chained in main.go",
+      "Existing handler tests unbroken"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `go test ./...` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

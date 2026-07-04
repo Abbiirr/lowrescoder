@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-migration-003",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Migrate Rust num-parser from panic-based to Result<T, String> error handling",
+  "description": "A Rust library uses unwrap() on parse operations. Migrate all three public functions to return Result<T, String> instead of panicking.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_num_parser",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Rust library in src/lib.rs has three functions that use unwrap() and will panic on invalid input:\n  parse_int(s: &str) -> i32\n  parse_pair(s: &str) -> (i32, i32)\n  parse_and_sum(s: &str) -> i32\n\nMigrate all three to return Result<T, String>:\n  pub fn parse_int(s: &str) -> Result<i32, String>\n  pub fn parse_pair(s: &str) -> Result<(i32, i32), String>\n  pub fn parse_and_sum(s: &str) -> Result<i32, String>\n\nMap parse errors to a descriptive String error. Use the ? operator to propagate errors from parse_pair to parse_and_sum.\n\nUpdate the existing tests to call .unwrap() or .expect() on the Result. Add 2 new error-case tests:\n  test_parse_int_invalid — parse_int(\"abc\") returns Err\n  test_parse_pair_invalid — parse_pair(\"x, y\") returns Err\n\ncargo test must pass all 5 tests. cargo build must succeed.",
+    "required_artifacts": [
+      "All 3 functions return Result<T, String>",
+      "? operator used for error propagation",
+      "Existing tests updated to unwrap Results",
+      "test_parse_int_invalid and test_parse_pair_invalid added",
+      "cargo test passes 5 tests"
+    ],
+    "success_criteria": [
+      "No panics on invalid input",
+      "Error propagation uses ?",
+      "All 5 tests pass"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `cargo test` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

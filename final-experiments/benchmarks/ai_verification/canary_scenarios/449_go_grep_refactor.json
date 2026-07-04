@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-grep-refactor-001",
+  "title": "Rename a Go function used across multiple call sites",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Go package has a poorly-named function `CalcResult` used in 3 places across 2 source files. Rename it to `ComputeScore` everywhere. Agent must use grep/search to find all call sites then edit all files. All tests must remain green.",
+  "repo_seed": {
+    "files": {
+      "score.go": "package score\n\n// CalcResult computes the weighted score.\nfunc CalcResult(raw int, weight float64) float64 {\n\treturn float64(raw) * weight\n}\n\nfunc Grade(raw int) string {\n\ts := CalcResult(raw, 1.0)\n\tif s >= 90 {\n\t\treturn \"A\"\n\t} else if s >= 80 {\n\t\treturn \"B\"\n\t} else if s >= 70 {\n\t\treturn \"C\"\n\t}\n\treturn \"F\"\n}\n",
+      "report.go": "package score\n\nimport \"fmt\"\n\nfunc Report(raw int, weight float64) string {\n\ts := CalcResult(raw, weight)\n\treturn fmt.Sprintf(\"Score: %.1f\", s)\n}\n",
+      "score_test.go": "package score\n\nimport \"testing\"\n\nfunc TestComputeScore(t *testing.T) {\n\tgot := ComputeScore(50, 2.0)\n\tif got != 100.0 {\n\t\tt.Errorf(\"ComputeScore(50, 2.0) = %f, want 100.0\", got)\n\t}\n}\n\nfunc TestGrade(t *testing.T) {\n\tif Grade(95) != \"A\" {\n\t\tt.Error(\"expected A for raw=95\")\n\t}\n\tif Grade(50) != \"F\" {\n\t\tt.Error(\"expected F for raw=50\")\n\t}\n}\n\nfunc TestReport(t *testing.T) {\n\tgot := Report(10, 3.0)\n\tif got != \"Score: 30.0\" {\n\t\tt.Errorf(\"Report(10, 3.0) = %q, want 'Score: 30.0'\", got)\n\t}\n}\n",
+      "go.mod": "module score\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The test file expects a function named `ComputeScore` but the implementation defines it as `CalcResult`. Rename `CalcResult` to `ComputeScore` everywhere it appears in score.go and report.go, so all tests pass.\n\nUse search tools to find all occurrences first, then apply the renames. Run `go test ./...` to verify.",
+    "entry_point": "score.go",
+    "success_criteria": [
+      "All 3 go tests pass",
+      "Function is named ComputeScore everywhere",
+      "CalcResult no longer exists"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./..."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 5
+}

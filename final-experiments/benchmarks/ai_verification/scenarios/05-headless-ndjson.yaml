@@ -1,0 +1,22 @@
+title: Headless NDJSON protocol invariant
+category: backend_feature
+difficulty: easy
+target_stack:
+  language: python
+task_spec:
+  prompt: |
+    Say "protocol test passed" and nothing else.
+repo_seed:
+  mode: fresh
+expected_outcomes:
+  must_have:
+    - "thread_started event present"
+    - "turn_started event present"
+    - "turn_completed event with usage"
+  must_not_have:
+    - "error event"
+grading:
+  checks:
+    - snapshot
+  check_commands:
+    snapshot: "true"

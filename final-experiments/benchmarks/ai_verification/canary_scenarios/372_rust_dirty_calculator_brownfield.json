@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-brownfield-012",
+  "title": "Fix three bugs in a Rust integer calculator",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Three calculator operations have bugs: power uses addition instead of multiplication, abs_diff returns signed difference, and gcd always returns the first argument.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "/// Returns base raised to the power of exp (non-negative exp).\npub fn power(base: i64, exp: u32) -> i64 {\n    (0..exp).fold(0, |acc, _| acc + base) // bug: fold starts at 0 with + instead of 1 with *\n}\n\n/// Returns the absolute difference between a and b.\npub fn abs_diff(a: i64, b: i64) -> i64 {\n    a - b // bug: not absolute — should be (a - b).abs()\n}\n\n/// Returns the greatest common divisor of a and b.\npub fn gcd(mut a: u64, mut b: u64) -> u64 {\n    while b != 0 {\n        let t = b;\n        b = a; // bug: should be a % b\n        a = t;\n    }\n    a\n}\n",
+      "tests/calc_test.rs": "use calculator::{power, abs_diff, gcd};\n\n#[test]\nfn test_power() {\n    assert_eq!(power(2, 10), 1024);\n    assert_eq!(power(3, 0), 1);\n    assert_eq!(power(5, 1), 5);\n}\n\n#[test]\nfn test_abs_diff() {\n    assert_eq!(abs_diff(10, 3), 7);\n    assert_eq!(abs_diff(3, 10), 7);\n    assert_eq!(abs_diff(5, 5), 0);\n}\n\n#[test]\nfn test_gcd() {\n    assert_eq!(gcd(48, 18), 6);\n    assert_eq!(gcd(0, 5), 5);\n    assert_eq!(gcd(7, 7), 7);\n}\n",
+      "Cargo.toml": "[package]\nname = \"calculator\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/lib.rs:\n1. `power`: change `fold(0, |acc, _| acc + base)` to `fold(1, |acc, _| acc * base)`\n2. `abs_diff`: change `a - b` to `(a - b).abs()`\n3. `gcd`: change `b = a` to `b = a % b` in the while loop\nAll 3 tests must pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": "All 3 cargo test cases pass",
+    "followup_prompts": [
+      "Run `cargo test --quiet` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test --quiet` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "cargo test",
+    "expected_exit_code": 0
+  }
+}

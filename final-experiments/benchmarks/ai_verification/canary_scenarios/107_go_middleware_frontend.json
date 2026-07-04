@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-frontend-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add HTML todo list and stats pages to Go middleware server",
+  "description": "Brownfield Go task: extend the JSON todo server with two HTML-rendering endpoints using html/template with inline template strings.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_middleware_server",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add two HTML-rendering handlers to the Go middleware server. All existing tests must still pass.\n\nIn a new file internal/handler/html.go:\n\n  func HTMLTodoList(w http.ResponseWriter, r *http.Request)\n    — GET only (405 otherwise)\n    — renders Content-Type: text/html; charset=utf-8\n    — page title: \"Todo List\"\n    — shows all todos in a <table> with columns: ID, Title, Done\n    — rows for done todos must have class=\"done\" on the <tr>\n\n  func HTMLStats(w http.ResponseWriter, r *http.Request)\n    — GET only (405 otherwise)\n    — renders Content-Type: text/html; charset=utf-8\n    — page title: \"Stats\"\n    — shows a <dl> with two entries: \"Total\" and \"Done\" counts\n\nUse html/template with inline template strings (no external template files).\nBoth handlers read from the same package-level todos slice and mu used by todos.go.\n\nUpdate cmd/server/main.go to register:\n  mux.HandleFunc(\"/todos.html\", handler.HTMLTodoList)\n  mux.HandleFunc(\"/stats.html\", handler.HTMLStats)\n\nAll 3 existing tests must still pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "GET /todos.html returns 200 with text/html content type",
+      "GET /todos.html includes todo titles in HTML table",
+      "Done todos have class=\"done\" on their <tr>",
+      "GET /stats.html returns 200 with Total and Done counts",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `go test ./...` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

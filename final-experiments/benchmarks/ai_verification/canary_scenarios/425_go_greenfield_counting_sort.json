@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-greenfield-051",
+  "title": "Implement Counting Sort in Go",
+  "category": "repo_init",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement CountingSort(arr []int) []int that sorts a slice of non-negative integers using counting sort (O(n+k)).",
+  "repo_seed": {
+    "files": {
+      "countingsort.go": "package countingsort\n\n// CountingSort sorts a slice of non-negative integers using counting sort.\nfunc CountingSort(arr []int) []int {\n\tpanic(\"not implemented\")\n}\n",
+      "countingsort_test.go": "package countingsort\n\nimport (\n\t\"reflect\"\n\t\"testing\"\n)\n\nfunc TestEmpty(t *testing.T) {\n\tresult := CountingSort([]int{})\n\tif len(result) != 0 {\n\t\tt.Errorf(\"CountingSort([]) = %v, want []\", result)\n\t}\n}\n\nfunc TestSingle(t *testing.T) {\n\tresult := CountingSort([]int{5})\n\tif !reflect.DeepEqual(result, []int{5}) {\n\t\tt.Errorf(\"CountingSort([5]) = %v, want [5]\", result)\n\t}\n}\n\nfunc TestReversed(t *testing.T) {\n\tresult := CountingSort([]int{5, 4, 3, 2, 1})\n\twant := []int{1, 2, 3, 4, 5}\n\tif !reflect.DeepEqual(result, want) {\n\t\tt.Errorf(\"CountingSort([5..1]) = %v, want %v\", result, want)\n\t}\n}\n\nfunc TestDuplicates(t *testing.T) {\n\tresult := CountingSort([]int{3, 1, 4, 1, 5, 9, 2, 6, 5, 3})\n\twant := []int{1, 1, 2, 3, 3, 4, 5, 5, 6, 9}\n\tif !reflect.DeepEqual(result, want) {\n\t\tt.Errorf(\"CountingSort(pi digits) = %v, want %v\", result, want)\n\t}\n}\n",
+      "go.mod": "module countingsort\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement CountingSort in countingsort.go:\n- If arr is empty, return empty slice\n- Find the maximum value in arr\n- Allocate a count slice of length max+1, fill with zeros\n- Increment count[v] for each value v in arr\n- Reconstruct the sorted result by iterating count: for each index i with count[i]>0 append i that many times\n- Return the sorted result\nAll 4 test cases must pass.",
+    "entry_point": "countingsort.go",
+    "success_criteria": "All 4 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

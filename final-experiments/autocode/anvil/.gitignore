@@ -1,0 +1,6 @@
+# Generated copycat output — reproducible via `autocode anvil copycat`.
+# The registry (copycat/registry.yaml) is the tracked input; everything below
+# is regenerable artifact.
+copycat/census/
+patch_bundles/
+audit_log.jsonl

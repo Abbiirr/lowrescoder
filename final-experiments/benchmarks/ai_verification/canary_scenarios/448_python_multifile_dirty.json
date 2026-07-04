@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-py-multifile-dirty-001",
+  "title": "Fix bugs spread across two Python modules",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Python calculator app split across two files: calc.py (operations) and formatter.py (result formatting). Both have bugs. The agent must read and edit both files to make all tests pass. Exercises multi-file edit_file usage.",
+  "repo_seed": {
+    "files": {
+      "calc.py": "def add(a, b):\n    return a + b\n\ndef subtract(a, b):\n    # BUG: wrong order\n    return b - a\n\ndef multiply(a, b):\n    return a * b\n\ndef divide(a, b):\n    if b == 0:\n        raise ValueError(\"division by zero\")\n    # BUG: integer division instead of float\n    return a // b\n",
+      "formatter.py": "def format_result(value, precision=2):\n    # BUG: uses %d (integer) instead of %.*f\n    return \"%d\" % value\n\ndef format_percent(value):\n    # BUG: multiplies by 10 instead of 100\n    return \"%.1f%%\" % (value * 10)\n",
+      "test_calc.py": "import pytest\nfrom calc import add, subtract, multiply, divide\nfrom formatter import format_result, format_percent\n\ndef test_add():\n    assert add(3, 4) == 7\n\ndef test_subtract():\n    assert subtract(10, 3) == 7\n\ndef test_multiply():\n    assert multiply(3, 4) == 12\n\ndef test_divide_float():\n    assert divide(7, 2) == 3.5\n\ndef test_divide_zero():\n    with pytest.raises(ValueError):\n        divide(5, 0)\n\ndef test_format_result():\n    assert format_result(3.14159) == \"3.14\"\n\ndef test_format_result_precision():\n    assert format_result(3.14159, 3) == \"3.142\"\n\ndef test_format_percent():\n    assert format_percent(0.25) == \"25.0%\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix the bugs in calc.py and formatter.py so all tests pass.\n\nKnown issues:\n- subtract returns the wrong value\n- divide uses integer division instead of float division\n- format_result doesn't use the precision parameter\n- format_percent multiplies by the wrong factor\n\nRun `pytest test_calc.py -v` to verify your fixes.",
+    "entry_point": "calc.py",
+    "success_criteria": [
+      "All 8 pytest tests pass",
+      "subtract(10, 3) == 7",
+      "divide(7, 2) == 3.5",
+      "format_result(3.14159) == '3.14'",
+      "format_percent(0.25) == '25.0%'"
+    ],
+    "followup_prompts": [
+      "Run `pytest test_calc.py -v` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `pytest test_calc.py -v` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "pytest test_calc.py -v"
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 5
+}

@@ -1,0 +1,75 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-007",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Build a Reverse Polish Notation (RPN) evaluator in Python",
+  "description": "Greenfield Python task: implement evaluate_rpn(tokens) that evaluates arithmetic expressions in Reverse Polish Notation using a stack.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"rpn\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/rpn.py",
+        "content": "# TODO: implement evaluate_rpn\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_rpn.py",
+        "content": "import pytest\nfrom src.rpn import evaluate_rpn\n\n\ndef test_single_number():\n    assert evaluate_rpn([\"42\"]) == 42.0\n\n\ndef test_simple_addition():\n    assert evaluate_rpn([\"3\", \"4\", \"+\"]) == 7.0\n\n\ndef test_multiplication_and_addition():\n    # 2 3 * 4 + = (2*3)+4 = 10\n    assert evaluate_rpn([\"2\", \"3\", \"*\", \"4\", \"+\"]) == 10.0\n\n\ndef test_subtraction():\n    assert evaluate_rpn([\"10\", \"3\", \"-\"]) == 7.0\n\n\ndef test_division():\n    assert evaluate_rpn([\"10\", \"2\", \"/\"]) == 5.0\n\n\ndef test_complex_expression():\n    # 5 1 2 + 4 * + 3 - = 5 + (1+2)*4 - 3 = 5 + 12 - 3 = 14\n    result = evaluate_rpn([\"5\", \"1\", \"2\", \"+\", \"4\", \"*\", \"+\", \"3\", \"-\"])\n    assert abs(result - 14.0) < 1e-9\n\n\ndef test_invalid_expression_raises():\n    with pytest.raises((ValueError, IndexError)):\n        evaluate_rpn([\"+\"])  # no operands\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement evaluate_rpn in src/rpn.py.\n\ndef evaluate_rpn(tokens: list[str]) -> float:\n    \"\"\"\n    Evaluate a Reverse Polish Notation expression.\n    tokens: list of strings — either numeric values or operators (+, -, *, /).\n    Returns the result as float.\n    Raises ValueError or IndexError for malformed expressions.\n    \"\"\"\n\nAlgorithm (stack-based):\n1. For each token:\n   - If it's a number, push float(token) onto the stack.\n   - If it's an operator (+, -, *, /), pop two operands (b then a), compute a op b, push result.\n2. Return stack.pop() as the final result.\n\nAll 7 tests in tests/test_rpn.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "Uses a stack to process tokens left-to-right",
+      "Numbers are pushed as floats",
+      "Operators pop two values: b = stack.pop(), a = stack.pop(), push a op b",
+      "Returns the single remaining stack value",
+      "Raises on invalid input (no operands for operator)",
+      "All 7 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (7 tests)",
+      "uv run python -c \"from src.rpn import evaluate_rpn\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.rpn import evaluate_rpn\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

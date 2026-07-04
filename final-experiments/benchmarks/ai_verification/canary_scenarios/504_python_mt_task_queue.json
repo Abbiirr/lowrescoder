@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "504-python-mt-task-queue",
+  "title": "Build a priority task queue in Python — 3 turns",
+  "category": "repo_init",
+  "difficulty": "easy",
+  "target_stack": {"language": "python", "framework": null, "extra": {}},
+  "description": "Three scripted turns build a priority task queue: turn 1 adds enqueue/dequeue, turn 2 adds priority ordering (lower number = higher priority), turn 3 adds peek/size/is_empty.",
+  "repo_seed": {
+    "files": {
+      "task_queue.py": "\"\"\"Priority task queue: lower priority number = higher urgency.\"\"\"\nimport heapq\nfrom typing import Any\n\n\nclass TaskQueue:\n    def __init__(self):\n        self._heap: list = []\n        self._counter = 0  # tiebreaker for equal priorities\n\n    def enqueue(self, task: Any, priority: int = 0) -> None:\n        \"\"\"Add task with given priority. Lower priority number = dequeued first.\"\"\"\n        raise NotImplementedError\n\n    def dequeue(self) -> Any:\n        \"\"\"Remove and return the highest-priority (lowest number) task.\n        Raises IndexError if empty.\n        \"\"\"\n        raise NotImplementedError\n\n    def peek(self) -> Any:\n        \"\"\"Return next task without removing it. Raises IndexError if empty.\"\"\"\n        raise NotImplementedError\n\n    def size(self) -> int:\n        \"\"\"Return number of tasks in the queue.\"\"\"\n        raise NotImplementedError\n\n    def is_empty(self) -> bool:\n        \"\"\"Return True if no tasks are queued.\"\"\"\n        raise NotImplementedError\n",
+      "tests/test_task_queue.py": "import pytest\nfrom task_queue import TaskQueue\n\n\ndef test_enqueue_and_dequeue():\n    q = TaskQueue()\n    q.enqueue(\"task_a\")\n    assert q.dequeue() == \"task_a\"\n\n\ndef test_priority_ordering():\n    q = TaskQueue()\n    q.enqueue(\"low\", priority=10)\n    q.enqueue(\"high\", priority=1)\n    q.enqueue(\"med\", priority=5)\n    assert q.dequeue() == \"high\"\n    assert q.dequeue() == \"med\"\n    assert q.dequeue() == \"low\"\n\n\ndef test_fifo_for_equal_priority():\n    q = TaskQueue()\n    q.enqueue(\"first\", priority=5)\n    q.enqueue(\"second\", priority=5)\n    assert q.dequeue() == \"first\"\n    assert q.dequeue() == \"second\"\n\n\ndef test_dequeue_empty_raises():\n    q = TaskQueue()\n    with pytest.raises(IndexError):\n        q.dequeue()\n\n\ndef test_peek_does_not_remove():\n    q = TaskQueue()\n    q.enqueue(\"x\", priority=1)\n    assert q.peek() == \"x\"\n    assert q.size() == 1\n\n\ndef test_peek_empty_raises():\n    q = TaskQueue()\n    with pytest.raises(IndexError):\n        q.peek()\n\n\ndef test_size_and_is_empty():\n    q = TaskQueue()\n    assert q.is_empty()\n    assert q.size() == 0\n    q.enqueue(\"t\", 1)\n    q.enqueue(\"u\", 2)\n    assert q.size() == 2\n    assert not q.is_empty()\n    q.dequeue()\n    assert q.size() == 1\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `enqueue(task, priority)` and `dequeue()` in `task_queue.py`. Use `self._heap` with `heapq`. Store tuples `(priority, counter, task)` so heapq does the ordering — use `self._counter` as a tiebreaker and increment it after each enqueue. `dequeue()` should raise `IndexError` if empty.",
+    "followup_prompts": [
+      "Good. Now implement `peek()` — return the next task without removing it, raising IndexError if empty. Also implement `size()` returning the heap length, and `is_empty()` returning True when size is 0. Run `uv run pytest tests/ -q` and fix any failures.",
+      "Final check: run `uv run pytest tests/ -q` one more time. All 7 tests must be green. Pay attention to the FIFO-for-equal-priority test — make sure your counter tiebreaker is working correctly."
+    ],
+    "success_criteria": [
+      "enqueue/dequeue maintain priority heap ordering",
+      "Equal priority tasks dequeue in FIFO order via counter tiebreaker",
+      "dequeue raises IndexError on empty queue",
+      "peek returns next task without removing it",
+      "size and is_empty are consistent",
+      "All 7 pytest tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "uv run pytest tests/ -q"}
+  },
+  "duration_hint_minutes": 10
+}

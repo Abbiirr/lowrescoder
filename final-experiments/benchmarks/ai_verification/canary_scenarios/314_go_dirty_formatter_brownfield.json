@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-brownfield-008",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Fix bugs in a Go string formatting module",
+  "description": "Brownfield Go dirty_cleanup: fix three intentional bugs in string formatting functions (Repeat repeats wrong char, Truncate cuts from wrong end, Pad pads wrong side).",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module strfmt\n\ngo 1.21\n"
+      },
+      {
+        "path": "strfmt.go",
+        "content": "package strfmt\n\nimport \"strings\"\n\n// BUG: repeats the last character instead of the first\nfunc Repeat(s string, n int) string {\n\tif s == \"\" || n <= 0 {\n\t\treturn \"\"\n\t}\n\treturn strings.Repeat(string(s[len(s)-1]), n)\n}\n\n// BUG: truncates from the beginning instead of the end\nfunc Truncate(s string, maxLen int) string {\n\tif len(s) <= maxLen {\n\t\treturn s\n\t}\n\treturn s[len(s)-maxLen:]\n}\n\n// BUG: pads on the left instead of the right\nfunc PadRight(s string, width int, pad rune) string {\n\tif len(s) >= width {\n\t\treturn s\n\t}\n\treturn strings.Repeat(string(pad), width-len(s)) + s\n}\n"
+      },
+      {
+        "path": "strfmt_test.go",
+        "content": "package strfmt\n\nimport \"testing\"\n\nfunc TestRepeat(t *testing.T) {\n\tif got := Repeat(\"abc\", 3); got != \"aaa\" {\n\t\tt.Fatalf(\"want aaa, got %q\", got)\n\t}\n}\n\nfunc TestTruncate(t *testing.T) {\n\tif got := Truncate(\"hello world\", 5); got != \"hello\" {\n\t\tt.Fatalf(\"want hello, got %q\", got)\n\t}\n}\n\nfunc TestPadRight(t *testing.T) {\n\tif got := PadRight(\"hi\", 5, '-'); got != \"hi---\" {\n\t\tt.Fatalf(\"want hi---, got %q\", got)\n\t}\n}\n\nfunc TestRepeatEmpty(t *testing.T) {\n\tif got := Repeat(\"\", 3); got != \"\" {\n\t\tt.Fatalf(\"want empty, got %q\", got)\n\t}\n}\n\nfunc TestTruncateShort(t *testing.T) {\n\tif got := Truncate(\"hi\", 10); got != \"hi\" {\n\t\tt.Fatalf(\"want hi, got %q\", got)\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in strfmt.go.\n\nBug 1 — Repeat: repeats s[len(s)-1] (last char) instead of s[0] (first char).\n  Fix: change string(s[len(s)-1]) to string(s[0])\n\nBug 2 — Truncate: takes the tail instead of the head.\n  Fix: change s[len(s)-maxLen:] to s[:maxLen]\n\nBug 3 — PadRight: pads on the left (prepend) instead of right (append).\n  Fix: change ...+s to s+...\n\nAll 5 tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Repeat repeats the first character of the string",
+      "Truncate returns the first maxLen characters",
+      "PadRight appends pad characters on the right",
+      "All edge cases (empty string, no truncation needed) handled",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

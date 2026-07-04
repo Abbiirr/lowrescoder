@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-027",
+  "title": "Fix three bugs in a Python Vector2D class",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Fix bugs in Vector2D: dot subtracts y components instead of adding, magnitude sums x+y instead of sqrt(x^2+y^2), add subtracts y instead of adding.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/vector2d.py": "import math\n\n\nclass Vector2D:\n    def __init__(self, x: float, y: float):\n        self.x = x\n        self.y = y\n\n    def dot(self, other: 'Vector2D') -> float:\n        # BUG 1: subtracts y components instead of adding\n        return self.x * other.x - self.y * other.y\n\n    def magnitude(self) -> float:\n        # BUG 2: sums x+y instead of sqrt(x^2+y^2)\n        return math.sqrt(self.x + self.y)\n\n    def add(self, other: 'Vector2D') -> 'Vector2D':\n        # BUG 3: subtracts y component instead of adding\n        return Vector2D(self.x + other.x, self.y - other.y)\n",
+      "tests/test_vector2d.py": "import sys\nsys.path.insert(0, '.')\nimport math\nfrom src.vector2d import Vector2D\n\n\ndef test_dot():\n    v1 = Vector2D(3, 4)\n    v2 = Vector2D(1, 2)\n    assert v1.dot(v2) == 11\n\n\ndef test_magnitude():\n    v = Vector2D(3, 4)\n    assert math.isclose(v.magnitude(), 5.0)\n\n\ndef test_add_x():\n    v = Vector2D(1, 2).add(Vector2D(3, 4))\n    assert v.x == 4\n\n\ndef test_add_y():\n    v = Vector2D(1, 2).add(Vector2D(3, 4))\n    assert v.y == 6\n",
+      "pyproject.toml": "[project]\nname = \"vector2d\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = []\n\n[tool.pytest.ini_options]\npythonpath = [\".\"]\n\n[dependency-groups]\ndev = [\"pytest>=8.0\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/vector2d.py:\n1. dot: change `- self.y * other.y` to `+ self.y * other.y`\n2. magnitude: change `math.sqrt(self.x + self.y)` to `math.sqrt(self.x ** 2 + self.y ** 2)`\n3. add: change `self.y - other.y` to `self.y + other.y`\nAll 4 tests must pass.",
+    "entry_point": "src/vector2d.py",
+    "success_criteria": "All 4 pytest test cases pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

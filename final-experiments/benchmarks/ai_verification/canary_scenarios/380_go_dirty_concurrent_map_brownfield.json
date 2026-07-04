@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-brownfield-021",
+  "title": "Fix three bugs in a Go concurrent safe map wrapper",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A SafeMap struct wraps sync.RWMutex around a map but has three bugs: Get uses Lock instead of RLock, Delete forgets to unlock on the early-return path, and Len reads without holding any lock.",
+  "repo_seed": {
+    "files": {
+      "safemap.go": "package safemap\n\nimport \"sync\"\n\ntype SafeMap struct {\n\tmu sync.RWMutex\n\tm  map[string]int\n}\n\nfunc New() *SafeMap {\n\treturn &SafeMap{m: make(map[string]int)}\n}\n\nfunc (s *SafeMap) Set(key string, val int) {\n\ts.mu.Lock()\n\tdefer s.mu.Unlock()\n\ts.m[key] = val\n}\n\nfunc (s *SafeMap) Get(key string) (int, bool) {\n\ts.mu.Lock() // bug: should be RLock\n\tdefer s.mu.Unlock() // bug: should be RUnlock\n\tv, ok := s.m[key]\n\treturn v, ok\n}\n\nfunc (s *SafeMap) Delete(key string) {\n\ts.mu.Lock()\n\tif _, ok := s.m[key]; !ok {\n\t\treturn // bug: missing s.mu.Unlock() before return\n\t}\n\tdelete(s.m, key)\n\ts.mu.Unlock()\n}\n\nfunc (s *SafeMap) Len() int {\n\t// bug: missing lock — should hold RLock\n\treturn len(s.m)\n}\n",
+      "safemap_test.go": "package safemap\n\nimport (\n\t\"sync\"\n\t\"testing\"\n)\n\nfunc TestSetGet(t *testing.T) {\n\tsm := New()\n\tsm.Set(\"a\", 1)\n\tsm.Set(\"b\", 2)\n\tif v, ok := sm.Get(\"a\"); !ok || v != 1 {\n\t\tt.Errorf(\"Get(a) = %d,%v, want 1,true\", v, ok)\n\t}\n\tif _, ok := sm.Get(\"z\"); ok {\n\t\tt.Error(\"Get(z) should return false\")\n\t}\n}\n\nfunc TestDelete(t *testing.T) {\n\tsm := New()\n\tsm.Set(\"x\", 10)\n\tsm.Delete(\"x\")\n\tif _, ok := sm.Get(\"x\"); ok {\n\t\tt.Error(\"x should be deleted\")\n\t}\n\tsm.Delete(\"nonexistent\") // should not deadlock\n}\n\nfunc TestLen(t *testing.T) {\n\tsm := New()\n\tsm.Set(\"a\", 1)\n\tsm.Set(\"b\", 2)\n\tsm.Set(\"c\", 3)\n\tif sm.Len() != 3 {\n\t\tt.Errorf(\"Len = %d, want 3\", sm.Len())\n\t}\n}\n\nfunc TestConcurrent(t *testing.T) {\n\tsm := New()\n\tvar wg sync.WaitGroup\n\tfor i := 0; i < 100; i++ {\n\t\twg.Add(1)\n\t\tgo func(i int) {\n\t\t\tdefer wg.Done()\n\t\t\tsm.Set(\"k\", i)\n\t\t\tsm.Get(\"k\")\n\t\t\tsm.Len()\n\t\t}(i)\n\t}\n\twg.Wait()\n}\n",
+      "go.mod": "module safemap\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in safemap.go:\n1. `Get`: change `s.mu.Lock()` to `s.mu.RLock()` and `s.mu.Unlock()` to `s.mu.RUnlock()`\n2. `Delete`: add `defer s.mu.Unlock()` at the top (and remove the manual `s.mu.Unlock()` at the bottom) OR add `s.mu.Unlock(); return` on the early-return path\n3. `Len`: add `s.mu.RLock()` before and `s.mu.RUnlock()` after (or use defer)\nAll 4 tests must pass without deadlock or race.",
+    "entry_point": "safemap.go",
+    "success_criteria": "All go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test -race ./...",
+    "expected_exit_code": 0
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-backend-009",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add CreateItem and DeleteItem to Go web-app handler",
+  "description": "Brownfield Go task: extend the go-web-app items handler with POST create and DELETE endpoints.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_web_app",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add two new handler functions to internal/handler/items.go. All existing tests must still pass.\n\nAdd a package-level nextID int initialized to 4 (since Store starts with IDs 1, 2, 3).\n\n  func CreateItem(w http.ResponseWriter, r *http.Request)\n    — POST only; 405 for other methods\n    — decodes JSON body {\"name\": string, \"price\": float64}; 400 if name is empty\n    — assigns nextID (increment after use), appends to Store\n    — returns 201 + the new Item as JSON\n\n  func DeleteItem(w http.ResponseWriter, r *http.Request)\n    — DELETE only; 405 for other methods\n    — URL pattern: /api/items/{id}; parse id from r.URL.Path after \"/api/items/\"\n    — returns 400 for non-integer id\n    — removes matching item from Store; returns 204 No Content\n    — returns 404 if id not found\n\nAll existing tests must still pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "CreateItem creates a new item with auto-assigned ID and returns 201",
+      "CreateItem returns 400 for missing or empty name",
+      "DeleteItem removes item and returns 204",
+      "DeleteItem returns 404 for unknown id",
+      "DeleteItem returns 405 for non-DELETE requests",
+      "All existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `go test ./...` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

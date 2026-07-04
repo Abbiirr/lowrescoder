@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-008",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Build a min-max stack in Rust with O(1) get_min and get_max",
+  "description": "Greenfield Rust task: implement MinMaxStack<T> that supports push, pop, peek, get_min, and get_max all in O(1) using auxiliary min/max tracking stacks.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"minmax-stack\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement MinMaxStack\n"
+      },
+      {
+        "path": "tests/minmax_test.rs",
+        "content": "use minmax_stack::MinMaxStack;\n\n#[test]\nfn test_push_and_pop() {\n    let mut s = MinMaxStack::new();\n    s.push(3);\n    s.push(1);\n    s.push(4);\n    assert_eq!(s.pop(), Some(4));\n    assert_eq!(s.pop(), Some(1));\n    assert_eq!(s.pop(), Some(3));\n    assert_eq!(s.pop(), None);\n}\n\n#[test]\nfn test_get_min() {\n    let mut s = MinMaxStack::new();\n    s.push(5);\n    s.push(2);\n    s.push(8);\n    assert_eq!(s.get_min(), Some(&2));\n    s.pop(); // removes 8\n    assert_eq!(s.get_min(), Some(&2));\n    s.pop(); // removes 2\n    assert_eq!(s.get_min(), Some(&5));\n}\n\n#[test]\nfn test_get_max() {\n    let mut s = MinMaxStack::new();\n    s.push(3);\n    s.push(7);\n    s.push(1);\n    assert_eq!(s.get_max(), Some(&7));\n    s.pop(); // removes 1\n    assert_eq!(s.get_max(), Some(&7));\n    s.pop(); // removes 7\n    assert_eq!(s.get_max(), Some(&3));\n}\n\n#[test]\nfn test_empty_returns_none() {\n    let s: MinMaxStack<i32> = MinMaxStack::new();\n    assert_eq!(s.get_min(), None);\n    assert_eq!(s.get_max(), None);\n    assert_eq!(s.peek(), None);\n}\n\n#[test]\nfn test_peek_does_not_consume() {\n    let mut s = MinMaxStack::new();\n    s.push(42);\n    assert_eq!(s.peek(), Some(&42));\n    assert_eq!(s.get_min(), Some(&42));\n    assert!(!s.is_empty());\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement MinMaxStack in src/lib.rs.\n\npub struct MinMaxStack<T> {\n    data:    Vec<T>,\n    min_stk: Vec<T>,  // tracks running minimum\n    max_stk: Vec<T>,  // tracks running maximum\n}\n\nimpl<T: Ord + Clone> MinMaxStack<T> {\n    pub fn new() -> Self\n    pub fn push(&mut self, item: T)\n        // Push to data. If min_stk is empty or item <= min_stk.last(), push to min_stk.\n        // If max_stk is empty or item >= max_stk.last(), push to max_stk.\n    pub fn pop(&mut self) -> Option<T>\n        // Pop from data. If popped item == min_stk.last(), also pop from min_stk.\n        // If popped item == max_stk.last(), also pop from max_stk.\n    pub fn peek(&self) -> Option<&T>       // top of data\n    pub fn get_min(&self) -> Option<&T>    // top of min_stk\n    pub fn get_max(&self) -> Option<&T>    // top of max_stk\n    pub fn is_empty(&self) -> bool\n}\n\nAll 5 tests in tests/minmax_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "Three Vec fields: data, min_stk, max_stk",
+      "push maintains min_stk and max_stk invariants",
+      "pop removes from min_stk/max_stk when the popped value equals their top",
+      "get_min and get_max are O(1) via stack tops",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

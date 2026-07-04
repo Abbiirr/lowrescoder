@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-brownfield-014",
+  "title": "Fix worker pool goroutine bugs in Go",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A worker pool has three bugs: workers never read from the jobs channel, results are never collected, and WaitGroup is not used correctly causing a race.",
+  "repo_seed": {
+    "files": {
+      "workerpool.go": "package workerpool\n\nimport \"sync\"\n\n// Job holds input for a worker.\ntype Job struct {\n\tID    int\n\tInput int\n}\n\n// Result holds output from a worker.\ntype Result struct {\n\tJobID  int\n\tOutput int\n}\n\n// RunPool starts numWorkers goroutines that double each job's Input.\n// It returns all results.\nfunc RunPool(jobs []Job, numWorkers int) []Result {\n\tjobCh := make(chan Job, len(jobs))\n\tresCh := make(chan Result, len(jobs))\n\n\tvar wg sync.WaitGroup\n\tfor i := 0; i < numWorkers; i++ {\n\t\tgo func() {\n\t\t\tfor j := range jobCh { // bug: was 'for { j := Job{}' (never receives)\n\t\t\t\t_ = j\n\t\t\t\t// bug: result not sent\n\t\t\t}\n\t\t\t// bug: wg.Done() missing\n\t\t}()\n\t}\n\n\tfor _, j := range jobs {\n\t\tjobCh <- j\n\t}\n\tclose(jobCh)\n\twg.Wait()\n\n\tclose(resCh)\n\tvar results []Result\n\tfor r := range resCh {\n\t\tresults = append(results, r)\n\t}\n\treturn results\n}\n",
+      "workerpool_test.go": "package workerpool\n\nimport (\n\t\"sort\"\n\t\"testing\"\n)\n\nfunc TestRunPoolBasic(t *testing.T) {\n\tjobs := []Job{{ID: 1, Input: 5}, {ID: 2, Input: 10}, {ID: 3, Input: 3}}\n\tresults := RunPool(jobs, 2)\n\tif len(results) != 3 {\n\t\tt.Fatalf(\"want 3 results, got %d\", len(results))\n\t}\n\tsort.Slice(results, func(i, j int) bool { return results[i].JobID < results[j].JobID })\n\tif results[0].Output != 10 || results[1].Output != 20 || results[2].Output != 6 {\n\t\tt.Fatalf(\"unexpected outputs: %+v\", results)\n\t}\n}\n\nfunc TestRunPoolSingleWorker(t *testing.T) {\n\tjobs := []Job{{ID: 1, Input: 7}}\n\tresults := RunPool(jobs, 1)\n\tif len(results) != 1 || results[0].Output != 14 {\n\t\tt.Fatalf(\"want [{1 14}], got %+v\", results)\n\t}\n}\n\nfunc TestRunPoolEmpty(t *testing.T) {\n\tresults := RunPool(nil, 3)\n\tif len(results) != 0 {\n\t\tt.Fatalf(\"want empty, got %+v\", results)\n\t}\n}\n",
+      "go.mod": "module workerpool\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix RunPool in workerpool.go — three bugs:\n1. Workers must call `wg.Add(1)` before the goroutine launches and `wg.Done()` at the end of the goroutine\n2. Workers must send results: `resCh <- Result{JobID: j.ID, Output: j.Input * 2}`\n3. The goroutine must actually range over jobCh (the seed already has `for j := range jobCh` but removes the send and Done — restore both)\nAll 3 tests must pass.",
+    "entry_point": "workerpool.go",
+    "success_criteria": "All 3 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

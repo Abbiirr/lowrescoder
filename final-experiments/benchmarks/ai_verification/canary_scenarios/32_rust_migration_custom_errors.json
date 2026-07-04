@@ -1,0 +1,57 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-migration-002",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "hard",
+  "duration_hint_minutes": 45,
+  "title": "Migrate Rust file-processor from Box<dyn Error> to a typed AppError enum",
+  "description": "A Rust file-processing library uses Box<dyn Error> everywhere. Migrate to a custom AppError enum so callers can match on specific error variants.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_boxed_errors",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The library in src/lib.rs uses Box<dyn std::error::Error> as the error type everywhere. Migrate to a typed error enum:\n\n1. Define a public enum AppError with three variants:\n   - Io(std::io::Error) — wraps filesystem errors\n   - Parse(std::num::ParseIntError) — wraps integer parse errors\n   - Validation(String) — holds a validation message\n\n2. Implement std::fmt::Display for AppError (e.g., each variant formats its inner error or message).\n\n3. Implement std::error::Error for AppError.\n\n4. Implement From<std::io::Error> for AppError (maps to Io variant) and From<std::num::ParseIntError> for AppError (maps to Parse variant) so the ? operator still works.\n\n5. Change the signatures of all four public functions to return Result<T, AppError> instead of Result<T, Box<dyn std::error::Error>>.\n\n6. Change the AppResult<T> type alias to type AppResult<T> = Result<T, AppError>.\n\n7. Update the tests: they should still use .unwrap() / .is_err() — but add three new tests that match on specific variants: test_parse_error_variant (asserts Err(AppError::Parse(_))), test_io_error_variant (asserts Err(AppError::Io(_)) for a non-existent path), test_validation_error_variant (asserts Err(AppError::Validation(_)) for a bad username).\n\ncargo test must pass all 10 tests. cargo clippy -- -D warnings must be clean.",
+    "required_artifacts": [
+      "AppError enum with Io, Parse, Validation variants",
+      "Display + Error impls for AppError",
+      "From<io::Error> and From<ParseIntError> impls",
+      "All four public functions return Result<T, AppError>",
+      "AppResult<T> = Result<T, AppError>",
+      "3 new variant-matching tests pass",
+      "cargo test: 10 tests pass",
+      "cargo clippy -- -D warnings clean"
+    ],
+    "success_criteria": [
+      "Callers can now match on AppError::Io vs AppError::Parse vs AppError::Validation",
+      "? operator still works without explicit conversions",
+      "All 10 tests pass"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `cargo test` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

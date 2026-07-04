@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-035",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement an event dispatcher (observer pattern) in Rust",
+  "description": "Greenfield Rust task: implement an EventDispatcher that allows subscribing handlers (closures) to named event types and dispatching events to all registered handlers.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"eventbus\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement EventDispatcher\n"
+      },
+      {
+        "path": "tests/event_test.rs",
+        "content": "use eventbus::EventDispatcher;\nuse std::cell::RefCell;\nuse std::rc::Rc;\n\n#[test]\nfn test_subscribe_and_dispatch() {\n    let mut dispatcher = EventDispatcher::new();\n    let received = Rc::new(RefCell::new(vec![]));\n    let r = Rc::clone(&received);\n    dispatcher.subscribe(\"click\", move |data: &str| {\n        r.borrow_mut().push(data.to_string());\n    });\n    dispatcher.dispatch(\"click\", \"button1\");\n    assert_eq!(*received.borrow(), vec![\"button1\"]);\n}\n\n#[test]\nfn test_multiple_subscribers() {\n    let mut dispatcher = EventDispatcher::new();\n    let count = Rc::new(RefCell::new(0u32));\n    let c1 = Rc::clone(&count);\n    let c2 = Rc::clone(&count);\n    dispatcher.subscribe(\"ping\", move |_: &str| { *c1.borrow_mut() += 1; });\n    dispatcher.subscribe(\"ping\", move |_: &str| { *c2.borrow_mut() += 10; });\n    dispatcher.dispatch(\"ping\", \"\");\n    assert_eq!(*count.borrow(), 11);\n}\n\n#[test]\nfn test_different_events_isolated() {\n    let mut dispatcher = EventDispatcher::new();\n    let fired = Rc::new(RefCell::new(false));\n    let f = Rc::clone(&fired);\n    dispatcher.subscribe(\"a\", move |_: &str| { *f.borrow_mut() = true; });\n    dispatcher.dispatch(\"b\", \"irrelevant\"); // should NOT fire handler for \"a\"\n    assert!(!*fired.borrow());\n}\n\n#[test]\nfn test_no_subscribers() {\n    let mut dispatcher = EventDispatcher::new();\n    // dispatching with no subscribers should not panic\n    dispatcher.dispatch(\"unknown\", \"data\");\n}\n\n#[test]\nfn test_dispatch_data_passed() {\n    let mut dispatcher = EventDispatcher::new();\n    let last = Rc::new(RefCell::new(String::new()));\n    let l = Rc::clone(&last);\n    dispatcher.subscribe(\"msg\", move |data: &str| {\n        *l.borrow_mut() = data.to_string();\n    });\n    dispatcher.dispatch(\"msg\", \"hello\");\n    dispatcher.dispatch(\"msg\", \"world\");\n    assert_eq!(*last.borrow(), \"world\");\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement EventDispatcher in src/lib.rs.\n\nuse std::collections::HashMap;\n\npub struct EventDispatcher {\n    handlers: HashMap<String, Vec<Box<dyn Fn(&str)>>>,\n}\n\nimpl EventDispatcher {\n    pub fn new() -> Self {\n        EventDispatcher { handlers: HashMap::new() }\n    }\n\n    pub fn subscribe<F: Fn(&str) + 'static>(&mut self, event: &str, handler: F) {\n        self.handlers\n            .entry(event.to_string())\n            .or_default()\n            .push(Box::new(handler));\n    }\n\n    pub fn dispatch(&self, event: &str, data: &str) {\n        if let Some(handlers) = self.handlers.get(event) {\n            for handler in handlers {\n                handler(data);\n            }\n        }\n    }\n}\n\nAll 5 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "EventDispatcher stores handlers in HashMap<String, Vec<Box<dyn Fn(&str)>>>",
+      "subscribe adds a boxed closure to the event's handler list",
+      "dispatch calls all handlers for the named event with the data string",
+      "dispatch on unknown event does not panic",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-greenfield-046",
+  "title": "Implement a builder pattern for server config in Rust",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement a ServerConfigBuilder with method chaining that produces a validated ServerConfig.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "#[derive(Debug, PartialEq)]\npub struct ServerConfig {\n    pub host: String,\n    pub port: u16,\n    pub max_connections: usize,\n    pub debug: bool,\n}\n\npub struct ServerConfigBuilder {\n    // your fields\n}\n\nimpl ServerConfigBuilder {\n    pub fn new() -> Self { panic!(\"not implemented\") }\n    pub fn host(self, host: &str) -> Self { panic!(\"not implemented\") }\n    pub fn port(self, port: u16) -> Self { panic!(\"not implemented\") }\n    pub fn max_connections(self, n: usize) -> Self { panic!(\"not implemented\") }\n    pub fn debug(self, debug: bool) -> Self { panic!(\"not implemented\") }\n    pub fn build(self) -> Result<ServerConfig, &'static str> { panic!(\"not implemented\") }\n}\n",
+      "tests/builder_test.rs": "use builder_config::ServerConfigBuilder;\n\n#[test]\nfn test_defaults() {\n    let cfg = ServerConfigBuilder::new().build().unwrap();\n    assert_eq!(cfg.host, \"localhost\");\n    assert_eq!(cfg.port, 8080);\n    assert_eq!(cfg.max_connections, 100);\n    assert!(!cfg.debug);\n}\n\n#[test]\nfn test_custom_values() {\n    let cfg = ServerConfigBuilder::new()\n        .host(\"example.com\")\n        .port(9090)\n        .max_connections(500)\n        .debug(true)\n        .build()\n        .unwrap();\n    assert_eq!(cfg.host, \"example.com\");\n    assert_eq!(cfg.port, 9090);\n    assert_eq!(cfg.max_connections, 500);\n    assert!(cfg.debug);\n}\n\n#[test]\nfn test_invalid_port_zero() {\n    let result = ServerConfigBuilder::new().port(0).build();\n    assert!(result.is_err());\n}\n\n#[test]\nfn test_empty_host_rejected() {\n    let result = ServerConfigBuilder::new().host(\"\").build();\n    assert!(result.is_err());\n}\n\n#[test]\nfn test_method_chain() {\n    // chaining works without intermediate bindings\n    let _ = ServerConfigBuilder::new().host(\"a\").port(80).debug(false).build().unwrap();\n}\n",
+      "Cargo.toml": "[package]\nname = \"builder_config\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement ServerConfigBuilder in src/lib.rs:\n- Fields: `host: String` (default \"localhost\"), `port: u16` (default 8080), `max_connections: usize` (default 100), `debug: bool` (default false)\n- Each setter takes `mut self` and returns `Self` (consuming builder pattern)\n- `build()`: return Err if host is empty or port is 0; otherwise return Ok(ServerConfig{...})\nAll 5 tests must pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": "All 5 cargo test cases pass",
+    "followup_prompts": [
+      "Run `cargo test --quiet` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test --quiet` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "cargo test",
+    "expected_exit_code": 0
+  }
+}

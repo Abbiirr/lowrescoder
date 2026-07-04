@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-ts-backend-feature-001",
+  "title": "Add a DELETE endpoint to a TypeScript Express-like server",
+  "category": "backend_feature",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "typescript",
+    "framework": "node",
+    "extra": {}
+  },
+  "description": "A simple Node.js HTTP server (no framework) handles GET and POST for a TODO list. It's missing the DELETE /todos/:id endpoint. Add it so the integration test passes. Exercises backend_feature category and TypeScript editing.",
+  "repo_seed": {
+    "files": {
+      "server.ts": "import * as http from 'http';\nimport { URL } from 'url';\n\ninterface Todo {\n  id: number;\n  title: string;\n  done: boolean;\n}\n\nconst todos: Todo[] = [];\nlet nextId = 1;\n\nexport function createServer(): http.Server {\n  return http.createServer((req, res) => {\n    const url = new URL(req.url!, `http://${req.headers.host}`);\n    const path = url.pathname;\n\n    res.setHeader('Content-Type', 'application/json');\n\n    if (req.method === 'GET' && path === '/todos') {\n      res.writeHead(200);\n      res.end(JSON.stringify(todos));\n      return;\n    }\n\n    if (req.method === 'POST' && path === '/todos') {\n      let body = '';\n      req.on('data', chunk => body += chunk);\n      req.on('end', () => {\n        const { title } = JSON.parse(body);\n        const todo: Todo = { id: nextId++, title, done: false };\n        todos.push(todo);\n        res.writeHead(201);\n        res.end(JSON.stringify(todo));\n      });\n      return;\n    }\n\n    // TODO: add DELETE /todos/:id\n\n    res.writeHead(404);\n    res.end(JSON.stringify({ error: 'not found' }));\n  });\n}\n",
+      "server.test.ts": "import * as http from 'http';\nimport { createServer } from './server';\n\nlet server: http.Server;\nlet port: number;\n\nbeforeAll((done) => {\n  server = createServer();\n  server.listen(0, () => {\n    port = (server.address() as any).port;\n    done();\n  });\n});\n\nafterAll((done) => server.close(done));\n\nasync function req(method: string, path: string, body?: object) {\n  return new Promise<{ status: number; body: any }>((resolve, reject) => {\n    const data = body ? JSON.stringify(body) : undefined;\n    const options = {\n      hostname: '127.0.0.1',\n      port,\n      path,\n      method,\n      headers: data ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) } : {},\n    };\n    const r = http.request(options, (res) => {\n      let responseBody = '';\n      res.on('data', chunk => responseBody += chunk);\n      res.on('end', () => resolve({ status: res.statusCode!, body: JSON.parse(responseBody) }));\n    });\n    r.on('error', reject);\n    if (data) r.write(data);\n    r.end();\n  });\n}\n\ntest('GET /todos returns empty array', async () => {\n  const r = await req('GET', '/todos');\n  expect(r.status).toBe(200);\n  expect(Array.isArray(r.body)).toBe(true);\n});\n\ntest('POST /todos creates a todo', async () => {\n  const r = await req('POST', '/todos', { title: 'Buy milk' });\n  expect(r.status).toBe(201);\n  expect(r.body.title).toBe('Buy milk');\n  expect(r.body.id).toBeGreaterThan(0);\n});\n\ntest('DELETE /todos/:id removes the todo', async () => {\n  const created = await req('POST', '/todos', { title: 'Delete me' });\n  const id = created.body.id;\n  const del = await req('DELETE', `/todos/${id}`);\n  expect(del.status).toBe(204);\n  const list = await req('GET', '/todos');\n  expect(list.body.find((t: any) => t.id === id)).toBeUndefined();\n});\n\ntest('DELETE /todos/:id returns 404 for unknown id', async () => {\n  const r = await req('DELETE', '/todos/999999');\n  expect(r.status).toBe(404);\n});\n",
+      "package.json": "{\"name\":\"todo-server\",\"version\":\"1.0.0\",\"scripts\":{\"test\":\"npx ts-jest --testEnvironment node server.test.ts || npx jest\",\"jest\":\"jest\"},\"devDependencies\":{\"@types/node\":\"*\",\"ts-jest\":\"^29.0.0\",\"jest\":\"^29.0.0\",\"typescript\":\"^5.0.0\",\"@types/jest\":\"^29.0.0\"},\"jest\":{\"preset\":\"ts-jest\",\"testEnvironment\":\"node\",\"testMatch\":[\"**/*.test.ts\"]}}\n",
+      "tsconfig.json": "{\"compilerOptions\":{\"target\":\"ES2020\",\"module\":\"commonjs\",\"strict\":true,\"esModuleInterop\":true,\"outDir\":\"./dist\"},\"include\":[\"*.ts\"]}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Add a DELETE /todos/:id endpoint to server.ts. When called:\n- If the todo with that id exists: remove it from the array and respond with HTTP 204 (no body)\n- If not found: respond with HTTP 404 and `{\"error\": \"not found\"}`\n\nThe existing GET and POST handlers show the pattern. The test suite in server.test.ts has 2 DELETE tests that currently fail.\n\nRun `npx jest --no-coverage` to verify all 4 tests pass.",
+    "entry_point": "server.ts",
+    "success_criteria": [
+      "All 4 jest tests pass",
+      "DELETE /todos/:id returns 204 on success",
+      "DELETE /todos/:id returns 404 for unknown id"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `npm install --silent && npx jest --no-coverage 2>&1` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "npm install --silent && npx jest --no-coverage 2>&1"
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 8
+}

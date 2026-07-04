@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-021",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 20,
+  "title": "Implement RPN (postfix) expression evaluator in Python",
+  "description": "Greenfield Python task: implement eval_rpn that evaluates a Reverse Polish Notation expression given as a list of string tokens, and tokenize that converts an infix string to a postfix token list using the shunting-yard algorithm.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"rpn_eval\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/rpn_eval.py",
+        "content": "# TODO: implement eval_rpn and tokenize\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_rpn_eval.py",
+        "content": "from src.rpn_eval import eval_rpn, tokenize\n\n\ndef test_eval_rpn_basic():\n    # 3 4 + = 7\n    assert eval_rpn([\"3\", \"4\", \"+\"]) == 7\n\n\ndef test_eval_rpn_complex():\n    # 2 3 4 * + = 14\n    assert eval_rpn([\"2\", \"3\", \"4\", \"*\", \"+\"]) == 14\n\n\ndef test_eval_rpn_subtraction():\n    # 10 3 - = 7\n    assert eval_rpn([\"10\", \"3\", \"-\"]) == 7\n\n\ndef test_eval_rpn_division():\n    # 15 3 / = 5\n    assert eval_rpn([\"15\", \"3\", \"/\"]) == 5\n\n\ndef test_tokenize_roundtrip():\n    # tokenize should produce tokens eval_rpn can evaluate correctly\n    tokens = tokenize(\"3 + 4 * 2\")\n    # 3 4 2 * + = 3 + 8 = 11\n    assert eval_rpn(tokens) == 11\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement RPN evaluator and shunting-yard tokenizer in src/rpn_eval.py.\n\ndef eval_rpn(tokens: list[str]) -> int | float:\n    # Use a stack. For each token:\n    # If operand: push int(token) if integer, else float(token).\n    # If operator (+, -, *, /): pop b then a, push a op b.\n    # Return stack[0].\n\ndef tokenize(expr: str) -> list[str]:\n    # Shunting-yard: convert infix to postfix.\n    # Precedence: * and / have higher precedence than + and -.\n    # All operators are left-associative.\n    # Tokens are integers and operators. Use split() to tokenize input.\n    # Use an operator stack and output list.\n    # For each token:\n    #   If number: append to output.\n    #   If operator: while stack top has >= precedence, pop to output; push current.\n    # After all tokens: pop remaining operators to output.\n\nAll 5 tests in tests/test_rpn_eval.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "eval_rpn uses a stack and applies operators left-to-right",
+      "eval_rpn handles all four arithmetic operators correctly",
+      "tokenize implements shunting-yard with correct precedence (* / over + -)",
+      "tokenize('3 + 4 * 2') produces postfix that evaluates to 11",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.rpn_eval import eval_rpn, tokenize\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.rpn_eval import eval_rpn, tokenize\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

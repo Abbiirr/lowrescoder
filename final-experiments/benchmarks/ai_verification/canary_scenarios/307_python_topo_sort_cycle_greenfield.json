@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-029",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "hard",
+  "duration_hint_minutes": 30,
+  "title": "Implement topological sort with cycle detection in Python",
+  "description": "Greenfield Python task: implement Kahn's algorithm for topological sorting of a directed acyclic graph, and detect cycles by checking if all nodes were sorted.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"toposort\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/toposort.py",
+        "content": "# TODO: implement topological_sort and has_cycle\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_toposort.py",
+        "content": "from src.toposort import topological_sort, has_cycle\n\n\ndef test_simple_dag():\n    # 0 -> 1 -> 3, 0 -> 2 -> 3\n    edges = [(0, 1), (0, 2), (1, 3), (2, 3)]\n    result = topological_sort(4, edges)\n    # 0 must come before 1 and 2; both before 3\n    assert result.index(0) < result.index(1)\n    assert result.index(0) < result.index(2)\n    assert result.index(1) < result.index(3)\n    assert result.index(2) < result.index(3)\n\n\ndef test_linear_chain():\n    edges = [(0, 1), (1, 2), (2, 3)]\n    result = topological_sort(4, edges)\n    assert result == [0, 1, 2, 3]\n\n\ndef test_has_cycle_true():\n    edges = [(0, 1), (1, 2), (2, 0)]  # cycle\n    assert has_cycle(3, edges)\n\n\ndef test_has_cycle_false():\n    edges = [(0, 1), (1, 2)]\n    assert not has_cycle(3, edges)\n\n\ndef test_no_edges():\n    result = topological_sort(3, [])\n    assert set(result) == {0, 1, 2}\n    assert len(result) == 3\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement topological_sort and has_cycle in src/toposort.py using Kahn's algorithm.\n\nfrom collections import deque, defaultdict\n\ndef topological_sort(n: int, edges: list[tuple[int, int]]) -> list[int]:\n    # Build adjacency list and in-degree array\n    adj = defaultdict(list)\n    in_degree = [0] * n\n    for u, v in edges:\n        adj[u].append(v)\n        in_degree[v] += 1\n    # Start with all nodes of in-degree 0\n    queue = deque(i for i in range(n) if in_degree[i] == 0)\n    result = []\n    while queue:\n        node = queue.popleft()\n        result.append(node)\n        for neighbor in adj[node]:\n            in_degree[neighbor] -= 1\n            if in_degree[neighbor] == 0:\n                queue.append(neighbor)\n    return result  # will be incomplete if cycle exists\n\ndef has_cycle(n: int, edges: list[tuple[int, int]]) -> bool:\n    return len(topological_sort(n, edges)) != n\n\nAll 5 tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "topological_sort uses Kahn's BFS algorithm with in-degree array",
+      "topological_sort preserves all dependency orderings",
+      "has_cycle returns True when sort result length < n",
+      "No-edge graph returns all nodes in any order",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.toposort import topological_sort, has_cycle\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.toposort import topological_sort, has_cycle\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

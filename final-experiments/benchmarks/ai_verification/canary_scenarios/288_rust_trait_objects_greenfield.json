@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-031",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement shape area/perimeter via trait objects in Rust",
+  "description": "Greenfield Rust task: define a Shape trait with area() and perimeter() methods, implement it for Circle, Rectangle, and Triangle, and write total_area/total_perimeter functions that accept &[Box<dyn Shape>].",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"shapes\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement Shape trait and Circle, Rectangle, Triangle structs\n"
+      },
+      {
+        "path": "tests/shapes_test.rs",
+        "content": "use shapes::{Circle, Rectangle, Triangle, Shape, total_area, total_perimeter};\nuse std::f64::consts::PI;\n\n#[test]\nfn test_circle() {\n    let c = Circle { radius: 1.0 };\n    assert!((c.area() - PI).abs() < 1e-9);\n    assert!((c.perimeter() - 2.0 * PI).abs() < 1e-9);\n}\n\n#[test]\nfn test_rectangle() {\n    let r = Rectangle { width: 3.0, height: 4.0 };\n    assert_eq!(r.area(), 12.0);\n    assert_eq!(r.perimeter(), 14.0);\n}\n\n#[test]\nfn test_triangle() {\n    // 3-4-5 right triangle\n    let t = Triangle { a: 3.0, b: 4.0, c: 5.0 };\n    assert_eq!(t.area(), 6.0); // Heron's formula\n    assert_eq!(t.perimeter(), 12.0);\n}\n\n#[test]\nfn test_total_area() {\n    let shapes: Vec<Box<dyn Shape>> = vec![\n        Box::new(Rectangle { width: 2.0, height: 3.0 }),\n        Box::new(Rectangle { width: 4.0, height: 5.0 }),\n    ];\n    assert_eq!(total_area(&shapes), 26.0);\n}\n\n#[test]\nfn test_total_perimeter() {\n    let shapes: Vec<Box<dyn Shape>> = vec![\n        Box::new(Rectangle { width: 1.0, height: 1.0 }),\n        Box::new(Rectangle { width: 2.0, height: 3.0 }),\n    ];\n    assert_eq!(total_perimeter(&shapes), 14.0); // 4+10\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement Shape trait and types in src/lib.rs.\n\npub trait Shape {\n    fn area(&self) -> f64;\n    fn perimeter(&self) -> f64;\n}\n\npub struct Circle { pub radius: f64 }\nimpl Shape for Circle {\n    fn area(&self) -> f64 { std::f64::consts::PI * self.radius * self.radius }\n    fn perimeter(&self) -> f64 { 2.0 * std::f64::consts::PI * self.radius }\n}\n\npub struct Rectangle { pub width: f64, pub height: f64 }\nimpl Shape for Rectangle {\n    fn area(&self) -> f64 { self.width * self.height }\n    fn perimeter(&self) -> f64 { 2.0 * (self.width + self.height) }\n}\n\npub struct Triangle { pub a: f64, pub b: f64, pub c: f64 }\nimpl Shape for Triangle {\n    fn area(&self) -> f64 { // Heron's formula\n        let s = (self.a + self.b + self.c) / 2.0;\n        (s * (s-self.a) * (s-self.b) * (s-self.c)).sqrt()\n    }\n    fn perimeter(&self) -> f64 { self.a + self.b + self.c }\n}\n\npub fn total_area(shapes: &[Box<dyn Shape>]) -> f64\n    // shapes.iter().map(|s| s.area()).sum()\n\npub fn total_perimeter(shapes: &[Box<dyn Shape>]) -> f64\n\nAll 5 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "Shape trait defines area() and perimeter()",
+      "Circle, Rectangle, Triangle all implement Shape",
+      "Triangle uses Heron's formula for area",
+      "total_area and total_perimeter work with trait objects",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

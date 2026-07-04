@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-backend-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "hard",
+  "duration_hint_minutes": 35,
+  "title": "Add word_frequency, top_n_words, and longest_common_prefix to Rust string-utils library",
+  "description": "A Rust string-utils library with word_count and capitalize_words gets three more complex analytical functions.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_string_utils",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Rust library in src/lib.rs has word_count and capitalize_words helpers. Add three new functions:\n\n1. pub fn word_frequency(text: &str) -> std::collections::HashMap<String, usize>\n   Count occurrences of each word (split on whitespace). Words are lowercased before counting.\n   Empty string returns empty map.\n\n2. pub fn top_n_words(text: &str, n: usize) -> Vec<(String, usize)>\n   Return the top n words by frequency (highest count first). When counts are equal, sort words alphabetically (ascending). Returns at most n pairs.\n   If n == 0 or text is empty, return empty vec.\n\n3. pub fn longest_common_prefix(words: &[&str]) -> String\n   Return the longest string that is a prefix of every word in the slice.\n   If the slice is empty or no common prefix exists, return an empty string.\n\nWrite 6+ tests covering: word_frequency basic, word_frequency empty, top_n_words basic, top_n_words with ties, top_n_words n larger than vocab, longest_common_prefix basic, longest_common_prefix no match.\n\nAll 3 existing tests must still pass. cargo test must pass all 9+ tests. cargo build must succeed.",
+    "required_artifacts": [
+      "pub fn word_frequency(text: &str) -> HashMap<String, usize>",
+      "pub fn top_n_words(text: &str, n: usize) -> Vec<(String, usize)>",
+      "pub fn longest_common_prefix(words: &[&str]) -> String",
+      "6+ new tests plus all 3 original tests pass",
+      "cargo test passes",
+      "cargo build succeeds"
+    ],
+    "success_criteria": [
+      "word_frequency lowercases words",
+      "top_n_words breaks ties alphabetically",
+      "longest_common_prefix handles empty slice and no-match",
+      "9+ total tests pass"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `cargo test` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

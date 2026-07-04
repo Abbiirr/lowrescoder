@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-frontend-010",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "medium",
+  "duration_hint_minutes": 35,
+  "title": "Add CRUD item endpoints to the FastAPI health endpoint app",
+  "description": "Frontend-feature task on backend_health_endpoint: the app has only GET /items. Add POST /items (create), GET /items/{item_id} (fetch), and DELETE /items/{item_id} (remove). Use an in-memory dict store. Existing GET /items test must still pass.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "backend_health_endpoint",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Extend src/app.py with three new endpoints backed by an in-memory dict store.\n\nStore: items: dict[int, dict] = {}; next_id: int = 1  (module-level or app.state)\n\nPOST /items\n  Body: {\"name\": str}\n  Creates item {\"id\": <next_id>, \"name\": <name>}, stores it, returns it with status 201.\n\nGET /items/{item_id}\n  Returns {\"id\": item_id, \"name\": <name>} or 404 if not found.\n\nDELETE /items/{item_id}\n  Removes item, returns 204 No Content. Returns 404 if not found.\n\nAlso update GET /items to return all stored items: {\"items\": [<item>, ...]}\nThe original test (response == {\"items\": []}) must still pass on a fresh state.\n\nAdd tests/test_crud.py covering the new endpoints.",
+    "required_artifacts": [
+      "POST /items creates item with auto-incremented id, returns 201",
+      "GET /items/{item_id} returns item or 404",
+      "DELETE /items/{item_id} removes item (204) or 404",
+      "GET /items returns all stored items (empty on fresh state)",
+      "Original test still passes",
+      "New CRUD tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (all tests)",
+      "uv run python -c \"from src.app import app\" passes"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `uv run pytest tests/ -v` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.app import app\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

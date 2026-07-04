@@ -1,0 +1,19 @@
+title: Compaction Path A invariant (deterministic)
+category: backend_feature
+difficulty: medium
+target_stack:
+  language: python
+task_spec:
+  prompt: |
+    Deterministic check: Path A compaction uses Session Notes when available.
+    This scenario uses a custom grading check command that directly exercises
+    ContextEngine.auto_compact() with seeded SessionNotes and asserts path=A.
+    No live agent is required.
+repo_seed:
+  mode: fresh
+grading:
+  checks:
+    - snapshot
+  check_commands:
+    snapshot: "uv run python -m benchmarks.ai_verification.checks.check_compaction_path_a"
+  expect_fixture_failure: false

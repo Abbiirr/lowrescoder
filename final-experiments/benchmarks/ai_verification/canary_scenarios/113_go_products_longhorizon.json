@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-longhorizon-005",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "duration_hint_minutes": 50,
+  "title": "Extend Go products API in 3 steps: pagination, categories, and CSV export",
+  "description": "Multi-step Go task: extend the legacy products API with pagination support, a category field with filtering, and a CSV export endpoint.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_legacy_products",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Extend internal/products/products.go in three steps. All 4 existing tests must still pass.\n\nStep 1 — Pagination:\n  Update GET /products to accept ?limit=N&offset=M query params.\n  - If absent or invalid (non-integer), ignore (return all).\n  - Slicing: store[offset:min(offset+limit, len(store))].\n  - Return {\"products\": [...], \"total\": <total before pagination>}.\n  - Existing GET /products must now return this shape (update listProducts).\n\nStep 2 — Category field:\n  Add Category string field to Product struct (json: \"category\").\n  - POST /products body now accepts optional \"category\" (default empty string).\n  - GET /products accepts optional ?category=X param: case-insensitive equality filter.\n  - Category filter applies BEFORE pagination.\n\nStep 3 — CSV export:\n  GET /products/export\n  - Content-Type: text/csv\n  - First row: Name,Price,Category header\n  - One row per product: {name},{price},{category}\n  - Price formatted to 2 decimal places\n  - No pagination applied; always exports all products\n  - Must be routed before the /products/{id} catch-all in Handler\n\nAll 4 existing tests plus solution-only tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "GET /products returns {products, total} with pagination",
+      "?limit=N&offset=M correctly slices the store",
+      "Product.Category field with json tag",
+      "?category=X case-insensitive filter works",
+      "GET /products/export returns CSV with Name,Price,Category header",
+      "All 4 existing tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `go test ./...` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `go test ./...` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

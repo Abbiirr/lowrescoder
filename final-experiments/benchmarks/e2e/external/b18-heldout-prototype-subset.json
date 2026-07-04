@@ -1,0 +1,76 @@
+{
+  "_meta": {
+    "description": "B18: Fresh Held-Out Issue Resolution \u2014 fix novel bugs not seen in training data",
+    "comparison_validity": "internal",
+    "parity_claim": "forbidden",
+    "note": "Multi-task lane: date parsing, memory leaks, pagination, race conditions, unicode, and fresh proxy tasks.",
+    "last_verified": "2026-03-21"
+  },
+  "tasks": [
+    {
+      "task_id": "b18-fix-date-parsing",
+      "category": "bugfix",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Fix a date parser that crashes on ISO 8601 timezone offsets like +05:30 and -08:00.",
+      "fixture_dir": "fixtures/b18/b18-fix-date-parsing",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b18-fix-memory-leak",
+      "category": "bugfix",
+      "difficulty": "hard",
+      "language": "python",
+      "description": "Identify and fix a memory leak in a long-running process.",
+      "fixture_dir": "fixtures/b18/b18-fix-memory-leak",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b18-fix-pagination",
+      "category": "bugfix",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Fix broken pagination logic that skips or duplicates records at page boundaries.",
+      "fixture_dir": "fixtures/b18/b18-fix-pagination",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b18-fix-race-condition",
+      "category": "bugfix",
+      "difficulty": "hard",
+      "language": "python",
+      "description": "Fix a race condition in a concurrent data processing pipeline.",
+      "fixture_dir": "fixtures/b18/b18-fix-race-condition",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b18-fix-unicode-crash",
+      "category": "bugfix",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Fix a search function that crashes on non-ASCII characters including accented letters, CJK, and emoji.",
+      "fixture_dir": "fixtures/b18/b18-fix-unicode-crash",
+      "setup_commands": [
+        "bash setup.sh"
+      ],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    }
+  ]
+}

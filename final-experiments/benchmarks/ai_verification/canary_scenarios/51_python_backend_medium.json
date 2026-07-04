@@ -1,0 +1,64 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-backend-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Add name-search filter and price sort to FastAPI items API",
+  "description": "A minimal FastAPI items API needs a name search filter and a price sort query parameter added to the list endpoint.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "backend_health_endpoint",
+    "injections": [
+      {
+        "path": "src/app.py",
+        "content": "from fastapi import FastAPI\n\napp = FastAPI()\n\n_items = [\n    {\"id\": 1, \"name\": \"Widget A\", \"price\": 9.99},\n    {\"id\": 2, \"name\": \"Gadget B\", \"price\": 24.99},\n    {\"id\": 3, \"name\": \"Tool C\", \"price\": 14.99},\n    {\"id\": 4, \"name\": \"Widget Pro\", \"price\": 49.99},\n]\n\n\n@app.get(\"/items\")\ndef list_items() -> list:\n    return _items\n"
+      },
+      {
+        "path": "tests/test_items.py",
+        "content": "from fastapi.testclient import TestClient\nfrom src.app import app\n\nclient = TestClient(app)\n\n\ndef test_list_all():\n    r = client.get(\"/items\")\n    assert r.status_code == 200\n    assert len(r.json()) == 4\n"
+      }
+    ],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "The FastAPI app in src/app.py has GET /items returning all 4 items. Add two query params:\n\n1. ?q=<query> — case-insensitive substring search on item name. Absent means return all.\n2. ?sort=price_asc or ?sort=price_desc — sort results by price. Absent means original order.\n\nBoth params compose: ?q=widget&sort=price_desc filters then sorts.\n\nAdd 4 tests in tests/test_items.py:\n  test_search_widget — ?q=widget returns 2 items (Widget A and Widget Pro)\n  test_search_no_match — ?q=xyz returns empty list\n  test_sort_asc — ?sort=price_asc returns items with increasing price\n  test_sort_desc_with_filter — ?q=widget&sort=price_desc returns Widgets sorted descending\n\nThe original test must still pass. Run uv run pytest tests/ -q to confirm.",
+    "required_artifacts": [
+      "?q= search filter on GET /items",
+      "?sort=price_asc|price_desc on GET /items",
+      "4 new tests covering search and sort",
+      "Original test still passes"
+    ],
+    "success_criteria": [
+      "Search is case-insensitive substring match",
+      "Sort composes with search filter",
+      "All 5 tests pass"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `uv run pytest tests/ -q` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q",
+      "lint": "uv run ruff check src/ tests/"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-longhorizon-006",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Extend rust_page_builder with headings, links, and lists",
+  "description": "Brownfield Rust task: add heading, link, and unordered-list builder methods to the Page struct.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_page_builder",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add four new methods to Page in src/lib.rs. All 3 existing tests must still pass.\n\n  pub fn add_heading(&mut self, level: u8, text: &str) -> &mut Self\n    — appends <h1>text</h1> through <h6>text</h6> depending on level (clamp level to 1–6)\n\n  pub fn add_link(&mut self, href: &str, text: &str) -> &mut Self\n    — appends <a href=\"{href}\">{text}</a>\n\n  pub fn add_unordered_list(&mut self, items: &[&str]) -> &mut Self\n    — appends <ul><li>item1</li><li>item2</li>...</ul>\n    — produces empty <ul></ul> for empty slice\n\n  pub fn item_count(&self) -> usize\n    — returns the number of body items currently added\n\nDo not modify the existing methods or tests.\nAdd tests for all 4 new methods.\nAll 3 existing tests must still pass.\nRun: cargo test",
+    "required_artifacts": [
+      "add_heading generates correct <h1>–<h6> tags",
+      "add_link generates <a href=\"...\">text</a>",
+      "add_unordered_list generates <ul><li>...</li></ul>",
+      "item_count returns number of body items",
+      "Tests for all 4 new methods",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `cargo test` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `cargo test` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

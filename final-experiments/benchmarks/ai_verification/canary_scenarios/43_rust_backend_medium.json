@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-backend-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Add three string-analysis functions to Rust string-utils: is_palindrome, count_vowels, slugify",
+  "description": "A Rust string-utils library needs three new string-analysis functions with tests.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_string_utils",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Rust library in src/lib.rs has word_count and capitalize_words. Add three new functions:\n\n1. pub fn is_palindrome(s: &str) -> bool\n   Returns true if s (ignoring case and non-alphabetic chars) reads the same forwards and backwards.\n   Examples: is_palindrome(\"racecar\") == true, is_palindrome(\"A man a plan a canal Panama\") == true, is_palindrome(\"hello\") == false.\n\n2. pub fn count_vowels(s: &str) -> usize\n   Returns the number of ASCII vowels (a, e, i, o, u, case-insensitive) in s.\n   Examples: count_vowels(\"Hello World\") == 3, count_vowels(\"\") == 0.\n\n3. pub fn slugify(s: &str) -> String\n   Converts s to a URL slug: lowercase, non-alphanumeric chars replaced by hyphens, consecutive hyphens collapsed to one, leading/trailing hyphens removed.\n   Examples: slugify(\"Hello World!\") == \"hello-world\", slugify(\"  Rust is Great  \") == \"rust-is-great\".\n\nAdd 2 tests per function (6 total). All 3 existing tests must still pass.\ncargo test must show 9+ tests passing. cargo build must succeed.",
+    "required_artifacts": [
+      "is_palindrome with 2 tests",
+      "count_vowels with 2 tests",
+      "slugify with 2 tests",
+      "All 3 original tests still pass",
+      "cargo test passes all 9+ tests"
+    ],
+    "success_criteria": [
+      "is_palindrome ignores case and non-alpha chars",
+      "count_vowels case-insensitive",
+      "slugify collapses consecutive separators",
+      "All 9+ tests pass"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `cargo test` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

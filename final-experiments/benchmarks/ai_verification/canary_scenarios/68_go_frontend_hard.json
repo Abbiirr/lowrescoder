@@ -1,0 +1,58 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-frontend-003",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "hard",
+  "duration_hint_minutes": 40,
+  "title": "Add multi-handler admin panel with create and delete to Go web app",
+  "description": "Extend the Go web app with a full admin panel: an HTML admin page showing item stats, a form-based create endpoint, and a POST-based delete endpoint.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_web_app",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Extend the go_web_app with an admin panel. Add the following to internal/handler/:\n\n1. Create admin.go with three handlers:\n\n   AdminPage(w http.ResponseWriter, r *http.Request)\n   - Only handles GET. Responds 200 with HTML.\n   - Renders templates/admin.html with a struct containing Items []Item, Count int, Total float64, Avg float64.\n   - Count = len(Store), Total = sum of all prices, Avg = Total/Count (0 if Count==0).\n\n   CreateAdminItem(w http.ResponseWriter, r *http.Request)\n   - Only handles POST. Parses form fields: name (string) and price (float64).\n   - Appends a new Item to Store with the next available ID (max existing ID + 1).\n   - Responds 302 redirect to /admin.\n\n   DeleteAdminItem(w http.ResponseWriter, r *http.Request)\n   - Only handles POST. Extracts the item ID from the URL path (last segment).\n   - Removes the matching item from Store.\n   - Responds 302 redirect to /admin.\n\n2. Create templates/admin.html with:\n   - An <h1>Admin Panel</h1> heading.\n   - A summary section showing 'Items: N' and 'Total: $X.XX'.\n   - A <table> listing all items (ID, Name, Price, Delete button).\n   - Each Delete button is a <form method=\"POST\" action=\"/admin/items/{id}/delete\"> with a submit button.\n   - A <form method=\"POST\" action=\"/admin/items\"> with name and price text inputs and a Create button.\n\n3. Create internal/handler/admin_test.go with 4 tests:\n   - TestAdminPageOK: GET /admin returns 200 and HTML containing 'Admin Panel'\n   - TestAdminPageShowsItems: GET /admin HTML contains 'Widget A'\n   - TestCreateAdminItem: POST /admin/items with name=NewThing&price=5.00 returns 302; subsequent GET /admin contains 'NewThing'\n   - TestDeleteAdminItem: POST /admin/items/1/delete returns 302; subsequent GET /admin does not contain 'Widget A'\n\nIn each test, build a fresh *http.ServeMux, register AdminPage at 'GET /admin', CreateAdminItem at 'POST /admin/items', and DeleteAdminItem at 'POST /admin/items/{id}/delete'. Call ResetStore() before each test.\n\nRun go test ./... and go build ./... to confirm.",
+    "required_artifacts": [
+      "internal/handler/admin.go with AdminPage, CreateAdminItem, DeleteAdminItem",
+      "templates/admin.html with heading, stats, items table, create form, delete forms",
+      "internal/handler/admin_test.go with 4 tests",
+      "AdminPage renders item list and aggregate stats",
+      "CreateAdminItem appends to Store and redirects",
+      "DeleteAdminItem removes from Store and redirects",
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "success_criteria": [
+      "All 4 admin tests pass",
+      "Admin page shows count and total price",
+      "Create and delete handlers modify Store correctly",
+      "go build clean"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `go test ./...` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

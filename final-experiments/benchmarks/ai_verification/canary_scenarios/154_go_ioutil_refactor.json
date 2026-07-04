@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-refactor-008",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Wrap go_ioutil_reader functions in a FileReader struct",
+  "description": "Brownfield Go refactor: introduce a FileReader struct that wraps the existing package-level file functions as methods.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_ioutil_reader",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Refactor internal/fileutil/fileutil.go to introduce a FileReader struct. All 3 existing tests must still pass.\n\nAdd to fileutil.go:\n\n  type FileReader struct { /* unexported path field */ }\n\n  func NewFileReader(path string) *FileReader\n    — constructs a FileReader for the given path\n\n  func (fr *FileReader) ReadBytes() ([]byte, error)\n    — delegates to the package-level ReadBytes(fr.path)\n\n  func (fr *FileReader) WriteBytes(data []byte) error\n    — delegates to the package-level WriteBytes(fr.path, data)\n\n  func (fr *FileReader) ReadLines() ([]string, error)\n    — delegates to the package-level ReadLines(fr.path)\n\nAlso add tests for the FileReader methods in fileutil_test.go.\nDo not modify the existing package-level functions.\nAll 3 existing tests must still pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "FileReader struct with unexported path field",
+      "NewFileReader constructs FileReader for path",
+      "ReadBytes() delegates to package-level ReadBytes",
+      "WriteBytes(data) delegates to package-level WriteBytes",
+      "ReadLines() delegates to package-level ReadLines",
+      "Tests for FileReader methods added to fileutil_test.go",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `go test ./...` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

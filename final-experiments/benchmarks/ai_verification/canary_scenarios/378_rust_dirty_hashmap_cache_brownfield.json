@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-brownfield-013",
+  "title": "Fix three bugs in a Rust key-value cache with TTL",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A simple KV cache with expiry has three bugs: insert stores wrong expiry, get checks expiry with wrong comparison, and evict_expired removes live entries instead of expired ones.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "use std::collections::HashMap;\nuse std::time::{Duration, Instant};\n\npub struct Cache {\n    store: HashMap<String, (String, Instant)>,\n}\n\nimpl Cache {\n    pub fn new() -> Self {\n        Cache { store: HashMap::new() }\n    }\n\n    pub fn insert(&mut self, key: &str, value: &str, ttl: Duration) {\n        let expiry = Instant::now(); // bug: should be Instant::now() + ttl\n        self.store.insert(key.to_string(), (value.to_string(), expiry));\n    }\n\n    pub fn get(&self, key: &str) -> Option<&str> {\n        self.store.get(key).and_then(|(v, expiry)| {\n            if Instant::now() > *expiry { // bug: should be <  (expired means now > expiry)\n                Some(v.as_str())\n            } else {\n                None\n            }\n        })\n    }\n\n    pub fn evict_expired(&mut self) {\n        let now = Instant::now();\n        self.store.retain(|_, (_, expiry)| now > *expiry); // bug: should be now <= *expiry (keep live)\n    }\n\n    pub fn len(&self) -> usize {\n        self.store.len()\n    }\n}\n",
+      "tests/cache_test.rs": "use std::time::Duration;\nuse std::thread::sleep;\nuse kv_cache::Cache;\n\n#[test]\nfn test_insert_and_get_live() {\n    let mut c = Cache::new();\n    c.insert(\"k\", \"v\", Duration::from_secs(10));\n    assert_eq!(c.get(\"k\"), Some(\"v\"));\n}\n\n#[test]\nfn test_expired_returns_none() {\n    let mut c = Cache::new();\n    c.insert(\"k\", \"v\", Duration::from_millis(50));\n    sleep(Duration::from_millis(100));\n    assert_eq!(c.get(\"k\"), None);\n}\n\n#[test]\nfn test_evict_expired() {\n    let mut c = Cache::new();\n    c.insert(\"live\", \"a\", Duration::from_secs(10));\n    c.insert(\"dead\", \"b\", Duration::from_millis(50));\n    sleep(Duration::from_millis(100));\n    c.evict_expired();\n    assert_eq!(c.len(), 1);\n    assert_eq!(c.get(\"live\"), Some(\"a\"));\n}\n",
+      "Cargo.toml": "[package]\nname = \"kv_cache\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/lib.rs:\n1. `insert`: change `Instant::now()` to `Instant::now() + ttl` so the expiry is in the future\n2. `get`: change `if Instant::now() > *expiry` to `if Instant::now() < *expiry` (return value only when entry is still live)\n3. `evict_expired`: change `retain(|_, (_, expiry)| now > *expiry)` to `retain(|_, (_, expiry)| now <= *expiry)` to keep live entries\nAll 3 tests must pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": "All 3 cargo test cases pass",
+    "followup_prompts": [
+      "Run `cargo test --quiet` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test --quiet` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "cargo test",
+    "expected_exit_code": 0
+  }
+}

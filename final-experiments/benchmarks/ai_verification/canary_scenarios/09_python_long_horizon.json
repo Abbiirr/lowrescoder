@@ -1,0 +1,60 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-long-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "duration_hint_minutes": 30,
+  "title": "Evolve a Python service over 5 steps: config, logging, pagination, caching, docs",
+  "description": "A Python batch-processing service works but has hardcoded config, no logging, no pagination, no caching, and no docstrings. Improve it in 5 sequential steps without breaking any existing tests.",
+  "target_stack": {
+    "language": "python",
+    "framework": "",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_multistep_service",
+    "injections": [],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "Improve the service in src/ through these 5 steps. Do NOT break any existing tests.\n\nStep 1 — Config from environment:\n  Replace hardcoded values in src/config.py with os.environ.get() calls (keep same names, add defaults matching current values).\n\nStep 2 — Structured logging:\n  Add a src/logger.py module with get_logger(name) returning a stdlib logger. Wire it into src/processor.py: log each successful transform at DEBUG and each retry at WARNING.\n\nStep 3 — Pagination for batch_process:\n  Add batch_process_page(groups, page, page_size) -> dict in src/processor.py that returns only the slice for the given page (1-indexed). Add tests in tests/test_pagination.py (at least 3 tests).\n\nStep 4 — Simple in-memory cache:\n  Add src/cache.py with cached_process(items) that wraps process() and caches results keyed by tuple(items). Cache should be clearable. Add tests in tests/test_cache.py (at least 2 tests).\n\nStep 5 — Docstrings:\n  Add one-line docstrings to every public function in src/processor.py and src/store.py.\n\nFinal requirement: uv run pytest tests/ -q must pass all tests including the new ones you add.",
+    "required_artifacts": [
+      "src/config.py uses os.environ.get()",
+      "src/logger.py exists with get_logger()",
+      "src/processor.py logs at DEBUG/WARNING",
+      "batch_process_page() exists and tested",
+      "src/cache.py exists with cached_process()",
+      "all tests pass"
+    ],
+    "success_criteria": [
+      "Config reads from environment with original defaults",
+      "Logger module wired into processor",
+      "Pagination logic correct (1-indexed, handles edge cases)",
+      "Cache keyed by tuple(items), clearable",
+      "All public functions have docstrings",
+      "No existing tests broken"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `uv run pytest tests/ -q` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `uv run pytest tests/ -q` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q",
+      "lint": "uv run ruff check src/ tests/ 2>/dev/null || true"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

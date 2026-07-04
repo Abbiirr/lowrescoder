@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-dirty-calculator-001",
+  "title": "Fix bugs in a Rust calculator module",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Rust calculator module has three bugs: division returns floor instead of float division, power uses addition instead of multiplication, and percent_of has dividend and divisor swapped. Fix all three.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "//! Simple calculator operations.\n\n/// Divide a by b. Returns f64. Panics if b is zero.\npub fn divide(a: f64, b: f64) -> f64 {\n    if b == 0.0 {\n        panic!(\"division by zero\");\n    }\n    // BUG 1: integer floor division instead of float division\n    (a as i64 / b as i64) as f64\n}\n\n/// Raise base to the given integer power. Returns f64.\npub fn power(base: f64, exp: u32) -> f64 {\n    if exp == 0 {\n        return 1.0;\n    }\n    let mut result = 1.0_f64;\n    for _ in 0..exp {\n        // BUG 2: adds base instead of multiplying\n        result += base;\n    }\n    result\n}\n\n/// Return what percent `part` is of `total`.\n/// E.g. percent_of(25.0, 200.0) == 12.5\npub fn percent_of(part: f64, total: f64) -> f64 {\n    // BUG 3: dividend and divisor are swapped\n    (total / part) * 100.0\n}\n",
+      "src/main.rs": "fn main() {}\n",
+      "tests/calculator_tests.rs": "#[cfg(test)]\nmod tests {\n    use rust_dirty_calculator::{divide, power, percent_of};\n\n    #[test]\n    fn test_divide_exact() {\n        assert_eq!(divide(10.0, 4.0), 2.5);\n    }\n\n    #[test]\n    fn test_divide_whole() {\n        assert_eq!(divide(9.0, 3.0), 3.0);\n    }\n\n    #[test]\n    fn test_power_basic() {\n        assert_eq!(power(2.0, 3), 8.0);\n    }\n\n    #[test]\n    fn test_power_zero_exp() {\n        assert_eq!(power(5.0, 0), 1.0);\n    }\n\n    #[test]\n    fn test_percent_of() {\n        assert!((percent_of(25.0, 200.0) - 12.5).abs() < 1e-9);\n    }\n\n    #[test]\n    fn test_percent_of_half() {\n        assert!((percent_of(50.0, 100.0) - 50.0).abs() < 1e-9);\n    }\n}\n",
+      "Cargo.toml": "[package]\nname = \"rust_dirty_calculator\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\nname = \"rust_dirty_calculator\"\npath = \"src/lib.rs\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix the three bugs in src/lib.rs:\n\n1. BUG 1 in divide(): Replace `(a as i64 / b as i64) as f64` with `a / b` for proper float division.\n2. BUG 2 in power(): Replace `result += base` with `result *= base` to multiply instead of add.\n3. BUG 3 in percent_of(): Replace `(total / part) * 100.0` with `(part / total) * 100.0` to fix the swapped operands.\n\nRun `cargo test` to verify all 6 tests pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": [
+      "All 6 cargo tests pass",
+      "divide(10.0, 4.0) == 2.5 (float division)",
+      "power(2.0, 3) == 8.0 (multiplication not addition)",
+      "percent_of(25.0, 200.0) == 12.5 (correct operand order)"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test"
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 5
+}

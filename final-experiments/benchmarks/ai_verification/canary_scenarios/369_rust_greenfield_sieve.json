@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-greenfield-049",
+  "title": "Implement the Sieve of Eratosthenes in Rust",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement sieve_of_eratosthenes(n) returning all primes <= n, and a related is_prime(n) function.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "/// Returns all primes <= n using the Sieve of Eratosthenes.\npub fn sieve(n: usize) -> Vec<usize> {\n    panic!(\"not implemented\")\n}\n\n/// Returns true if n is prime.\npub fn is_prime(n: usize) -> bool {\n    panic!(\"not implemented\")\n}\n",
+      "tests/sieve_test.rs": "use sieve::{sieve, is_prime};\n\n#[test]\nfn test_sieve_small() {\n    assert_eq!(sieve(10), vec![2, 3, 5, 7]);\n}\n\n#[test]\nfn test_sieve_zero_one() {\n    assert_eq!(sieve(0), vec![]);\n    assert_eq!(sieve(1), vec![]);\n    assert_eq!(sieve(2), vec![2]);\n}\n\n#[test]\nfn test_sieve_20() {\n    assert_eq!(sieve(20), vec![2, 3, 5, 7, 11, 13, 17, 19]);\n}\n\n#[test]\nfn test_is_prime() {\n    assert!(!is_prime(0));\n    assert!(!is_prime(1));\n    assert!(is_prime(2));\n    assert!(is_prime(13));\n    assert!(!is_prime(15));\n}\n\n#[test]\nfn test_is_prime_large() {\n    assert!(is_prime(97));\n    assert!(!is_prime(100));\n}\n",
+      "Cargo.toml": "[package]\nname = \"sieve\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement in src/lib.rs:\n- `sieve(n)`: create a bool Vec of size n+1 (all true except indices 0 and 1); for p from 2..=sqrt(n): if is_prime[p], mark multiples p*p, p*p+p, ... as false; collect indices where is_composite[i]==true\n- `is_prime(n)`: if n < 2 return false; check divisors from 2..=sqrt(n), return false if any divides n; return true\nAll 5 tests must pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": "All 5 cargo test cases pass",
+    "followup_prompts": [
+      "Run `cargo test --quiet` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test --quiet` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "cargo test",
+    "expected_exit_code": 0
+  }
+}

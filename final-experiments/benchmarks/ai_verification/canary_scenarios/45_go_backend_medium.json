@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-backend-002",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Add DELETE /items/{id} endpoint to Go items API",
+  "description": "A Go items CRUD API has GET and POST but is missing DELETE. Add the delete endpoint with tests.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_items_handler",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Go items API in internal/items/handler.go supports GET /items, GET /items/{id}, and POST /items. Add the missing endpoint:\n\nDELETE /items/{id}:\n  - Extract the ID from the URL path (same pattern as GetItem).\n  - Return 404 with JSON error if item not found.\n  - Remove the item from the store and return 200 with {\"deleted\": true}.\n  - Register the route in cmd/server/main.go.\n\nAdd TestDeleteItem (item found and deleted, 200) and TestDeleteItemNotFound (missing ID, 404).\n\nAll 4 existing tests must still pass. Run go test ./... to confirm. Run go vet ./... to confirm no issues.",
+    "required_artifacts": [
+      "DELETE /items/{id} handler in internal/items/handler.go",
+      "Route registered in cmd/server/main.go",
+      "TestDeleteItem and TestDeleteItemNotFound",
+      "All 4 original tests still pass",
+      "go test ./... passes",
+      "go vet ./... clean"
+    ],
+    "success_criteria": [
+      "DELETE returns 404 for unknown ID",
+      "DELETE removes item from store (subsequent GET /items shows it gone)",
+      "All 6 tests pass",
+      "go vet clean"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `go test ./...` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

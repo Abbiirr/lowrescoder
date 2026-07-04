@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-brownfield-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Fix bugs in a Rust string parsing module",
+  "description": "Brownfield Rust dirty_cleanup: fix three intentional bugs in string utility functions (trim_and_upper returns lowercase, count_words counts characters, split_on_comma doesn't split on commas).",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"strparser\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// BUG: returns lowercase instead of uppercase\npub fn trim_and_upper(s: &str) -> String {\n    s.trim().to_lowercase()\n}\n\n// BUG: counts bytes/characters instead of whitespace-separated words\npub fn count_words(s: &str) -> usize {\n    s.len()\n}\n\n// BUG: splits on whitespace instead of commas\npub fn split_on_comma(s: &str) -> Vec<String> {\n    s.split_whitespace().map(|p| p.to_string()).collect()\n}\n"
+      },
+      {
+        "path": "tests/parser_test.rs",
+        "content": "use strparser::{trim_and_upper, count_words, split_on_comma};\n\n#[test]\nfn test_trim_and_upper() {\n    assert_eq!(trim_and_upper(\"  hello  \"), \"HELLO\");\n}\n\n#[test]\nfn test_count_words() {\n    assert_eq!(count_words(\"the quick brown fox\"), 4);\n    assert_eq!(count_words(\"hello\"), 1);\n}\n\n#[test]\nfn test_split_on_comma() {\n    assert_eq!(split_on_comma(\"a,b,c\"), vec![\"a\", \"b\", \"c\"]);\n}\n\n#[test]\nfn test_trim_preserves_content() {\n    assert_eq!(trim_and_upper(\"  rust  \"), \"RUST\");\n}\n\n#[test]\nfn test_split_on_comma_single() {\n    assert_eq!(split_on_comma(\"only\"), vec![\"only\"]);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/lib.rs.\n\nBug 1 — trim_and_upper: uses to_lowercase() instead of to_uppercase().\n  Fix: change .to_lowercase() to .to_uppercase()\n\nBug 2 — count_words: returns s.len() (byte count) instead of word count.\n  Fix: return s.split_whitespace().count()\n\nBug 3 — split_on_comma: splits on whitespace instead of commas.\n  Fix: s.split(',').map(|p| p.to_string()).collect()\n\nAll 5 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "trim_and_upper trims and converts to uppercase",
+      "count_words splits on whitespace and counts",
+      "split_on_comma splits on ',' character",
+      "Empty strings handled correctly",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

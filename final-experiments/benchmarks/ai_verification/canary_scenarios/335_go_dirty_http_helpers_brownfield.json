@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-brownfield-012",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Fix bugs in Go HTTP response helpers",
+  "description": "Brownfield Go dirty_cleanup: fix three intentional bugs in HTTP response helpers (RespondJSON sets wrong content type, RespondError uses wrong status constant, RespondRedirect redirects to wrong URL).",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module httphelper\n\ngo 1.21\n"
+      },
+      {
+        "path": "httphelper.go",
+        "content": "package httphelper\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n)\n\n// BUG: sets Content-Type to text/plain instead of application/json\nfunc RespondJSON(w http.ResponseWriter, status int, body any) error {\n\tw.Header().Set(\"Content-Type\", \"text/plain\")\n\tw.WriteHeader(status)\n\treturn json.NewEncoder(w).Encode(body)\n}\n\n// BUG: uses StatusOK (200) instead of StatusBadRequest (400)\nfunc RespondError(w http.ResponseWriter, msg string) {\n\thttp.Error(w, msg, http.StatusOK)\n}\n\n// BUG: redirects to \"/\" instead of to the provided `to` URL\nfunc RespondRedirect(w http.ResponseWriter, r *http.Request, to string) {\n\thttp.Redirect(w, r, \"/\", http.StatusFound)\n}\n"
+      },
+      {
+        "path": "httphelper_test.go",
+        "content": "package httphelper\n\nimport (\n\t\"net/http\"\n\t\"net/http/httptest\"\n\t\"strings\"\n\t\"testing\"\n)\n\nfunc TestRespondJSONContentType(t *testing.T) {\n\tw := httptest.NewRecorder()\n\tRespondJSON(w, http.StatusOK, map[string]string{\"ok\": \"true\"})\n\tif ct := w.Header().Get(\"Content-Type\"); !strings.HasPrefix(ct, \"application/json\") {\n\t\tt.Fatalf(\"want application/json, got %q\", ct)\n\t}\n}\n\nfunc TestRespondJSONStatus(t *testing.T) {\n\tw := httptest.NewRecorder()\n\tRespondJSON(w, http.StatusCreated, nil)\n\tif w.Code != http.StatusCreated {\n\t\tt.Fatalf(\"want 201, got %d\", w.Code)\n\t}\n}\n\nfunc TestRespondErrorStatus(t *testing.T) {\n\tw := httptest.NewRecorder()\n\tRespondError(w, \"bad input\")\n\tif w.Code != http.StatusBadRequest {\n\t\tt.Fatalf(\"want 400, got %d\", w.Code)\n\t}\n}\n\nfunc TestRespondRedirectURL(t *testing.T) {\n\tw := httptest.NewRecorder()\n\tr := httptest.NewRequest(\"GET\", \"/old\", nil)\n\tRespondRedirect(w, r, \"/new\")\n\tif loc := w.Header().Get(\"Location\"); loc != \"/new\" {\n\t\tt.Fatalf(\"want /new, got %q\", loc)\n\t}\n}\n\nfunc TestRespondRedirectCode(t *testing.T) {\n\tw := httptest.NewRecorder()\n\tr := httptest.NewRequest(\"GET\", \"/old\", nil)\n\tRespondRedirect(w, r, \"/new\")\n\tif w.Code != http.StatusFound {\n\t\tt.Fatalf(\"want 302, got %d\", w.Code)\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in httphelper.go.\n\nBug 1 — RespondJSON Content-Type: sets text/plain instead of application/json.\n  Fix: change to w.Header().Set(\"Content-Type\", \"application/json\")\n\nBug 2 — RespondError status: uses http.StatusOK (200) instead of http.StatusBadRequest (400).\n  Fix: change to http.Error(w, msg, http.StatusBadRequest)\n\nBug 3 — RespondRedirect URL: hardcodes \"/\" instead of using the `to` parameter.\n  Fix: change to http.Redirect(w, r, to, http.StatusFound)\n\nAll 5 tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "RespondJSON sets Content-Type: application/json",
+      "RespondError returns HTTP 400 Bad Request",
+      "RespondRedirect uses the provided `to` URL",
+      "All edge cases handled",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

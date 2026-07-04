@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "534-ts-mt-observable",
+  "title": "Build a simple Observable in TypeScript — 3 turns",
+  "category": "repo_init",
+  "difficulty": "hard",
+  "target_stack": {"language": "typescript", "framework": null, "extra": {}},
+  "description": "Three turns build an Observable: turn 1 subscribe/next, turn 2 error/complete, turn 3 pipe/map operator.",
+  "repo_seed": {
+    "files": {
+      "package.json": "{\n  \"name\": \"observable\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"test\": \"jest --forceExit\"\n  },\n  \"devDependencies\": {\n    \"@types/jest\": \"^29.0.0\",\n    \"jest\": \"^29.0.0\",\n    \"ts-jest\": \"^29.0.0\",\n    \"typescript\": \"^5.0.0\"\n  },\n  \"jest\": {\n    \"preset\": \"ts-jest\",\n    \"testEnvironment\": \"node\"\n  }\n}\n",
+      "src/observable.ts": "export interface Observer<T> {\n  next?: (value: T) => void;\n  error?: (err: unknown) => void;\n  complete?: () => void;\n}\n\nexport interface Subscription {\n  unsubscribe: () => void;\n}\n\ntype SubscriberFn<T> = (observer: Required<Observer<T>>) => (() => void) | void;\n\nexport class Observable<T> {\n  private _subscriberFn: SubscriberFn<T>;\n\n  constructor(subscriberFn: SubscriberFn<T>) {\n    this._subscriberFn = subscriberFn;\n  }\n\n  subscribe(observer: Observer<T>): Subscription {\n    // TODO: wrap observer with safe defaults and call _subscriberFn\n    return { unsubscribe: () => {} };\n  }\n\n  /** Apply a transform operator, returning a new Observable. */\n  pipe<U>(operator: (source: Observable<T>) => Observable<U>): Observable<U> {\n    // TODO\n    return new Observable<U>(() => {});\n  }\n}\n\n/** Creates an Observable from an array (synchronous). */\nexport function from<T>(values: T[]): Observable<T> {\n  // TODO\n  return new Observable<T>(() => {});\n}\n\n/** Map operator: transform each value. */\nexport function map<T, U>(fn: (value: T) => U) {\n  return (source: Observable<T>): Observable<U> => {\n    // TODO\n    return new Observable<U>(() => {});\n  };\n}\n",
+      "src/observable.test.ts": "import { Observable, from, map } from './observable';\n\ntest('subscribe receives next values', () => {\n  const received: number[] = [];\n  const obs = new Observable<number>((observer) => {\n    observer.next(1);\n    observer.next(2);\n    observer.next(3);\n  });\n  obs.subscribe({ next: (v) => received.push(v) });\n  expect(received).toEqual([1, 2, 3]);\n});\n\ntest('complete is called', () => {\n  let done = false;\n  const obs = new Observable<number>((observer) => {\n    observer.next(1);\n    observer.complete();\n  });\n  obs.subscribe({ complete: () => { done = true; } });\n  expect(done).toBe(true);\n});\n\ntest('error is called', () => {\n  let caught: unknown = null;\n  const obs = new Observable<number>((observer) => {\n    observer.error(new Error('oops'));\n  });\n  obs.subscribe({ error: (e) => { caught = e; } });\n  expect(caught).toBeInstanceOf(Error);\n});\n\ntest('unsubscribe stops future emissions', () => {\n  const received: number[] = [];\n  let emitter: ((v: number) => void) | null = null;\n  const obs = new Observable<number>((observer) => {\n    emitter = (v) => observer.next(v);\n  });\n  const sub = obs.subscribe({ next: (v) => received.push(v) });\n  emitter!(1);\n  sub.unsubscribe();\n  emitter!(2); // should not reach observer after unsubscribe\n  expect(received).toEqual([1]);\n});\n\ntest('from emits array values', () => {\n  const received: number[] = [];\n  from([10, 20, 30]).subscribe({ next: (v) => received.push(v) });\n  expect(received).toEqual([10, 20, 30]);\n});\n\ntest('map transforms values', () => {\n  const received: string[] = [];\n  from([1, 2, 3]).pipe(map((v) => `item-${v}`)).subscribe({ next: (v) => received.push(v) });\n  expect(received).toEqual(['item-1', 'item-2', 'item-3']);\n});\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `subscribe(observer: Observer<T>)` in `src/observable.ts`. Wrap the observer so missing callbacks default to no-ops. Call `this._subscriberFn` with the wrapped observer. Track whether unsubscribed, and if so don't call next/error/complete. Return a Subscription object with an unsubscribe function. Run `npm test -- --forceExit`.",
+    "followup_prompts": [
+      "Good. Now implement `from<T>(values: T[]): Observable<T>` — create an Observable that calls observer.next for each value synchronously. Also implement the `error` and `complete` behavior in subscribe: after complete() is called, subsequent next() calls should be ignored. Run `npm test -- --forceExit` and fix any failures.",
+      "Final step: implement `map<T, U>(fn)` operator and `pipe(operator)`. map returns a function that creates a new Observable subscribing to the source and calling fn on each next value. pipe applies the operator to this observable. Run `npm test -- --forceExit` — all 6 tests must pass."
+    ],
+    "success_criteria": [
+      "subscribe delivers next values to observer",
+      "complete callback is invoked",
+      "error callback is invoked",
+      "unsubscribe prevents future next/complete/error calls",
+      "from() emits array values synchronously",
+      "map() transforms values through pipe()",
+      "All 6 tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "npm test -- --forceExit"}
+  },
+  "duration_hint_minutes": 20
+}

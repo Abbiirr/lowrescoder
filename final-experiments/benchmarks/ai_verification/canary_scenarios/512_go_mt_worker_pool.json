@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "512-go-mt-worker-pool",
+  "title": "Build a worker pool in Go — 3 turns",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "Three turns build a goroutine worker pool: turn 1 adds Submit()/Start(), turn 2 adds result collection, turn 3 adds Shutdown()/drain.",
+  "repo_seed": {
+    "files": {
+      "go.mod": "module github.com/ai-verification/worker-pool\n\ngo 1.22\n",
+      "pool/pool.go": "package pool\n\nimport \"sync\"\n\n// Task is a unit of work with an integer result.\ntype Task struct {\n\tID  int\n\tFn  func() int\n}\n\n// Result holds the output of a completed task.\ntype Result struct {\n\tID    int\n\tValue int\n}\n\n// Pool is a fixed-size goroutine worker pool.\ntype Pool struct {\n\tworkers int\n\ttasks   chan Task\n\tresults chan Result\n\twg      sync.WaitGroup\n\tonce    sync.Once\n}\n\n// New creates a pool with n workers.\nfunc New(n int) *Pool {\n\treturn &Pool{\n\t\tworkers: n,\n\t\ttasks:   make(chan Task, 64),\n\t\tresults: make(chan Result, 64),\n\t}\n}\n\n// Start launches the worker goroutines.\nfunc (p *Pool) Start() {\n\t// TODO: launch p.workers goroutines that read from p.tasks\n\t// and send results to p.results\n}\n\n// Submit sends a task to the pool. Must be called after Start().\nfunc (p *Pool) Submit(t Task) {\n\tp.tasks <- t\n}\n\n// Results returns the results channel for reading completed tasks.\nfunc (p *Pool) Results() <-chan Result {\n\treturn p.results\n}\n\n// Shutdown signals workers to stop and waits for all to finish.\nfunc (p *Pool) Shutdown() {\n\t// TODO: close tasks channel and wait for workers\n}\n",
+      "pool/pool_test.go": "package pool_test\n\nimport (\n\t\"sort\"\n\t\"testing\"\n\n\t\"github.com/ai-verification/worker-pool/pool\"\n)\n\nfunc TestBasicExecution(t *testing.T) {\n\tp := pool.New(2)\n\tp.Start()\n\tp.Submit(pool.Task{ID: 1, Fn: func() int { return 42 }})\n\tresult := <-p.Results()\n\tif result.Value != 42 || result.ID != 1 {\n\t\tt.Fatalf(\"expected {1,42}, got %+v\", result)\n\t}\n\tp.Shutdown()\n}\n\nfunc TestMultipleTasks(t *testing.T) {\n\tp := pool.New(4)\n\tp.Start()\n\tn := 10\n\tfor i := 0; i < n; i++ {\n\t\tid := i\n\t\tp.Submit(pool.Task{ID: id, Fn: func() int { return id * 2 }})\n\t}\n\tp.Shutdown()\n\tclose(p.Results().(chan pool.Result)) // drain\n}\n\nfunc TestAllResultsReceived(t *testing.T) {\n\tp := pool.New(3)\n\tp.Start()\n\tn := 9\n\tfor i := 1; i <= n; i++ {\n\t\tv := i\n\t\tp.Submit(pool.Task{ID: v, Fn: func() int { return v }})\n\t}\n\tp.Shutdown()\n\tvar ids []int\n\tfor r := range p.Results() {\n\t\tids = append(ids, r.ID)\n\t}\n\tif len(ids) != n {\n\t\tt.Fatalf(\"expected %d results, got %d\", n, len(ids))\n\t}\n\tsort.Ints(ids)\n\tfor i, id := range ids {\n\t\tif id != i+1 {\n\t\t\tt.Fatalf(\"missing id %d\", i+1)\n\t\t}\n\t}\n}\n\nfunc TestWorkerCount(t *testing.T) {\n\t// Just ensure pool with 1 worker still processes all tasks\n\tp := pool.New(1)\n\tp.Start()\n\tfor i := 0; i < 5; i++ {\n\t\tv := i\n\t\tp.Submit(pool.Task{ID: v, Fn: func() int { return v * 3 }})\n\t}\n\tp.Shutdown()\n\tcount := 0\n\tfor range p.Results() {\n\t\tcount++\n\t}\n\tif count != 5 {\n\t\tt.Fatalf(\"expected 5 results, got %d\", count)\n\t}\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `Start()` in `pool/pool.go`: launch `p.workers` goroutines, each reading from `p.tasks`, calling `task.Fn()`, and sending a `Result{ID: task.ID, Value: result}` to `p.results`. Add each goroutine to `p.wg`. Run `go test ./...`.",
+    "followup_prompts": [
+      "Good. Now implement `Shutdown()`: close `p.tasks` to signal workers to stop, wait for all workers via `p.wg.Wait()`, then close `p.results` so callers can range over it. Use `p.once` to ensure Shutdown is idempotent. Run `go test ./...` and fix any failures.",
+      "Final check: run `go test ./...` one more time — all 4 tests must pass. Make sure TestAllResultsReceived can range over Results() to completion after Shutdown()."
+    ],
+    "success_criteria": [
+      "Start() launches exactly n workers",
+      "Workers read tasks, execute Fn, send results",
+      "Shutdown() signals workers and waits for completion",
+      "Results channel is closed after Shutdown so range terminates",
+      "go test ./... passes (4 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "go test ./..."}
+  },
+  "duration_hint_minutes": 20
+}

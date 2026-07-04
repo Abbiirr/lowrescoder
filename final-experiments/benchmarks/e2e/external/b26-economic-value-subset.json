@@ -1,0 +1,66 @@
+{
+  "_meta": {
+    "description": "B26: Economic-Value Freelance Tasks — deliver visible value on bounded feature tasks",
+    "comparison_validity": "internal",
+    "parity_claim": "forbidden",
+    "note": "Multi-task lane: CLI tool, data pipeline, email validator, markdown parser, REST endpoint.",
+    "last_verified": "2026-03-21"
+  },
+  "tasks": [
+    {
+      "task_id": "b26-build-cli-tool",
+      "category": "feature",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Build a command-line tool with argument parsing, help text, and structured output.",
+      "fixture_dir": "fixtures/b26/b26-build-cli-tool",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b26-build-data-pipeline",
+      "category": "feature",
+      "difficulty": "hard",
+      "language": "python",
+      "description": "Build a data processing pipeline that reads, transforms, and outputs structured data.",
+      "fixture_dir": "fixtures/b26/b26-build-data-pipeline",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b26-build-email-validator",
+      "category": "feature",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Build an email validation module with RFC-compliant checking and clear error messages.",
+      "fixture_dir": "fixtures/b26/b26-build-email-validator",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b26-build-markdown-parser",
+      "category": "feature",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Build a markdown parser that converts markdown to HTML supporting common formatting elements.",
+      "fixture_dir": "fixtures/b26/b26-build-markdown-parser",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    },
+    {
+      "task_id": "b26-build-rest-endpoint",
+      "category": "feature",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Build a REST API endpoint with proper HTTP methods, status codes, and JSON responses.",
+      "fixture_dir": "fixtures/b26/b26-build-rest-endpoint",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11"
+    }
+  ]
+}

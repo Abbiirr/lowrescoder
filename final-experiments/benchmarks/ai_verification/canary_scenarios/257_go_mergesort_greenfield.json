@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-022",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Implement merge sort in Go",
+  "description": "Greenfield Go task: implement MergeSort(arr []int) []int that returns a new sorted slice using the divide-and-conquer merge sort algorithm.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module mergesort\n\ngo 1.21\n"
+      },
+      {
+        "path": "mergesort.go",
+        "content": "package mergesort\n\n// TODO: implement MergeSort\n"
+      },
+      {
+        "path": "mergesort_test.go",
+        "content": "package mergesort\n\nimport \"testing\"\n\nfunc equalSlices(a, b []int) bool {\n\tif len(a) != len(b) {\n\t\treturn false\n\t}\n\tfor i := range a {\n\t\tif a[i] != b[i] {\n\t\t\treturn false\n\t\t}\n\t}\n\treturn true\n}\n\nfunc TestMergeSortBasic(t *testing.T) {\n\tresult := MergeSort([]int{3, 1, 4, 1, 5, 9, 2, 6})\n\texpected := []int{1, 1, 2, 3, 4, 5, 6, 9}\n\tif !equalSlices(result, expected) {\n\t\tt.Errorf(\"want %v, got %v\", expected, result)\n\t}\n}\n\nfunc TestMergeSortEmpty(t *testing.T) {\n\tresult := MergeSort([]int{})\n\tif len(result) != 0 {\n\t\tt.Errorf(\"want empty, got %v\", result)\n\t}\n}\n\nfunc TestMergeSortSingle(t *testing.T) {\n\tresult := MergeSort([]int{42})\n\tif !equalSlices(result, []int{42}) {\n\t\tt.Errorf(\"want [42], got %v\", result)\n\t}\n}\n\nfunc TestMergeSortAlreadySorted(t *testing.T) {\n\tresult := MergeSort([]int{1, 2, 3, 4, 5})\n\tif !equalSlices(result, []int{1, 2, 3, 4, 5}) {\n\t\tt.Errorf(\"want [1..5], got %v\", result)\n\t}\n}\n\nfunc TestMergeSortReverse(t *testing.T) {\n\tresult := MergeSort([]int{5, 4, 3, 2, 1})\n\tif !equalSlices(result, []int{1, 2, 3, 4, 5}) {\n\t\tt.Errorf(\"want [1..5], got %v\", result)\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement MergeSort in mergesort.go.\n\nfunc MergeSort(arr []int) []int\n  // Return a new sorted copy of arr using merge sort.\n  // Base case: return a copy if len(arr) <= 1.\n  // Divide: split at mid = len/2.\n  // Conquer: recursively sort left and right halves.\n  // Merge: combine two sorted halves into one sorted slice.\n\nAll 5 tests in mergesort_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Returns new sorted slice (does not sort in-place)",
+      "Base case returns a copy for len<=1",
+      "Splits at mid and recurses on both halves",
+      "merge helper merges two sorted slices into one",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

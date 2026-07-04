@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-greenfield-045",
+  "title": "Implement balanced bracket checker in Python",
+  "category": "repo_init",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement is_balanced(s) that returns True if all brackets in s are properly nested and closed. Supports (), [], {}.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/brackets.py": "def is_balanced(s: str) -> bool:\n    raise NotImplementedError\n",
+      "tests/test_brackets.py": "from src.brackets import is_balanced\n\ndef test_empty():\n    assert is_balanced('') is True\n\ndef test_simple_pairs():\n    assert is_balanced('()') is True\n    assert is_balanced('[]') is True\n    assert is_balanced('{}') is True\n\ndef test_nested():\n    assert is_balanced('({[]})') is True\n\ndef test_unbalanced():\n    assert is_balanced('(]') is False\n    assert is_balanced('([)]') is False\n    assert is_balanced('(') is False\n    assert is_balanced(')') is False\n\ndef test_mixed_chars():\n    assert is_balanced('a(b[c]d)e') is True\n    assert is_balanced('x(y]z') is False\n",
+      "pyproject.toml": "[project]\nname = \"brackets\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npythonpath = [\".\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement is_balanced(s) in src/brackets.py using a stack:\n- For each char: if it's an opener ({, [, () push it; if it's a closer check the stack is non-empty and top matches the pair; any mismatch returns False\n- At the end return True iff stack is empty\nAll 5 tests must pass.",
+    "entry_point": "src/brackets.py",
+    "success_criteria": "All 5 pytest tests pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -q` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

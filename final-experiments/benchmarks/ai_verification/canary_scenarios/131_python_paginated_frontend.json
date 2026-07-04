@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-frontend-006",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add paginated HTML product table to FastAPI products API",
+  "description": "Brownfield Python/FastAPI task: add a GET /products/ui endpoint that renders an HTML table of products with page and per_page query parameters.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_paginated_api",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add a GET /products/ui endpoint to src/app.py. All 3 existing tests must still pass.\n\n  @app.get(\"/products/ui\", response_class=HTMLResponse)\n  def products_ui(page: int = Query(1, ge=1), per_page: int = Query(10, ge=1, le=100)) -> HTMLResponse\n    — imports: from fastapi import Query; from fastapi.responses import HTMLResponse\n    — slice PRODUCTS based on page and per_page\n    — render an HTML page with:\n        * <h1>Products</h1>\n        * <p>Page {page} of {total_pages} ({total} total)</p>\n        * <table> with columns: ID, Name, Category, Price (formatted as $X.XX)\n    — default: page=1, per_page=10\n    — IMPORTANT: register /products/ui BEFORE /products/{product_id} in the file,\n      otherwise FastAPI matches /products/ui as /products/ui (integer parse fails → 422)\n\nAll 3 existing tests must still pass.\nRun: pytest",
+    "required_artifacts": [
+      "GET /products/ui returns 200 with text/html content type",
+      "HTML table contains product ID, Name, Category, Price columns",
+      "HTML page shows pagination info (page X of Y, N total)",
+      "page=2 per_page=10 returns the second 10 products",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "pytest passes",
+      "ruff check passes"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `uv run pytest tests/ -v` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

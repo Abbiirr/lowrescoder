@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-brownfield-007",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Refactor global state to dependency injection in Go",
+  "description": "Brownfield Go refactor: replace a package-level global registry map with a Registry struct so that multiple independent registries can coexist. All existing function-level tests must pass.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module registry\n\ngo 1.21\n"
+      },
+      {
+        "path": "registry.go",
+        "content": "package registry\n\nvar store = map[string]string{}\n\nfunc Register(key, value string) {\n\tstore[key] = value\n}\n\nfunc Lookup(key string) (string, bool) {\n\tv, ok := store[key]\n\treturn v, ok\n}\n\nfunc Unregister(key string) {\n\tdelete(store, key)\n}\n\nfunc Keys() []string {\n\tkeys := make([]string, 0, len(store))\n\tfor k := range store {\n\t\tkeys = append(keys, k)\n\t}\n\treturn keys\n}\n"
+      },
+      {
+        "path": "registry_test.go",
+        "content": "package registry\n\nimport \"testing\"\n\nfunc TestRegisterLookup(t *testing.T) {\n\tstore = map[string]string{} // reset global\n\tRegister(\"a\", \"1\")\n\tv, ok := Lookup(\"a\")\n\tif !ok || v != \"1\" {\n\t\tt.Fatalf(\"want 1 true, got %q %v\", v, ok)\n\t}\n}\n\nfunc TestUnregister(t *testing.T) {\n\tstore = map[string]string{}\n\tRegister(\"x\", \"v\")\n\tUnregister(\"x\")\n\t_, ok := Lookup(\"x\")\n\tif ok {\n\t\tt.Fatal(\"x should be unregistered\")\n\t}\n}\n\nfunc TestLookupMissing(t *testing.T) {\n\tstore = map[string]string{}\n\t_, ok := Lookup(\"missing\")\n\tif ok {\n\t\tt.Fatal(\"should not find missing key\")\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Refactor registry.go to use a Registry struct instead of a global variable.\n\npackage registry\n\ntype Registry struct {\n    store map[string]string\n}\n\nfunc NewRegistry() *Registry {\n    return &Registry{store: make(map[string]string)}\n}\n\nfunc (r *Registry) Register(key, value string) { r.store[key] = value }\nfunc (r *Registry) Lookup(key string) (string, bool) { v, ok := r.store[key]; return v, ok }\nfunc (r *Registry) Unregister(key string) { delete(r.store, key) }\nfunc (r *Registry) Keys() []string {\n    keys := make([]string, 0, len(r.store))\n    for k := range r.store { keys = append(keys, k) }\n    return keys\n}\n\nAll 5 tests in the solution test file must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Registry is a struct with a store map field",
+      "NewRegistry() returns an initialized *Registry",
+      "All four methods are on *Registry receiver",
+      "No package-level global variable remains",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `go test ./...` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

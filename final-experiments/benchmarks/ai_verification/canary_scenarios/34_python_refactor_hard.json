@@ -1,0 +1,57 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-refactor-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "hard",
+  "duration_hint_minutes": 50,
+  "title": "Refactor monolithic FastAPI app into APIRouter modules (users, posts, comments)",
+  "description": "A FastAPI app with users, posts, and comments all in src/app.py must be split into separate APIRouter modules without breaking any tests.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_monolith_api",
+    "injections": [],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "The FastAPI app in src/app.py has three domains (users, posts, comments) all defined in one file. Refactor into a modular layout WITHOUT changing any HTTP routes or response shapes:\n\n1. Create src/routes/__init__.py (empty).\n2. Create src/routes/users.py — move all user-related state (_users, _next_user_id) and the three user endpoints into a users_router = APIRouter(prefix='/users', tags=['users']). The router must export a reset_users() function.\n3. Create src/routes/posts.py — move posts state + endpoints into posts_router = APIRouter(prefix='/posts', tags=['posts']). Export reset_posts().\n4. Create src/routes/comments.py — move comment state + create_comment + list_comments into comments_router = APIRouter(tags=['comments']). Keep the path /posts/{post_id}/comments. Export reset_comments(). Comments must still validate that the post exists — they should import posts_router state or a shared getter.\n5. Rewrite src/app.py to only: import and include the three routers, define app = FastAPI(), and define reset() that calls reset_users() + reset_posts() + reset_comments().\n6. All 7 existing tests must pass without modification. Run uv run pytest tests/ -q to confirm.\n7. Run uv run ruff check src/ to confirm no lint errors.",
+    "required_artifacts": [
+      "src/routes/users.py with users_router and reset_users()",
+      "src/routes/posts.py with posts_router and reset_posts()",
+      "src/routes/comments.py with comments_router and reset_comments()",
+      "src/app.py reduced to router includes + reset()",
+      "All 7 existing tests pass unchanged",
+      "uv run ruff check src/ clean"
+    ],
+    "success_criteria": [
+      "No routes changed — identical HTTP surface",
+      "State properly encapsulated in each module",
+      "Cross-module dependency (comments checking post existence) handled cleanly"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `uv run pytest tests/ -q` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

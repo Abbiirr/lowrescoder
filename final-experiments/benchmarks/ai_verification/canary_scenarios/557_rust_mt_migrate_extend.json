@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "557-rust-mt-migrate-extend",
+  "title": "Migrate String to &str in Rust then add From impl — 3 turns",
+  "category": "migration",
+  "difficulty": "medium",
+  "target_stack": {"language": "rust", "framework": null, "extra": {}},
+  "description": "Functions take String by value unnecessarily — migrate to &str, keep tests green, add From<&str> impl.",
+  "repo_seed": {
+    "files": {
+      "Cargo.toml": "[package]\nname = \"str-migration\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+      "src/lib.rs": "//! String-heavy API that can use &str instead.\n\n/// Represents a label.\n#[derive(Debug, Clone, PartialEq)]\npub struct Label {\n    value: String,\n    prefix: String,\n}\n\nimpl Label {\n    /// Create with owned strings — MIGRATION: parameters should be &str.\n    pub fn new(value: String, prefix: String) -> Self {\n        Label { value, prefix }\n    }\n\n    /// Returns formatted label.\n    pub fn display(&self) -> String {\n        format!(\"[{}] {}\", self.prefix, self.value)\n    }\n\n    /// Check if label matches — MIGRATION: param should be &str.\n    pub fn matches(&self, other: String) -> bool {\n        self.value == other\n    }\n\n    /// Prefix the label — MIGRATION: param should be &str.\n    pub fn with_prefix(&self, prefix: String) -> Label {\n        Label {\n            value: self.value.clone(),\n            prefix,\n        }\n    }\n\n    pub fn value(&self) -> &str {\n        &self.value\n    }\n}\n\n// TODO: impl From<&str> for Label (use empty prefix)\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_new_with_str() {\n        // After migration, should accept &str\n        let l = Label::new(\"foo\", \"TAG\");\n        assert_eq!(l.display(), \"[TAG] foo\");\n    }\n\n    #[test]\n    fn test_matches_with_str() {\n        let l = Label::new(\"hello\", \"X\");\n        assert!(l.matches(\"hello\"));\n        assert!(!l.matches(\"world\"));\n    }\n\n    #[test]\n    fn test_with_prefix_str() {\n        let l = Label::new(\"item\", \"OLD\");\n        let l2 = l.with_prefix(\"NEW\");\n        assert_eq!(l2.display(), \"[NEW] item\");\n    }\n\n    #[test]\n    fn test_from_str() {\n        let l = Label::from(\"myvalue\");\n        assert_eq!(l.value(), \"myvalue\");\n        assert_eq!(l.display(), \"[] myvalue\");\n    }\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Migrate `Label::new(value: String, prefix: String)` to accept `&str` — change signature to `new(value: &str, prefix: &str)` and internally call `.to_string()` or `.into()` to store as `String`. Similarly migrate `matches(&self, other: String)` to `matches(&self, other: &str)` and `with_prefix(&self, prefix: String)` to `with_prefix(&self, prefix: &str)`. Run `cargo test --quiet`.",
+    "followup_prompts": [
+      "Run `cargo test --quiet` to confirm no regressions from your migration. Make sure existing tests compile and pass with the new `&str` parameters. Walk me through what changed.",
+      "Final pass: implement `From<&str> for Label` — create a Label with the given value and an empty prefix string `\"\"`. Then run `cargo test --quiet` and confirm everything is green — all 4 tests must pass."
+    ],
+    "success_criteria": [
+      "new() accepts &str parameters",
+      "matches() accepts &str",
+      "with_prefix() accepts &str",
+      "From<&str> creates Label with empty prefix",
+      "cargo test passes (4 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "cargo test --quiet"}
+  },
+  "duration_hint_minutes": 15
+}

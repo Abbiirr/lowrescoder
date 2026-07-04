@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-brownfield-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Fix bugs in a Rust vector utility module",
+  "description": "Brownfield Rust dirty_cleanup: fix three intentional bugs in vector utility functions (sum_evens, running_max, dedup). The repo_seed has broken code; the agent must fix all bugs so all tests pass.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"vecutil\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// BUG: filters odd numbers instead of even\npub fn sum_evens(nums: &[i32]) -> i32 {\n    nums.iter().filter(|&&x| x % 2 != 0).sum()\n}\n\n// BUG: should track running max, but always uses first element as initial\npub fn running_max(nums: &[i32]) -> Vec<i32> {\n    if nums.is_empty() {\n        return vec![];\n    }\n    let mut result = vec![nums[0]];\n    let mut cur_max = nums[0];\n    for &n in &nums[1..] {\n        // BUG: compares n with nums[0] instead of cur_max\n        if n > nums[0] {\n            cur_max = n;\n        }\n        result.push(cur_max);\n    }\n    result\n}\n\n// BUG: wrong dedup — removes elements equal to NEXT element instead of previous\npub fn dedup(nums: Vec<i32>) -> Vec<i32> {\n    if nums.is_empty() {\n        return vec![];\n    }\n    let mut result = vec![];\n    for i in 0..nums.len() {\n        // BUG: should compare with last element in result, not next in nums\n        if i + 1 < nums.len() && nums[i] == nums[i + 1] {\n            continue;\n        }\n        result.push(nums[i]);\n    }\n    result\n}\n"
+      },
+      {
+        "path": "tests/vecutil_test.rs",
+        "content": "use vecutil::{sum_evens, running_max, dedup};\n\n#[test]\nfn test_sum_evens() {\n    assert_eq!(sum_evens(&[1, 2, 3, 4, 5, 6]), 12);\n    assert_eq!(sum_evens(&[1, 3, 5]), 0);\n}\n\n#[test]\nfn test_running_max() {\n    assert_eq!(running_max(&[3, 1, 4, 1, 5, 9, 2]), vec![3, 3, 4, 4, 5, 9, 9]);\n}\n\n#[test]\nfn test_dedup() {\n    assert_eq!(dedup(vec![1, 1, 2, 3, 3, 3, 4]), vec![1, 2, 3, 4]);\n    assert_eq!(dedup(vec![1, 2, 3]), vec![1, 2, 3]);\n}\n\n#[test]\nfn test_sum_evens_all_even() {\n    assert_eq!(sum_evens(&[2, 4, 6]), 12);\n}\n\n#[test]\nfn test_dedup_empty() {\n    assert_eq!(dedup(vec![]), Vec::<i32>::new());\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/lib.rs.\n\nBug 1 — sum_evens: filter condition is inverted.\n  Fix: change `x % 2 != 0` to `x % 2 == 0`\n\nBug 2 — running_max: comparison uses nums[0] instead of cur_max.\n  Fix: change `if n > nums[0]` to `if n > cur_max`\n\nBug 3 — dedup: removes elements equal to NEXT element instead of PREVIOUS.\n  Fix: compare with the last element in result:\n    if result.last() == Some(&nums[i]) { continue }\n    result.push(nums[i]);\n\nAll 5 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "sum_evens filters even numbers (% 2 == 0)",
+      "running_max compares against cur_max not nums[0]",
+      "dedup compares against result.last() not the next input element",
+      "dedup handles empty input",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

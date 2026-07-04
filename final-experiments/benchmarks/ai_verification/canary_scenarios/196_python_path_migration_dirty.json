@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-dirty-011",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 bugs in python_path_migration file_utils functions",
+  "description": "Brownfield Python dirty scenario: list_text_files, read_if_exists, and ensure_dir each have a bug. Fix them so all 5 tests pass.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_path_migration",
+    "injections": [
+      {
+        "path": "src/file_utils.py",
+        "content": "\"\"\"File utilities using os.path — to be migrated to pathlib.Path.\"\"\"\nimport os\n\n\ndef list_text_files(directory: str) -> list[str]:\n    \"\"\"Return sorted list of .txt filenames (not full paths) in directory.\"\"\"\n    result = []\n    for name in os.listdir(directory):\n        full = os.path.join(directory, name)\n        # BUG: filters for .md files instead of .txt\n        if os.path.isfile(full) and name.endswith(\".md\"):\n            result.append(name)\n    return sorted(result)\n\n\ndef read_if_exists(path: str) -> str | None:\n    \"\"\"Return file contents as str, or None if file does not exist.\"\"\"\n    # BUG: always returns None regardless of whether file exists\n    return None\n\n\ndef ensure_dir(path: str) -> str:\n    \"\"\"Create directory (and parents) if it doesn't exist. Return path.\"\"\"\n    # BUG: never creates the directory\n    return path\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 bugs in src/file_utils.py so all 5 tests pass.\n\n  def list_text_files(directory):\n    — filters for .md files instead of .txt\n    — fix: change name.endswith(\".md\") to name.endswith(\".txt\")\n\n  def read_if_exists(path):\n    — always returns None without checking if file exists\n    — fix: restore the os.path.exists check and open the file to read its contents\n\n  def ensure_dir(path):\n    — never creates the directory (os.makedirs call is missing)\n    — fix: add `if not os.path.isdir(path): os.makedirs(path)` before the return\n\nDo not modify the test file.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "list_text_files filters for .txt extension",
+      "read_if_exists returns file contents or None",
+      "ensure_dir creates the directory if missing",
+      "All 5 existing tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run python -c \"from src.file_utils import list_text_files, read_if_exists, ensure_dir\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.file_utils import list_text_files, read_if_exists, ensure_dir\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

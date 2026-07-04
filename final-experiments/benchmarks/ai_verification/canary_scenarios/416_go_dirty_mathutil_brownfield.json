@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-brownfield-026",
+  "title": "Fix three bugs in a Go math utilities package",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Fix bugs in mathutil: Max returns wrong value when b>a, Abs negates positive numbers, IsPrime returns true for n==1.",
+  "repo_seed": {
+    "files": {
+      "mathutil.go": "package mathutil\n\n// Max returns the larger of a and b.\nfunc Max(a, b int) int {\n\tif a >= b {\n\t\treturn b // BUG 1: should return a\n\t}\n\treturn a // BUG 1: should return b\n}\n\n// Abs returns the absolute value of n.\nfunc Abs(n int) int {\n\tif n > 0 {\n\t\treturn -n // BUG 2: should return n (positive stays positive)\n\t}\n\treturn -n\n}\n\n// IsPrime returns true if n is a prime number.\nfunc IsPrime(n int) bool {\n\tif n < 2 {\n\t\treturn true // BUG 3: n<2 is not prime; should return false\n\t}\n\tfor i := 2; i*i <= n; i++ {\n\t\tif n%i == 0 {\n\t\t\treturn false\n\t\t}\n\t}\n\treturn true\n}\n",
+      "mathutil_test.go": "package mathutil\n\nimport \"testing\"\n\nfunc TestMax(t *testing.T) {\n\tif got := Max(3, 5); got != 5 {\n\t\tt.Errorf(\"Max(3,5) = %d, want 5\", got)\n\t}\n\tif got := Max(7, 2); got != 7 {\n\t\tt.Errorf(\"Max(7,2) = %d, want 7\", got)\n\t}\n\tif got := Max(4, 4); got != 4 {\n\t\tt.Errorf(\"Max(4,4) = %d, want 4\", got)\n\t}\n}\n\nfunc TestAbs(t *testing.T) {\n\tif got := Abs(-5); got != 5 {\n\t\tt.Errorf(\"Abs(-5) = %d, want 5\", got)\n\t}\n\tif got := Abs(3); got != 3 {\n\t\tt.Errorf(\"Abs(3) = %d, want 3\", got)\n\t}\n\tif got := Abs(0); got != 0 {\n\t\tt.Errorf(\"Abs(0) = %d, want 0\", got)\n\t}\n}\n\nfunc TestIsPrime(t *testing.T) {\n\tif IsPrime(1) {\n\t\tt.Error(\"1 is not prime\")\n\t}\n\tif !IsPrime(2) {\n\t\tt.Error(\"2 is prime\")\n\t}\n\tif !IsPrime(7) {\n\t\tt.Error(\"7 is prime\")\n\t}\n\tif IsPrime(4) {\n\t\tt.Error(\"4 is not prime\")\n\t}\n}\n",
+      "go.mod": "module mathutil\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in mathutil.go:\n1. Max: swap the return values — `if a >= b { return a }; return b`\n2. Abs: change `if n > 0 { return -n }` to `if n > 0 { return n }`\n3. IsPrime: change `if n < 2 { return true }` to `if n < 2 { return false }`\nAll 3 test cases must pass.",
+    "entry_point": "mathutil.go",
+    "success_criteria": "All 3 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

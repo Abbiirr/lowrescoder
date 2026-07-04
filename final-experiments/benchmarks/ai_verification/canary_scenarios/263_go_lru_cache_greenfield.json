@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-024",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Implement LRU cache in Go",
+  "description": "Greenfield Go task: implement an LRU cache with Get and Put operations in O(1) using a doubly linked list plus a hash map.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module lrucache\n\ngo 1.21\n"
+      },
+      {
+        "path": "lru.go",
+        "content": "package lrucache\n\n// TODO: implement LRUCache\n"
+      },
+      {
+        "path": "lru_test.go",
+        "content": "package lrucache\n\nimport \"testing\"\n\nfunc TestLRUBasic(t *testing.T) {\n\tcache := NewLRUCache(2)\n\tcache.Put(1, 10)\n\tcache.Put(2, 20)\n\tif v, ok := cache.Get(1); !ok || v != 10 {\n\t\tt.Fatalf(\"want 10 got %d\", v)\n\t}\n}\n\nfunc TestLRUEviction(t *testing.T) {\n\tcache := NewLRUCache(2)\n\tcache.Put(1, 10)\n\tcache.Put(2, 20)\n\tcache.Put(3, 30) // evicts key 1\n\tif _, ok := cache.Get(1); ok {\n\t\tt.Fatal(\"key 1 should have been evicted\")\n\t}\n\tif v, ok := cache.Get(3); !ok || v != 30 {\n\t\tt.Fatalf(\"want 30 got %d\", v)\n\t}\n}\n\nfunc TestLRUUpdateKeepsRecent(t *testing.T) {\n\tcache := NewLRUCache(2)\n\tcache.Put(1, 10)\n\tcache.Put(2, 20)\n\tcache.Put(1, 100) // update makes 1 most recent\n\tcache.Put(3, 30)  // evicts key 2 (least recent)\n\tif _, ok := cache.Get(2); ok {\n\t\tt.Fatal(\"key 2 should have been evicted\")\n\t}\n\tif v, ok := cache.Get(1); !ok || v != 100 {\n\t\tt.Fatalf(\"want 100 got %d\", v)\n\t}\n}\n\nfunc TestLRUGetPromotes(t *testing.T) {\n\tcache := NewLRUCache(2)\n\tcache.Put(1, 10)\n\tcache.Put(2, 20)\n\tcache.Get(1)     // promotes 1 to most recent\n\tcache.Put(3, 30) // evicts key 2\n\tif _, ok := cache.Get(2); ok {\n\t\tt.Fatal(\"key 2 should have been evicted\")\n\t}\n}\n\nfunc TestLRUMiss(t *testing.T) {\n\tcache := NewLRUCache(2)\n\tif _, ok := cache.Get(99); ok {\n\t\tt.Fatal(\"should miss on empty cache\")\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement an LRU cache in lru.go.\n\ntype LRUCache struct { ... }\nfunc NewLRUCache(capacity int) *LRUCache\nfunc (c *LRUCache) Get(key int) (int, bool)\nfunc (c *LRUCache) Put(key int, value int)\n\n// Use a doubly linked list + map[int]*node for O(1) operations.\n// Sentinel head/tail nodes simplify edge cases.\n// Get: if miss return (0, false); on hit move node to front, return (val, true).\n// Put: if key exists update val and move to front; if at capacity remove tail.prev before inserting.\n// Insert new nodes at front (just after head sentinel).\n\nAll 5 tests in lru_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Doubly linked list with sentinel head/tail nodes",
+      "map[int]*node for O(1) key lookup",
+      "Get promotes accessed node to front",
+      "Put evicts least-recently-used node when at capacity",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

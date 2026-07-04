@@ -1,0 +1,67 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-006",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Build a 2D Matrix in Rust with transpose and addition",
+  "description": "Greenfield Rust task: implement a Matrix struct with row-major storage, get/set, transpose, and element-wise addition.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"matrix\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement Matrix\n"
+      },
+      {
+        "path": "tests/matrix_test.rs",
+        "content": "use matrix::Matrix;\n\n#[test]\nfn test_new_is_zeros() {\n    let m = Matrix::new(2, 3);\n    assert_eq!(m.get(0, 0), 0.0);\n    assert_eq!(m.get(1, 2), 0.0);\n    assert_eq!(m.rows(), 2);\n    assert_eq!(m.cols(), 3);\n}\n\n#[test]\nfn test_set_and_get() {\n    let mut m = Matrix::new(2, 2);\n    m.set(0, 1, 5.0);\n    m.set(1, 0, 3.0);\n    assert_eq!(m.get(0, 1), 5.0);\n    assert_eq!(m.get(1, 0), 3.0);\n    assert_eq!(m.get(0, 0), 0.0);\n}\n\n#[test]\nfn test_transpose() {\n    let mut m = Matrix::new(2, 3);\n    m.set(0, 1, 7.0);\n    m.set(1, 2, 4.0);\n    let t = m.transpose();\n    assert_eq!(t.rows(), 3);\n    assert_eq!(t.cols(), 2);\n    assert_eq!(t.get(1, 0), 7.0); // m[0][1] -> t[1][0]\n    assert_eq!(t.get(2, 1), 4.0); // m[1][2] -> t[2][1]\n}\n\n#[test]\nfn test_add_matching_dims() {\n    let mut a = Matrix::new(2, 2);\n    a.set(0, 0, 1.0);\n    a.set(1, 1, 2.0);\n    let mut b = Matrix::new(2, 2);\n    b.set(0, 0, 3.0);\n    b.set(1, 1, 4.0);\n    let c = a.add(&b).expect(\"dims match\");\n    assert_eq!(c.get(0, 0), 4.0);\n    assert_eq!(c.get(1, 1), 6.0);\n    assert_eq!(c.get(0, 1), 0.0);\n}\n\n#[test]\nfn test_add_mismatched_dims_returns_none() {\n    let a = Matrix::new(2, 3);\n    let b = Matrix::new(3, 2);\n    assert!(a.add(&b).is_none());\n}\n\n#[test]\nfn test_transpose_identity() {\n    let mut m = Matrix::new(3, 3);\n    m.set(0, 1, 9.0);\n    m.set(2, 0, 5.0);\n    let tt = m.transpose().transpose();\n    assert_eq!(tt.get(0, 1), 9.0);\n    assert_eq!(tt.get(2, 0), 5.0);\n    assert_eq!(tt.rows(), 3);\n    assert_eq!(tt.cols(), 3);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement Matrix in src/lib.rs.\n\npub struct Matrix {\n    rows: usize,\n    cols: usize,\n    data: Vec<f64>,  // row-major: data[row * cols + col]\n}\n\nimpl Matrix {\n    pub fn new(rows: usize, cols: usize) -> Self   // filled with 0.0\n    pub fn rows(&self) -> usize\n    pub fn cols(&self) -> usize\n    pub fn get(&self, row: usize, col: usize) -> f64\n    pub fn set(&mut self, row: usize, col: usize, val: f64)\n    pub fn transpose(&self) -> Matrix              // returns a new Matrix\n    pub fn add(&self, other: &Matrix) -> Option<Matrix>  // None if dims differ\n}\n\nStore data in a flat Vec<f64> in row-major order (index = row * cols + col).\nAll 6 tests in tests/matrix_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "Matrix uses flat Vec<f64> in row-major order",
+      "rows() and cols() return correct dimensions",
+      "get/set index correctly using row * cols + col",
+      "transpose swaps rows/cols and reorganizes data",
+      "add returns None for mismatched dimensions",
+      "All 6 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (6 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-greenfield-052",
+  "title": "Implement Word Break DP in Python",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement word_break(s, word_dict) using bottom-up DP: return True if s can be segmented into words from word_dict, False otherwise.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/word_break.py": "def word_break(s: str, word_dict: list[str]) -> bool:\n    \"\"\"Return True if s can be segmented into words from word_dict.\"\"\"\n    raise NotImplementedError\n",
+      "tests/test_word_break.py": "import sys\nsys.path.insert(0, '.')\nfrom src.word_break import word_break\n\n\ndef test_empty_string():\n    assert word_break('', ['a', 'b']) is True\n\n\ndef test_simple():\n    assert word_break('leetcode', ['leet', 'code']) is True\n\n\ndef test_multiple_uses():\n    assert word_break('applepenapple', ['apple', 'pen']) is True\n\n\ndef test_impossible():\n    assert word_break('catsandog', ['cats', 'dog', 'sand', 'and', 'cat']) is False\n",
+      "pyproject.toml": "[project]\nname = \"word_break\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = []\n\n[tool.pytest.ini_options]\npythonpath = [\".\"]\n\n[dependency-groups]\ndev = [\"pytest>=8.0\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement word_break in src/word_break.py:\n- Convert word_dict to a set for O(1) lookup\n- Create dp[0..n] initialized to False; set dp[0]=True (empty prefix always reachable)\n- For i in 1..n: for j in 0..i: if dp[j] is True and s[j:i] is in word_set, set dp[i]=True and break\n- Return dp[n]\nAll 4 test cases must pass.",
+    "entry_point": "src/word_break.py",
+    "success_criteria": "All 4 pytest test cases pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -q` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

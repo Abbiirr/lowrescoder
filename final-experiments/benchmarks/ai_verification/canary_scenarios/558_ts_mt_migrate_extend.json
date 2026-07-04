@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "558-ts-mt-migrate-extend",
+  "title": "Migrate JS to TypeScript then add generic utility type — 3 turns",
+  "category": "migration",
+  "difficulty": "medium",
+  "target_stack": {"language": "typescript", "framework": null, "extra": {}},
+  "description": "Plain JavaScript utility functions migrated to TypeScript with proper types, tests green, generic utility type added.",
+  "repo_seed": {
+    "files": {
+      "package.json": "{\n  \"name\": \"ts-migration\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"test\": \"jest --forceExit\"\n  },\n  \"devDependencies\": {\n    \"@types/jest\": \"^29.0.0\",\n    \"jest\": \"^29.0.0\",\n    \"ts-jest\": \"^29.0.0\",\n    \"typescript\": \"^5.0.0\"\n  },\n  \"jest\": {\n    \"preset\": \"ts-jest\",\n    \"testEnvironment\": \"node\"\n  }\n}\n",
+      "src/utils.ts": "// JavaScript-style code without proper types — needs TypeScript migration.\n\n// TODO: add proper types to all these functions\n\n/** Group an array by a key function. */\nexport function groupBy(arr: any[], keyFn: (item: any) => any): Record<any, any[]> {\n  return arr.reduce((acc, item) => {\n    const key = keyFn(item);\n    if (!acc[key]) acc[key] = [];\n    acc[key].push(item);\n    return acc;\n  }, {});\n}\n\n/** Pick specific keys from an object. */\nexport function pick(obj: any, keys: string[]): any {\n  return keys.reduce((acc: any, key) => {\n    if (key in obj) acc[key] = obj[key];\n    return acc;\n  }, {});\n}\n\n/** Omit specific keys from an object. */\nexport function omit(obj: any, keys: string[]): any {\n  return Object.fromEntries(\n    Object.entries(obj).filter(([k]) => !keys.includes(k))\n  );\n}\n\n/** Deep merge two objects (second overrides first). */\nexport function merge(target: any, source: any): any {\n  const result = { ...target };\n  for (const key of Object.keys(source)) {\n    if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key])) {\n      result[key] = merge(target[key] || {}, source[key]);\n    } else {\n      result[key] = source[key];\n    }\n  }\n  return result;\n}\n\n// TODO: add generic utility type\n// DeepPartial<T> should make all properties and nested properties optional\nexport type DeepPartial<T> = T;\n",
+      "src/utils.test.ts": "import { groupBy, pick, omit, merge } from './utils';\nimport type { DeepPartial } from './utils';\n\ninterface User { id: number; name: string; role: string; }\n\ntest('groupBy groups correctly', () => {\n  const users: User[] = [\n    { id: 1, name: 'Alice', role: 'admin' },\n    { id: 2, name: 'Bob', role: 'user' },\n    { id: 3, name: 'Charlie', role: 'admin' },\n  ];\n  const grouped = groupBy(users, (u: User) => u.role);\n  expect(grouped['admin']).toHaveLength(2);\n  expect(grouped['user']).toHaveLength(1);\n});\n\ntest('pick selects keys', () => {\n  const result = pick({ a: 1, b: 2, c: 3 }, ['a', 'c']);\n  expect(result).toEqual({ a: 1, c: 3 });\n});\n\ntest('omit removes keys', () => {\n  const result = omit({ a: 1, b: 2, c: 3 }, ['b']);\n  expect(result).toEqual({ a: 1, c: 3 });\n});\n\ntest('merge deep merges objects', () => {\n  const a = { x: 1, nested: { y: 2, z: 3 } };\n  const b = { nested: { y: 99, w: 4 } };\n  const result = merge(a, b);\n  expect(result).toEqual({ x: 1, nested: { y: 99, z: 3, w: 4 } });\n});\n\ntest('DeepPartial makes nested properties optional', () => {\n  // TypeScript type check — if DeepPartial is correct, this compiles\n  const partial: DeepPartial<{ a: number; b: { c: string } }> = { b: {} };\n  expect(partial).toBeDefined();\n});\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Add proper TypeScript generics to `groupBy` in `src/utils.ts` — change signature to `groupBy<T>(arr: T[], keyFn: (item: T) => string | number): Record<string, T[]>`. Remove the `any` types. Run `npm test -- --forceExit`.",
+    "followup_prompts": [
+      "Run `npm test -- --forceExit` to confirm no regressions. Now add generics to `pick<T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K>` and `omit<T extends object, K extends keyof T>(obj: T, keys: K[]): Omit<T, K>`. Walk me through what changed.",
+      "Final pass: implement `DeepPartial<T>` — a recursive type that makes all properties of T optional, including nested object properties. Use conditional type: `{ [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] }`. Then run `npm test -- --forceExit` — all 5 tests must pass."
+    ],
+    "success_criteria": [
+      "groupBy has proper generic types",
+      "pick uses Pick<T, K> return type",
+      "omit uses Omit<T, K> return type",
+      "DeepPartial recursively makes all properties optional",
+      "All 5 tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "npm test -- --forceExit"}
+  },
+  "duration_hint_minutes": 20
+}

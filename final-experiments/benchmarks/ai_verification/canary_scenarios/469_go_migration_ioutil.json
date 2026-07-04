@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-migration-ioutil-001",
+  "title": "Migrate ioutil deprecated functions to os/io equivalents",
+  "category": "refactor",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Go file utility uses deprecated ioutil functions (ioutil.ReadFile, ioutil.WriteFile, ioutil.TempFile, ioutil.NopCloser). Migrate each to its modern os/io equivalent.",
+  "repo_seed": {
+    "files": {
+      "fileutil.go": "package fileutil\n\nimport (\n\t\"io/ioutil\"\n\t\"os\"\n)\n\n// ReadBytes reads all bytes from a file.\nfunc ReadBytes(path string) ([]byte, error) {\n\treturn ioutil.ReadFile(path)\n}\n\n// WriteBytes writes bytes to a file with 0644 permissions.\nfunc WriteBytes(path string, data []byte) error {\n\treturn ioutil.WriteFile(path, data, 0644)\n}\n\n// TempFile creates a temporary file in dir with the given pattern.\nfunc TempFile(dir, pattern string) (*os.File, error) {\n\treturn ioutil.TempFile(dir, pattern)\n}\n\n// NopCloser wraps a reader with a no-op Close method.\nfunc NopCloser(r interface{ Read([]byte) (int, error) }) interface {\n\tRead([]byte) (int, error)\n\tClose() error\n} {\n\treturn ioutil.NopCloser(r)\n}\n",
+      "fileutil_test.go": "package fileutil\n\nimport (\n\t\"bytes\"\n\t\"os\"\n\t\"testing\"\n)\n\nfunc TestReadWriteBytes(t *testing.T) {\n\ttmp, err := os.CreateTemp(\"\", \"fileutil-*\")\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\tdefer os.Remove(tmp.Name())\n\ttmp.Close()\n\n\tdata := []byte(\"hello fileutil\")\n\tif err := WriteBytes(tmp.Name(), data); err != nil {\n\t\tt.Fatalf(\"WriteBytes: %v\", err)\n\t}\n\tgot, err := ReadBytes(tmp.Name())\n\tif err != nil {\n\t\tt.Fatalf(\"ReadBytes: %v\", err)\n\t}\n\tif !bytes.Equal(got, data) {\n\t\tt.Errorf(\"got %q, want %q\", got, data)\n\t}\n}\n\nfunc TestTempFile(t *testing.T) {\n\tf, err := TempFile(\"\", \"test-*\")\n\tif err != nil {\n\t\tt.Fatalf(\"TempFile: %v\", err)\n\t}\n\tdefer os.Remove(f.Name())\n\tf.Close()\n\tif _, err := os.Stat(f.Name()); err != nil {\n\t\tt.Errorf(\"TempFile did not create file: %v\", err)\n\t}\n}\n\nfunc TestNopCloser(t *testing.T) {\n\tr := bytes.NewReader([]byte(\"data\"))\n\tnc := NopCloser(r)\n\tif err := nc.Close(); err != nil {\n\t\tt.Errorf(\"Close returned error: %v\", err)\n\t}\n}\n",
+      "go.mod": "module fileutil\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Migrate fileutil.go away from the deprecated io/ioutil package.\n\nReplace each deprecated call:\n- `ioutil.ReadFile(path)` → `os.ReadFile(path)`\n- `ioutil.WriteFile(path, data, 0644)` → `os.WriteFile(path, data, 0644)`\n- `ioutil.TempFile(dir, pattern)` → `os.CreateTemp(dir, pattern)`\n- `ioutil.NopCloser(r)` → `io.NopCloser(r)`\n\nUpdate the import block: remove `io/ioutil`, keep `os`, add `io` for NopCloser.\n\nRun `go test ./...` to verify all 3 tests pass.",
+    "entry_point": "fileutil.go",
+    "success_criteria": [
+      "All 3 go tests pass",
+      "No ioutil references remain",
+      "os.ReadFile, os.WriteFile, os.CreateTemp, io.NopCloser used"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `go test ./...` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./..."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 7
+}

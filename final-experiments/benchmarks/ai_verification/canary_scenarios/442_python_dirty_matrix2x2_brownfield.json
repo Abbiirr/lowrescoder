@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-028",
+  "title": "Fix three bugs in a Python Matrix2x2 class",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Fix bugs in Matrix2x2: determinant swaps a*d and b*c terms, trace adds 1 to the result, is_singular checks != 0 instead of == 0.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/matrix2x2.py": "class Matrix2x2:\n    \"\"\"2x2 matrix [[a, b], [c, d]].\"\"\"\n    def __init__(self, a, b, c, d):\n        self.a = a\n        self.b = b\n        self.c = c\n        self.d = d\n\n    def determinant(self) -> float:\n        # BUG 1: computes a*c - b*d instead of a*d - b*c\n        return self.a * self.c - self.b * self.d\n\n    def trace(self) -> float:\n        # BUG 2: adds 1 to the result\n        return self.a + self.d + 1\n\n    def is_singular(self) -> bool:\n        # BUG 3: returns True when det != 0 (reversed condition)\n        return self.determinant() != 0\n",
+      "tests/test_matrix2x2.py": "import sys\nsys.path.insert(0, '.')\nfrom src.matrix2x2 import Matrix2x2\n\n\ndef test_determinant():\n    m = Matrix2x2(1, 2, 3, 4)\n    assert m.determinant() == -2\n\n\ndef test_trace():\n    m = Matrix2x2(1, 2, 3, 4)\n    assert m.trace() == 5\n\n\ndef test_is_singular_false():\n    m = Matrix2x2(1, 2, 3, 4)\n    assert m.is_singular() is False\n\n\ndef test_is_singular_true():\n    m = Matrix2x2(1, 2, 2, 4)\n    assert m.is_singular() is True\n",
+      "pyproject.toml": "[project]\nname = \"matrix2x2\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = []\n\n[tool.pytest.ini_options]\npythonpath = [\".\"]\n\n[dependency-groups]\ndev = [\"pytest>=8.0\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/matrix2x2.py:\n1. determinant: change `self.a * self.c - self.b * self.d` to `self.a * self.d - self.b * self.c`\n2. trace: remove `+ 1` so it returns just `self.a + self.d`\n3. is_singular: change `!= 0` to `== 0`\nAll 4 tests must pass.",
+    "entry_point": "src/matrix2x2.py",
+    "success_criteria": "All 4 pytest test cases pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

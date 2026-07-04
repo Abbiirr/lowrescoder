@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-refactor-009",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Refactor python_path_migration file_utils to use pathlib.Path",
+  "description": "Brownfield Python refactor: replace os.path calls in src/file_utils.py with pathlib.Path equivalents. All 5 existing tests must still pass.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_path_migration",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Refactor src/file_utils.py to use pathlib.Path instead of os.path.\n\nRemove `import os` and replace with `from pathlib import Path`.\n\n  def list_text_files(directory: str) -> list[str]:\n    — use Path(directory).iterdir() to list files\n    — check .is_file() and .suffix == '.txt'\n    — return sorted list of .name strings\n\n  def read_if_exists(path: str) -> str | None:\n    — use Path(path).exists() and Path(path).read_text(encoding='utf-8')\n\n  def ensure_dir(path: str) -> str:\n    — use Path(path).mkdir(parents=True, exist_ok=True)\n    — return path (the str, unchanged)\n\nDo not modify the test file. All 5 tests must still pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "os import removed, pathlib.Path used instead",
+      "list_text_files uses Path.iterdir and .suffix",
+      "read_if_exists uses Path.exists and Path.read_text",
+      "ensure_dir uses Path.mkdir with parents=True, exist_ok=True",
+      "All 5 existing tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run python -c \"from src.file_utils import list_text_files, read_if_exists, ensure_dir\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `uv run pytest tests/ -v` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.file_utils import list_text_files, read_if_exists, ensure_dir\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "509-python-mt-api-rate-limit",
+  "title": "Add per-IP rate limiting middleware to FastAPI — 3 turns",
+  "category": "backend_feature",
+  "difficulty": "medium",
+  "target_stack": {"language": "python", "framework": "fastapi", "extra": {}},
+  "description": "FastAPI app needs a rate-limiting middleware. Turn 1: implement simple in-memory rate limiter. Turn 2: add per-IP tracking with separate counters. Turn 3: add test for limit-exceeded 429 response.",
+  "repo_seed": {
+    "files": {
+      "pyproject.toml": "[project]\nname = \"api-rate-limit\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = [\n    \"fastapi>=0.110.0\",\n    \"httpx>=0.27.0\",\n    \"pytest>=8.0.0\",\n    \"pytest-asyncio>=0.23.0\",\n]\n",
+      "app.py": "\"\"\"FastAPI app with rate limiting middleware.\"\"\"\nfrom fastapi import FastAPI, Request, Response\nfrom fastapi.responses import JSONResponse\nimport time\nfrom collections import defaultdict\n\napp = FastAPI()\n\n# Simple in-memory rate limit store: ip -> (count, window_start)\n_rate_store: dict[str, tuple[int, float]] = defaultdict(lambda: (0, 0.0))\nRATE_LIMIT = 5  # requests per window\nWINDOW_SECONDS = 60.0\n\n\n@app.middleware(\"http\")\nasync def rate_limit_middleware(request: Request, call_next):\n    \"\"\"Rate limit by client IP. Return 429 when limit exceeded.\"\"\"\n    # TODO: implement rate limiting\n    response = await call_next(request)\n    return response\n\n\n@app.get(\"/ping\")\nasync def ping():\n    return {\"pong\": True}\n\n\n@app.get(\"/items\")\nasync def list_items():\n    return {\"items\": [\"a\", \"b\", \"c\"]}\n",
+      "tests/test_rate_limit.py": "import pytest\nfrom fastapi.testclient import TestClient\nfrom app import app, _rate_store, RATE_LIMIT\n\n\n@pytest.fixture(autouse=True)\ndef clear_rate_store():\n    _rate_store.clear()\n    yield\n    _rate_store.clear()\n\n\nclient = TestClient(app)\n\n\ndef test_ping_works():\n    r = client.get(\"/ping\")\n    assert r.status_code == 200\n\n\ndef test_items_works():\n    r = client.get(\"/items\")\n    assert r.status_code == 200\n\n\ndef test_rate_limit_not_exceeded():\n    for _ in range(RATE_LIMIT):\n        r = client.get(\"/ping\")\n        assert r.status_code == 200\n\n\ndef test_rate_limit_exceeded_returns_429():\n    for _ in range(RATE_LIMIT):\n        client.get(\"/ping\")\n    r = client.get(\"/ping\")  # one over the limit\n    assert r.status_code == 429\n    assert \"rate limit\" in r.json().get(\"detail\", \"\").lower()\n\n\ndef test_different_ips_have_separate_counters():\n    \"\"\"Two different IPs should each get their own rate limit window.\"\"\"\n    # Exhaust limit for 127.0.0.1\n    for _ in range(RATE_LIMIT):\n        client.get(\"/ping\", headers={\"X-Forwarded-For\": \"10.0.0.1\"})\n    # 10.0.0.2 should still be under limit\n    r = client.get(\"/ping\", headers={\"X-Forwarded-For\": \"10.0.0.2\"})\n    assert r.status_code == 200\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The `rate_limit_middleware` in `app.py` is a stub — it passes all requests through. Implement it: extract the client IP from `request.client.host` (or `X-Forwarded-For` header if present), track request counts in `_rate_store` per IP with a `WINDOW_SECONDS` sliding window, and return a 429 JSONResponse with `{\"detail\": \"rate limit exceeded\"}` when the count exceeds `RATE_LIMIT`. Run `uv run pytest tests/ -q`.",
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. Make sure the middleware handles missing `request.client` (e.g., during testing), and that X-Forwarded-For IP extraction works correctly for the per-IP test. Run `uv run pytest tests/ -q` and fix any failures.",
+      "Run `uv run pytest tests/ -q` to verify everything including your per-IP tracking. Fix any failures and confirm the feature is complete — all 5 tests must pass."
+    ],
+    "success_criteria": [
+      "Requests under the rate limit return the normal response",
+      "Requests over the limit return 429 with detail containing 'rate limit'",
+      "Per-IP tracking: different IPs have independent counters",
+      "Middleware handles missing client gracefully",
+      "All 5 pytest tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "uv run pytest tests/ -q"}
+  },
+  "duration_hint_minutes": 20
+}

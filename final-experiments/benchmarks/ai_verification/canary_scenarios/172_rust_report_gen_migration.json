@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-migration-007",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Introduce Report struct wrapping rust_report_gen free functions",
+  "description": "Brownfield Rust migration: encapsulate item analysis functions in a Report struct while keeping backward-compatible free functions.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_report_gen",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Migrate src/lib.rs to introduce a Report struct. All 3 existing tests must still pass.\n\nAdd:\n  pub struct Report { /* items: Vec<Item> */ }\n\n  impl Report {\n    pub fn new(items: Vec<Item>) -> Self\n\n    pub fn sum(&self) -> f64\n      — delegates to the package-level sum function\n\n    pub fn max_item(&self) -> Option<&Item>\n      — delegates to the package-level max_item function\n\n    pub fn min_item(&self) -> Option<&Item>\n      — delegates to the package-level min_item function\n\n    pub fn average(&self) -> Option<f64>\n      — returns the average value of all items, or None if empty\n  }\n\nDo not modify the existing free functions or tests.\nAdd at least 4 tests for the Report struct.\nAll 3 existing tests must still pass.\nRun: cargo test",
+    "required_artifacts": [
+      "Report struct with items field",
+      "Report::new(items) constructor",
+      "Report::sum delegates to free function",
+      "Report::max_item delegates to free function",
+      "Report::min_item delegates to free function",
+      "Report::average returns mean or None for empty",
+      "At least 4 tests for Report methods",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `cargo test` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

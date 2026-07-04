@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-028",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Implement a worker pool in Go",
+  "description": "Greenfield Go task: implement a WorkerPool that distributes tasks to a fixed number of goroutines using channels, collects results, and supports graceful shutdown.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module workerpool\n\ngo 1.21\n"
+      },
+      {
+        "path": "workerpool.go",
+        "content": "package workerpool\n\n// TODO: implement WorkerPool\n"
+      },
+      {
+        "path": "workerpool_test.go",
+        "content": "package workerpool\n\nimport (\n\t\"sort\"\n\t\"testing\"\n)\n\nfunc TestWorkerPoolBasic(t *testing.T) {\n\twp := New(3)\n\twp.Start()\n\tfor i := 1; i <= 9; i++ {\n\t\tn := i\n\t\twp.Submit(func() int { return n * n })\n\t}\n\tresults := wp.Stop()\n\tif len(results) != 9 {\n\t\tt.Fatalf(\"want 9 results got %d\", len(results))\n\t}\n}\n\nfunc TestWorkerPoolSums(t *testing.T) {\n\twp := New(2)\n\twp.Start()\n\tfor i := 1; i <= 5; i++ {\n\t\tn := i\n\t\twp.Submit(func() int { return n })\n\t}\n\tresults := wp.Stop()\n\ttotal := 0\n\tfor _, r := range results {\n\t\ttotal += r\n\t}\n\tif total != 15 {\n\t\tt.Fatalf(\"want sum 15 got %d\", total)\n\t}\n}\n\nfunc TestWorkerPoolOrdering(t *testing.T) {\n\twp := New(1) // single worker preserves order\n\twp.Start()\n\tfor i := 0; i < 5; i++ {\n\t\tn := i\n\t\twp.Submit(func() int { return n })\n\t}\n\tresults := wp.Stop()\n\tsort.Ints(results)\n\tfor i, v := range results {\n\t\tif v != i {\n\t\t\tt.Fatalf(\"want %d got %d\", i, v)\n\t\t}\n\t}\n}\n\nfunc TestWorkerPoolEmpty(t *testing.T) {\n\twp := New(2)\n\twp.Start()\n\tresults := wp.Stop()\n\tif len(results) != 0 {\n\t\tt.Fatalf(\"want 0 results got %d\", len(results))\n\t}\n}\n\nfunc TestWorkerPoolSingleWorker(t *testing.T) {\n\twp := New(1)\n\twp.Start()\n\twp.Submit(func() int { return 42 })\n\tresults := wp.Stop()\n\tif len(results) != 1 || results[0] != 42 {\n\t\tt.Fatalf(\"want [42] got %v\", results)\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement WorkerPool in workerpool.go.\n\ntype WorkerPool struct {\n    workers int\n    jobs    chan func() int\n    results chan int\n    wg      sync.WaitGroup\n}\n\nfunc New(workers int) *WorkerPool\n    // Create with buffered jobs channel (size workers*10) and results channel.\n\nfunc (wp *WorkerPool) Start()\n    // Launch `workers` goroutines, each reading from jobs channel.\n    // Each goroutine: for job := range jobs { results <- job(); wg.Done() }\n\nfunc (wp *WorkerPool) Submit(job func() int)\n    // wg.Add(1); jobs <- job\n\nfunc (wp *WorkerPool) Stop() []int\n    // Close jobs channel, wait for all workers to finish (wg.Wait()).\n    // Close results channel, collect all results into a slice.\n    // Return the slice.\n\nAll 5 tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Start launches exactly `workers` goroutines reading from jobs channel",
+      "Submit sends a job and increments the WaitGroup",
+      "Stop closes jobs, waits for completion, then collects results",
+      "No deadlock for empty job queue",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

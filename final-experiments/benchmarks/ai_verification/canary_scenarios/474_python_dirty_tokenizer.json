@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-py-dirty-tokenizer-001",
+  "title": "Fix bugs in a Python tokenizer module",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Python tokenizer has three bugs: floats always get type INT, identifiers record end position instead of start, and operators get type 'UNKNOWN' instead of 'OP'. Fix all three.",
+  "repo_seed": {
+    "files": {
+      "tokenizer.py": "\"\"\"Simple expression tokenizer.\"\"\"\nfrom dataclasses import dataclass\nfrom typing import List\n\n\n@dataclass\nclass Token:\n    type: str   # 'INT', 'FLOAT', 'IDENT', 'OP'\n    value: str\n    pos: int\n\n\ndef tokenize(text: str) -> List[Token]:\n    \"\"\"Tokenize a simple expression string into tokens.\"\"\"\n    tokens = []\n    i = 0\n    while i < len(text):\n        ch = text[i]\n\n        if ch.isspace():\n            i += 1\n            continue\n\n        # Numbers: int or float\n        if ch.isdigit() or ch == '.':\n            j = i\n            has_dot = False\n            while j < len(text) and (text[j].isdigit() or text[j] == '.'):\n                if text[j] == '.':\n                    has_dot = True\n                j += 1\n            num_str = text[i:j]\n            # BUG 1: always emits INT even for floats — should use 'FLOAT' when has_dot\n            tokens.append(Token('INT', num_str, i))\n            i = j\n            continue\n\n        # Identifiers\n        if ch.isalpha() or ch == '_':\n            j = i\n            while j < len(text) and (text[j].isalnum() or text[j] == '_'):\n                j += 1\n            # BUG 2: records end position j instead of start position i\n            tokens.append(Token('IDENT', text[i:j], j))\n            i = j\n            continue\n\n        # Operators: + - * / ( )\n        if ch in '+-*/()':\n            # BUG 3: emits 'UNKNOWN' instead of 'OP' token type\n            tokens.append(Token('UNKNOWN', ch, i))\n            i += 1\n            continue\n\n        # Unknown character — skip\n        i += 1\n\n    return tokens\n",
+      "test_tokenizer.py": "import pytest\nfrom tokenizer import tokenize, Token\n\n\ndef test_integers():\n    tokens = tokenize('42 7')\n    assert len(tokens) == 2\n    assert tokens[0] == Token('INT', '42', 0)\n    assert tokens[1] == Token('INT', '7', 3)\n\n\ndef test_float():\n    tokens = tokenize('3.14')\n    assert len(tokens) == 1\n    assert tokens[0].type == 'FLOAT'\n    assert tokens[0].value == '3.14'\n\n\ndef test_identifier():\n    tokens = tokenize('foo bar')\n    assert tokens[0] == Token('IDENT', 'foo', 0)\n    assert tokens[1] == Token('IDENT', 'bar', 4)\n\n\ndef test_operator():\n    tokens = tokenize('+')\n    assert len(tokens) == 1\n    assert tokens[0] == Token('OP', '+', 0)\n\n\ndef test_expression():\n    tokens = tokenize('x + 3.5')\n    types = [t.type for t in tokens]\n    assert types == ['IDENT', 'OP', 'FLOAT']\n    assert tokens[2].value == '3.5'\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix the three bugs in tokenizer.py:\n\n1. BUG 1 (float type): Change `Token('INT', num_str, i)` to `Token('FLOAT' if has_dot else 'INT', num_str, i)` so floats get FLOAT type.\n2. BUG 2 (identifier position): Change `Token('IDENT', text[i:j], j)` to `Token('IDENT', text[i:j], i)` so the position records the start, not the end.\n3. BUG 3 (operator type): Change `Token('UNKNOWN', ch, i)` to `Token('OP', ch, i)` so operators get OP type.\n\nRun `pytest test_tokenizer.py -v --rootdir=.` to verify all 5 tests pass.",
+    "entry_point": "tokenizer.py",
+    "success_criteria": [
+      "All 5 pytest tests pass",
+      "Float tokens have type FLOAT",
+      "Identifier tokens record start position",
+      "Operator tokens have type OP not UNKNOWN"
+    ],
+    "followup_prompts": [
+      "Run `pytest test_tokenizer.py -v --rootdir=.` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `pytest test_tokenizer.py -v --rootdir=.` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "pytest test_tokenizer.py -v --rootdir=."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 5
+}

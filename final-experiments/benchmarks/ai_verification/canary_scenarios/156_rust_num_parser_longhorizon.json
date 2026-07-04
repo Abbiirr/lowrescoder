@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-longhorizon-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Extend rust_num_parser with safe variants and list operations",
+  "description": "Brownfield Rust task: add Result-returning variants of existing parsers and new list-parsing utilities alongside the panicking originals.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_num_parser",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add five new functions to src/lib.rs. All 3 existing tests must still pass.\n\n  pub fn try_parse_int(s: &str) -> Result<i32, String>\n    — like parse_int but returns Err(\"invalid integer: '<trimmed_s>'\") on failure\n\n  pub fn try_parse_pair(s: &str) -> Result<(i32, i32), String>\n    — like parse_pair but returns Err on invalid or missing second element\n\n  pub fn parse_list(s: &str) -> Vec<i32>\n    — splits s on ',' and parses each trimmed token as i32; panics on invalid token; returns [] for empty input\n\n  pub fn sum_list(s: &str) -> i32\n    — parses a comma-separated list and returns the sum; returns 0 for empty input\n\n  pub fn max_in_list(s: &str) -> Option<i32>\n    — returns the maximum value from a comma-separated list, or None if input is empty\n\nDo not modify the existing functions or tests.\nAdd tests for all 5 new functions.\nAll 3 existing tests must still pass.\nRun: cargo test",
+    "required_artifacts": [
+      "try_parse_int returns Ok(n) for valid input, Err for invalid",
+      "try_parse_pair returns Ok((a,b)) for valid, Err for invalid or missing second element",
+      "parse_list parses comma-separated integers into Vec<i32>, empty vec for empty input",
+      "sum_list sums comma-separated integers, 0 for empty input",
+      "max_in_list returns Some(max) for non-empty, None for empty",
+      "Tests for all 5 new functions",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `cargo test` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `cargo test` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

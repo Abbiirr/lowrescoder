@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-migration-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Migrate Go products API from monolithic handler to http.ServeMux routing",
+  "description": "A Go products API uses a single Handler function with manual URL/method dispatch. Migrate to http.NewServeMux() with per-route handler registration.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_legacy_products",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The products package in internal/products/products.go has a single exported Handler function that manually dispatches requests by inspecting r.URL.Path and r.Method with a switch statement. Migrate it to use http.NewServeMux():\n\n1. Keep the four private handler functions (listProducts, createProduct, getProduct, deleteProduct) with their existing logic unchanged.\n\n2. Replace the monolithic Handler function with a NewMux() function that constructs and returns an *http.ServeMux with all four routes registered:\n   - mux.HandleFunc(\"GET /products\", listProducts)\n   - mux.HandleFunc(\"POST /products\", createProduct)\n   - mux.HandleFunc(\"GET /products/{id}\", getProduct)\n   - mux.HandleFunc(\"DELETE /products/{id}\", deleteProduct)\n   Note: Go 1.22+ method+path pattern syntax is available.\n\n3. Inside getProduct and deleteProduct, extract the {id} path value using r.PathValue(\"id\") instead of strings.TrimPrefix.\n\n4. Update the test file to call products.NewMux() and use httptest.NewServer(mux) or pass requests directly via mux.ServeHTTP(w, r). Remove the old Handler-based calls. All four existing tests must pass.\n\n5. Remove the now-unused imports (strings) if applicable.\n\nRun go test ./... and go build ./... to confirm.",
+    "required_artifacts": [
+      "NewMux() function returns *http.ServeMux with 4 routes",
+      "monolithic Handler function removed",
+      "getProduct and deleteProduct use r.PathValue(\"id\")",
+      "strings import removed if unused",
+      "All 4 existing tests pass via mux.ServeHTTP",
+      "go test ./... passes",
+      "go build ./... succeeds"
+    ],
+    "success_criteria": [
+      "Route dispatch handled by stdlib ServeMux, not manual switch",
+      "Method-aware patterns used (GET /products, not just /products)",
+      "All tests pass with updated test setup"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `go test ./...` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

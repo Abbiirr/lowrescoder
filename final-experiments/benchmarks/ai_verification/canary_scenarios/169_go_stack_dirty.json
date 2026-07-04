@@ -1,0 +1,64 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-dirty-006",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 buggy Go stack implementation methods",
+  "description": "Greenfield Go dirty scenario: a stack data structure has 3 broken methods. Fix Pop, Peek, and IsEmpty so all tests pass.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module github.com/ai-verification/go-stack\n\ngo 1.21\n"
+      },
+      {
+        "path": "internal/stack/stack.go",
+        "content": "package stack\n\n// Stack is a LIFO integer stack.\ntype Stack struct {\n\titems []int\n}\n\n// Push adds v to the top of the stack.\nfunc (s *Stack) Push(v int) {\n\ts.items = append(s.items, v)\n}\n\n// Pop removes and returns the top element. Returns (0, false) if empty.\nfunc (s *Stack) Pop() (int, bool) {\n\tif len(s.items) == 0 {\n\t\treturn 0, false\n\t}\n\t// BUG: returns first element instead of last (top)\n\ttop := s.items[0]\n\ts.items = s.items[1:]\n\treturn top, true\n}\n\n// Peek returns the top element without removing it. Returns (0, false) if empty.\nfunc (s *Stack) Peek() (int, bool) {\n\tif len(s.items) == 0 {\n\t\treturn 0, false\n\t}\n\t// BUG: returns first element instead of last (top)\n\treturn s.items[0], true\n}\n\n// Size returns the number of items in the stack.\nfunc (s *Stack) Size() int {\n\treturn len(s.items)\n}\n\n// IsEmpty returns true if the stack has no items.\nfunc (s *Stack) IsEmpty() bool {\n\t// BUG: inverted condition — returns true when non-empty\n\treturn len(s.items) != 0\n}\n"
+      },
+      {
+        "path": "internal/stack/stack_test.go",
+        "content": "package stack_test\n\nimport (\n\t\"testing\"\n\n\t\"github.com/ai-verification/go-stack/internal/stack\"\n)\n\nfunc TestPushPop(t *testing.T) {\n\tvar s stack.Stack\n\ts.Push(1)\n\ts.Push(2)\n\ts.Push(3)\n\tv, ok := s.Pop()\n\tif !ok || v != 3 {\n\t\tt.Fatalf(\"expected 3, got %d ok=%v\", v, ok)\n\t}\n\tv, ok = s.Pop()\n\tif !ok || v != 2 {\n\t\tt.Fatalf(\"expected 2, got %d ok=%v\", v, ok)\n\t}\n}\n\nfunc TestPopEmpty(t *testing.T) {\n\tvar s stack.Stack\n\t_, ok := s.Pop()\n\tif ok {\n\t\tt.Fatal(\"expected ok=false on empty stack\")\n\t}\n}\n\nfunc TestPeek(t *testing.T) {\n\tvar s stack.Stack\n\ts.Push(10)\n\ts.Push(20)\n\tv, ok := s.Peek()\n\tif !ok || v != 20 {\n\t\tt.Fatalf(\"expected 20, got %d ok=%v\", v, ok)\n\t}\n\tif s.Size() != 2 {\n\t\tt.Fatalf(\"Peek should not remove items, size=%d\", s.Size())\n\t}\n}\n\nfunc TestSize(t *testing.T) {\n\tvar s stack.Stack\n\tif s.Size() != 0 {\n\t\tt.Fatalf(\"expected size 0, got %d\", s.Size())\n\t}\n\ts.Push(1)\n\ts.Push(2)\n\tif s.Size() != 2 {\n\t\tt.Fatalf(\"expected size 2, got %d\", s.Size())\n\t}\n}\n\nfunc TestIsEmpty(t *testing.T) {\n\tvar s stack.Stack\n\tif !s.IsEmpty() {\n\t\tt.Fatal(\"empty stack should return true from IsEmpty\")\n\t}\n\ts.Push(1)\n\tif s.IsEmpty() {\n\t\tt.Fatal(\"non-empty stack should return false from IsEmpty\")\n\t}\n}\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 buggy methods in internal/stack/stack.go so all tests pass.\n\n  func (s *Stack) Pop() (int, bool)\n    — remove and return the TOP (last added) element, not the first\n\n  func (s *Stack) Peek() (int, bool)\n    — return the TOP element without removing it\n\n  func (s *Stack) IsEmpty() bool\n    — return true only when len(s.items) == 0\n\nDo not modify the test file.\nRun: go test ./...",
+    "required_artifacts": [
+      "Pop returns the last-in element (LIFO order)",
+      "Peek returns last-in element without removing",
+      "IsEmpty returns true only for empty stack",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

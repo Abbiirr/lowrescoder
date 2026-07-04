@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-032",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement a Protocol-based serializer in Python",
+  "description": "Greenfield Python task: define a Serializable Protocol requiring to_dict() and from_dict() classmethods, implement it for a User class, and write serialize/deserialize helpers.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"serializer\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/serializer.py",
+        "content": "# TODO: implement Serializable protocol, User class, serialize/deserialize helpers\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_serializer.py",
+        "content": "from src.serializer import User, serialize, deserialize\n\n\ndef test_user_to_dict():\n    u = User(name=\"Alice\", age=30)\n    d = u.to_dict()\n    assert d == {\"name\": \"Alice\", \"age\": 30}\n\n\ndef test_user_from_dict():\n    u = User.from_dict({\"name\": \"Bob\", \"age\": 25})\n    assert u.name == \"Bob\"\n    assert u.age == 25\n\n\ndef test_serialize():\n    u = User(name=\"Carol\", age=22)\n    assert serialize(u) == {\"name\": \"Carol\", \"age\": 22}\n\n\ndef test_deserialize():\n    u = deserialize(User, {\"name\": \"Dave\", \"age\": 40})\n    assert isinstance(u, User)\n    assert u.name == \"Dave\"\n\n\ndef test_roundtrip():\n    original = User(name=\"Eve\", age=35)\n    restored = User.from_dict(original.to_dict())\n    assert restored.name == original.name\n    assert restored.age == original.age\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement the Serializable protocol, User class, and helpers in src/serializer.py.\n\nfrom typing import Protocol, runtime_checkable, Any\n\n\n@runtime_checkable\nclass Serializable(Protocol):\n    def to_dict(self) -> dict:\n        ...\n\n    @classmethod\n    def from_dict(cls, data: dict) -> 'Serializable':\n        ...\n\n\nclass User:\n    def __init__(self, name: str, age: int):\n        self.name = name\n        self.age = age\n\n    def to_dict(self) -> dict:\n        return {\"name\": self.name, \"age\": self.age}\n\n    @classmethod\n    def from_dict(cls, data: dict) -> 'User':\n        return cls(name=data[\"name\"], age=data[\"age\"])\n\n\ndef serialize(obj: Serializable) -> dict:\n    return obj.to_dict()\n\n\ndef deserialize(cls: type, data: dict) -> Any:\n    return cls.from_dict(data)\n\nAll 5 tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "Serializable Protocol with to_dict and from_dict",
+      "User implements the protocol with correct field mapping",
+      "serialize() calls to_dict()",
+      "deserialize() calls cls.from_dict()",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.serializer import User, serialize, deserialize\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.serializer import User, serialize, deserialize\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

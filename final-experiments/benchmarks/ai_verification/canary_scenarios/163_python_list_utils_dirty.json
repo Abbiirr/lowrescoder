@@ -1,0 +1,72 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-dirty-005",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 buggy Python list utility functions",
+  "description": "Greenfield Python dirty scenario: a list-utils module has 3 broken implementations. Fix flatten, unique, and chunk so all tests pass.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"list-utils\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = [\n    \"pytest>=8.0\",\n    \"ruff>=0.4\",\n]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/list_utils.py",
+        "content": "def flatten(nested: list) -> list:\n    \"\"\"Return a new list with all sub-lists flattened one level deep.\"\"\"\n    return nested  # BUG: should flatten, not return unchanged\n\n\ndef unique(items: list) -> list:\n    \"\"\"Return items with duplicates removed, preserving first-occurrence order.\"\"\"\n    return sorted(items)  # BUG: sorts instead of preserving order\n\n\ndef chunk(items: list, n: int) -> list[list]:\n    \"\"\"Split items into consecutive chunks of size n (last chunk may be smaller).\"\"\"\n    return []  # BUG: always returns empty list\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_list_utils.py",
+        "content": "from src.list_utils import flatten, unique, chunk\n\n\ndef test_flatten_basic():\n    assert flatten([[1, 2], [3, 4]]) == [1, 2, 3, 4]\n\n\ndef test_flatten_empty():\n    assert flatten([]) == []\n\n\ndef test_flatten_single():\n    assert flatten([[1]]) == [1]\n\n\ndef test_unique_basic():\n    assert unique([3, 1, 2, 1, 3]) == [3, 1, 2]\n\n\ndef test_unique_empty():\n    assert unique([]) == []\n\n\ndef test_unique_no_dups():\n    assert unique([1, 2, 3]) == [1, 2, 3]\n\n\ndef test_chunk_basic():\n    assert chunk([1, 2, 3, 4, 5], 2) == [[1, 2], [3, 4], [5]]\n\n\ndef test_chunk_exact():\n    assert chunk([1, 2, 3, 4], 2) == [[1, 2], [3, 4]]\n\n\ndef test_chunk_empty():\n    assert chunk([], 3) == []\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 buggy functions in src/list_utils.py so all tests pass.\n\n  def flatten(nested: list) -> list\n    — return a new list with all sub-lists flattened one level deep\n    — e.g. flatten([[1, 2], [3, 4]]) == [1, 2, 3, 4]\n\n  def unique(items: list) -> list\n    — return items with duplicates removed, preserving first-occurrence order\n    — e.g. unique([3, 1, 2, 1, 3]) == [3, 1, 2]\n\n  def chunk(items: list, n: int) -> list[list]\n    — split items into consecutive chunks of size n; last chunk may be smaller\n    — e.g. chunk([1, 2, 3, 4, 5], 2) == [[1, 2], [3, 4], [5]]\n\nDo not modify the test file.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "flatten returns one-level flattened list",
+      "unique removes duplicates preserving order",
+      "chunk splits list into size-n groups",
+      "All 9 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "539-ts-mt-add-pagination",
+  "title": "Add pagination to data table component in TypeScript — 3 turns",
+  "category": "frontend_feature",
+  "difficulty": "medium",
+  "target_stack": {"language": "typescript", "framework": "react", "extra": {}},
+  "description": "Data table has no pagination. Add page state, prev/next navigation, and page size selector across 3 turns.",
+  "repo_seed": {
+    "files": {
+      "package.json": "{\n  \"name\": \"data-table-pagination\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"test\": \"jest --forceExit\"\n  },\n  \"dependencies\": {\n    \"react\": \"^18.0.0\"\n  },\n  \"devDependencies\": {\n    \"@testing-library/react\": \"^14.0.0\",\n    \"@testing-library/user-event\": \"^14.0.0\",\n    \"@types/react\": \"^18.0.0\",\n    \"@types/jest\": \"^29.0.0\",\n    \"jest\": \"^29.0.0\",\n    \"jest-environment-jsdom\": \"^29.0.0\",\n    \"ts-jest\": \"^29.0.0\",\n    \"typescript\": \"^5.0.0\"\n  },\n  \"jest\": {\n    \"preset\": \"ts-jest\",\n    \"testEnvironment\": \"jsdom\"\n  }\n}\n",
+      "src/usePagination.ts": "import { useState } from 'react';\n\nexport interface PaginationState {\n  currentPage: number;\n  pageSize: number;\n  totalItems: number;\n  totalPages: number;\n  startIndex: number;\n  endIndex: number;\n  hasPrev: boolean;\n  hasNext: boolean;\n}\n\nexport interface PaginationActions {\n  goToPage: (page: number) => void;\n  nextPage: () => void;\n  prevPage: () => void;\n  setPageSize: (size: number) => void;\n}\n\nexport function usePagination(\n  totalItems: number,\n  initialPageSize: number = 10\n): PaginationState & PaginationActions {\n  const [currentPage, setCurrentPage] = useState(1);\n  const [pageSize, setPageSizeState] = useState(initialPageSize);\n\n  // TODO: compute derived values and implement actions\n  const totalPages = 1;\n  const startIndex = 0;\n  const endIndex = 0;\n  const hasPrev = false;\n  const hasNext = false;\n\n  const goToPage = (_page: number) => {};\n  const nextPage = () => {};\n  const prevPage = () => {};\n  const setPageSize = (_size: number) => {};\n\n  return {\n    currentPage, pageSize, totalItems, totalPages,\n    startIndex, endIndex, hasPrev, hasNext,\n    goToPage, nextPage, prevPage, setPageSize,\n  };\n}\n",
+      "src/usePagination.test.ts": "import { renderHook, act } from '@testing-library/react';\nimport { usePagination } from './usePagination';\n\ntest('initial state', () => {\n  const { result } = renderHook(() => usePagination(100, 10));\n  expect(result.current.currentPage).toBe(1);\n  expect(result.current.totalPages).toBe(10);\n  expect(result.current.startIndex).toBe(0);\n  expect(result.current.endIndex).toBe(9);\n  expect(result.current.hasPrev).toBe(false);\n  expect(result.current.hasNext).toBe(true);\n});\n\ntest('nextPage advances page', () => {\n  const { result } = renderHook(() => usePagination(100, 10));\n  act(() => result.current.nextPage());\n  expect(result.current.currentPage).toBe(2);\n  expect(result.current.startIndex).toBe(10);\n  expect(result.current.hasPrev).toBe(true);\n});\n\ntest('prevPage goes back', () => {\n  const { result } = renderHook(() => usePagination(100, 10));\n  act(() => result.current.nextPage());\n  act(() => result.current.prevPage());\n  expect(result.current.currentPage).toBe(1);\n});\n\ntest('does not go below page 1', () => {\n  const { result } = renderHook(() => usePagination(100, 10));\n  act(() => result.current.prevPage());\n  expect(result.current.currentPage).toBe(1);\n});\n\ntest('does not exceed total pages', () => {\n  const { result } = renderHook(() => usePagination(10, 10));\n  act(() => result.current.nextPage());\n  expect(result.current.currentPage).toBe(1); // already on last page\n});\n\ntest('setPageSize recalculates', () => {\n  const { result } = renderHook(() => usePagination(100, 10));\n  act(() => result.current.setPageSize(25));\n  expect(result.current.pageSize).toBe(25);\n  expect(result.current.totalPages).toBe(4);\n});\n\ntest('goToPage jumps to page', () => {\n  const { result } = renderHook(() => usePagination(100, 10));\n  act(() => result.current.goToPage(5));\n  expect(result.current.currentPage).toBe(5);\n  expect(result.current.startIndex).toBe(40);\n});\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement the derived state values in `usePagination` in `src/usePagination.ts`. Compute: `totalPages = Math.ceil(totalItems / pageSize)`, `startIndex = (currentPage - 1) * pageSize`, `endIndex = Math.min(startIndex + pageSize - 1, totalItems - 1)`, `hasPrev = currentPage > 1`, `hasNext = currentPage < totalPages`. Run `npm test -- --forceExit`.",
+    "followup_prompts": [
+      "Good. Now implement the action functions: `goToPage(page)` — clamp to [1, totalPages] and call setCurrentPage. `nextPage()` — if hasNext, advance. `prevPage()` — if hasPrev, go back. Run `npm test -- --forceExit` and fix any failures.",
+      "Final step: implement `setPageSize(size)` — update pageSize state and reset currentPage to 1. Run `npm test -- --forceExit` — all 7 tests must pass."
+    ],
+    "success_criteria": [
+      "totalPages, startIndex, endIndex computed correctly",
+      "hasPrev and hasNext reflect position",
+      "nextPage and prevPage clamp to valid range",
+      "goToPage jumps to clamped page",
+      "setPageSize resets to page 1 and recalculates",
+      "All 7 tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "npm test -- --forceExit"}
+  },
+  "duration_hint_minutes": 15
+}

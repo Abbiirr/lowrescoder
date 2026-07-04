@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-012",
+  "title": "Fix three bugs in BankAccount class",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Fix three bugs in a BankAccount class: deposit doesn't update balance, withdraw allows overdraft without check, get_balance returns wrong field.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/bank.py": "class BankAccount:\n    def __init__(self, owner: str, initial: float = 0.0):\n        self.owner = owner\n        self._balance = initial\n\n    def deposit(self, amount: float) -> None:\n        if amount <= 0:\n            raise ValueError(\"deposit must be positive\")\n        self._balance - amount  # bug: should be +=\n\n    def withdraw(self, amount: float) -> None:\n        if amount <= 0:\n            raise ValueError(\"withdraw must be positive\")\n        # bug: missing overdraft check\n        self._balance -= amount\n\n    def get_balance(self) -> float:\n        return self.owner  # bug: should return self._balance\n\n    def transfer(self, target: 'BankAccount', amount: float) -> None:\n        self.withdraw(amount)\n        target.deposit(amount)\n",
+      "tests/test_bank.py": "import pytest\nfrom src.bank import BankAccount\n\ndef test_deposit_increases_balance():\n    a = BankAccount(\"alice\", 100.0)\n    a.deposit(50.0)\n    assert a.get_balance() == 150.0\n\ndef test_withdraw_decreases_balance():\n    a = BankAccount(\"alice\", 100.0)\n    a.withdraw(30.0)\n    assert a.get_balance() == 70.0\n\ndef test_withdraw_overdraft_raises():\n    a = BankAccount(\"alice\", 50.0)\n    with pytest.raises(ValueError):\n        a.withdraw(100.0)\n\ndef test_get_balance_returns_float():\n    a = BankAccount(\"alice\", 200.0)\n    assert isinstance(a.get_balance(), float)\n\ndef test_transfer():\n    a = BankAccount(\"alice\", 100.0)\n    b = BankAccount(\"bob\", 0.0)\n    a.transfer(b, 40.0)\n    assert a.get_balance() == 60.0\n    assert b.get_balance() == 40.0\n",
+      "pyproject.toml": "[project]\nname = \"bank\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The BankAccount class has three bugs:\n1. `deposit` uses subtraction instead of addition — fix to `self._balance += amount`\n2. `withdraw` has no overdraft guard — add `if amount > self._balance: raise ValueError(\"insufficient funds\")`\n3. `get_balance` returns `self.owner` instead of `self._balance` — fix the return value\nAll five tests should pass after your fix.",
+    "entry_point": "src/bank.py",
+    "success_criteria": "All 5 pytest tests pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

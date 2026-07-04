@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-ts-greenfield-linked-list-001",
+  "title": "Implement a singly linked list in TypeScript",
+  "category": "repo_init",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "typescript",
+    "framework": "node",
+    "extra": {}
+  },
+  "description": "Implement a generic-free singly linked list in TypeScript/Node.js with push, pop, peek, size, and toArray. All methods throw 'not implemented'.",
+  "repo_seed": {
+    "files": {
+      "linked_list.js": "/**\n * Singly linked list implementation.\n */\nclass Node {\n  constructor(value) {\n    this.value = value;\n    this.next = null;\n  }\n}\n\nclass LinkedList {\n  constructor() {\n    this.head = null;\n    this._size = 0;\n  }\n\n  /** Append value to the end. */\n  push(value) {\n    throw new Error('push: not implemented');\n  }\n\n  /** Remove and return the last value. Throws if empty. */\n  pop() {\n    throw new Error('pop: not implemented');\n  }\n\n  /** Return last value without removing. Throws if empty. */\n  peek() {\n    throw new Error('peek: not implemented');\n  }\n\n  /** Return number of elements. */\n  size() {\n    throw new Error('size: not implemented');\n  }\n\n  /** Return all values as an array from head to tail. */\n  toArray() {\n    throw new Error('toArray: not implemented');\n  }\n}\n\nmodule.exports = LinkedList;\n",
+      "test_linked_list.js": "const assert = require('assert');\nconst LinkedList = require('./linked_list');\n\n// push + toArray\nconst ll = new LinkedList();\nll.push(1);\nll.push(2);\nll.push(3);\nassert.deepStrictEqual(ll.toArray(), [1, 2, 3], 'toArray after push');\nassert.strictEqual(ll.size(), 3, 'size should be 3');\n\n// peek\nassert.strictEqual(ll.peek(), 3, 'peek returns last');\nassert.strictEqual(ll.size(), 3, 'peek does not remove');\n\n// pop\nassert.strictEqual(ll.pop(), 3, 'pop returns last');\nassert.strictEqual(ll.size(), 2, 'size after pop');\nassert.deepStrictEqual(ll.toArray(), [1, 2], 'toArray after pop');\n\n// pop until empty\nll.pop();\nll.pop();\nassert.strictEqual(ll.size(), 0, 'empty after all pops');\n\n// empty throws\ntry {\n  ll.pop();\n  assert.fail('should throw on empty pop');\n} catch (e) {\n  assert.ok(e.message !== 'should throw on empty pop', 'pop threw correctly');\n}\ntry {\n  ll.peek();\n  assert.fail('should throw on empty peek');\n} catch (e) {\n  assert.ok(e.message !== 'should throw on empty peek', 'peek threw correctly');\n}\n\nconsole.log('All tests passed!');\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement the LinkedList methods in linked_list.js:\n\n1. push(value): Append a new Node to the tail. Update this._size.\n2. pop(): Walk to the second-to-last node, detach last, decrement this._size, return the value. Throw Error('empty') if size is 0.\n3. peek(): Walk to the last node and return its value. Throw Error('empty') if size is 0.\n4. size(): Return this._size.\n5. toArray(): Walk from this.head, collecting values into an array. Return []  if empty.\n\nRun `node test_linked_list.js` to verify (should print 'All tests passed!').",
+    "entry_point": "linked_list.js",
+    "success_criteria": [
+      "node test_linked_list.js exits 0 and prints 'All tests passed!'",
+      "push appends to tail",
+      "pop removes from tail and returns value",
+      "peek returns last without removing",
+      "size tracks count",
+      "pop/peek throw on empty"
+    ],
+    "followup_prompts": [
+      "Run `node test_linked_list.js` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `node test_linked_list.js` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "node test_linked_list.js"
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 6
+}

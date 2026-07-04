@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-longhorizon-002",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "medium",
+  "duration_hint_minutes": 35,
+  "title": "Evolve Go items API in 3 steps: PUT update, name-search, and price sort",
+  "description": "A Go items CRUD API evolves over three focused steps, each building on the last.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_items_handler",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Go items API in internal/items/handler.go supports GET/POST /items and GET /items/{id}. Evolve it in three steps:\n\nStep 1 — PUT /items/{id}: Add partial update. Accept JSON body with optional 'name' (string) and 'price' (float64). Update only provided fields. Return 200 with updated item, 404 if not found, 400 on malformed body. Write TestUpdateItem and TestUpdateItemNotFound.\n\nStep 2 — Name search: Add ?name=<query> optional param to GET /items. Case-insensitive substring match against item names. Return all items when param absent, filtered list when present. Write TestSearchByName.\n\nStep 3 — Price sort: Add ?sort=price_asc or ?sort=price_desc optional param to GET /items. Apply sort after name filter (if both present). Default behaviour (no sort param) is insertion order. Write TestSortByPriceAsc and TestSortByPriceDesc.\n\nAll 4 existing tests must still pass. Run go test ./... to confirm. Run go vet ./... to confirm no issues.",
+    "required_artifacts": [
+      "PUT /items/{id} partial update endpoint",
+      "GET /items?name= case-insensitive search",
+      "GET /items?sort=price_asc|price_desc sorting",
+      "TestUpdateItem, TestUpdateItemNotFound, TestSearchByName, TestSortByPriceAsc, TestSortByPriceDesc",
+      "All 4 original tests still pass",
+      "go test ./... passes"
+    ],
+    "success_criteria": [
+      "All three features compose: ?name=foo&sort=price_asc works",
+      "Existing tests unmodified and passing",
+      "Go vet clean"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `go test ./...` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `go test ./...` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

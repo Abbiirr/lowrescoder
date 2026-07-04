@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-016",
+  "title": "Fix three bugs in a Python inventory manager",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "An Inventory class has three bugs: add_item uses wrong sign, remove_item allows negative stock, and total_value multiplies wrong fields.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/inventory.py": "class Inventory:\n    def __init__(self):\n        self._items: dict[str, dict] = {}\n\n    def add_item(self, name: str, quantity: int, price: float) -> None:\n        if name in self._items:\n            self._items[name]['quantity'] -= quantity  # bug: should be +=\n        else:\n            self._items[name] = {'quantity': quantity, 'price': price}\n\n    def remove_item(self, name: str, quantity: int) -> None:\n        if name not in self._items:\n            raise KeyError(f'{name} not in inventory')\n        # bug: allows negative stock, should raise if quantity > current\n        self._items[name]['quantity'] -= quantity\n\n    def total_value(self) -> float:\n        # bug: multiplies quantity by quantity instead of price\n        return sum(v['quantity'] * v['quantity'] for v in self._items.values())\n\n    def stock(self, name: str) -> int:\n        return self._items[name]['quantity']\n",
+      "tests/test_inventory.py": "import pytest\nfrom src.inventory import Inventory\n\ndef test_add_item_new():\n    inv = Inventory()\n    inv.add_item('apple', 10, 0.5)\n    assert inv.stock('apple') == 10\n\ndef test_add_item_existing():\n    inv = Inventory()\n    inv.add_item('apple', 10, 0.5)\n    inv.add_item('apple', 5, 0.5)\n    assert inv.stock('apple') == 15\n\ndef test_remove_item_valid():\n    inv = Inventory()\n    inv.add_item('apple', 10, 0.5)\n    inv.remove_item('apple', 3)\n    assert inv.stock('apple') == 7\n\ndef test_remove_item_overdraft_raises():\n    inv = Inventory()\n    inv.add_item('apple', 5, 0.5)\n    with pytest.raises(ValueError):\n        inv.remove_item('apple', 10)\n\ndef test_total_value():\n    inv = Inventory()\n    inv.add_item('apple', 10, 0.5)\n    inv.add_item('banana', 4, 1.25)\n    assert abs(inv.total_value() - 10.0) < 1e-9\n",
+      "pyproject.toml": "[project]\nname = \"inventory\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npythonpath = [\".\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/inventory.py:\n1. `add_item`: change `-=` to `+=` in the update branch\n2. `remove_item`: add guard `if quantity > self._items[name]['quantity']: raise ValueError('insufficient stock')` before subtracting\n3. `total_value`: change `v['quantity'] * v['quantity']` to `v['quantity'] * v['price']`\nAll 5 tests must pass.",
+    "entry_point": "src/inventory.py",
+    "success_criteria": "All 5 pytest tests pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

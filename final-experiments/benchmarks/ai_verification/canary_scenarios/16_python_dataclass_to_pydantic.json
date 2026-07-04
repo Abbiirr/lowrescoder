@@ -1,0 +1,62 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-migration-002",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "medium",
+  "duration_hint_minutes": 20,
+  "title": "Migrate Python dataclasses to Pydantic v2 models",
+  "description": "A FastAPI product API uses plain Python dataclasses internally. Migrate them to Pydantic v2 BaseModel with field validation (price > 0, name non-empty, valid category). Tests must still pass; add validation tests.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_paginated_api",
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"sample-paginated-api\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = [\n    \"fastapi>=0.111\",\n    \"httpx>=0.27\",\n    \"pydantic>=2.0\",\n    \"pytest>=8.0\",\n]\n"
+      }
+    ],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "Migrate the Product dataclass in src/data.py to a Pydantic v2 BaseModel with validation:\n\n1. Replace @dataclass with class Product(BaseModel).\n2. Add field validators:\n   - name: must be non-empty string (strip whitespace before check)\n   - price: must be > 0\n   - category: must be one of ['electronics', 'clothing', 'food']\n3. PRODUCTS list stays in data.py — construct Product(**kwargs) instead of Product(positional).\n4. src/app.py: update serialization to use product.model_dump() instead of manual dict construction.\n5. Add tests/test_validation.py with at least 4 tests:\n   - valid product constructs ok\n   - empty name raises ValidationError\n   - negative price raises ValidationError\n   - invalid category raises ValidationError\n\nAll 3 existing tests in test_products.py must still pass.",
+    "required_artifacts": [
+      "Product is now a Pydantic BaseModel",
+      "field validators for name, price, category",
+      "tests/test_validation.py with 4+ tests",
+      "all tests pass"
+    ],
+    "success_criteria": [
+      "from dataclasses import dataclass absent from data.py",
+      "from pydantic import BaseModel present",
+      "name/price/category all validated",
+      "app.py uses model_dump()",
+      "4+ validation tests passing"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q",
+      "lint": "uv run ruff check src/ tests/ 2>/dev/null || true"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

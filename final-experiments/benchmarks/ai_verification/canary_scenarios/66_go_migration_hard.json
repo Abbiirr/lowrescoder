@@ -1,0 +1,58 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-migration-003",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "hard",
+  "duration_hint_minutes": 35,
+  "title": "Migrate Go CSV utilities from deprecated io/ioutil to io+os and add streaming API",
+  "description": "A Go CSV utility package uses the deprecated io/ioutil functions. Migrate to modern io and os packages, then extend the API with Reader/Writer variants that accept io.Reader and io.Writer interfaces.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_csv_reader",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The package internal/csvutil uses deprecated io/ioutil functions in ParseCSV and WriteCSV.\n\n1. Replace all ioutil.ReadFile calls with os.ReadFile and all ioutil.WriteFile calls with os.WriteFile. Remove the 'io/ioutil' import. Add 'os' and 'io' imports.\n\n2. Add two new streaming functions:\n   - ParseCSVFromReader(r io.Reader) ([][]string, error) — reads CSV from any io.Reader\n   - WriteCSVToWriter(w io.Writer, rows [][]string) error — writes CSV to any io.Writer\n\n3. Refactor ParseCSV to open the file with os.Open, then delegate to ParseCSVFromReader.\n   Refactor WriteCSV to open/create the file with os.Create, then delegate to WriteCSVToWriter.\n\n4. Add 3 new tests:\n   - TestParseCSVFromReader: pass strings.NewReader as input\n   - TestWriteCSVToWriter: use bytes.Buffer as output, verify round-trip\n   - TestStreamingRoundTrip: write via WriteCSVToWriter, parse back via ParseCSVFromReader\n\nAll 4 existing tests must continue to pass.\n\nRun go test ./... and go build ./... to confirm.",
+    "required_artifacts": [
+      "io/ioutil import removed",
+      "ParseCSVFromReader(r io.Reader) ([][]string, error) added",
+      "WriteCSVToWriter(w io.Writer, rows [][]string) error added",
+      "ParseCSV delegates to ParseCSVFromReader via os.Open",
+      "WriteCSV delegates to WriteCSVToWriter via os.Create",
+      "3 new streaming tests added",
+      "All 4 original tests pass",
+      "go test ./... passes"
+    ],
+    "success_criteria": [
+      "No ioutil references remain",
+      "ParseCSV and WriteCSV use os package for file I/O",
+      "Streaming API accepts io.Reader / io.Writer",
+      "All 7 tests pass"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `go test ./...` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

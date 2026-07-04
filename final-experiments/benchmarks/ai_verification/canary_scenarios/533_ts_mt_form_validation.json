@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "533-ts-mt-form-validation",
+  "title": "Build a form validator in TypeScript — 3 turns",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {"language": "typescript", "framework": null, "extra": {}},
+  "description": "Three turns build a form validator: turn 1 required field check, turn 2 format validation (email, number), turn 3 async validation.",
+  "repo_seed": {
+    "files": {
+      "package.json": "{\n  \"name\": \"form-validator\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"test\": \"jest --forceExit\"\n  },\n  \"devDependencies\": {\n    \"@types/jest\": \"^29.0.0\",\n    \"jest\": \"^29.0.0\",\n    \"ts-jest\": \"^29.0.0\",\n    \"typescript\": \"^5.0.0\"\n  },\n  \"jest\": {\n    \"preset\": \"ts-jest\",\n    \"testEnvironment\": \"node\"\n  }\n}\n",
+      "src/validator.ts": "export type ValidationResult = { valid: boolean; error?: string };\n\nexport type Validator = (value: string) => ValidationResult;\nexport type AsyncValidator = (value: string) => Promise<ValidationResult>;\n\n/** Validates that a field is not empty. */\nexport function required(message = 'This field is required'): Validator {\n  return (_value) => ({ valid: false, error: message }); // TODO\n}\n\n/** Validates email format. */\nexport function email(message = 'Invalid email address'): Validator {\n  return (_value) => ({ valid: false, error: message }); // TODO\n}\n\n/** Validates that value is a number. */\nexport function isNumber(message = 'Must be a number'): Validator {\n  return (_value) => ({ valid: false, error: message }); // TODO\n}\n\n/** Validates minimum string length. */\nexport function minLength(min: number, message?: string): Validator {\n  return (_value) => ({ valid: false, error: message ?? `Min length is ${min}` }); // TODO\n}\n\n/**\n * Run multiple validators and return first failure.\n * If all pass, return { valid: true }.\n */\nexport function validate(value: string, validators: Validator[]): ValidationResult {\n  return { valid: false }; // TODO\n}\n\n/**\n * Run validators including async ones sequentially.\n * Returns first failure or { valid: true }.\n */\nexport async function validateAsync(\n  value: string,\n  validators: (Validator | AsyncValidator)[]\n): Promise<ValidationResult> {\n  return { valid: false }; // TODO\n}\n",
+      "src/validator.test.ts": "import { required, email, isNumber, minLength, validate, validateAsync } from './validator';\n\ntest('required passes for non-empty', () => {\n  expect(validate('hello', [required()])).toEqual({ valid: true });\n});\n\ntest('required fails for empty', () => {\n  const r = validate('', [required()]);\n  expect(r.valid).toBe(false);\n  expect(r.error).toBeTruthy();\n});\n\ntest('email passes for valid email', () => {\n  expect(validate('test@example.com', [email()])).toEqual({ valid: true });\n});\n\ntest('email fails for invalid', () => {\n  expect(validate('notanemail', [email()]).valid).toBe(false);\n  expect(validate('@no-local.com', [email()]).valid).toBe(false);\n});\n\ntest('isNumber passes for number string', () => {\n  expect(validate('42', [isNumber()])).toEqual({ valid: true });\n  expect(validate('3.14', [isNumber()])).toEqual({ valid: true });\n});\n\ntest('isNumber fails for non-number', () => {\n  expect(validate('hello', [isNumber()]).valid).toBe(false);\n});\n\ntest('minLength passes when long enough', () => {\n  expect(validate('abcde', [minLength(3)])).toEqual({ valid: true });\n});\n\ntest('minLength fails when too short', () => {\n  expect(validate('ab', [minLength(3)]).valid).toBe(false);\n});\n\ntest('validate returns first error', () => {\n  const r = validate('', [required(), email()]);\n  expect(r.valid).toBe(false);\n  // Should fail on required first\n});\n\ntest('validateAsync with sync validators', async () => {\n  const r = await validateAsync('hello', [required(), minLength(3)]);\n  expect(r).toEqual({ valid: true });\n});\n\ntest('validateAsync with async validator', async () => {\n  const asyncCheck: import('./validator').AsyncValidator = async (v) =>\n    v === 'taken' ? { valid: false, error: 'Username taken' } : { valid: true };\n  const r = await validateAsync('taken', [required(), asyncCheck]);\n  expect(r.valid).toBe(false);\n  expect(r.error).toBe('Username taken');\n});\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `required()` and `validate()` in `src/validator.ts`. required: return valid=true if value.trim() is non-empty, else return the error message. validate: loop through validators, call each with value, return first failing result, or {valid: true} if all pass. Run `npm test -- --forceExit`.",
+    "followup_prompts": [
+      "Good. Now implement `email()`, `isNumber()`, and `minLength()`. email: use a regex like `/^[^@]+@[^@]+\\.[^@]+$/` to check format. isNumber: use `!isNaN(Number(value))` but reject empty string. minLength: check `value.length >= min`. Run `npm test -- --forceExit` and fix any failures.",
+      "Final step: implement `validateAsync()` — loop through validators, await each one (whether sync or async), return first failure or {valid: true}. Run `npm test -- --forceExit` — all 11 tests must pass."
+    ],
+    "success_criteria": [
+      "required passes non-empty, fails empty/whitespace",
+      "email validates format with regex",
+      "isNumber accepts numeric strings, rejects non-numeric",
+      "minLength checks string length",
+      "validate returns first error from chain",
+      "validateAsync handles both sync and async validators",
+      "All 11 tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "npm test -- --forceExit"}
+  },
+  "duration_hint_minutes": 15
+}

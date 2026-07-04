@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-025",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement counting sort and radix sort in Go",
+  "description": "Greenfield Go task: implement CountingSort for non-negative integers within a bounded range, and RadixSort using counting sort as a stable digit-level subroutine.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module sorting\n\ngo 1.21\n"
+      },
+      {
+        "path": "sorting.go",
+        "content": "package sorting\n\n// TODO: implement CountingSort and RadixSort\n"
+      },
+      {
+        "path": "sorting_test.go",
+        "content": "package sorting\n\nimport (\n\t\"reflect\"\n\t\"testing\"\n)\n\nfunc TestCountingSortBasic(t *testing.T) {\n\tgot := CountingSort([]int{4, 2, 2, 8, 3, 3, 1})\n\twant := []int{1, 2, 2, 3, 3, 4, 8}\n\tif !reflect.DeepEqual(got, want) {\n\t\tt.Fatalf(\"want %v got %v\", want, got)\n\t}\n}\n\nfunc TestCountingSortEmpty(t *testing.T) {\n\tgot := CountingSort([]int{})\n\tif len(got) != 0 {\n\t\tt.Fatalf(\"expected empty, got %v\", got)\n\t}\n}\n\nfunc TestRadixSortBasic(t *testing.T) {\n\tgot := RadixSort([]int{170, 45, 75, 90, 802, 24, 2, 66})\n\twant := []int{2, 24, 45, 66, 75, 90, 170, 802}\n\tif !reflect.DeepEqual(got, want) {\n\t\tt.Fatalf(\"want %v got %v\", want, got)\n\t}\n}\n\nfunc TestRadixSortSingleDigits(t *testing.T) {\n\tgot := RadixSort([]int{5, 3, 8, 1, 9, 2})\n\twant := []int{1, 2, 3, 5, 8, 9}\n\tif !reflect.DeepEqual(got, want) {\n\t\tt.Fatalf(\"want %v got %v\", want, got)\n\t}\n}\n\nfunc TestRadixSortEmpty(t *testing.T) {\n\tgot := RadixSort([]int{})\n\tif len(got) != 0 {\n\t\tt.Fatalf(\"expected empty, got %v\", got)\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement CountingSort and RadixSort in sorting.go.\n\nfunc CountingSort(arr []int) []int\n  // Find max value to size the count array.\n  // count[v]++ for each element.\n  // Reconstruct sorted output from count.\n  // Returns a new sorted slice (does not mutate input).\n  // Returns empty slice for empty input.\n\nfunc RadixSort(arr []int) []int\n  // Sort by each digit position (LSD = least significant digit first).\n  // For each digit position (exp = 1, 10, 100, ...): run a stable\n  // counting sort on the digit (arr[i]/exp)%10.\n  // Use a count array of size 10.\n  // Build output using suffix sums (right to left for stability).\n  // Returns a new sorted slice.\n\nAll 5 tests in sorting_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "CountingSort correctly counts and reconstructs sorted output",
+      "CountingSort handles empty input",
+      "RadixSort sorts by LSD using stable digit-level counting sort",
+      "RadixSort handles multi-digit numbers like 802, 170",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

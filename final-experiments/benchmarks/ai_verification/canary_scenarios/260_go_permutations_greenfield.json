@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-023",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement permutation generation (backtracking) in Go",
+  "description": "Greenfield Go task: implement Permutations(nums []int) [][]int that returns all permutations of nums using backtracking with swap-based generation.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module perms\n\ngo 1.21\n"
+      },
+      {
+        "path": "perms.go",
+        "content": "package perms\n\n// TODO: implement Permutations\n"
+      },
+      {
+        "path": "perms_test.go",
+        "content": "package perms\n\nimport (\n\t\"fmt\"\n\t\"testing\"\n)\n\nfunc TestPermutationsOne(t *testing.T) {\n\tperms := Permutations([]int{1})\n\tif len(perms) != 1 {\n\t\tt.Fatalf(\"want 1 permutation, got %d\", len(perms))\n\t}\n}\n\nfunc TestPermutationsTwo(t *testing.T) {\n\tperms := Permutations([]int{1, 2})\n\tif len(perms) != 2 {\n\t\tt.Fatalf(\"want 2 permutations, got %d\", len(perms))\n\t}\n}\n\nfunc TestPermutationsThree(t *testing.T) {\n\tperms := Permutations([]int{1, 2, 3})\n\tif len(perms) != 6 {\n\t\tt.Fatalf(\"want 6 permutations, got %d\", len(perms))\n\t}\n}\n\nfunc TestPermutationsEmpty(t *testing.T) {\n\tperms := Permutations([]int{})\n\tif len(perms) != 1 {\n\t\tt.Fatalf(\"want 1 (empty permutation), got %d\", len(perms))\n\t}\n}\n\nfunc TestPermutationsUnique(t *testing.T) {\n\tperms := Permutations([]int{1, 2, 3})\n\tseen := make(map[string]bool)\n\tfor _, p := range perms {\n\t\tkey := fmt.Sprintf(\"%v\", p)\n\t\tif seen[key] {\n\t\t\tt.Fatalf(\"duplicate permutation: %v\", p)\n\t\t}\n\t\tseen[key] = true\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement Permutations in perms.go using swap-based backtracking.\n\nfunc Permutations(nums []int) [][]int\n  // Work on a copy of nums to avoid mutating the input.\n  // Backtrack(start int):\n  //   if start == len(nums): copy nums into result\n  //   for i from start to len(nums)-1:\n  //     swap nums[start] and nums[i]\n  //     backtrack(start+1)\n  //     swap back (restore)\n  // Empty input yields [[]] — one empty permutation.\n\nAll 5 tests in perms_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Works on a copy of the input slice",
+      "Backtracking via swap at position start, recurse start+1, swap back",
+      "Collects permutations by copying nums when start==len",
+      "Empty input returns [][]int{{}}, not [][]int{}",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

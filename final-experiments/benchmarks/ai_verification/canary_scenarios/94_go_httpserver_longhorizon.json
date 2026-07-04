@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-longhorizon-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "duration_hint_minutes": 60,
+  "title": "Extend Go HTTP items server with full CRUD, pagination, and filtering in 3 steps",
+  "description": "Multi-step Go task: take an HTTP server that only lists empty items, and build it into a full items CRUD API with in-memory store, pagination, and category/name filtering.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_http_server",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "The existing server at internal/handler/items.go has only a stub ListItems that returns {\"items\": []}. Evolve it in 3 steps.\n\nStep 1 — In-memory store + full CRUD:\n  Add to internal/handler/items.go:\n    type Item struct { ID int; Name string; Category string; Price float64 } (json tags)\n    var items []Item + var nextID = 1 + var mu sync.Mutex\n    func ResetItems()              — clear store (for tests)\n    func ListItems(w, r)           — GET /items → {\"items\": [...], \"total\": N} (keep existing signature)\n    func CreateItem(w, r)          — POST /items, JSON body → 201 + created item; 400 if Name empty\n    func GetItem(w, r)             — GET /items/{id} → 200 + item; 404 if missing\n\nStep 2 — Pagination:\n  ListItems must honour ?limit=N&offset=M query params.\n  Return full list (no pagination) if params absent.\n  Slicing: result[offset:min(offset+limit, len)] — clamp to bounds.\n\nStep 3 — Filtering:\n  ListItems must also honour:\n    ?category=X  — case-insensitive equality filter on Category\n    ?q=keyword   — case-insensitive substring filter on Name\n  Filters apply before pagination.\n\nUpdate cmd/server/main.go to register:\n  /items   → GET→ListItems, POST→CreateItem\n  /items/  → GetItem\n\nAll existing fixture tests (TestListItems) plus new solution tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Item struct with ID/Name/Category/Price",
+      "ResetItems for test isolation",
+      "CreateItem returns 201 with assigned ID",
+      "GetItem returns 404 for missing ID",
+      "ListItems supports ?limit=&offset= pagination",
+      "ListItems supports ?category= and ?q= filters",
+      "All tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `go test ./...` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `go test ./...` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

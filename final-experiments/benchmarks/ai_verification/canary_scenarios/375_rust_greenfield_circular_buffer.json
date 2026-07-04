@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-greenfield-050",
+  "title": "Implement a fixed-capacity circular buffer in Rust",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement CircularBuffer<T> with fixed capacity. push overwrites oldest element when full. pop removes from the front. Implement is_empty, is_full, len.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "pub struct CircularBuffer<T> {\n    // TODO: implement\n}\n\nimpl<T> CircularBuffer<T> {\n    pub fn new(capacity: usize) -> Self { panic!(\"not implemented\") }\n    pub fn push(&mut self, item: T) { panic!(\"not implemented\") }\n    pub fn pop(&mut self) -> Option<T> { panic!(\"not implemented\") }\n    pub fn is_empty(&self) -> bool { panic!(\"not implemented\") }\n    pub fn is_full(&self) -> bool { panic!(\"not implemented\") }\n    pub fn len(&self) -> usize { panic!(\"not implemented\") }\n}\n",
+      "tests/cb_test.rs": "use circular_buffer::CircularBuffer;\n\n#[test]\nfn test_basic_push_pop() {\n    let mut cb: CircularBuffer<i32> = CircularBuffer::new(3);\n    assert!(cb.is_empty());\n    cb.push(1);\n    cb.push(2);\n    cb.push(3);\n    assert!(cb.is_full());\n    assert_eq!(cb.len(), 3);\n    assert_eq!(cb.pop(), Some(1));\n    assert_eq!(cb.pop(), Some(2));\n    assert_eq!(cb.pop(), Some(3));\n    assert_eq!(cb.pop(), None);\n}\n\n#[test]\nfn test_overwrite_on_full() {\n    let mut cb: CircularBuffer<i32> = CircularBuffer::new(3);\n    cb.push(1);\n    cb.push(2);\n    cb.push(3);\n    cb.push(4); // overwrites 1\n    assert_eq!(cb.len(), 3);\n    assert_eq!(cb.pop(), Some(2));\n    assert_eq!(cb.pop(), Some(3));\n    assert_eq!(cb.pop(), Some(4));\n}\n\n#[test]\nfn test_interleaved() {\n    let mut cb: CircularBuffer<i32> = CircularBuffer::new(3);\n    cb.push(10);\n    cb.push(20);\n    assert_eq!(cb.pop(), Some(10));\n    cb.push(30);\n    cb.push(40);\n    assert_eq!(cb.len(), 3);\n    assert_eq!(cb.pop(), Some(20));\n    assert_eq!(cb.pop(), Some(30));\n}\n",
+      "Cargo.toml": "[package]\nname = \"circular_buffer\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement CircularBuffer<T> in src/lib.rs using a Vec<Option<T>> of fixed capacity with head and tail indices:\n- `new(capacity)`: allocate Vec of capacity Nones, head=0, tail=0, len=0\n- `push(item)`: store at buf[tail % capacity], advance tail; if full (len==capacity) advance head too (overwrite oldest); else increment len\n- `pop()`: if empty return None; take buf[head % capacity], advance head, decrement len, return Some(item)\n- `is_empty()`: len == 0\n- `is_full()`: len == capacity\n- `len()`: return len\nAll 3 tests must pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": "All 3 cargo test cases pass",
+    "followup_prompts": [
+      "Run `cargo test --quiet` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test --quiet` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "cargo test",
+    "expected_exit_code": 0
+  }
+}

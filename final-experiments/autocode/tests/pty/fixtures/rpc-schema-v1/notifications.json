@@ -1,0 +1,10 @@
+[
+  {"name":"on_status","method":"on_status","params_model":"StatusParams","message":{"jsonrpc":"2.0","method":"on_status","params":{"model":"tools","provider":"openrouter","mode":"suggest","session_id":"mock-session-001"}}},
+  {"name":"on_error","method":"on_error","params_model":"ErrorParams","message":{"jsonrpc":"2.0","method":"on_error","params":{"message":"backend crashed"}}},
+  {"name":"on_token","method":"on_token","params_model":"TokenParams","message":{"jsonrpc":"2.0","method":"on_token","params":{"text":"hello"}}},
+  {"name":"on_thinking","method":"on_thinking","params_model":"ThinkingParams","message":{"jsonrpc":"2.0","method":"on_thinking","params":{"text":"considering"}}},
+  {"name":"on_done","method":"on_done","params_model":"DoneParams","message":{"jsonrpc":"2.0","method":"on_done","params":{"tokens_in":10,"tokens_out":5,"cancelled":false,"layer_used":4}}},
+  {"name":"on_tool_call","method":"on_tool_call","params_model":"ToolCallParams","message":{"jsonrpc":"2.0","method":"on_tool_call","params":{"name":"write_file","status":"completed","args":"{\"path\":\"demo.txt\"}","result":"ok"}}},
+  {"name":"on_task_state","method":"on_task_state","params_model":"TaskStateParams","message":{"jsonrpc":"2.0","method":"on_task_state","params":{"tasks":[{"id":"t1","title":"Build schema","status":"done"}],"subagents":[{"id":"s1","role":"reviewer","status":"running"}]}}},
+  {"name":"on_cost_update","method":"on_cost_update","params_model":"CostUpdateParams","message":{"jsonrpc":"2.0","method":"on_cost_update","params":{"cost":"0.0021","tokens_in":123,"tokens_out":45}}}
+]

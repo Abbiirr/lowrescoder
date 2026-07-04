@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-014",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement Longest Common Subsequence length in Go using DP",
+  "description": "Greenfield Go task: implement LCS(s1, s2 string) int that returns the length of the longest common subsequence of the two strings using bottom-up dynamic programming.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module lcs\n\ngo 1.22\n"
+      },
+      {
+        "path": "lcs.go",
+        "content": "package lcs\n\n// TODO: implement LCS\n"
+      },
+      {
+        "path": "lcs_test.go",
+        "content": "package lcs\n\nimport \"testing\"\n\nfunc TestClassicCase(t *testing.T) {\n\t// ABCBDAB vs BDCABA → LCS length 4 (e.g. BCBA or BDAB)\n\tif got := LCS(\"ABCBDAB\", \"BDCABA\"); got != 4 {\n\t\tt.Fatalf(\"expected 4, got %d\", got)\n\t}\n}\n\nfunc TestIdentical(t *testing.T) {\n\tif got := LCS(\"hello\", \"hello\"); got != 5 {\n\t\tt.Fatalf(\"expected 5, got %d\", got)\n\t}\n}\n\nfunc TestNoCommon(t *testing.T) {\n\tif got := LCS(\"abc\", \"xyz\"); got != 0 {\n\t\tt.Fatalf(\"expected 0, got %d\", got)\n\t}\n}\n\nfunc TestEmpty(t *testing.T) {\n\tif got := LCS(\"\", \"abc\"); got != 0 {\n\t\tt.Fatalf(\"expected 0, got %d\", got)\n\t}\n\tif got := LCS(\"\", \"\"); got != 0 {\n\t\tt.Fatalf(\"expected 0, got %d\", got)\n\t}\n}\n\nfunc TestSingleChar(t *testing.T) {\n\tif got := LCS(\"a\", \"a\"); got != 1 {\n\t\tt.Fatalf(\"expected 1, got %d\", got)\n\t}\n\tif got := LCS(\"a\", \"b\"); got != 0 {\n\t\tt.Fatalf(\"expected 0, got %d\", got)\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement LCS in lcs.go.\n\nfunc LCS(s1, s2 string) int\n\nAlgorithm (bottom-up DP):\n- Rune slices r1, r2 from s1, s2.\n- dp[i][j] = LCS length of r1[:i] and r2[:j].\n- dp[0][j] = 0, dp[i][0] = 0.\n- if r1[i-1] == r2[j-1]: dp[i][j] = dp[i-1][j-1] + 1\n- else: dp[i][j] = max(dp[i-1][j], dp[i][j-1])\n- Return dp[m][n].\n\nAll 5 tests in lcs_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "DP table (m+1) x (n+1) initialized to 0",
+      "Diagonal +1 when characters match",
+      "max(left, up) when characters differ",
+      "Handles empty strings",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

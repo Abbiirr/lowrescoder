@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-dirty-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix two bugs in Flask app: wrong status code and mis-shaped JSON response",
+  "description": "The Flask items app has two bugs: index() returns HTTP 500 instead of 200, and api_items() wraps the items list in a dict instead of returning the list directly. Both tests fail. Fix the bugs.",
+  "target_stack": {
+    "language": "python",
+    "framework": "flask",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_flask_app",
+    "injections": [
+      {
+        "path": "src/app.py",
+        "content": "from flask import Flask, render_template, jsonify\n\napp = Flask(__name__, template_folder=\"../templates\")\n\n_items = [\n    {\"id\": 1, \"name\": \"Widget A\", \"price\": 9.99},\n    {\"id\": 2, \"name\": \"Widget B\", \"price\": 19.99},\n]\n\n\n@app.get(\"/\")\ndef index():\n    # BUG: returns 500 instead of 200\n    return render_template(\"index.html\", items=_items), 500\n\n\n@app.get(\"/api/items\")\ndef api_items():\n    # BUG: wraps list in a dict — should return the list directly\n    return jsonify({\"items\": _items})\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix two bugs in src/app.py:\n\n1. index() returns HTTP 500 — remove the explicit status code so Flask returns the default 200:\n   return render_template(\"index.html\", items=_items)\n\n2. api_items() wraps _items in a dict instead of returning the list directly:\n   return jsonify(_items)\n\nAll 2 tests in tests/test_app.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "index() returns 200 (no explicit status code override)",
+      "api_items() returns a JSON list (not a dict)",
+      "Both tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ passes (2 tests)",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-backend-007",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add UpdateTodo and DeleteTodo handlers to Go middleware server",
+  "description": "Brownfield Go task: add PATCH and DELETE handlers for individual todos to the existing middleware-server handler package.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_middleware_server",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add two new handler functions to internal/handler/todos.go. All 3 existing tests must still pass.\n\n  func UpdateTodo(w http.ResponseWriter, r *http.Request)\n    — PATCH only (405 otherwise)\n    — parse todo ID from path: /todos/{id}\n    — decode JSON body: { \"done\": bool } (only Done is updatable)\n    — 404 if not found\n    — 200 + JSON updated todo on success\n\n  func DeleteTodo(w http.ResponseWriter, r *http.Request)\n    — DELETE only (405 otherwise)\n    — parse todo ID from path: /todos/{id}\n    — 404 if not found\n    — 204 No Content on success\n\nPath parsing: use strings.TrimPrefix(r.URL.Path, \"/todos/\") and strconv.Atoi.\nBoth functions must hold the mu mutex while reading/modifying todos.\nAll 3 existing tests must still pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "PATCH /todos/1 with {\"done\": true} returns 200 with updated todo",
+      "DELETE /todos/1 returns 204 and removes the todo",
+      "UpdateTodo returns 404 for nonexistent ID",
+      "DeleteTodo returns 404 for nonexistent ID",
+      "Non-PATCH to UpdateTodo returns 405",
+      "Non-DELETE to DeleteTodo returns 405",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `go test ./...` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

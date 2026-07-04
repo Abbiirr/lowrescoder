@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-024",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Implement KMP pattern matching in Rust",
+  "description": "Greenfield Rust task: implement build_failure (KMP partial match table) and kmp_search that returns all start indices of pattern occurrences in text (including overlapping).",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"kmp\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement build_failure and kmp_search\n"
+      },
+      {
+        "path": "tests/kmp_test.rs",
+        "content": "use kmp::{build_failure, kmp_search};\n\n#[test]\nfn test_kmp_basic() {\n    assert_eq!(kmp_search(\"abcabcabc\", \"abc\"), vec![0usize, 3, 6]);\n}\n\n#[test]\nfn test_kmp_no_match() {\n    assert_eq!(kmp_search(\"hello\", \"world\"), Vec::<usize>::new());\n}\n\n#[test]\nfn test_kmp_single_char() {\n    assert_eq!(kmp_search(\"aabaa\", \"a\"), vec![0usize, 1, 3, 4]);\n}\n\n#[test]\nfn test_kmp_empty_text() {\n    assert_eq!(kmp_search(\"\", \"abc\"), Vec::<usize>::new());\n}\n\n#[test]\nfn test_kmp_overlapping() {\n    assert_eq!(kmp_search(\"aaaa\", \"aa\"), vec![0usize, 1, 2]);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement KMP string search in src/lib.rs.\n\npub fn build_failure(pattern: &[u8]) -> Vec<usize>\n  // Build the KMP failure function (partial match table).\n  // fail[0] = 0. For i in 1..m:\n  //   while j>0 && pattern[i]!=pattern[j]: j=fail[j-1]\n  //   if pattern[i]==pattern[j]: j+=1\n  //   fail[i] = j\n\npub fn kmp_search(text: &str, pattern: &str) -> Vec<usize>\n  // Return sorted list of all start indices of pattern in text (0-indexed).\n  // Supports overlapping matches.\n  // Return empty Vec if pattern is empty or text is shorter than pattern.\n  // Use build_failure internally.\n\nAll 5 tests in tests/kmp_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "build_failure correctly builds partial match table for any pattern",
+      "kmp_search resets j to fail[j-1] after each match (supports overlapping)",
+      "kmp_search handles empty text and empty pattern edge cases",
+      "Single-char pattern returns all occurrence indices",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

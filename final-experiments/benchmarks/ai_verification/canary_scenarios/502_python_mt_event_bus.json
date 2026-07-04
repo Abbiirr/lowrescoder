@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "502-python-mt-event-bus",
+  "title": "Build an event bus in Python — 3 turns",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {"language": "python", "framework": null, "extra": {}},
+  "description": "Three scripted turns build an event bus: turn 1 adds subscribe/publish, turn 2 adds unsubscribe and once(), turn 3 adds wildcard topic support and runs the full suite.",
+  "repo_seed": {
+    "files": {
+      "event_bus.py": "\"\"\"Simple event bus / pub-sub system.\"\"\"\nfrom collections import defaultdict\nfrom typing import Callable, Any\n\n\nclass EventBus:\n    def __init__(self):\n        self._handlers: dict[str, list[Callable]] = defaultdict(list)\n        self._once_handlers: dict[str, list[Callable]] = defaultdict(list)\n\n    def subscribe(self, topic: str, handler: Callable) -> None:\n        \"\"\"Register handler for topic.\"\"\"\n        raise NotImplementedError\n\n    def unsubscribe(self, topic: str, handler: Callable) -> bool:\n        \"\"\"Remove handler from topic. Returns True if handler was found.\"\"\"\n        raise NotImplementedError\n\n    def once(self, topic: str, handler: Callable) -> None:\n        \"\"\"Register handler that fires only once then auto-unsubscribes.\"\"\"\n        raise NotImplementedError\n\n    def publish(self, topic: str, *args: Any, **kwargs: Any) -> int:\n        \"\"\"Fire all handlers for topic. Returns count of handlers called.\n        \n        Also calls handlers subscribed to '*' (wildcard) for any topic.\n        \"\"\"\n        raise NotImplementedError\n",
+      "tests/test_event_bus.py": "import pytest\nfrom event_bus import EventBus\n\n\ndef test_subscribe_and_publish():\n    bus = EventBus()\n    results = []\n    bus.subscribe(\"click\", lambda x: results.append(x))\n    bus.publish(\"click\", 42)\n    assert results == [42]\n\n\ndef test_multiple_handlers():\n    bus = EventBus()\n    a, b = [], []\n    bus.subscribe(\"ev\", lambda x: a.append(x))\n    bus.subscribe(\"ev\", lambda x: b.append(x))\n    bus.publish(\"ev\", 1)\n    assert a == [1] and b == [1]\n\n\ndef test_publish_returns_handler_count():\n    bus = EventBus()\n    bus.subscribe(\"x\", lambda: None)\n    bus.subscribe(\"x\", lambda: None)\n    count = bus.publish(\"x\")\n    assert count == 2\n\n\ndef test_publish_no_handlers_returns_zero():\n    bus = EventBus()\n    assert bus.publish(\"no_topic\") == 0\n\n\ndef test_unsubscribe_removes_handler():\n    bus = EventBus()\n    calls = []\n    h = lambda: calls.append(1)\n    bus.subscribe(\"ev\", h)\n    bus.unsubscribe(\"ev\", h)\n    bus.publish(\"ev\")\n    assert calls == []\n\n\ndef test_unsubscribe_returns_false_for_missing():\n    bus = EventBus()\n    assert bus.unsubscribe(\"ev\", lambda: None) is False\n\n\ndef test_once_fires_once():\n    bus = EventBus()\n    calls = []\n    bus.once(\"click\", lambda: calls.append(1))\n    bus.publish(\"click\")\n    bus.publish(\"click\")\n    assert calls == [1]\n\n\ndef test_wildcard_receives_all_topics():\n    bus = EventBus()\n    received = []\n    bus.subscribe(\"*\", lambda topic, val: received.append((topic, val)))\n    bus.publish(\"a\", \"a\", 1)\n    bus.publish(\"b\", \"b\", 2)\n    assert (\"a\", 1) in received\n    assert (\"b\", 2) in received\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `subscribe(topic, handler)` and `publish(topic, *args, **kwargs)` in `event_bus.py`. subscribe should add the handler to `self._handlers[topic]`. publish should call all handlers for the topic and return the count of handlers called. Don't worry about unsubscribe, once, or wildcards yet.",
+    "followup_prompts": [
+      "Good. Now implement `unsubscribe(topic, handler)` — remove the handler from self._handlers[topic] and return True if it was found, False if not. Also implement `once(topic, handler)` — register in self._once_handlers so it fires once then is removed. Update publish() to also call and clear once-handlers. Run `uv run pytest tests/ -q`.",
+      "Final step: update `publish()` to also call any handlers registered under `'*'` (wildcard), passing the topic name as the first argument followed by the original args. Run `uv run pytest tests/ -q` — all 8 tests must pass."
+    ],
+    "success_criteria": [
+      "subscribe and publish work for basic cases",
+      "publish returns handler count",
+      "unsubscribe removes the handler and returns bool",
+      "once handlers fire exactly once",
+      "wildcard '*' receives all topics with topic name prepended",
+      "All 8 pytest tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "uv run pytest tests/ -q"}
+  },
+  "duration_hint_minutes": 15
+}

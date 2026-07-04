@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-longhorizon-012",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "duration_hint_minutes": 60,
+  "title": "Extend the extract-function app with a shared validators module and multiple new handlers",
+  "description": "Long-horizon task on refactor_extract_function: create a shared validators module with email, phone, and username validation; extend handlers with handle_registration and handle_profile_update; extend models with validate_user_record_extended. All existing tests must pass.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "refactor_extract_function",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement four new additions across three files:\n\n1. Create src/validators.py:\n   - is_valid_email(email: str) -> bool  (reuse regex from handlers/models)\n   - validate_phone(phone: str) -> bool  (7+ digit pattern: r'^\\+?[\\d\\s\\-(). ]{7,}$')\n   - validate_username(username: str) -> bool  (3-20 chars, alphanumeric + underscore: r'^\\w{3,20}$')\n\n2. Add to src/handlers.py (import from src.validators):\n   - handle_registration(email, name, phone) -> dict\n     Validates email and phone, returns {user, email, phone}\n   - handle_profile_update(user_id: int, email: str, username: str) -> dict\n     Validates email and username, returns {user_id, email, username}\n\n3. Add to src/models.py (import from src.validators):\n   - validate_user_record_extended(record: dict) -> bool\n     Checks email (via is_valid_email) AND username (via validate_username if present)\n\nAll 6 existing tests must still pass.\nAdd tests/test_extended.py covering the new functions.",
+    "required_artifacts": [
+      "src/validators.py with is_valid_email, validate_phone, validate_username",
+      "handle_registration validates email+phone",
+      "handle_profile_update validates email+username",
+      "validate_user_record_extended checks email and optional username",
+      "All 6 original tests pass",
+      "New extended tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (all tests)",
+      "uv run python -c \"from src.handlers import handle_signup\" passes"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `uv run pytest tests/ -v` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `uv run pytest tests/ -v` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.handlers import handle_signup\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

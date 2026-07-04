@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "543-rust-mt-long-cli-tool",
+  "title": "Build a CLI word count tool in Rust — 4 turns",
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "target_stack": {"language": "rust", "framework": null, "extra": {}},
+  "description": "Four-turn CLI tool: turn 1 argument parsing, turn 2 file reading, turn 3 word/line/char counting, turn 4 error handling and tests.",
+  "repo_seed": {
+    "files": {
+      "Cargo.toml": "[package]\nname = \"wc-tool\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\nclap = { version = \"4\", features = [\"derive\"] }\n\n[dev-dependencies]\nassert_cmd = \"2\"\npredicates = \"3\"\n",
+      "src/main.rs": "use clap::Parser;\n\n#[derive(Parser, Debug)]\n#[command(name = \"wc\", about = \"Count words, lines, and chars\")]\nstruct Cli {\n    /// Files to process\n    files: Vec<String>,\n    /// Count lines\n    #[arg(short = 'l')]\n    lines: bool,\n    /// Count words\n    #[arg(short = 'w')]\n    words: bool,\n    /// Count characters\n    #[arg(short = 'c')]\n    chars: bool,\n}\n\nfn main() {\n    let _cli = Cli::parse();\n    // TODO: implement\n    eprintln!(\"not yet implemented\");\n    std::process::exit(1);\n}\n",
+      "src/lib.rs": "use std::io::{self, BufRead};\nuse std::fs::File;\nuse std::path::Path;\n\n#[derive(Debug, PartialEq, Default)]\npub struct Counts {\n    pub lines: usize,\n    pub words: usize,\n    pub chars: usize,\n}\n\n/// Count lines, words, and characters in a reader.\npub fn count<R: BufRead>(reader: R) -> io::Result<Counts> {\n    // TODO\n    Err(io::Error::new(io::ErrorKind::Other, \"not implemented\"))\n}\n\n/// Count a file by path.\npub fn count_file(path: &Path) -> io::Result<Counts> {\n    let f = File::open(path)?;\n    let reader = io::BufReader::new(f);\n    count(reader)\n}\n",
+      "tests/integration_test.rs": "use assert_cmd::Command;\nuse predicates::prelude::*;\nuse std::fs;\nuse tempfile::TempDir;\n\nfn tmp_file(dir: &TempDir, name: &str, content: &str) -> std::path::PathBuf {\n    let path = dir.path().join(name);\n    fs::write(&path, content).unwrap();\n    path\n}\n\n#[test]\nfn test_count_lines() {\n    let dir = TempDir::new().unwrap();\n    let p = tmp_file(&dir, \"a.txt\", \"hello\\nworld\\n\");\n    Command::cargo_bin(\"wc\").unwrap()\n        .arg(\"-l\")\n        .arg(p.to_str().unwrap())\n        .assert()\n        .success()\n        .stdout(predicate::str::contains(\"2\"));\n}\n\n#[test]\nfn test_count_words() {\n    let dir = TempDir::new().unwrap();\n    let p = tmp_file(&dir, \"b.txt\", \"one two three\\n\");\n    Command::cargo_bin(\"wc\").unwrap()\n        .arg(\"-w\")\n        .arg(p.to_str().unwrap())\n        .assert()\n        .success()\n        .stdout(predicate::str::contains(\"3\"));\n}\n\n#[test]\nfn test_missing_file_error() {\n    Command::cargo_bin(\"wc\").unwrap()\n        .arg(\"-l\")\n        .arg(\"nonexistent.txt\")\n        .assert()\n        .failure();\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `count<R: BufRead>(reader: R) -> io::Result<Counts>` in `src/lib.rs`. Read all lines with `reader.lines()`, count: lines (total line count), words (split each line by whitespace, sum word counts), chars (total character count including newlines). Run `cargo test --quiet` (the integration tests will fail until main.rs is complete, but the library tests should work).",
+    "followup_prompts": [
+      "Good progress. Run `cargo test --quiet` to see where we stand. Now update `main.rs` to use `count_file()`: loop over `cli.files`, call `count_file(path)`, and print the results. If no flags are given, print all three counts. If `-l` is given, print only lines; `-w` for words; `-c` for chars. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Good. Now add error handling: if a file doesn't exist, print an error to stderr and exit with code 1. Also add the tempfile dependency to Cargo.toml dev-dependencies: `tempfile = \"3\"`. Run `cargo test --quiet` and fix any failures.",
+      "Final push: run `cargo test --quiet` and fix any remaining failures. Make sure all 3 integration tests pass — lines, words, and the missing-file error case."
+    ],
+    "success_criteria": [
+      "count() correctly counts lines, words, and characters",
+      "main outputs correct counts for -l, -w, -c flags",
+      "Missing file causes non-zero exit",
+      "cargo test passes (3 integration tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "cargo test --quiet"}
+  },
+  "duration_hint_minutes": 35
+}

@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-brownfield-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Migrate os.path file utilities to pathlib.Path in Python",
+  "description": "Brownfield Python migration: replace os.path and os functions with pathlib.Path equivalents in a file utility module. All existing tests must continue to pass after the migration.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"fileutils\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/fileutils.py",
+        "content": "import os\n\n\ndef get_extension(path: str) -> str:\n    \"\"\"Return the file extension including the dot, e.g. '.txt'.\"\"\"\n    _, ext = os.path.splitext(path)\n    return ext\n\n\ndef get_stem(path: str) -> str:\n    \"\"\"Return filename without extension.\"\"\"\n    return os.path.splitext(os.path.basename(path))[0]\n\n\ndef join_paths(*parts: str) -> str:\n    \"\"\"Join path components.\"\"\"\n    return os.path.join(*parts)\n\n\ndef is_absolute(path: str) -> bool:\n    \"\"\"Return True if the path is absolute.\"\"\"\n    return os.path.isabs(path)\n\n\ndef parent_dir(path: str) -> str:\n    \"\"\"Return the parent directory of the given path.\"\"\"\n    return os.path.dirname(path)\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_fileutils.py",
+        "content": "from src.fileutils import get_extension, get_stem, join_paths, is_absolute, parent_dir\n\n\ndef test_get_extension():\n    assert get_extension(\"/tmp/report.txt\") == \".txt\"\n    assert get_extension(\"archive.tar.gz\") == \".gz\"\n\n\ndef test_get_stem():\n    assert get_stem(\"/home/user/notes.md\") == \"notes\"\n    assert get_stem(\"script.py\") == \"script\"\n\n\ndef test_join_paths():\n    assert join_paths(\"/home\", \"user\", \"docs\") == \"/home/user/docs\"\n\n\ndef test_is_absolute():\n    assert is_absolute(\"/etc/passwd\")\n    assert not is_absolute(\"relative/path\")\n\n\ndef test_parent_dir():\n    assert parent_dir(\"/home/user/file.txt\") == \"/home/user\"\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Migrate src/fileutils.py from os.path to pathlib.Path.\n\nfrom pathlib import Path\n\ndef get_extension(path: str) -> str:\n    return Path(path).suffix  # e.g. '.txt'\n\ndef get_stem(path: str) -> str:\n    return Path(path).stem\n\ndef join_paths(*parts: str) -> str:\n    result = Path(parts[0])\n    for p in parts[1:]:\n        result = result / p\n    return str(result)\n\ndef is_absolute(path: str) -> bool:\n    return Path(path).is_absolute()\n\ndef parent_dir(path: str) -> str:\n    return str(Path(path).parent)\n\nAll 5 tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "import os removed, from pathlib import Path added",
+      "get_extension uses Path.suffix",
+      "get_stem uses Path.stem",
+      "join_paths uses Path division operator",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.fileutils import get_extension, get_stem, join_paths, is_absolute, parent_dir\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.fileutils import get_extension, get_stem, join_paths, is_absolute, parent_dir\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

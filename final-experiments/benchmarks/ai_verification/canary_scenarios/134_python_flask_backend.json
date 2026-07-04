@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-backend-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add item CRUD endpoints to Flask items API",
+  "description": "Brownfield Python/Flask task: extend the items API with create, get-by-id, and delete endpoints.",
+  "target_stack": {
+    "language": "python",
+    "framework": "flask",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_flask_app",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Extend src/app.py with three new endpoints. All 2 existing tests must still pass.\n\n  POST /api/items\n    — reads JSON body with 'name' (str) and 'price' (float)\n    — assigns a new auto-incremented integer id (start at 3, since fixture has ids 1 and 2)\n    — appends the new item to _items\n    — returns the created item as JSON with status 201\n\n  GET /api/items/<int:item_id>\n    — returns the item with that id as JSON\n    — returns 404 JSON {'error': 'not found'} if not present\n\n  DELETE /api/items/<int:item_id>\n    — removes the item with that id from _items\n    — returns 204 No Content on success\n    — returns 404 JSON {'error': 'not found'} if not present\n\nKeep _next_id as a module-level variable starting at 3.\nAll 2 existing tests must still pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "POST /api/items returns 201 with new item including auto-assigned id",
+      "GET /api/items/<id> returns 200 with the item",
+      "GET /api/items/<id> returns 404 for unknown id",
+      "DELETE /api/items/<id> removes the item and returns 204",
+      "DELETE /api/items/<id> returns 404 for unknown id",
+      "All 2 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `uv run pytest tests/ -v` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

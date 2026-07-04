@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-033",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement a min-heap priority queue in Go",
+  "description": "Greenfield Go task: implement a MinHeap that satisfies heap.Interface, supporting Push, Pop (returns minimum), and Peek operations.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module minheap\n\ngo 1.21\n"
+      },
+      {
+        "path": "heap.go",
+        "content": "package minheap\n\n// TODO: implement MinHeap\n"
+      },
+      {
+        "path": "heap_test.go",
+        "content": "package minheap\n\nimport \"testing\"\n\nfunc TestPushPop(t *testing.T) {\n\th := NewMinHeap()\n\th.Push(3)\n\th.Push(1)\n\th.Push(4)\n\th.Push(2)\n\tif got := h.Pop(); got != 1 {\n\t\tt.Fatalf(\"want 1, got %d\", got)\n\t}\n\tif got := h.Pop(); got != 2 {\n\t\tt.Fatalf(\"want 2, got %d\", got)\n\t}\n}\n\nfunc TestPeek(t *testing.T) {\n\th := NewMinHeap()\n\th.Push(5)\n\th.Push(2)\n\th.Push(8)\n\tif got := h.Peek(); got != 2 {\n\t\tt.Fatalf(\"want 2, got %d\", got)\n\t}\n\tif h.Len() != 3 {\n\t\tt.Fatalf(\"Peek should not remove element\")\n\t}\n}\n\nfunc TestLen(t *testing.T) {\n\th := NewMinHeap()\n\tif h.Len() != 0 {\n\t\tt.Fatal(\"new heap should have len 0\")\n\t}\n\th.Push(1)\n\th.Push(2)\n\tif h.Len() != 2 {\n\t\tt.Fatalf(\"want 2, got %d\", h.Len())\n\t}\n}\n\nfunc TestSortOrder(t *testing.T) {\n\th := NewMinHeap()\n\tvalues := []int{9, 3, 7, 1, 5}\n\tfor _, v := range values {\n\t\th.Push(v)\n\t}\n\tprev := h.Pop()\n\tfor h.Len() > 0 {\n\t\tcurr := h.Pop()\n\t\tif curr < prev {\n\t\t\tt.Fatalf(\"out of order: %d before %d\", prev, curr)\n\t\t}\n\t\tprev = curr\n\t}\n}\n\nfunc TestSingleElement(t *testing.T) {\n\th := NewMinHeap()\n\th.Push(42)\n\tif got := h.Pop(); got != 42 {\n\t\tt.Fatalf(\"want 42, got %d\", got)\n\t}\n\tif h.Len() != 0 {\n\t\tt.Fatal(\"heap should be empty after popping last element\")\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement MinHeap in heap.go using container/heap.\n\npackage minheap\n\nimport \"container/heap\"\n\ntype intHeap []int\n\nfunc (h intHeap) Len() int           { return len(h) }\nfunc (h intHeap) Less(i, j int) bool { return h[i] < h[j] }\nfunc (h intHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }\nfunc (h *intHeap) Push(x any)        { *h = append(*h, x.(int)) }\nfunc (h *intHeap) Pop() any {\n    old := *h\n    n := len(old)\n    x := old[n-1]\n    *h = old[:n-1]\n    return x\n}\n\ntype MinHeap struct { h *intHeap }\n\nfunc NewMinHeap() *MinHeap {\n    h := &intHeap{}\n    heap.Init(h)\n    return &MinHeap{h: h}\n}\n\nfunc (m *MinHeap) Push(v int) { heap.Push(m.h, v) }\nfunc (m *MinHeap) Pop() int   { return heap.Pop(m.h).(int) }\nfunc (m *MinHeap) Peek() int  { return (*m.h)[0] }\nfunc (m *MinHeap) Len() int   { return m.h.Len() }\n\nAll 5 tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "intHeap implements heap.Interface (Len, Less, Swap, Push, Pop)",
+      "MinHeap wraps intHeap and exposes Push/Pop/Peek/Len",
+      "Pop returns minimum element",
+      "Peek does not remove element",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

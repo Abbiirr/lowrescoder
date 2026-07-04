@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "501-python-mt-lru-cache",
+  "title": "Build an LRU cache in Python — 3 turns",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {"language": "python", "framework": null, "extra": {}},
+  "description": "Three scripted turns build an LRU cache: turn 1 adds put/get with a no-op eviction path, turn 2 implements LRU eviction when capacity is exceeded, turn 3 adds clear() and runs the full suite.",
+  "repo_seed": {
+    "files": {
+      "lru_cache.py": "\"\"\"LRU Cache implementation.\"\"\"\nfrom collections import OrderedDict\n\n\nclass LRUCache:\n    def __init__(self, capacity: int):\n        if capacity <= 0:\n            raise ValueError(\"capacity must be positive\")\n        self.capacity = capacity\n        self._store: OrderedDict = OrderedDict()\n\n    def get(self, key):\n        \"\"\"Return value for key, or -1 if not present. Mark as recently used.\"\"\"\n        raise NotImplementedError\n\n    def put(self, key, value) -> None:\n        \"\"\"Insert or update key. Evict least-recently-used if over capacity.\"\"\"\n        raise NotImplementedError\n\n    def clear(self) -> None:\n        \"\"\"Remove all entries.\"\"\"\n        raise NotImplementedError\n",
+      "tests/test_lru_cache.py": "import pytest\nfrom lru_cache import LRUCache\n\n\ndef test_basic_put_get():\n    c = LRUCache(2)\n    c.put(1, 10)\n    assert c.get(1) == 10\n\n\ndef test_missing_key_returns_minus_one():\n    c = LRUCache(2)\n    assert c.get(99) == -1\n\n\ndef test_update_existing_key():\n    c = LRUCache(2)\n    c.put(1, 10)\n    c.put(1, 20)\n    assert c.get(1) == 20\n\n\ndef test_eviction_lru():\n    c = LRUCache(2)\n    c.put(1, 1)\n    c.put(2, 2)\n    c.get(1)       # 1 is now most recently used\n    c.put(3, 3)    # should evict 2 (LRU), not 1\n    assert c.get(2) == -1\n    assert c.get(1) == 1\n    assert c.get(3) == 3\n\n\ndef test_eviction_order_put():\n    c = LRUCache(3)\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    c.put(\"c\", 3)\n    c.put(\"d\", 4)  # should evict \"a\"\n    assert c.get(\"a\") == -1\n    assert c.get(\"b\") == 2\n\n\ndef test_clear():\n    c = LRUCache(3)\n    c.put(1, 1)\n    c.put(2, 2)\n    c.clear()\n    assert c.get(1) == -1\n    assert c.get(2) == -1\n\n\ndef test_capacity_one():\n    c = LRUCache(1)\n    c.put(1, 100)\n    c.put(2, 200)\n    assert c.get(1) == -1\n    assert c.get(2) == 200\n\n\ndef test_invalid_capacity():\n    with pytest.raises(ValueError):\n        LRUCache(0)\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `get(key)` and `put(key, value)` in `lru_cache.py`. For now, just make get/put work correctly (no eviction needed yet — if the cache is over capacity just leave it). Use `self._store` (an OrderedDict). Run `uv run pytest tests/ -q` when you think it's working.",
+    "followup_prompts": [
+      "Good. Now implement LRU eviction in `put()`: when the cache exceeds capacity, remove the least-recently-used entry. Also make sure `get()` moves the accessed key to the 'most recently used' position. Run `uv run pytest tests/ -q` and fix any failures.",
+      "Final step: implement `clear()` so it removes all entries. Then run `uv run pytest tests/ -q` one more time — all 8 tests must be green."
+    ],
+    "success_criteria": [
+      "get() returns -1 for missing keys",
+      "put() inserts and updates correctly",
+      "LRU eviction removes least-recently-used entry",
+      "get() promotes accessed key to MRU position",
+      "clear() empties the cache",
+      "All 8 pytest tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "uv run pytest tests/ -q"}
+  },
+  "duration_hint_minutes": 15
+}

@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-longhorizon-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Extend Rust number-utils in 2 steps: parity helpers then clamp",
+  "description": "A Rust number-utilities library starts with only abs(). Grow it in two focused steps, each adding new functions and tests without breaking existing tests.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_number_utils",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Rust library in src/lib.rs currently exports only abs(n: i64) -> i64 with 3 passing tests. Extend it in two steps:\n\nStep 1 — Parity helpers:\n  pub fn is_even(n: i64) -> bool\n  pub fn is_odd(n: i64) -> bool\n  Add 4 tests: test_is_even_positive, test_is_even_negative, test_is_odd_basic, test_is_even_zero.\n  All 3 existing abs tests must still pass.\n\nStep 2 — Clamp:\n  pub fn clamp(n: i64, min: i64, max: i64) -> i64\n  Returns min if n < min, max if n > max, else n.\n  Add 3 tests: test_clamp_below, test_clamp_above, test_clamp_within.\n  All 7 tests from Step 1 must still pass.\n\ncargo test must show 10 tests passing (3 original + 4 parity + 3 clamp). cargo build must succeed.",
+    "required_artifacts": [
+      "is_even and is_odd functions",
+      "clamp function",
+      "4 parity tests",
+      "3 clamp tests",
+      "All 10 tests pass"
+    ],
+    "success_criteria": [
+      "is_odd(n) == !is_even(n) for all n",
+      "clamp handles below, above, and within range",
+      "All 10 tests pass",
+      "Existing 3 tests unmodified"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `cargo test` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `cargo test` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

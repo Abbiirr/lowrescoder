@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-py-migration-pathlib-001",
+  "title": "Migrate os.path calls to pathlib.Path",
+  "category": "refactor",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Python file_utils module uses os.path throughout. Migrate it to use pathlib.Path equivalents. Tests verify the same behavior is preserved.",
+  "repo_seed": {
+    "files": {
+      "file_utils.py": "\"\"\"File utility helpers using os.path.\"\"\"\nimport os\n\n\ndef file_exists(path: str) -> bool:\n    \"\"\"Return True if path points to an existing file.\"\"\"\n    return os.path.isfile(path)\n\n\ndef ensure_dir(path: str) -> str:\n    \"\"\"Create directory and all parents if they don't exist. Returns the path.\"\"\"\n    os.makedirs(path, exist_ok=True)\n    return path\n\n\ndef join_paths(*parts: str) -> str:\n    \"\"\"Join path components.\"\"\"\n    return os.path.join(*parts)\n\n\ndef get_extension(path: str) -> str:\n    \"\"\"Return the file extension including the dot, e.g. '.txt'. Empty string if none.\"\"\"\n    _, ext = os.path.splitext(path)\n    return ext\n\n\ndef list_files(directory: str, extension: str = \"\") -> list:\n    \"\"\"Return sorted list of files in directory, optionally filtered by extension.\"\"\"\n    if not os.path.isdir(directory):\n        return []\n    result = []\n    for entry in os.listdir(directory):\n        full = os.path.join(directory, entry)\n        if os.path.isfile(full):\n            if not extension or entry.endswith(extension):\n                result.append(entry)\n    return sorted(result)\n",
+      "test_file_utils.py": "import os\nimport tempfile\nimport pytest\nfrom file_utils import file_exists, ensure_dir, join_paths, get_extension, list_files\n\n\ndef test_file_exists_true(tmp_path):\n    f = tmp_path / \"hello.txt\"\n    f.write_text(\"hi\")\n    assert file_exists(str(f)) is True\n\n\ndef test_file_exists_false(tmp_path):\n    assert file_exists(str(tmp_path / \"nope.txt\")) is False\n\n\ndef test_ensure_dir(tmp_path):\n    new_dir = str(tmp_path / \"a\" / \"b\" / \"c\")\n    result = ensure_dir(new_dir)\n    assert result == new_dir\n    assert os.path.isdir(new_dir)\n\n\ndef test_join_paths():\n    result = join_paths(\"a\", \"b\", \"c.txt\")\n    assert result == os.path.join(\"a\", \"b\", \"c.txt\")\n\n\ndef test_get_extension():\n    assert get_extension(\"report.pdf\") == \".pdf\"\n    assert get_extension(\"noext\") == \"\"\n    assert get_extension(\"archive.tar.gz\") == \".gz\"\n\n\ndef test_list_files(tmp_path):\n    (tmp_path / \"a.txt\").write_text(\"\")\n    (tmp_path / \"b.py\").write_text(\"\")\n    (tmp_path / \"c.txt\").write_text(\"\")\n    all_files = list_files(str(tmp_path))\n    assert all_files == [\"a.txt\", \"b.py\", \"c.txt\"]\n    txt_files = list_files(str(tmp_path), extension=\".txt\")\n    assert txt_files == [\"a.txt\", \"c.txt\"]\n\n\ndef test_list_files_missing_dir(tmp_path):\n    result = list_files(str(tmp_path / \"nonexistent\"))\n    assert result == []\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Migrate file_utils.py from os.path to pathlib.Path.\n\nReplace each function body:\n- file_exists: use Path(path).is_file()\n- ensure_dir: use Path(path).mkdir(parents=True, exist_ok=True), return path\n- join_paths: use str(Path(*parts)) or Path(parts[0]).joinpath(*parts[1:])\n- get_extension: use Path(path).suffix\n- list_files: use Path(directory).is_dir(), Path(directory).iterdir(), p.is_file(), p.suffix or p.name.endswith()\n\nKeep the function signatures identical (str in, str/list out). Do NOT import os anymore.\n\nRun `pytest test_file_utils.py -v --rootdir=.` to verify all 8 tests pass.",
+    "entry_point": "file_utils.py",
+    "success_criteria": [
+      "All 8 pytest tests pass",
+      "No os.path calls remain in file_utils.py",
+      "pathlib.Path used throughout"
+    ],
+    "followup_prompts": [
+      "Run `pytest test_file_utils.py -v --rootdir=.` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `pytest test_file_utils.py -v --rootdir=.` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "pytest test_file_utils.py -v --rootdir=."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 8
+}

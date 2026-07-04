@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-dirty-009",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 bugs in go_legacy_products handlers",
+  "description": "Brownfield Go dirty scenario: createProduct, getProduct, and deleteProduct each have a bug. Fix them so all 4 tests pass.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_legacy_products",
+    "injections": [
+      {
+        "path": "internal/products/products.go",
+        "content": "package products\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n\t\"strconv\"\n\t\"strings\"\n\t\"sync\"\n)\n\ntype Product struct {\n\tID    int     `json:\"id\"`\n\tName  string  `json:\"name\"`\n\tPrice float64 `json:\"price\"`\n}\n\nvar (\n\tmu     sync.Mutex\n\tstore  []Product\n\tnextID = 1\n)\n\nfunc ResetStore() {\n\tmu.Lock()\n\tdefer mu.Unlock()\n\tstore = nil\n\tnextID = 1\n}\n\nfunc Handler(w http.ResponseWriter, r *http.Request) {\n\tpath := r.URL.Path\n\tswitch {\n\tcase path == \"/products\" && r.Method == http.MethodGet:\n\t\tlistProducts(w, r)\n\tcase path == \"/products\" && r.Method == http.MethodPost:\n\t\tcreateProduct(w, r)\n\tcase strings.HasPrefix(path, \"/products/\") && r.Method == http.MethodGet:\n\t\tgetProduct(w, r)\n\tcase strings.HasPrefix(path, \"/products/\") && r.Method == http.MethodDelete:\n\t\tdeleteProduct(w, r)\n\tdefault:\n\t\thttp.NotFound(w, r)\n\t}\n}\n\nfunc listProducts(w http.ResponseWriter, r *http.Request) {\n\tmu.Lock()\n\tdefer mu.Unlock()\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tjson.NewEncoder(w).Encode(store)\n}\n\nfunc createProduct(w http.ResponseWriter, r *http.Request) {\n\tvar body struct {\n\t\tName  string  `json:\"name\"`\n\t\tPrice float64 `json:\"price\"`\n\t}\n\tif err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Name == \"\" {\n\t\thttp.Error(w, \"bad request\", http.StatusBadRequest)\n\t\treturn\n\t}\n\tmu.Lock()\n\tdefer mu.Unlock()\n\tp := Product{ID: nextID, Name: body.Name, Price: body.Price}\n\tnextID++\n\tstore = append(store, p)\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\t// BUG: returns 200 OK instead of 201 Created\n\tw.WriteHeader(http.StatusOK)\n\tjson.NewEncoder(w).Encode(p)\n}\n\nfunc getProduct(w http.ResponseWriter, r *http.Request) {\n\tid, err := strconv.Atoi(strings.TrimPrefix(r.URL.Path, \"/products/\"))\n\tif err != nil {\n\t\thttp.Error(w, \"bad id\", http.StatusBadRequest)\n\t\treturn\n\t}\n\tmu.Lock()\n\tdefer mu.Unlock()\n\tfor _, p := range store {\n\t\t// BUG: inverted comparison — returns when IDs do NOT match\n\t\tif p.ID != id {\n\t\t\tw.Header().Set(\"Content-Type\", \"application/json\")\n\t\t\tjson.NewEncoder(w).Encode(p)\n\t\t\treturn\n\t\t}\n\t}\n\thttp.Error(w, \"not found\", http.StatusNotFound)\n}\n\nfunc deleteProduct(w http.ResponseWriter, r *http.Request) {\n\t// BUG: wrong TrimPrefix — missing trailing slash\n\tid, err := strconv.Atoi(strings.TrimPrefix(r.URL.Path, \"/products\"))\n\tif err != nil {\n\t\thttp.Error(w, \"bad id\", http.StatusBadRequest)\n\t\treturn\n\t}\n\tmu.Lock()\n\tdefer mu.Unlock()\n\tfor i, p := range store {\n\t\tif p.ID == id {\n\t\t\tstore = append(store[:i], store[i+1:]...)\n\t\t\tw.WriteHeader(http.StatusNoContent)\n\t\t\treturn\n\t\t}\n\t}\n\thttp.Error(w, \"not found\", http.StatusNotFound)\n}\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 bugs in internal/products/products.go so all 4 tests pass.\n\n  func createProduct:\n    — returns http.StatusOK (200) instead of http.StatusCreated (201)\n    — fix: w.WriteHeader(http.StatusCreated)\n\n  func getProduct:\n    — inverted comparison: returns items where p.ID != id (should be == id)\n    — fix: change 'p.ID != id' to 'p.ID == id'\n\n  func deleteProduct:\n    — wrong TrimPrefix: '/products' should be '/products/'\n    — fix: strings.TrimPrefix(r.URL.Path, \"/products/\")\n\nDo not modify the test file.\nRun: go test ./...",
+    "required_artifacts": [
+      "createProduct returns 201 Created",
+      "getProduct uses == comparison for ID match",
+      "deleteProduct uses /products/ prefix",
+      "All 4 existing tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

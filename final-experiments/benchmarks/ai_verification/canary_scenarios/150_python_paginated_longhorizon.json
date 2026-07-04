@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-longhorizon-007",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "medium",
+  "duration_hint_minutes": 35,
+  "title": "Extend FastAPI products API with categories, filtering, and stats in 3 steps",
+  "description": "Multi-step Python/FastAPI task: add category listing, query filtering, and product statistics endpoints.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_paginated_api",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Extend src/app.py in three steps. All 3 existing tests must still pass.\n\nStep 1 — GET /products/categories:\n  — returns a sorted list of unique categories as JSON array of strings\n  — e.g. [\"clothing\", \"electronics\", \"food\"]\n  — register BEFORE /products/{product_id}\n\nStep 2 — Add category filter to GET /products:\n  @app.get(\"/products\")\n  def list_products(category: str | None = None) -> list[dict]\n    — if category is provided, return only products matching that category (case-sensitive)\n    — if category is None, return all products (existing behavior)\n\nStep 3 — GET /products/stats:\n  — returns {\"count\": N, \"min_price\": X, \"max_price\": Y, \"avg_price\": Z}\n  — all price values rounded to 2 decimal places\n  — register BEFORE /products/{product_id}\n\nAll 3 existing tests must still pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "GET /products/categories returns sorted unique category list",
+      "GET /products?category=electronics returns only electronics products",
+      "GET /products returns all products when category param absent",
+      "GET /products/stats returns count, min_price, max_price, avg_price",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `uv run pytest tests/ -v` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `uv run pytest tests/ -v` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

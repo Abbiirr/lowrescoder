@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-brownfield-018",
+  "title": "Fix three bugs in Go string-check functions",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Three string functions have bugs: IsPalindrome is case-sensitive, IsAnagram only checks one direction, and CountVowels skips 'u'.",
+  "repo_seed": {
+    "files": {
+      "strcheck.go": "package strcheck\n\nimport \"strings\"\n\n// IsPalindrome returns true if s reads the same forwards and backwards (case-insensitive).\nfunc IsPalindrome(s string) bool {\n\t// bug: no ToLower — treats 'A' != 'a'\n\trunes := []rune(s)\n\tfor i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {\n\t\tif runes[i] != runes[j] {\n\t\t\treturn false\n\t\t}\n\t}\n\treturn true\n}\n\n// IsAnagram returns true if a and b are anagrams (case-insensitive).\nfunc IsAnagram(a, b string) bool {\n\ta = strings.ToLower(a)\n\tb = strings.ToLower(b)\n\tif len(a) != len(b) {\n\t\treturn false\n\t}\n\tcounts := make(map[rune]int)\n\tfor _, c := range a {\n\t\tcounts[c]++\n\t}\n\tfor _, c := range b {\n\t\tcounts[c]-- // bug: missing check that count goes negative\n\t}\n\t// bug: never verifies all counts are zero\n\treturn true\n}\n\n// CountVowels counts vowels (a, e, i, o, u) in s (case-insensitive).\nfunc CountVowels(s string) int {\n\tcount := 0\n\tfor _, c := range strings.ToLower(s) {\n\t\tif c == 'a' || c == 'e' || c == 'i' || c == 'o' { // bug: missing 'u'\n\t\t\tcount++\n\t\t}\n\t}\n\treturn count\n}\n",
+      "strcheck_test.go": "package strcheck\n\nimport \"testing\"\n\nfunc TestIsPalindrome(t *testing.T) {\n\tif !IsPalindrome(\"racecar\") { t.Fatal(\"racecar should be palindrome\") }\n\tif !IsPalindrome(\"Racecar\") { t.Fatal(\"Racecar should be palindrome (case-insensitive)\") }\n\tif IsPalindrome(\"hello\") { t.Fatal(\"hello is not a palindrome\") }\n}\n\nfunc TestIsAnagram(t *testing.T) {\n\tif !IsAnagram(\"listen\", \"silent\") { t.Fatal(\"listen/silent are anagrams\") }\n\tif IsAnagram(\"hello\", \"world\") { t.Fatal(\"hello/world are not anagrams\") }\n\tif IsAnagram(\"aab\", \"bba\") { t.Fatal(\"aab/bba are not anagrams\") }\n}\n\nfunc TestCountVowels(t *testing.T) {\n\tif got := CountVowels(\"umbrella\"); got != 3 { t.Fatalf(\"want 3, got %d\", got) }\n\tif got := CountVowels(\"AEIOU\"); got != 5 { t.Fatalf(\"want 5, got %d\", got) }\n}\n",
+      "go.mod": "module strcheck\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in strcheck.go:\n1. `IsPalindrome`: add `s = strings.ToLower(s)` before converting to runes\n2. `IsAnagram`: after the loop over b, add `for _, v := range counts { if v != 0 { return false } }` before `return true`\n3. `CountVowels`: add `|| c == 'u'` to the condition\nAll 3 tests must pass.",
+    "entry_point": "strcheck.go",
+    "success_criteria": "All 3 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

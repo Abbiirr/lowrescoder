@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-031",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Implement Point and Rectangle as dataclasses in Python",
+  "description": "Greenfield Python task: implement Point(x, y) and Rectangle(x, y, width, height) as @dataclass types, plus area() and translate() helper functions.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"shapes\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/shapes.py",
+        "content": "# TODO: implement Point and Rectangle as dataclasses\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_shapes.py",
+        "content": "from src.shapes import Point, Rectangle, area, translate\n\n\ndef test_point_creation():\n    p = Point(x=1.0, y=2.0)\n    assert p.x == 1.0\n    assert p.y == 2.0\n\n\ndef test_rectangle_creation():\n    r = Rectangle(x=0, y=0, width=10, height=5)\n    assert r.width == 10\n    assert r.height == 5\n\n\ndef test_area():\n    r = Rectangle(x=0, y=0, width=4, height=3)\n    assert area(r) == 12.0\n\n\ndef test_translate():\n    p = Point(1.0, 2.0)\n    p2 = translate(p, 3.0, -1.0)\n    assert p2.x == 4.0\n    assert p2.y == 1.0\n\n\ndef test_dataclass_type():\n    import dataclasses\n    p = Point(x=0, y=0)\n    assert dataclasses.is_dataclass(p)\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement Point and Rectangle as @dataclass types in src/shapes.py.\n\nfrom dataclasses import dataclass\n\n\n@dataclass\nclass Point:\n    x: float\n    y: float\n\n\n@dataclass\nclass Rectangle:\n    x: float\n    y: float\n    width: float\n    height: float\n\n\ndef area(rect: Rectangle) -> float:\n    return rect.width * rect.height\n\n\ndef translate(point: Point, dx: float, dy: float) -> Point:\n    return Point(point.x + dx, point.y + dy)\n\nAll 5 tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "Point is a @dataclass with x and y float fields",
+      "Rectangle is a @dataclass with x, y, width, height fields",
+      "dataclasses.is_dataclass(Point(...)) returns True",
+      "area() and translate() functions implemented",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.shapes import Point, Rectangle\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.shapes import Point, Rectangle\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

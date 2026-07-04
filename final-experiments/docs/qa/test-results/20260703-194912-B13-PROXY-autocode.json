@@ -1,0 +1,138 @@
+{
+  "contract": {
+    "harness_version": "1.0.0",
+    "harness_commit_sha": "unknown",
+    "agent": "autocode",
+    "agent_version": "0.1.0",
+    "model": "bench_stable",
+    "provider_mode": "local_free",
+    "lane": "B13-PROXY",
+    "run_id": "selfimprove-20260703-192639",
+    "manifest_hash": "sha256:547416330edbc951",
+    "budget_profile": {
+      "wall_time_s": 86400,
+      "token_cap": 50000,
+      "max_tool_calls": 100
+    },
+    "budget_profile_id": "wt86400_tc50000_mc100",
+    "command_trace": "/home/bs01763/projects/ai/autocode-full/benchmarks/benchmark_runner.py --agent autocode --lane B13-PROXY --model bench_stable --max-tasks 4 --task-timeout-s 600 --run-id selfimprove-20260703-192639",
+    "timestamp": "2026-07-03T19:49:12.279621+00:00",
+    "comparison_validity": "proxy-only",
+    "seed": null,
+    "image_digests": {}
+  },
+  "lane": "B13-PROXY",
+  "lane_name": "CodeClash Equivalent (PROXY)",
+  "agent": "autocode",
+  "model": "bench_stable",
+  "provider_mode": "local_free",
+  "aggregate": {
+    "total_tasks": 4,
+    "resolved": 0,
+    "resolve_rate": 0.0,
+    "infra_fails": 4,
+    "infra_fail_rate": 1.0,
+    "total_wall_time_s": 1351.2,
+    "avg_wall_time_s": 337.8
+  },
+  "results": [
+    {
+      "task_id": "cc-001-two-sum",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 744.2,
+      "tool_calls": 1,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": false,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0
+      }
+    },
+    {
+      "task_id": "cc-002-lru-cache",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 80.4,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Could not reach the configured gateway at http://localhost:4000/v1.",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": false,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0
+      }
+    },
+    {
+      "task_id": "cc-003-merge-intervals",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 279.7,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": false,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 1,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0
+      }
+    },
+    {
+      "task_id": "cc-004-word-break",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 246.9,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": false,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": false
+        },
+        "index_build_ms": 0,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0
+      }
+    }
+  ],
+  "image_digests": {},
+  "halted": false
+}

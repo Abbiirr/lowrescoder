@@ -1,0 +1,65 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-refactor-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Extract FastAPI item handlers into a separate router module",
+  "description": "A monolithic FastAPI app has all routes in a single file. Extract the items routes into a dedicated APIRouter module.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "backend_health_endpoint",
+    "injections": [
+      {
+        "path": "src/app.py",
+        "content": "from fastapi import FastAPI, HTTPException\n\napp = FastAPI()\n\n_items = [\n    {\"id\": 1, \"name\": \"Widget A\", \"price\": 9.99},\n    {\"id\": 2, \"name\": \"Gadget B\", \"price\": 24.99},\n]\n\n\n@app.get(\"/items\")\ndef list_items() -> dict:\n    return {\"items\": _items}\n\n\n@app.get(\"/items/{item_id}\")\ndef get_item(item_id: int) -> dict:\n    for item in _items:\n        if item[\"id\"] == item_id:\n            return item\n    raise HTTPException(status_code=404, detail=\"not found\")\n\n\n@app.get(\"/health\")\ndef health() -> dict:\n    return {\"status\": \"ok\"}\n"
+      },
+      {
+        "path": "tests/test_items.py",
+        "content": "from fastapi.testclient import TestClient\nfrom src.app import app\n\nclient = TestClient(app)\n\n\ndef test_list_items():\n    r = client.get(\"/items\")\n    assert r.status_code == 200\n    assert len(r.json()[\"items\"]) == 2\n\n\ndef test_get_item():\n    r = client.get(\"/items/1\")\n    assert r.status_code == 200\n    assert r.json()[\"name\"] == \"Widget A\"\n\n\ndef test_get_item_not_found():\n    r = client.get(\"/items/999\")\n    assert r.status_code == 404\n\n\ndef test_health():\n    r = client.get(\"/health\")\n    assert r.status_code == 200\n    assert r.json()[\"status\"] == \"ok\"\n"
+      }
+    ],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "The FastAPI app in src/app.py has all routes in one file. Refactor by extracting the /items routes into src/routers/items.py:\n\n1. Create src/routers/__init__.py (empty).\n\n2. Create src/routers/items.py:\n   - Contains an APIRouter with prefix=\"/items\".\n   - Moves _items list, list_items, and get_item into this module.\n   - The router must be importable as: from src.routers.items import router\n\n3. Update src/app.py:\n   - Remove the /items routes and _items list.\n   - Import the router and register it: app.include_router(router)\n   - Keep the /health route in app.py.\n\n4. All 4 existing tests must still pass without modification.\n\nRun uv run pytest tests/ -q. Run uv run ruff check src/.",
+    "required_artifacts": [
+      "src/routers/__init__.py",
+      "src/routers/items.py with APIRouter prefix=/items",
+      "src/app.py uses app.include_router(router)",
+      "All 4 existing tests pass unchanged",
+      "uv run pytest tests/ -q passes"
+    ],
+    "success_criteria": [
+      "Items routes served via include_router",
+      "Health route remains in app.py",
+      "All 4 tests pass"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `uv run pytest tests/ -q` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

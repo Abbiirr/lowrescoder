@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-029",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "hard",
+  "duration_hint_minutes": 35,
+  "title": "Implement segment tree for range sum queries in Go",
+  "description": "Greenfield Go task: implement a segment tree supporting range sum queries and point updates in O(log n) time.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module segtree\n\ngo 1.21\n"
+      },
+      {
+        "path": "segtree.go",
+        "content": "package segtree\n\n// TODO: implement SegTree\n"
+      },
+      {
+        "path": "segtree_test.go",
+        "content": "package segtree\n\nimport \"testing\"\n\nfunc TestSegTreeBuild(t *testing.T) {\n\tst := New([]int{1, 2, 3, 4, 5})\n\tif st.Query(0, 4) != 15 {\n\t\tt.Fatalf(\"want 15 got %d\", st.Query(0, 4))\n\t}\n}\n\nfunc TestSegTreeRangeQuery(t *testing.T) {\n\tst := New([]int{1, 3, 5, 7, 9})\n\tif st.Query(1, 3) != 15 { // 3+5+7\n\t\tt.Fatalf(\"want 15 got %d\", st.Query(1, 3))\n\t}\n\tif st.Query(0, 0) != 1 {\n\t\tt.Fatalf(\"want 1 got %d\", st.Query(0, 0))\n\t}\n}\n\nfunc TestSegTreeUpdate(t *testing.T) {\n\tst := New([]int{1, 2, 3, 4, 5})\n\tst.Update(2, 10) // change index 2 from 3 to 10\n\tif st.Query(0, 4) != 22 { // 1+2+10+4+5\n\t\tt.Fatalf(\"want 22 got %d\", st.Query(0, 4))\n\t}\n}\n\nfunc TestSegTreeSingleElement(t *testing.T) {\n\tst := New([]int{42})\n\tif st.Query(0, 0) != 42 {\n\t\tt.Fatalf(\"want 42 got %d\", st.Query(0, 0))\n\t}\n\tst.Update(0, 10)\n\tif st.Query(0, 0) != 10 {\n\t\tt.Fatalf(\"want 10 got %d\", st.Query(0, 0))\n\t}\n}\n\nfunc TestSegTreeMultiUpdate(t *testing.T) {\n\tst := New([]int{0, 0, 0, 0})\n\tfor i := 0; i < 4; i++ {\n\t\tst.Update(i, i+1)\n\t}\n\tif st.Query(0, 3) != 10 { // 1+2+3+4\n\t\tt.Fatalf(\"want 10 got %d\", st.Query(0, 3))\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement SegTree in segtree.go.\n\ntype SegTree struct { tree []int; n int }\n\nfunc New(data []int) *SegTree\n    // Allocate tree of size 4*len(data). Build from data using build(1, 0, n-1).\n\nfunc (st *SegTree) build(node, start, end int)\n    // If start==end: tree[node]=data[start]\n    // Else: mid=(start+end)/2; build left (node*2,start,mid); build right (node*2+1,mid+1,end);\n    //       tree[node]=tree[node*2]+tree[node*2+1]\n\nfunc (st *SegTree) Query(l, r int) int\n    // Call query(1, 0, n-1, l, r)\n\nfunc (st *SegTree) query(node, start, end, l, r int) int\n    // No overlap: return 0. Total overlap: return tree[node].\n    // Partial: mid=(start+end)/2; return query(left)+query(right)\n\nfunc (st *SegTree) Update(idx, val int)\n    // Call update(1, 0, n-1, idx, val)\n\nfunc (st *SegTree) update(node, start, end, idx, val int)\n    // If leaf: tree[node]=val\n    // Else: recurse to correct child; tree[node]=tree[2*node]+tree[2*node+1]\n\nAll 5 tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "build recursively constructs sum segment tree",
+      "Query handles single-element, full-range, and partial-range correctly",
+      "Update propagates new value up the tree",
+      "tree is 1-indexed with root at node 1",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

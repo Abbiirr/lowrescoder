@@ -1,0 +1,82 @@
+{
+  "_meta": {
+    "description": "B28: Reliability and Repeatability — stable behavior across reruns",
+    "comparison_validity": "internal",
+    "parity_claim": "forbidden",
+    "note": "Multi-task lane: atomic writes, consistent config, deterministic sort, idempotent migration, reproducible hash.",
+    "last_verified": "2026-03-21"
+  },
+  "tasks": [
+    {
+      "task_id": "b28-atomic-file-write",
+      "category": "reliability",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Implement atomic file writes that never leave partial or corrupted files on failure.",
+      "fixture_dir": "fixtures/b28/b28-atomic-file-write",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "force_host": true
+      }
+    },
+    {
+      "task_id": "b28-consistent-config",
+      "category": "reliability",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Ensure configuration loading produces consistent results regardless of file read order.",
+      "fixture_dir": "fixtures/b28/b28-consistent-config",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "force_host": true
+      }
+    },
+    {
+      "task_id": "b28-deterministic-sort",
+      "category": "reliability",
+      "difficulty": "easy",
+      "language": "python",
+      "description": "Fix a sort implementation that produces non-deterministic output for equal-key items.",
+      "fixture_dir": "fixtures/b28/b28-deterministic-sort",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "force_host": true
+      }
+    },
+    {
+      "task_id": "b28-idempotent-migration",
+      "category": "reliability",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Make a database migration script idempotent so it can be safely rerun without errors.",
+      "fixture_dir": "fixtures/b28/b28-idempotent-migration",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "force_host": true,
+        "protected_paths": ["project/app.db"]
+      }
+    },
+    {
+      "task_id": "b28-reproducible-hash",
+      "category": "reliability",
+      "difficulty": "medium",
+      "language": "python",
+      "description": "Fix a hashing function that produces different results across runs due to dict ordering or randomness.",
+      "fixture_dir": "fixtures/b28/b28-reproducible-hash",
+      "setup_commands": ["bash setup.sh"],
+      "grading_command": "bash verify.sh",
+      "python_version": "3.11",
+      "extra": {
+        "force_host": true
+      }
+    }
+  ]
+}

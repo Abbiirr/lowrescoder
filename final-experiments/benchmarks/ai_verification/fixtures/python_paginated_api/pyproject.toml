@@ -1,0 +1,9 @@
+[project]
+name = "sample-paginated-api"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.111",
+    "httpx>=0.27",
+    "pytest>=8.0",
+]

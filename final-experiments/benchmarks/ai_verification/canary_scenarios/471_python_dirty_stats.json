@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-py-dirty-stats-001",
+  "title": "Fix bugs in a Python statistics module",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Python statistics module has three bugs: mean divides by wrong count, median doesn't handle even-length lists, and variance uses wrong formula. Fix all three.",
+  "repo_seed": {
+    "files": {
+      "stats.py": "\"\"\"Simple statistics functions.\"\"\"\n\n\ndef mean(numbers: list) -> float:\n    \"\"\"Return the arithmetic mean.\"\"\"\n    # BUG: divides by 1 instead of len(numbers)\n    return sum(numbers) / 1\n\n\ndef median(numbers: list) -> float:\n    \"\"\"Return the median value.\"\"\"\n    if not numbers:\n        raise ValueError('empty list')\n    s = sorted(numbers)\n    n = len(s)\n    mid = n // 2\n    # BUG: always returns single middle element, doesn't average two middles for even-length\n    return float(s[mid])\n\n\ndef variance(numbers: list) -> float:\n    \"\"\"Return the population variance.\"\"\"\n    if len(numbers) < 2:\n        raise ValueError('need at least 2 values')\n    m = mean(numbers)\n    # BUG: uses n-1 (sample variance) instead of n (population variance)\n    return sum((x - m) ** 2 for x in numbers) / (len(numbers) - 1)\n",
+      "test_stats.py": "import pytest\nfrom stats import mean, median, variance\n\n\ndef test_mean_basic():\n    assert mean([1, 2, 3, 4, 5]) == 3.0\n    assert mean([10, 20]) == 15.0\n\n\ndef test_median_odd():\n    assert median([3, 1, 2]) == 2.0\n\n\ndef test_median_even():\n    assert median([1, 2, 3, 4]) == 2.5\n\n\ndef test_median_single():\n    assert median([7]) == 7.0\n\n\ndef test_variance_population():\n    # population variance of [2, 4, 4, 4, 5, 5, 7, 9] = 4.0\n    assert variance([2, 4, 4, 4, 5, 5, 7, 9]) == pytest.approx(4.0)\n\n\ndef test_variance_simple():\n    assert variance([0, 10]) == pytest.approx(25.0)\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix the three bugs in stats.py:\n\n1. BUG in mean(): Change `/ 1` to `/ len(numbers)`\n2. BUG in median(): For even-length lists, return the average of the two middle elements: `(s[mid-1] + s[mid]) / 2`\n3. BUG in variance(): Change `/ (len(numbers) - 1)` to `/ len(numbers)` for population variance\n\nRun `pytest test_stats.py -v --rootdir=.` to verify all 6 tests pass.",
+    "entry_point": "stats.py",
+    "success_criteria": [
+      "All 6 pytest tests pass",
+      "mean divides by len(numbers)",
+      "median averages two middle values for even lists",
+      "variance uses population formula (divide by n)"
+    ],
+    "followup_prompts": [
+      "Run `pytest test_stats.py -v --rootdir=.` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `pytest test_stats.py -v --rootdir=.` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "pytest test_stats.py -v --rootdir=."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 5
+}

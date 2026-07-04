@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-refactor-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Wrap Rust string-utils functions in a TextAnalyzer struct",
+  "description": "A Rust string-utils library has standalone functions. Wrap them in a TextAnalyzer struct so callers can chain operations on a text value.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_string_utils",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Rust library in src/lib.rs has word_count(s: &str) -> usize and capitalize_words(s: &str) -> String as free functions. Add a TextAnalyzer struct that wraps these:\n\npub struct TextAnalyzer<'a> {\n    text: &'a str,\n}\n\nimpl<'a> TextAnalyzer<'a> {\n    pub fn new(text: &'a str) -> Self\n    pub fn word_count(&self) -> usize        // delegates to the free function\n    pub fn capitalize(&self) -> String       // delegates to the free function\n}\n\nThe free functions must stay exactly as they are — do not modify them.\n\nWrite 3 tests for TextAnalyzer:\n  test_analyzer_word_count — TextAnalyzer::new(\"hello world\").word_count() == 2\n  test_analyzer_capitalize — TextAnalyzer::new(\"hello world\").capitalize() == \"Hello World\"\n  test_analyzer_empty — TextAnalyzer::new(\"\").word_count() == 0\n\nAll 3 original tests must still pass. cargo test must pass all 6 tests. cargo build must succeed.",
+    "required_artifacts": [
+      "pub struct TextAnalyzer<'a> with new, word_count, and capitalize methods",
+      "Free functions unchanged",
+      "3 new TextAnalyzer tests",
+      "All 3 original tests still pass",
+      "cargo test passes 6 tests"
+    ],
+    "success_criteria": [
+      "TextAnalyzer delegates to existing free functions",
+      "Lifetimes are correct",
+      "All 6 tests pass"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `cargo test` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

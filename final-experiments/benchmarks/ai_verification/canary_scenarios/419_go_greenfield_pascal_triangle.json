@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-greenfield-050",
+  "title": "Implement Pascal's Triangle in Go",
+  "category": "repo_init",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement PascalTriangle(n int) [][]int that returns the first n rows of Pascal's triangle.",
+  "repo_seed": {
+    "files": {
+      "pascal.go": "package pascal\n\n// PascalTriangle returns the first n rows of Pascal's triangle.\nfunc PascalTriangle(n int) [][]int {\n\tpanic(\"not implemented\")\n}\n",
+      "pascal_test.go": "package pascal\n\nimport (\n\t\"reflect\"\n\t\"testing\"\n)\n\nfunc TestPascalZero(t *testing.T) {\n\tif got := PascalTriangle(0); len(got) != 0 {\n\t\tt.Errorf(\"PascalTriangle(0) = %v, want []\", got)\n\t}\n}\n\nfunc TestPascalOne(t *testing.T) {\n\tgot := PascalTriangle(1)\n\twant := [][]int{{1}}\n\tif !reflect.DeepEqual(got, want) {\n\t\tt.Errorf(\"PascalTriangle(1) = %v, want %v\", got, want)\n\t}\n}\n\nfunc TestPascalFour(t *testing.T) {\n\tgot := PascalTriangle(4)\n\twant := [][]int{{1}, {1, 1}, {1, 2, 1}, {1, 3, 3, 1}}\n\tif !reflect.DeepEqual(got, want) {\n\t\tt.Errorf(\"PascalTriangle(4) = %v, want %v\", got, want)\n\t}\n}\n\nfunc TestPascalFifthRow(t *testing.T) {\n\trows := PascalTriangle(5)\n\twant := []int{1, 4, 6, 4, 1}\n\tif !reflect.DeepEqual(rows[4], want) {\n\t\tt.Errorf(\"row 5 = %v, want %v\", rows[4], want)\n\t}\n}\n",
+      "go.mod": "module pascal\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement PascalTriangle in pascal.go:\n- For n==0, return empty slice\n- For each row i (0-indexed): create slice of i+1 ints; set [0] and [i] to 1; fill inner positions j=1..i-1 with result[i-1][j-1]+result[i-1][j]\n- Return all rows\nAll 4 test cases must pass.",
+    "entry_point": "pascal.go",
+    "success_criteria": "All 4 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

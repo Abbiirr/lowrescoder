@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-longhorizon-003",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Extend Go web app in 2 steps: POST /api/items then DELETE /api/items/{id}",
+  "description": "A Go web app with read-only item endpoints evolves in two steps to support create and delete.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_web_app",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Go web app in internal/handler/items.go has GET / (HTML) and GET /api/items (JSON with ?q= filter). Extend it in two steps:\n\nStep 1 — POST /api/items:\n  Accept JSON body {\"name\": string, \"price\": float64}. Validate that name is non-empty and price >= 0. Return 400 for invalid input. Assign a new auto-incrementing ID, append to Store, return 201 with the created item as JSON. Write TestCreateItem (valid body, 201) and TestCreateItemBadRequest (empty name, 400).\n\nStep 2 — DELETE /api/items/{id}:\n  Extract the ID from the URL path. Return 404 if not found. Remove item from Store and return 200 with {\"deleted\": true}. Write TestDeleteItem (found, 200) and TestDeleteItemNotFound (missing, 404). Register both routes in cmd/server/main.go.\n\nAll 3 existing tests must still pass. Run go test ./... to confirm. Run go build ./... to confirm.",
+    "required_artifacts": [
+      "POST /api/items with validation and 201 response",
+      "DELETE /api/items/{id} with 404 and 200 responses",
+      "TestCreateItem, TestCreateItemBadRequest, TestDeleteItem, TestDeleteItemNotFound",
+      "All 3 original tests still pass",
+      "go test ./... passes"
+    ],
+    "success_criteria": [
+      "POST validates name and price",
+      "DELETE returns 404 for unknown IDs",
+      "All 7 tests pass"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `go test ./...` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `go test ./...` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

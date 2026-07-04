@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "560-go-mt-long-debugging",
+  "title": "Multi-bug Go debugging session — 4 turns",
+  "category": "dirty_cleanup",
+  "difficulty": "hard",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "Three bugs: data race, nil deref, logic error. Each fixed in separate turn, then race detector run.",
+  "repo_seed": {
+    "files": {
+      "go.mod": "module github.com/ai-verification/multi-bug\n\ngo 1.22\n",
+      "bugs/bugs.go": "package bugs\n\nimport (\n\t\"sync\"\n)\n\n// Counter has a data race — no mutex on concurrent increment.\ntype Counter struct {\n\tvalue int // BUG: not protected by mutex\n}\n\nfunc (c *Counter) Increment() {\n\tc.value++ // BUG: data race when called concurrently\n}\n\nfunc (c *Counter) Value() int {\n\treturn c.value // BUG: unsynchronized read\n}\n\n// SafeCounter uses a mutex — but needs to be implemented.\ntype SafeCounter struct {\n\tmu    sync.Mutex\n\tvalue int\n}\n\nfunc (c *SafeCounter) Increment() {\n\t// TODO: lock and increment\n}\n\nfunc (c *SafeCounter) Value() int {\n\t// TODO: lock and return value\n\treturn 0\n}\n\n// FindFirst returns the first element matching predicate.\n// BUG: nil deref — doesn't check if slice is nil before accessing.\nfunc FindFirst(items []string, pred func(string) bool) *string {\n\tfor _, item := range items {\n\t\tif pred(item) {\n\t\t\treturn &item // BUG: returns pointer to loop var (stale after loop)\n\t\t}\n\t}\n\treturn nil\n}\n\n// SumPositive should sum only positive numbers.\n// BUG: logic error — sums all numbers, ignores the positive-only requirement.\nfunc SumPositive(nums []int) int {\n\ttotal := 0\n\tfor _, n := range nums {\n\t\ttotal += n // BUG: should only add if n > 0\n\t}\n\treturn total\n}\n",
+      "bugs/bugs_test.go": "package bugs_test\n\nimport (\n\t\"sync\"\n\t\"testing\"\n\n\t\"github.com/ai-verification/multi-bug/bugs\"\n)\n\nfunc TestSafeCounterConcurrent(t *testing.T) {\n\tc := &bugs.SafeCounter{}\n\tvar wg sync.WaitGroup\n\tfor i := 0; i < 100; i++ {\n\t\twg.Add(1)\n\t\tgo func() {\n\t\t\tdefer wg.Done()\n\t\t\tc.Increment()\n\t\t}()\n\t}\n\twg.Wait()\n\tif c.Value() != 100 {\n\t\tt.Fatalf(\"expected 100, got %d\", c.Value())\n\t}\n}\n\nfunc TestFindFirst(t *testing.T) {\n\titems := []string{\"apple\", \"banana\", \"cherry\"}\n\tresult := bugs.FindFirst(items, func(s string) bool { return s == \"banana\" })\n\tif result == nil {\n\t\tt.Fatal(\"expected non-nil result\")\n\t}\n\tif *result != \"banana\" {\n\t\tt.Fatalf(\"expected banana, got %s\", *result)\n\t}\n}\n\nfunc TestFindFirstNotFound(t *testing.T) {\n\tresult := bugs.FindFirst([]string{\"a\", \"b\"}, func(s string) bool { return s == \"z\" })\n\tif result != nil {\n\t\tt.Fatal(\"expected nil when not found\")\n\t}\n}\n\nfunc TestSumPositive(t *testing.T) {\n\tresult := bugs.SumPositive([]int{1, -2, 3, -4, 5})\n\tif result != 9 {\n\t\tt.Fatalf(\"expected 9, got %d\", result)\n\t}\n}\n\nfunc TestSumPositiveAllNegative(t *testing.T) {\n\tresult := bugs.SumPositive([]int{-1, -2, -3})\n\tif result != 0 {\n\t\tt.Fatalf(\"expected 0, got %d\", result)\n\t}\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix the data race in `bugs.go`: implement `SafeCounter.Increment()` — lock `c.mu`, increment `c.value`, unlock. Implement `SafeCounter.Value()` — lock `c.mu`, read `c.value`, unlock. Run `go test -race ./...` to verify no data races in TestSafeCounterConcurrent.",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what you fixed. Now fix `FindFirst`: the bug is that it returns `&item` which is a pointer to the loop variable — instead, copy the value: `copy := item; return &copy`. Run `go test ./...`.",
+      "Good. Now fix Bug 3 in `SumPositive`: add `if n > 0` guard before `total += n`. Run `go test ./...` and fix any failures.",
+      "Final push: run `go test -race ./...` and confirm a completely clean build — no data races and all 5 tests pass."
+    ],
+    "success_criteria": [
+      "SafeCounter uses mutex for thread-safe increment and read",
+      "FindFirst returns copy of match, not pointer to loop var",
+      "SumPositive sums only positive numbers",
+      "go test -race ./... shows no data races and all 5 tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "go test -race ./..."}
+  },
+  "duration_hint_minutes": 25
+}

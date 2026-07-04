@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+<head><title>Blog</title></head>
+<body>
+<h1>Posts</h1>
+{% for post in posts %}
+<article>
+  <h2><a href="/posts/{{ post.id }}">{{ post.title }}</a></h2>
+  <p>{{ post.body }}</p>
+  <p>Tags: {{ post.tags | join(', ') }}</p>
+</article>
+{% endfor %}
+</body>
+</html>

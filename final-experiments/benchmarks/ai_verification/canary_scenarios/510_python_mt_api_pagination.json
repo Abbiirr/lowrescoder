@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "510-python-mt-api-pagination",
+  "title": "Add cursor-based pagination to FastAPI — 3 turns",
+  "category": "backend_feature",
+  "difficulty": "medium",
+  "target_stack": {"language": "python", "framework": "fastapi", "extra": {}},
+  "description": "FastAPI app needs pagination. Turn 1: add limit/offset. Turn 2: add cursor-based pagination. Turn 3: add tests and run them.",
+  "repo_seed": {
+    "files": {
+      "pyproject.toml": "[project]\nname = \"api-pagination\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = [\n    \"fastapi>=0.110.0\",\n    \"httpx>=0.27.0\",\n    \"pytest>=8.0.0\",\n]\n",
+      "app.py": "\"\"\"FastAPI app with pagination.\"\"\"\nfrom fastapi import FastAPI, Query\nfrom typing import Optional\nimport base64\n\napp = FastAPI()\n\n# In-memory dataset: 20 items\nITEMS = [{\"id\": i, \"name\": f\"item-{i}\"} for i in range(1, 21)]\n\n\n@app.get(\"/items\")\nasync def list_items(\n    limit: int = Query(default=10, ge=1, le=100),\n    offset: int = Query(default=0, ge=0),\n    cursor: Optional[str] = Query(default=None),\n):\n    \"\"\"List items with limit/offset or cursor-based pagination.\n    \n    If cursor is provided, use it instead of offset.\n    cursor is a base64-encoded item id to start after.\n    \n    Returns: {\"items\": [...], \"next_cursor\": \"...\"|null, \"total\": N}\n    \"\"\"\n    # TODO: implement pagination\n    return {\"items\": ITEMS, \"next_cursor\": None, \"total\": len(ITEMS)}\n",
+      "tests/test_pagination.py": "import pytest\nfrom fastapi.testclient import TestClient\nfrom app import app\nimport base64\n\nclient = TestClient(app)\n\n\ndef test_default_limit():\n    r = client.get(\"/items\")\n    data = r.json()\n    assert r.status_code == 200\n    assert len(data[\"items\"]) == 10\n    assert data[\"total\"] == 20\n\n\ndef test_custom_limit():\n    r = client.get(\"/items?limit=5\")\n    data = r.json()\n    assert len(data[\"items\"]) == 5\n\n\ndef test_offset_pagination():\n    r = client.get(\"/items?limit=5&offset=10\")\n    data = r.json()\n    assert len(data[\"items\"]) == 5\n    assert data[\"items\"][0][\"id\"] == 11\n\n\ndef test_offset_beyond_end():\n    r = client.get(\"/items?offset=25\")\n    data = r.json()\n    assert data[\"items\"] == []\n\n\ndef test_next_cursor_present_when_more():\n    r = client.get(\"/items?limit=5\")\n    data = r.json()\n    assert data[\"next_cursor\"] is not None\n\n\ndef test_next_cursor_none_at_end():\n    r = client.get(\"/items?limit=10&offset=10\")\n    data = r.json()\n    assert data[\"next_cursor\"] is None\n\n\ndef test_cursor_pagination():\n    # Get cursor from first page\n    r1 = client.get(\"/items?limit=5\")\n    cursor = r1.json()[\"next_cursor\"]\n    # Use cursor to get second page\n    r2 = client.get(f\"/items?limit=5&cursor={cursor}\")\n    data2 = r2.json()\n    assert len(data2[\"items\"]) == 5\n    assert data2[\"items\"][0][\"id\"] == 6\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The `list_items` endpoint in `app.py` returns all items without pagination. Implement limit/offset pagination: slice `ITEMS[offset:offset+limit]`, set `next_cursor` to None for now, and include `total`. Run `uv run pytest tests/test_pagination.py::test_default_limit tests/test_pagination.py::test_custom_limit tests/test_pagination.py::test_offset_pagination -v`.",
+    "followup_prompts": [
+      "Good. Now implement cursor-based pagination: when `cursor` is provided, decode it from base64 to get the last item id, find that item in ITEMS, and start from the item after it. Also generate `next_cursor` as base64(last_item_id) when there are more items, or None when at the end. Run `uv run pytest tests/ -q` and fix any failures.",
+      "Run `uv run pytest tests/ -q` to verify everything including your cursor implementation. Fix any failures and confirm the feature is complete — all 7 tests must pass."
+    ],
+    "success_criteria": [
+      "limit/offset slicing works correctly",
+      "offset beyond end returns empty items",
+      "next_cursor is present when more items exist, None at end",
+      "cursor decodes to item id and paginates from correct position",
+      "All 7 pytest tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "uv run pytest tests/ -q"}
+  },
+  "duration_hint_minutes": 20
+}

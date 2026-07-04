@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-dirty-009",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 bugs in python_blog_app routes",
+  "description": "Brownfield Python dirty scenario: index, api_posts, and api_create_post each have a bug. Fix them so all 6 tests pass.",
+  "target_stack": {
+    "language": "python",
+    "framework": "flask",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_blog_app",
+    "injections": [
+      {
+        "path": "src/app.py",
+        "content": "from flask import Flask, render_template, jsonify, request, abort\n\napp = Flask(__name__, template_folder=\"../templates\")\n\n_posts: list[dict] = [\n    {\"id\": 1, \"title\": \"Getting Started\", \"body\": \"Welcome to the blog.\", \"tags\": [\"intro\", \"welcome\"], \"published\": True},\n    {\"id\": 2, \"title\": \"Flask Tips\", \"body\": \"Use blueprints for large apps.\", \"tags\": [\"flask\", \"python\"], \"published\": True},\n    {\"id\": 3, \"title\": \"Draft Post\", \"body\": \"Work in progress.\", \"tags\": [\"draft\"], \"published\": False},\n    {\"id\": 4, \"title\": \"Advanced Python\", \"body\": \"Decorators and generators.\", \"tags\": [\"python\", \"advanced\"], \"published\": True},\n    {\"id\": 5, \"title\": \"Testing 101\", \"body\": \"Write tests early.\", \"tags\": [\"testing\", \"python\"], \"published\": True},\n]\n_next_id = 6\n\n\ndef reset():\n    global _next_id\n    _posts.clear()\n    _posts.extend([\n        {\"id\": 1, \"title\": \"Getting Started\", \"body\": \"Welcome to the blog.\", \"tags\": [\"intro\", \"welcome\"], \"published\": True},\n        {\"id\": 2, \"title\": \"Flask Tips\", \"body\": \"Use blueprints for large apps.\", \"tags\": [\"flask\", \"python\"], \"published\": True},\n        {\"id\": 3, \"title\": \"Draft Post\", \"body\": \"Work in progress.\", \"tags\": [\"draft\"], \"published\": False},\n        {\"id\": 4, \"title\": \"Advanced Python\", \"body\": \"Decorators and generators.\", \"tags\": [\"python\", \"advanced\"], \"published\": True},\n        {\"id\": 5, \"title\": \"Testing 101\", \"body\": \"Write tests early.\", \"tags\": [\"testing\", \"python\"], \"published\": True},\n    ])\n    _next_id = 6\n\n\n@app.get(\"/\")\ndef index():\n    # BUG: returns all posts including unpublished\n    published = _posts\n    return render_template(\"index.html\", posts=published)\n\n\n@app.get(\"/posts/<int:post_id>\")\ndef view_post(post_id: int):\n    post = next((p for p in _posts if p[\"id\"] == post_id), None)\n    if post is None:\n        abort(404)\n    return render_template(\"post.html\", post=post)\n\n\n@app.get(\"/admin\")\ndef admin():\n    return render_template(\"admin.html\", posts=_posts)\n\n\n@app.get(\"/api/posts\")\ndef api_posts():\n    # BUG: returns all posts instead of only published\n    return jsonify(_posts)\n\n\n@app.post(\"/api/posts\")\ndef api_create_post():\n    global _next_id\n    data = request.get_json(force=True)\n    if not data or not data.get(\"title\"):\n        abort(400)\n    post = {\n        \"id\": _next_id,\n        \"title\": data[\"title\"],\n        \"body\": data.get(\"body\", \"\"),\n        \"tags\": data.get(\"tags\", []),\n        \"published\": data.get(\"published\", False),\n    }\n    _next_id += 1\n    _posts.append(post)\n    # BUG: returns 200 instead of 201\n    return jsonify(post), 200\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 bugs in src/app.py so all 6 tests pass.\n\n  def index():\n    — passes all posts to template instead of only published ones\n    — fix: published = [p for p in _posts if p[\"published\"]]\n\n  def api_posts():\n    — returns all posts including unpublished\n    — fix: return jsonify([p for p in _posts if p[\"published\"]])\n\n  def api_create_post():\n    — returns HTTP 200 instead of 201\n    — fix: change 200 to 201\n\nDo not modify the test file.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "index filters to published posts only",
+      "api_posts filters to published posts only",
+      "api_create_post returns 201",
+      "All 6 existing tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run python -c \"from src.app import app\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.app import app\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

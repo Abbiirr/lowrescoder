@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-backend-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add DELETE and PATCH /users/{id} endpoints to the monolith API",
+  "description": "Brownfield Python/FastAPI task: extend the user resource with delete and partial-update endpoints.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_monolith_api",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add two new endpoints to src/app.py. All 8 existing tests must still pass.\n\n  DELETE /users/{user_id}\n    — removes the user from _users\n    — returns 204 No Content on success\n    — returns 404 if user not found\n\n  PATCH /users/{user_id}\n    — reads JSON body; updates 'username' and/or 'email' if present in body\n    — returns the updated user dict with 200\n    — returns 404 if user not found\n\nAll 8 existing tests must still pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "DELETE /users/{user_id} returns 204 on success",
+      "DELETE /users/{user_id} returns 404 for unknown id",
+      "PATCH /users/{user_id} updates present fields and returns updated user",
+      "PATCH /users/{user_id} returns 404 for unknown id",
+      "All 8 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `uv run pytest tests/ -v` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

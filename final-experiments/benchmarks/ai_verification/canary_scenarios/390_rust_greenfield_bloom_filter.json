@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-greenfield-053",
+  "title": "Implement a simple Bloom filter in Rust",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement BloomFilter with insert(item: &str) and might_contain(item: &str) -> bool. Use k=3 independent hash functions derived from std::collections::hash_map::DefaultHasher with different seeds.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "pub struct BloomFilter {\n    // TODO: implement\n}\n\nimpl BloomFilter {\n    pub fn new(size: usize) -> Self { panic!(\"not implemented\") }\n    pub fn insert(&mut self, item: &str) { panic!(\"not implemented\") }\n    pub fn might_contain(&self, item: &str) -> bool { panic!(\"not implemented\") }\n}\n",
+      "tests/bloom_test.rs": "use bloom_filter::BloomFilter;\n\n#[test]\nfn test_inserted_items_found() {\n    let mut bf = BloomFilter::new(1000);\n    bf.insert(\"hello\");\n    bf.insert(\"world\");\n    bf.insert(\"rust\");\n    assert!(bf.might_contain(\"hello\"));\n    assert!(bf.might_contain(\"world\"));\n    assert!(bf.might_contain(\"rust\"));\n}\n\n#[test]\nfn test_absent_item_usually_not_found() {\n    let mut bf = BloomFilter::new(1000);\n    bf.insert(\"abc\");\n    // 'xyz' was never inserted; with size=1000 and k=3, false positive rate is very low\n    // This may occasionally fail but probability < 0.001 with these params\n    assert!(!bf.might_contain(\"xyz\"));\n}\n\n#[test]\nfn test_empty_filter() {\n    let bf = BloomFilter::new(256);\n    assert!(!bf.might_contain(\"anything\"));\n}\n",
+      "Cargo.toml": "[package]\nname = \"bloom_filter\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement BloomFilter in src/lib.rs:\n- Store a `Vec<bool>` of `size` bits initialized to false\n- Use 3 hash functions: for seed in [1u64, 2, 3], create a `DefaultHasher`, call `write_u64(seed)` then `write(item.as_bytes())`, use `finish() % size as u64` as the bit index\n- `insert`: set all 3 bit positions to true\n- `might_contain`: return true only if all 3 bit positions are true\nAll 3 tests must pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": "All 3 cargo test cases pass",
+    "followup_prompts": [
+      "Run `cargo test --quiet` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test --quiet` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "cargo test",
+    "expected_exit_code": 0
+  }
+}

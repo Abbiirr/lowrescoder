@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-refactor-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "hard",
+  "duration_hint_minutes": 35,
+  "title": "Extract Formatter and Analyzer traits from Rust string-utils struct",
+  "description": "A Rust string-utils library needs to be split into composable traits so different formatting and analysis strategies can be mixed.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_string_utils",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Rust library in src/lib.rs has word_count and capitalize_words as free functions. Refactor by extracting two traits:\n\npub trait TextAnalyzer {\n    fn word_count(&self) -> usize;\n}\n\npub trait TextFormatter {\n    fn capitalize(&self) -> String;\n}\n\nImplement both traits for str:\n  impl TextAnalyzer for str { fn word_count(&self) -> usize { word_count(self) } }\n  impl TextFormatter for str { fn capitalize(&self) -> String { capitalize_words(self) } }\n\nKeep the free functions (word_count, capitalize_words) unchanged.\n\nWrite a generic function:\n  pub fn describe<T: TextAnalyzer + TextFormatter>(text: &T) -> String\n  Returns a String of the form \"{N} words: {capitalized}\" where N = text.word_count() and capitalized = text.capitalize().\n\nWrite 4 tests:\n  test_trait_word_count — \"hello world\".word_count() == 2\n  test_trait_capitalize — \"hello world\".capitalize() == \"Hello World\"\n  test_describe — describe(\"hello world\") == \"2 words: Hello World\"\n  test_describe_empty — describe(\"\") == \"0 words: \"\n\nAll 3 original tests must still pass. cargo test must pass all 7 tests. cargo build must succeed.",
+    "required_artifacts": [
+      "pub trait TextAnalyzer with word_count method",
+      "pub trait TextFormatter with capitalize method",
+      "impl TextAnalyzer for str and impl TextFormatter for str",
+      "pub fn describe<T: TextAnalyzer + TextFormatter>(text: &T) -> String",
+      "4 new tests plus 3 original",
+      "cargo test passes 7 tests"
+    ],
+    "success_criteria": [
+      "Traits implemented on str correctly",
+      "Generic describe function uses trait bounds",
+      "All 7 tests pass"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `cargo test` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

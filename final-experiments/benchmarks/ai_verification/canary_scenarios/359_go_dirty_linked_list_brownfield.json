@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-brownfield-017",
+  "title": "Fix three bugs in a Go singly linked list",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A singly linked list has three bugs: Append always inserts at head, Len counts one too many, Contains returns true when node is nil.",
+  "repo_seed": {
+    "files": {
+      "linkedlist.go": "package linkedlist\n\ntype Node struct {\n\tVal  int\n\tNext *Node\n}\n\ntype List struct {\n\thead *Node\n}\n\nfunc (l *List) Append(val int) {\n\t// bug: always inserts at head instead of tail\n\tl.head = &Node{Val: val, Next: l.head}\n}\n\nfunc (l *List) Len() int {\n\tcount := 1 // bug: should start at 0\n\tcurr := l.head\n\tfor curr != nil {\n\t\tcount++\n\t\tcurr = curr.Next\n\t}\n\treturn count\n}\n\nfunc (l *List) Contains(val int) bool {\n\tcurr := l.head\n\tfor curr != nil {\n\t\tif curr.Val == val {\n\t\t\treturn true\n\t\t}\n\t\tcurr = curr.Next\n\t}\n\treturn true // bug: should return false\n}\n",
+      "linkedlist_test.go": "package linkedlist\n\nimport \"testing\"\n\nfunc TestAppendOrder(t *testing.T) {\n\tl := &List{}\n\tl.Append(1)\n\tl.Append(2)\n\tl.Append(3)\n\t// after correct append: head->1->2->3\n\tif l.head.Val != 1 {\n\t\tt.Fatalf(\"want head=1, got %d\", l.head.Val)\n\t}\n\tif l.head.Next.Val != 2 {\n\t\tt.Fatalf(\"want second=2, got %d\", l.head.Next.Val)\n\t}\n}\n\nfunc TestLen(t *testing.T) {\n\tl := &List{}\n\tif l.Len() != 0 { t.Fatalf(\"empty list should have len 0, got %d\", l.Len()) }\n\tl.Append(1)\n\tl.Append(2)\n\tif l.Len() != 2 { t.Fatalf(\"want len 2, got %d\", l.Len()) }\n}\n\nfunc TestContains(t *testing.T) {\n\tl := &List{}\n\tl.Append(10)\n\tl.Append(20)\n\tif !l.Contains(10) { t.Fatal(\"should contain 10\") }\n\tif l.Contains(99) { t.Fatal(\"should not contain 99\") }\n}\n",
+      "go.mod": "module linkedlist\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in linkedlist.go:\n1. `Append`: walk to tail (`curr.Next != nil`), then set `curr.Next = &Node{Val: val}`; handle empty list (set head directly)\n2. `Len`: start `count := 0` instead of 1\n3. `Contains`: change `return true` at the bottom to `return false`\nAll 3 tests must pass.",
+    "entry_point": "linkedlist.go",
+    "success_criteria": "All 3 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

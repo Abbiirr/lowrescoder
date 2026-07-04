@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 10,
+  "title": "Add truncate_words function to Rust string-utils library",
+  "description": "A Rust library has word_count and capitalize_words. Add truncate_words(s: &str, max_words: usize) -> String that keeps the first max_words words and appends '...' if truncated.",
+  "target_stack": {
+    "language": "rust",
+    "framework": "",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_string_utils",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Add pub fn truncate_words(s: &str, max_words: usize) -> String to src/lib.rs.\n\nBehavior:\n- If s has <= max_words words, return s unchanged.\n- Otherwise return the first max_words words joined by spaces, followed by \" ...\".\n- Empty string returns empty string.\n\nAdd at least 4 unit tests covering: empty, exact-count, truncation, single-word.",
+    "required_artifacts": [
+      "truncate_words function in src/lib.rs",
+      "at least 4 tests",
+      "cargo test passes"
+    ],
+    "success_criteria": [
+      "truncate_words correctly truncates at word boundary",
+      "Appends ' ...' only when truncated",
+      "Edge cases: empty string, max_words=0, max_words>=word_count",
+      "All existing tests still pass"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `cargo test --quiet` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test --quiet",
+      "lint": "cargo clippy -- -D warnings"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

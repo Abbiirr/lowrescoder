@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-brownfield-022",
+  "title": "Fix two bugs in a Go Fibonacci implementation",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Go package provides Fib(n) and FibMemo(n). Fib has a base case bug (returns n==1 instead of n<=1), FibMemo initializes the memo incorrectly (map not initialized).",
+  "repo_seed": {
+    "files": {
+      "fib.go": "package fib\n\n// Fib returns the nth Fibonacci number (0-indexed: Fib(0)=0, Fib(1)=1).\nfunc Fib(n int) int {\n\tif n == 1 { // bug: should be n <= 1 (misses base case for n=0)\n\t\treturn n\n\t}\n\treturn Fib(n-1) + Fib(n-2)\n}\n\n// FibMemo returns the nth Fibonacci number using memoization.\nvar memo map[int]int // bug: nil map — writes will panic\n\nfunc FibMemo(n int) int {\n\tif n <= 1 {\n\t\treturn n\n\t}\n\tif v, ok := memo[n]; ok {\n\t\treturn v\n\t}\n\tv := FibMemo(n-1) + FibMemo(n-2)\n\tmemo[n] = v\n\treturn v\n}\n",
+      "fib_test.go": "package fib\n\nimport \"testing\"\n\nfunc TestFib(t *testing.T) {\n\tcases := []struct{ n, want int }{{0, 0}, {1, 1}, {2, 1}, {5, 5}, {10, 55}}\n\tfor _, c := range cases {\n\t\tif got := Fib(c.n); got != c.want {\n\t\t\tt.Errorf(\"Fib(%d) = %d, want %d\", c.n, got, c.want)\n\t\t}\n\t}\n}\n\nfunc TestFibMemo(t *testing.T) {\n\tmemo = make(map[int]int) // reset for test isolation\n\tcases := []struct{ n, want int }{{0, 0}, {1, 1}, {7, 13}, {20, 6765}}\n\tfor _, c := range cases {\n\t\tif got := FibMemo(c.n); got != c.want {\n\t\t\tt.Errorf(\"FibMemo(%d) = %d, want %d\", c.n, got, c.want)\n\t\t}\n\t}\n}\n",
+      "go.mod": "module fib\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix two bugs in fib.go:\n1. `Fib`: change `if n == 1` to `if n <= 1` so Fib(0) returns 0 correctly\n2. `FibMemo`: change `var memo map[int]int` to `var memo = make(map[int]int)` so the map is initialized\nAll 2 test functions must pass.",
+    "entry_point": "fib.go",
+    "success_criteria": "All go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

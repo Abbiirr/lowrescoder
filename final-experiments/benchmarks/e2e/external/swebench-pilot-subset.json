@@ -1,0 +1,141 @@
+{
+  "_meta": {
+    "description": "SWE-bench pilot subset: 5 cross-repo tasks (validated GREEN 2026-03-31)",
+    "selection_criteria": "5 repos x ~5 difficulty tiers, 1-5 failing tests, no GPU required",
+    "stratification": "Spread across difficulty tiers per repo",
+    "source": "princeton-nlp/SWE-bench_Verified (HuggingFace)",
+    "language": "python",
+    "workflow": [
+      "1. git init + fetch --depth=1 specific commit (fast)",
+      "2. pip install -e .",
+      "3. Apply test_patch (git apply) to add failing tests",
+      "4. Agent receives problem_statement as prompt",
+      "5. Agent makes code changes",
+      "6. Grading: run FAIL_TO_PASS tests, return code 0 = resolved"
+    ]
+  },
+  "tasks": [
+    {
+      "task_id": "django__django-10880",
+      "repo": "django/django",
+      "repo_name": "django",
+      "base_commit": "838e432e3e5519c5383d12018e6c78f8ec7833c1",
+      "environment_setup_commit": "419a78300f7cd27611196e1e464d50fd0385ff27",
+      "version": "3.0",
+      "difficulty": "<15 min fix",
+      "description": "Query syntax error with condition and distinct combination\nDescription\n\t\nA Count annotation containing both a Case condition and a distinct=True param produces a query error on Django 2.2 (whatever the db backend). A space is missing at least (... COUNT(DISTINCTCASE WHEN ...).\n",
+      "FAIL_TO_PASS": [
+        "test_count_distinct_expression (aggregation.tests.AggregateTestCase)"
+      ],
+      "test_patch": "diff --git a/tests/aggregation/tests.py b/tests/aggregation/tests.py\n--- a/tests/aggregation/tests.py\n+++ b/tests/aggregation/tests.py\n@@ -8,6 +8,7 @@\n     Avg, Count, DecimalField, DurationField, F, FloatField, Func, IntegerField,\n     Max, Min, Sum, Value,\n )\n+from django.db.models.expressions import Case, When\n from django.test import TestCase\n from django.test.utils import Approximate, CaptureQueriesContext\n from django.utils import timezone\n@@ -395,6 +396,12 @@ def test_count_star(self):\n         sql = ctx.captured_queries[0]['sql']\n         self.assertIn('SELECT COUNT(*) ', sql)\n \n+    def test_count_distinct_expression(self):\n+        aggs = Book.objects.aggregate(\n+            distinct_ratings=Count(Case(When(pages__gt=300, then='rating')), distinct=True),\n+        )\n+        self.assertEqual(aggs['distinct_ratings'], 4)\n+\n     def test_non_grouped_annotation_not_in_group_by(self):\n         \"\"\"\n         An annotation not included in values() before an aggregate should be\n",
+      "setup_commands": [
+        "git init django",
+        "cd django && git remote add origin https://github.com/django/django.git",
+        "cd django && git fetch --depth=1 origin 838e432e3e5519c5383d12018e6c78f8ec7833c1",
+        "cd django && git checkout FETCH_HEAD",
+        "cd django && pip install -e ."
+      ],
+      "grading_command": "cd django && python tests/runtests.py --settings=test_sqlite aggregation",
+      "python_version": "3.8"
+    },
+    {
+      "task_id": "sympy__sympy-12096",
+      "repo": "sympy/sympy",
+      "repo_name": "sympy",
+      "base_commit": "d7c3045115693e887bcd03599b7ca4650ac5f2cb",
+      "environment_setup_commit": "50b81f9f6be151014501ffac44e5dc6b2416938f",
+      "version": "1.0",
+      "difficulty": "<15 min fix",
+      "description": "evalf does not call _imp_ recursively\nExample from https://stackoverflow.com/questions/41818842/why-cant-i-evaluate-a-composition-of-implemented-functions-in-sympy-at-a-point:\r\n\r\n```\r\n>>> from sympy.utilities.lambdify import implemented_function\r\n>>> f = implemented_function('f', lambda x: x ** 2)\r\n>>> g = implemented_function('g', lambda x: 2 * x)\r\n>>> print(f(  2 ).evalf())\r\n4.00000000000000\r\n>>> print(  g(2) .evalf())\r\n4.00000000000000\r\n>>> print(f(g(2)).evalf())\r\nf(g(2))\r\n```\r\n\r\nThe code for this is in `Function._eval_evalf`. It isn't calling evalf recursively on the return of `_imp_`. \n",
+      "FAIL_TO_PASS": [
+        "test_issue_12092"
+      ],
+      "test_patch": "diff --git a/sympy/utilities/tests/test_lambdify.py b/sympy/utilities/tests/test_lambdify.py\n--- a/sympy/utilities/tests/test_lambdify.py\n+++ b/sympy/utilities/tests/test_lambdify.py\n@@ -751,6 +751,9 @@ def test_issue_2790():\n     assert lambdify((x, (y, (w, z))), w + x + y + z)(1, (2, (3, 4))) == 10\n     assert lambdify(x, x + 1, dummify=False)(1) == 2\n \n+def test_issue_12092():\n+    f = implemented_function('f', lambda x: x**2)\n+    assert f(f(2)).evalf() == Float(16)\n \n def test_ITE():\n     assert lambdify((x, y, z), ITE(x, y, z))(True, 5, 3) == 5\n",
+      "setup_commands": [
+        "git init sympy",
+        "cd sympy && git remote add origin https://github.com/sympy/sympy.git",
+        "cd sympy && git fetch --depth=1 origin d7c3045115693e887bcd03599b7ca4650ac5f2cb",
+        "cd sympy && git checkout FETCH_HEAD",
+        "cd sympy && pip install -e ."
+      ],
+      "grading_command": "cd sympy && python -m pytest -xvs sympy/utilities/tests/test_lambdify.py -k \"test_issue_12092\"",
+      "python_version": "3.9"
+    },
+    {
+      "task_id": "scikit-learn__scikit-learn-11310",
+      "repo": "scikit-learn/scikit-learn",
+      "repo_name": "scikit-learn",
+      "base_commit": "553b5fb8f84ba05c8397f26dd079deece2b05029",
+      "environment_setup_commit": "55bf5d93e5674f13a1134d93a11fd0cd11aabcd1",
+      "version": "0.20",
+      "difficulty": "<15 min fix",
+      "description": "Retrieving time to refit the estimator in BaseSearchCV\nBasically, I'm trying to figure out how much time it takes to refit the best model on the full data after doing grid/random search. What I can so far do is retrieve the time it takes to fit and score each model:\r\n```\r\nimport sklearn.datasets\r\nimport sklearn.model_selection\r\nimport sklearn.ensemble\r\n\r\nX, y = sklearn.datasets.load_iris(return_X_y=True)\r\n\r\nrs = sklearn.model_selection.GridSearchCV(\r\n    estimator=sklearn.ensemble.RandomForestClassifier(),\r\n    param_grid={'n_estimators': [2, 3, 4, 5]}\r\n)\r\nrs.fit(X, y)\r\nprint(rs.cv_results_['mean_fit_time'])\r\nprint(rs.cv_results_['mean_score_time'])\r\n```\r\nIn case I run this on a single core, I could time the whole search procedure and subtract the time it took to fit the single folds during hyperparameter optimization. Nevertheless, this isn't possible any more when setting `n_jobs != 1`.\r\n\r\nThus, it would be great to have an attribute `refit_time_` which is simply the time it took to refit the best model.\r\n\r\nUsecase: for [OpenML.org](https://openml.org) we want to support uploading the results of hyperparameter optimization, including the time it takes to do the hyperparameter optimization. \n",
+      "FAIL_TO_PASS": [
+        "sklearn/model_selection/tests/test_search.py::test_search_cv_timing"
+      ],
+      "test_patch": "diff --git a/sklearn/model_selection/tests/test_search.py b/sklearn/model_selection/tests/test_search.py\n--- a/sklearn/model_selection/tests/test_search.py\n+++ b/sklearn/model_selection/tests/test_search.py\n@@ -26,6 +26,7 @@\n from sklearn.utils.testing import assert_array_equal\n from sklearn.utils.testing import assert_array_almost_equal\n from sklearn.utils.testing import assert_almost_equal\n+from sklearn.utils.testing import assert_greater_equal\n from sklearn.utils.testing import ignore_warnings\n from sklearn.utils.mocking import CheckingClassifier, MockDataFrame\n \n@@ -1172,6 +1173,10 @@ def test_search_cv_timing():\n             assert_true(search.cv_results_[key][0] == 0.0)\n             assert_true(np.all(search.cv_results_[key] < 1))\n \n+        assert_true(hasattr(search, \"refit_time_\"))\n+        assert_true(isinstance(search.refit_time_, float))\n+        assert_greater_equal(search.refit_time_, 0)\n+\n \n def test_grid_search_correct_score_results():\n     # test that correct scores are used\n",
+      "setup_commands": [
+        "git init scikit-learn",
+        "cd scikit-learn && git remote add origin https://github.com/scikit-learn/scikit-learn.git",
+        "cd scikit-learn && git fetch --depth=1 origin 553b5fb8f84ba05c8397f26dd079deece2b05029",
+        "cd scikit-learn && git checkout FETCH_HEAD",
+        "cd scikit-learn && pip install -e ."
+      ],
+      "grading_command": "cd scikit-learn && python -m pytest \"sklearn/model_selection/tests/test_search.py::test_search_cv_timing\" -x -q",
+      "python_version": "3.7",
+      "extra_pip_deps": [
+        "Cython<3"
+      ]
+    },
+    {
+      "task_id": "pytest-dev__pytest-10081",
+      "repo": "pytest-dev/pytest",
+      "repo_name": "pytest",
+      "base_commit": "da9a2b584eb7a6c7e924b2621ed0ddaeca0a7bea",
+      "environment_setup_commit": "572b5657d7ca557593418ce0319fabff88800c73",
+      "version": "7.2",
+      "difficulty": "<15 min fix",
+      "description": "unittest.TestCase.tearDown executed for classes marked with `unittest.skip` when running --pdb\n<!--\r\nThanks for submitting an issue!\r\n\r\nQuick check-list while reporting bugs:\r\n-->\r\n\r\n- [x] a detailed description of the bug or problem you are having\r\n- [x] output of `pip list` from the virtual environment you are using\r\n- [x] pytest and operating system versions\r\n- [x] minimal example if possible\r\n\r\nRunning `pytest --pdb` will run the `tearDown()` of `unittest.TestCase` classes that are decorated with `unittest.skip` on the class level.\r\n\r\nIdentical to #7215 , but with the `skip()` on the class level rather than on the function level.\r\n\r\nMinimal test (adapted from #7215), `test_repro_skip_class.py`:\r\n```python\r\nimport unittest\r\n\r\n@unittest.skip(\"hello\")\r\nclass MyTestCase(unittest.TestCase):\r\n    def setUp(self):\r\n        xxx\r\n    def test_one(self):\r\n        pass\r\n    def tearDown(self):\r\n        xxx\r\n```\r\nSome versions (full below):\r\n```\r\n$ python --version\r\nPython 3.10.5\r\n$\u00a0pytest --version\r\npytest 7.1.2\r\n$ cat /etc/issue\r\nUbuntu 20.04.4 LTS \\n \\l\r\n```\r\nTest is properly skipped normally:\r\n```\r\n$ pytest test_repro_skip_class.py\r\n===================================== test session starts ======================================\r\nplatform linux -- Python 3.10.5, pytest-7.1.2, pluggy-1.0.0\r\nrootdir: [...]\r\ncollected 1 item                                                                               \r\n\r\ntest_repro_skip_class.py s                                                     ",
+      "FAIL_TO_PASS": [
+        "testing/test_unittest.py::test_pdb_teardown_skipped_for_classes[@unittest.skip]"
+      ],
+      "test_patch": "diff --git a/testing/test_unittest.py b/testing/test_unittest.py\n--- a/testing/test_unittest.py\n+++ b/testing/test_unittest.py\n@@ -1241,12 +1241,15 @@ def test_2(self):\n \n \n @pytest.mark.parametrize(\"mark\", [\"@unittest.skip\", \"@pytest.mark.skip\"])\n-def test_pdb_teardown_skipped(\n+def test_pdb_teardown_skipped_for_functions(\n     pytester: Pytester, monkeypatch: MonkeyPatch, mark: str\n ) -> None:\n-    \"\"\"With --pdb, setUp and tearDown should not be called for skipped tests.\"\"\"\n+    \"\"\"\n+    With --pdb, setUp and tearDown should not be called for tests skipped\n+    via a decorator (#7215).\n+    \"\"\"\n     tracked: List[str] = []\n-    monkeypatch.setattr(pytest, \"test_pdb_teardown_skipped\", tracked, raising=False)\n+    monkeypatch.setattr(pytest, \"track_pdb_teardown_skipped\", tracked, raising=False)\n \n     pytester.makepyfile(\n         \"\"\"\n@@ -1256,10 +1259,10 @@ def test_pdb_teardown_skipped(\n         class MyTestCase(unittest.TestCase):\n \n             def setUp(self):\n-                pytest.test_pdb_teardown_skipped.append(\"setUp:\" + self.id())\n+                pytest.track_pdb_teardown_skipped.append(\"setUp:\" + self.id())\n \n             def tearDown(self):\n-                pytest.test_pdb_teardown_skipped.append(\"tearDown:\" + self.id())\n+                pytest.track_pdb_teardown_skipped.append(\"tearDown:\" + self.id())\n \n             {mark}(\"skipped for reasons\")\n             def test_1(self):\n@@ -1274,6 +1277,43 @@ def test_1(self):\n     assert tracked == []\n \n \n+@pytest.mark.parametrize(\"mark\", [\"@unittest.skip\", \"@pytest.mark.skip\"])\n+def test_pdb_teardown_skipped_for_classes(\n+    pytester: Pytester, monkeypatch: MonkeyPatch, mark: str\n+) -> None:\n+    \"\"\"\n+    With --pdb, setUp and tearDown should not be called for tests skipped\n+    via a decorator on the class (#10060).\n+    \"\"\"\n+    tracked: List[str] = []\n+    monkeypatch.setattr(pytest, \"track_pdb_teardown_skipped\", tracked, raising=False)\n+\n+    pytester.makepyfile(\n+        \"\"\"\n+        import unittest\n+        import pytest\n+\n+        {mark}(\"skipped for reasons\")\n+        class MyTestCase(unittest.TestCase):\n+\n+            def setUp(self):\n+                pytest.track_pdb_teardown_skipped.append(\"setUp:\" + self.id())\n+\n+            def tearDown(self):\n+                pytest.track_pdb_teardown_skipped.append(\"tearDown:\" + self.id())\n+\n+            def test_1(self):\n+                pass\n+\n+    \"\"\".format(\n+            mark=mark\n+        )\n+    )\n+    result = pytester.runpytest_inprocess(\"--pdb\")\n+    result.stdout.fnmatch_lines(\"* 1 skipped in *\")\n+    assert tracked == []\n+\n+\n def test_async_support(pytester: Pytester) -> None:\n     pytest.importorskip(\"unittest.async_case\")\n \n",
+      "setup_commands": [
+        "git init pytest",
+        "cd pytest && git remote add origin https://github.com/pytest-dev/pytest.git",
+        "cd pytest && git fetch --depth=1 origin da9a2b584eb7a6c7e924b2621ed0ddaeca0a7bea",
+        "cd pytest && git checkout FETCH_HEAD",
+        "cd pytest && SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0 pip install -e ."
+      ],
+      "grading_command": "cd pytest && python -m pytest \"testing/test_unittest.py::test_pdb_teardown_skipped_for_classes[@unittest.skip]\" -x -q",
+      "python_version": "3.9"
+    },
+    {
+      "task_id": "matplotlib__matplotlib-13989",
+      "repo": "matplotlib/matplotlib",
+      "repo_name": "matplotlib",
+      "base_commit": "a3e2897bfaf9eaac1d6649da535c4e721c89fa69",
+      "environment_setup_commit": "d0628598f8d9ec7b0da6b60e7b29be2067b6ea17",
+      "version": "3.0",
+      "difficulty": "<15 min fix",
+      "description": "hist() no longer respects range=... when density=True\n<!--To help us understand and resolve your issue, please fill out the form to the best of your ability.-->\r\n<!--You can feel free to delete the sections that do not apply.-->\r\n\r\n### Bug report\r\n\r\n**Bug summary**\r\n\r\n<!--A short 1-2 sentences that succinctly describes the bug-->\r\n\r\n**Code for reproduction**\r\n\r\n<!--A minimum code snippet required to reproduce the bug.\r\nPlease make sure to minimize the number of dependencies required, and provide\r\nany necessary plotted data.\r\nAvoid using threads, as Matplotlib is (explicitly) not thread-safe.-->\r\n\r\n```python\r\n_, bins, _ = plt.hist(np.random.rand(10), \"auto\", range=(0, 1), density=True)\r\nprint(bins)\r\n```\r\n\r\n**Actual outcome**\r\n\r\n<!--The output produced by the above code, which may be a screenshot, console output, etc.-->\r\n\r\n```\r\n[0.00331535 0.18930174 0.37528813 0.56127453 0.74726092 0.93324731]\r\n```\r\n\r\n**Expected outcome**\r\n\r\nSome array where the first value is 0 and the last one is 1.\r\n\r\nNote that this bug doesn't happen if density=False.\r\n\r\nBisects to https://github.com/matplotlib/matplotlib/pull/8638/commits/239be7b18e311c57a1393b6eeefc62b7cc629339 (#8638).\r\n\r\n**Matplotlib version**\r\n<!--Please specify your platform and versions of the relevant libraries you are using:-->\r\n  * Operating system: linux\r\n  * Matplotlib version: master\r\n  * Matplotlib backend (`print(matplotlib.get_backend())`): any\r\n  * Python version: 37\r\n  * Jupyter version (if applicable): no\r\n  * Other lib",
+      "FAIL_TO_PASS": [
+        "lib/matplotlib/tests/test_axes.py::test_hist_range_and_density"
+      ],
+      "test_patch": "diff --git a/lib/matplotlib/tests/test_axes.py b/lib/matplotlib/tests/test_axes.py\n--- a/lib/matplotlib/tests/test_axes.py\n+++ b/lib/matplotlib/tests/test_axes.py\n@@ -6369,3 +6369,10 @@ def test_hist_nan_data():\n \n     assert np.allclose(bins, nanbins)\n     assert np.allclose(edges, nanedges)\n+\n+\n+def test_hist_range_and_density():\n+    _, bins, _ = plt.hist(np.random.rand(10), \"auto\",\n+                          range=(0, 1), density=True)\n+    assert bins[0] == 0\n+    assert bins[-1] == 1\n",
+      "setup_commands": [
+        "git init matplotlib",
+        "cd matplotlib && git remote add origin https://github.com/matplotlib/matplotlib.git",
+        "cd matplotlib && git fetch --depth=1 origin a3e2897bfaf9eaac1d6649da535c4e721c89fa69",
+        "cd matplotlib && git checkout FETCH_HEAD",
+        "cd matplotlib && pip install -e ."
+      ],
+      "grading_command": "cd matplotlib && python -m pytest \"lib/matplotlib/tests/test_axes.py::test_hist_range_and_density\" -x -q",
+      "python_version": "3.7",
+      "extra_apt_deps": [
+        "libfreetype6-dev",
+        "libpng-dev"
+      ]
+    }
+  ]
+}

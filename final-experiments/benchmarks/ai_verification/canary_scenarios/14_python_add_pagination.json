@@ -1,0 +1,58 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-backend-002",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "hard",
+  "duration_hint_minutes": 25,
+  "title": "Add offset pagination and category filter to FastAPI products API",
+  "description": "A FastAPI app returns all 100 products in one shot. Add ?page=&page_size= offset pagination and ?category= filtering to GET /products, with response metadata (total, page, page_size, pages). Tests must cover boundary conditions.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_paginated_api",
+    "injections": [],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "Add pagination and filtering to GET /products in src/app.py.\n\nNew signature: GET /products?page=1&page_size=10&category=electronics\n\nResponse shape:\n{\n  \"items\": [...],\n  \"total\": <total matching products>,\n  \"page\": <current page, 1-indexed>,\n  \"page_size\": <requested page_size>,\n  \"pages\": <total number of pages>\n}\n\nRules:\n- page defaults to 1, page_size defaults to 20, max page_size is 100.\n- category filter is optional; if provided, only return products in that category.\n- Return 422 if page < 1 or page_size < 1 or page_size > 100.\n- GET /products/{product_id} is unchanged.\n\nAdd tests in tests/test_pagination.py:\n- test default pagination (20 items, page=1)\n- test page=2 returns different items\n- test page_size=5 returns exactly 5 items\n- test category filter\n- test page beyond last page returns empty items with correct metadata\n- test invalid page_size=0 returns 422\n\nAll 3 existing tests must still pass.",
+    "required_artifacts": [
+      "pagination query params added to GET /products",
+      "response shape includes total/page/page_size/pages",
+      "category filter works",
+      "tests/test_pagination.py with 6+ tests",
+      "all tests pass"
+    ],
+    "success_criteria": [
+      "GET /products returns paginated response envelope",
+      "page_size default 20, max 100",
+      "category filter is case-insensitive substring or exact match",
+      "Invalid params return 422",
+      "6+ pagination tests covering boundary cases"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `uv run pytest tests/ -q` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q",
+      "lint": "uv run ruff check src/ tests/ 2>/dev/null || true"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-dirty-005",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 buggy Go number utility functions",
+  "description": "Greenfield Go dirty scenario: a number-tools package has 3 broken implementations. Fix MaxInt, Clamp, and Sum so all tests pass.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module github.com/ai-verification/go-number-tools\n\ngo 1.21\n"
+      },
+      {
+        "path": "internal/numtools/numtools.go",
+        "content": "package numtools\n\n// MaxInt returns the larger of a and b.\nfunc MaxInt(a, b int) int {\n\treturn a + b // BUG: should return max, not sum\n}\n\n// Clamp returns v clamped to [lo, hi].\nfunc Clamp(v, lo, hi int) int {\n\treturn v // BUG: no clamping applied\n}\n\n// Sum returns the sum of all integers in nums.\nfunc Sum(nums []int) int {\n\treturn 0 // BUG: always returns 0\n}\n"
+      },
+      {
+        "path": "internal/numtools/numtools_test.go",
+        "content": "package numtools_test\n\nimport (\n\t\"testing\"\n\n\t\"github.com/ai-verification/go-number-tools/internal/numtools\"\n)\n\nfunc TestMaxInt(t *testing.T) {\n\tif numtools.MaxInt(3, 7) != 7 {\n\t\tt.Errorf(\"MaxInt(3,7) should be 7\")\n\t}\n\tif numtools.MaxInt(10, 4) != 10 {\n\t\tt.Errorf(\"MaxInt(10,4) should be 10\")\n\t}\n}\n\nfunc TestClamp(t *testing.T) {\n\tif numtools.Clamp(5, 1, 10) != 5 {\n\t\tt.Errorf(\"Clamp(5,1,10) should be 5\")\n\t}\n\tif numtools.Clamp(-3, 0, 10) != 0 {\n\t\tt.Errorf(\"Clamp(-3,0,10) should be 0\")\n\t}\n\tif numtools.Clamp(15, 0, 10) != 10 {\n\t\tt.Errorf(\"Clamp(15,0,10) should be 10\")\n\t}\n}\n\nfunc TestSum(t *testing.T) {\n\tif numtools.Sum([]int{1, 2, 3, 4}) != 10 {\n\t\tt.Errorf(\"Sum([1,2,3,4]) should be 10\")\n\t}\n\tif numtools.Sum([]int{}) != 0 {\n\t\tt.Errorf(\"Sum([]) should be 0\")\n\t}\n}\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 buggy functions in internal/numtools/numtools.go so all tests pass.\n\n  func MaxInt(a, b int) int\n    — return the larger of a and b\n\n  func Clamp(v, lo, hi int) int\n    — return lo if v < lo, hi if v > hi, else v\n\n  func Sum(nums []int) int\n    — return the sum of all integers in nums (0 for empty slice)\n\nDo not modify the test file.\nRun: go test ./...",
+    "required_artifacts": [
+      "MaxInt returns the larger of two integers",
+      "Clamp returns lo when v < lo, hi when v > hi, else v",
+      "Sum returns sum of all elements (0 for empty slice)",
+      "All tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

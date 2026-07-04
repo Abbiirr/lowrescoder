@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-backend-008",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Add SortCSVByColumn and MergeCSV to Go CSV reader library",
+  "description": "Brownfield Go task: extend the CSV reader with column-sorting and multi-file merge functions.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_csv_reader",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add two new functions to internal/csvutil/csvutil.go. All existing tests must still pass.\n\n  func SortCSVByColumn(path string, col int, ascending bool) ([][]string, error)\n    — reads the CSV at path\n    — returns records sorted by column col (0-indexed, string comparison)\n    — the header row (index 0) stays first and is NOT sorted with data rows\n    — ascending=true sorts A→Z; ascending=false sorts Z→A\n    — rows where col is out of range are sorted last\n    — returns nil, err if the file cannot be read\n\n  func MergeCSV(paths []string, outPath string) error\n    — reads all CSVs in paths; uses the header from paths[0]\n    — appends data rows (not headers) from all files to outPath\n    — if outPath does not exist, creates it with the header + all data rows\n    — if outPath already exists, appends all data rows to it (preserving its header)\n    — if paths is empty, returns nil (no-op)\n    — returns an error if any input file cannot be read\n\nAll existing tests must still pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "SortCSVByColumn sorts data rows by column col (header stays first)",
+      "SortCSVByColumn ascending=false gives Z→A order",
+      "SortCSVByColumn with out-of-range col puts those rows last",
+      "MergeCSV creates outPath with header + all data rows when outPath missing",
+      "MergeCSV appends data rows when outPath already exists",
+      "All 4 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `go test ./...` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "human-session-py-store-001",
+  "title": "Human-like session: build an InMemoryStore in three turns",
+  "category": "repo_init",
+  "difficulty": "easy",
+  "target_stack": {"language": "python", "framework": null, "extra": {}},
+  "description": "Three scripted human turns build an InMemoryStore incrementally: turn 1 adds set/get, turn 2 adds delete/has, turn 3 adds keys and runs the full test suite. Tests for all five methods are provided upfront so grading drives progression across turns.",
+  "repo_seed": {
+    "files": {
+      "store.py": "\"\"\"In-memory key-value store.\"\"\"\n\n\nclass InMemoryStore:\n    \"\"\"A simple dict-backed store.\"\"\"\n\n    def __init__(self):\n        self._data = {}\n\n    def set(self, key: str, value) -> None:\n        \"\"\"Store value under key.\"\"\"\n        raise NotImplementedError\n\n    def get(self, key: str, default=None):\n        \"\"\"Return the value for key, or default if not present.\"\"\"\n        raise NotImplementedError\n\n    def delete(self, key: str) -> bool:\n        \"\"\"Remove key; return True if it existed, False otherwise.\"\"\"\n        raise NotImplementedError\n\n    def has(self, key: str) -> bool:\n        \"\"\"Return True if key is present.\"\"\"\n        raise NotImplementedError\n\n    def keys(self):\n        \"\"\"Return all current keys.\"\"\"\n        raise NotImplementedError\n",
+      "test_store.py": "import pytest\nfrom store import InMemoryStore\n\n\n@pytest.fixture\ndef store():\n    return InMemoryStore()\n\n\n# --- set / get ---\n\ndef test_set_and_get(store):\n    store.set(\"a\", 1)\n    assert store.get(\"a\") == 1\n\n\ndef test_get_default_when_missing(store):\n    assert store.get(\"nope\") is None\n\n\ndef test_get_custom_default(store):\n    assert store.get(\"nope\", 42) == 42\n\n\ndef test_overwrite(store):\n    store.set(\"k\", \"first\")\n    store.set(\"k\", \"second\")\n    assert store.get(\"k\") == \"second\"\n\n\n# --- delete ---\n\ndef test_delete_existing(store):\n    store.set(\"x\", 10)\n    assert store.delete(\"x\") is True\n    assert store.get(\"x\") is None\n\n\ndef test_delete_nonexistent(store):\n    assert store.delete(\"nope\") is False\n\n\n# --- has ---\n\ndef test_has_present(store):\n    store.set(\"present\", True)\n    assert store.has(\"present\") is True\n\n\ndef test_has_missing(store):\n    assert store.has(\"missing\") is False\n\n\ndef test_has_after_delete(store):\n    store.set(\"gone\", 1)\n    store.delete(\"gone\")\n    assert store.has(\"gone\") is False\n\n\n# --- keys ---\n\ndef test_keys_empty(store):\n    assert list(store.keys()) == []\n\n\ndef test_keys_after_sets(store):\n    store.set(\"b\", 2)\n    store.set(\"a\", 1)\n    assert sorted(store.keys()) == [\"a\", \"b\"]\n\n\ndef test_keys_after_delete(store):\n    store.set(\"a\", 1)\n    store.set(\"b\", 2)\n    store.delete(\"a\")\n    assert list(store.keys()) == [\"b\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement the `set(key, value)` and `get(key, default=None)` methods of InMemoryStore in store.py. Use `self._data` (the dict already provided in __init__). Do not change any other method yet.",
+    "followup_prompts": [
+      "Good. Now implement `delete(key)` — remove the key from self._data and return True if it existed, False if it didn't. Also implement `has(key)` which returns True if the key is in self._data.",
+      "Now implement `keys()` so it returns all current keys (e.g. return self._data.keys()). Then run `pytest test_store.py -v --rootdir=.` to verify all 12 tests pass and fix any remaining failures."
+    ],
+    "success_criteria": [
+      "All 12 pytest tests pass",
+      "set/get work with default parameter",
+      "delete returns bool indicating existence",
+      "has checks presence without side effects",
+      "keys reflects live store state"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {
+      "run_tests": "pytest test_store.py -v --rootdir=."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 15
+}

@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-backend-007",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add update_user and delete_user to python_sqlite_migration db",
+  "description": "Brownfield Python backend feature: add update_user(user_id, name) and delete_user(user_id) functions to src/db.py. All 4 original tests must still pass, plus 3 new tests.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_sqlite_migration",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add two new functions to src/db.py.\n\n  def update_user(user_id: int, name: str) -> dict | None:\n    UPDATE users SET name = ? WHERE id = ?\n    Return the updated user dict (via get_user) or None if user_id not found.\n\n  def delete_user(user_id: int) -> bool:\n    DELETE FROM users WHERE id = ?\n    Return True if a row was deleted (cur.rowcount > 0), False otherwise.\n\nDo not modify the original test file (test_db.py). All 4 original + 3 new tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "update_user executes UPDATE SQL and returns refreshed dict",
+      "update_user returns None when user_id not found",
+      "delete_user returns True on success, False on missing id",
+      "All 4 original tests still pass",
+      "All 3 new tests in test_db_extended.py pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run python -c \"from src.db import init_db, create_user, get_user, list_users\" passes"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `uv run pytest tests/ -v` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.db import init_db, create_user, get_user, list_users\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-021",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement 0/1 knapsack dynamic programming in Rust",
+  "description": "Greenfield Rust task: implement knapsack(capacity, weights, values) -> usize that returns the maximum total value achievable by selecting items (each at most once) within the given weight capacity.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"knapsack\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement knapsack\n"
+      },
+      {
+        "path": "tests/knapsack_test.rs",
+        "content": "use knapsack::knapsack;\n\n#[test]\nfn test_basic() {\n    // capacity=50, items: (w=10,v=60),(w=20,v=100),(w=30,v=120)\n    // optimal: take items 1+2 (w=50, v=220)\n    assert_eq!(knapsack(50, &[10, 20, 30], &[60, 100, 120]), 220);\n}\n\n#[test]\nfn test_zero_capacity() {\n    assert_eq!(knapsack(0, &[1, 2], &[10, 20]), 0);\n}\n\n#[test]\nfn test_empty_items() {\n    assert_eq!(knapsack(10, &[], &[]), 0);\n}\n\n#[test]\nfn test_single_item_fits() {\n    assert_eq!(knapsack(5, &[5], &[42]), 42);\n}\n\n#[test]\nfn test_single_item_too_heavy() {\n    assert_eq!(knapsack(4, &[5], &[42]), 0);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement 0/1 knapsack in src/lib.rs.\n\npub fn knapsack(capacity: usize, weights: &[usize], values: &[usize]) -> usize\n  // Returns the maximum value achievable using items 0..n-1 with total weight <= capacity.\n  // Each item can be taken at most once.\n  //\n  // DP approach:\n  //   dp[i][w] = max value using first i items with capacity w\n  //   dp[0][w] = 0 for all w\n  //   for i in 1..=n:\n  //     for w in 0..=capacity:\n  //       dp[i][w] = dp[i-1][w]                              (skip item i)\n  //       if weights[i-1] <= w:\n  //         dp[i][w] = max(dp[i][w], dp[i-1][w - weights[i-1]] + values[i-1])  (take item i)\n  //   return dp[n][capacity]\n\nAll 5 tests in tests/knapsack_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "dp table of size (n+1) x (capacity+1) initialized to 0",
+      "Outer loop over items i in 1..=n",
+      "Inner loop over weights w in 0..=capacity",
+      "Skip case: dp[i][w] = dp[i-1][w]",
+      "Take case: if weights[i-1] <= w, max with dp[i-1][w-weights[i-1]] + values[i-1]",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

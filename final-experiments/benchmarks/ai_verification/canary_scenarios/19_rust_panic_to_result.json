@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-migration-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Migrate panic/unwrap to Result<T, E> in Rust service library",
+  "description": "A Rust library uses panic! and unwrap() throughout. Migrate all five public functions to return Result<T, String> for proper error propagation.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_panic_service",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The library in src/lib.rs uses panic! and .unwrap() throughout. Migrate all five public functions to return Result<T, String> instead of panicking: divide(a, b) -> Result<f64, String> (Err on b==0.0), get_value(map, key) -> Result<i32, String> (Err if key missing), parse_age(s) -> Result<u32, String> (Err on parse failure), first_element(v) -> Result<i32, String> (Err on empty slice), find_user(users, name) -> Result<usize, String> (Err if not found). Update existing tests to call .unwrap() on the Ok result. Add one new error-case test per function (five total) verifying that the error path returns an Err. No panic! or .unwrap() should remain in library code (tests may use .unwrap()). cargo test must pass with zero failures.",
+    "required_artifacts": [
+      "All five functions return Result<T, String>",
+      "No panic! or .unwrap() calls in library (non-test) code",
+      "All 5 original tests pass (updated to .unwrap())",
+      "5 new error-case tests pass",
+      "cargo test output shows 10/10 passed"
+    ],
+    "success_criteria": [
+      "Idiomatic Rust error handling with meaningful Err messages",
+      "All tests green",
+      "cargo clippy clean (no warnings about panics)"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `cargo test` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

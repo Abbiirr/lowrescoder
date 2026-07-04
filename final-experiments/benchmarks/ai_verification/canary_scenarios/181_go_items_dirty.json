@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-dirty-007",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 buggy methods in go_items_handler",
+  "description": "Brownfield Go dirty scenario: ListItems, CreateItem, and GetItem each have a subtle bug. Fix them so all 4 tests pass.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_items_handler",
+    "injections": [
+      {
+        "path": "internal/items/handler.go",
+        "content": "package items\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n\t\"strconv\"\n\t\"strings\"\n\t\"sync\"\n)\n\ntype Item struct {\n\tID    int     `json:\"id\"`\n\tName  string  `json:\"name\"`\n\tPrice float64 `json:\"price\"`\n}\n\nvar (\n\tmu     sync.Mutex\n\tstore  []Item\n\tnextID = 1\n)\n\nfunc ResetStore() {\n\tmu.Lock()\n\tdefer mu.Unlock()\n\tstore = nil\n\tnextID = 1\n}\n\nfunc ListItems(w http.ResponseWriter, r *http.Request) {\n\t// BUG: wrong method check — should be != MethodGet\n\tif r.Method != http.MethodPost {\n\t\thttp.Error(w, \"method not allowed\", http.StatusMethodNotAllowed)\n\t\treturn\n\t}\n\tmu.Lock()\n\tdefer mu.Unlock()\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tjson.NewEncoder(w).Encode(store)\n}\n\nfunc CreateItem(w http.ResponseWriter, r *http.Request) {\n\tif r.Method != http.MethodPost {\n\t\thttp.Error(w, \"method not allowed\", http.StatusMethodNotAllowed)\n\t\treturn\n\t}\n\tvar body struct {\n\t\tName  string  `json:\"name\"`\n\t\tPrice float64 `json:\"price\"`\n\t}\n\tif err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Name == \"\" {\n\t\thttp.Error(w, \"bad request\", http.StatusBadRequest)\n\t\treturn\n\t}\n\tmu.Lock()\n\tdefer mu.Unlock()\n\titem := Item{ID: nextID, Name: body.Name, Price: body.Price}\n\tnextID++\n\tstore = append(store, item)\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\t// BUG: returns 200 OK instead of 201 Created\n\tw.WriteHeader(http.StatusOK)\n\tjson.NewEncoder(w).Encode(item)\n}\n\nfunc GetItem(w http.ResponseWriter, r *http.Request) {\n\tif r.Method != http.MethodGet {\n\t\thttp.Error(w, \"method not allowed\", http.StatusMethodNotAllowed)\n\t\treturn\n\t}\n\t// BUG: missing trailing slash in TrimPrefix — \"/items/1\" becomes \"/1\" and split gives [\"\",\"1\"]\n\tparts := strings.Split(strings.TrimPrefix(r.URL.Path, \"/items\"), \"/\")\n\tid, err := strconv.Atoi(parts[0])\n\tif err != nil {\n\t\thttp.Error(w, \"bad id\", http.StatusBadRequest)\n\t\treturn\n\t}\n\tmu.Lock()\n\tdefer mu.Unlock()\n\tfor _, item := range store {\n\t\tif item.ID == id {\n\t\t\tw.Header().Set(\"Content-Type\", \"application/json\")\n\t\t\tjson.NewEncoder(w).Encode(item)\n\t\t\treturn\n\t\t}\n\t}\n\thttp.Error(w, \"not found\", http.StatusNotFound)\n}\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 bugs in internal/items/handler.go so all 4 tests pass.\n\n  func ListItems:\n    — wrong method guard: checks != MethodPost instead of != MethodGet\n    — fix: change to r.Method != http.MethodGet\n\n  func CreateItem:\n    — returns http.StatusOK (200) instead of http.StatusCreated (201)\n    — fix: change to w.WriteHeader(http.StatusCreated)\n\n  func GetItem:\n    — wrong TrimPrefix argument: \"/items\" should be \"/items/\"\n    — fix: strings.TrimPrefix(r.URL.Path, \"/items/\")\n\nDo not modify the test file.\nRun: go test ./...",
+    "required_artifacts": [
+      "ListItems uses != http.MethodGet",
+      "CreateItem returns 201 Created",
+      "GetItem uses /items/ prefix",
+      "All 4 existing tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

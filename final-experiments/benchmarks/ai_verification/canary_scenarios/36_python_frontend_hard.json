@@ -1,0 +1,58 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-frontend-003",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "hard",
+  "duration_hint_minutes": 50,
+  "title": "Add admin bulk-delete, tag-filter, and JSON export to Flask blog",
+  "description": "A Flask blog with post management needs three hard admin features: bulk delete, tag-based filter on public and API views, and a JSON export endpoint.",
+  "target_stack": {
+    "language": "python",
+    "framework": "flask",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_blog_app",
+    "injections": [],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "The Flask blog in src/app.py has public views (/, /posts/<id>), an admin page (/admin), and a JSON API (/api/posts, POST /api/posts). Add three hard features:\n\nFeature 1 — Bulk delete: Add POST /admin/bulk-delete that accepts a JSON body {\"ids\": [1, 2, 3]}. Delete all posts with matching IDs. Return JSON {\"deleted\": N} where N is the count of actually deleted posts (IDs that did not exist are silently ignored). Return 400 if 'ids' key is missing or not a list.\n\nFeature 2 — Tag filter: Update GET / (HTML) and GET /api/posts (JSON) to accept an optional ?tag=<name> query param. Filter to posts that include that tag (case-insensitive). When combined with the existing published-only logic on both views, the tag filter applies after the published filter.\n\nFeature 3 — JSON export: Add GET /api/export that returns all posts (published AND drafts) as a JSON array. Accept an optional ?published=true|false param to filter: ?published=true returns only published, ?published=false returns only drafts, absent returns all. Add a Content-Disposition: attachment; filename=posts.json header so browsers treat it as a download.\n\nAdd tests in tests/test_blog.py covering: bulk delete removes correct posts, bulk delete with unknown IDs returns deleted=0 for those, tag filter on /api/posts, export all, export published only. All 6 original tests must still pass. Run uv run pytest tests/ -q to confirm.",
+    "required_artifacts": [
+      "POST /admin/bulk-delete with JSON body {ids:[...]}",
+      "GET /api/posts?tag= filter",
+      "GET / (HTML)?tag= filter",
+      "GET /api/export with ?published= param and Content-Disposition header",
+      "5 new tests covering all three features",
+      "All 6 original tests still pass"
+    ],
+    "success_criteria": [
+      "Bulk delete handles partial hits gracefully",
+      "Tag filter case-insensitive and composes with published filter",
+      "Export returns all posts including drafts by default",
+      "All tests pass"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `uv run pytest tests/ -q` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

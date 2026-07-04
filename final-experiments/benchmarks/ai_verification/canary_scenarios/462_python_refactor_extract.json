@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-py-refactor-extract-001",
+  "title": "Extract duplicate validation logic into a shared helper",
+  "category": "backend_feature",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Three Python functions each contain nearly identical email/age validation code. Extract into shared validate_user_data(email, age) helper, update callers, all tests pass.",
+  "repo_seed": {
+    "files": {
+      "user_ops.py": "\"\"\"User operations with duplicated validation logic.\"\"\"\nimport re\n\n\ndef create_user(name: str, email: str, age: int) -> dict:\n    \"\"\"Create a new user record.\"\"\"\n    if not re.match(r'^[^@]+@[^@]+\\.[^@]+$', email):\n        raise ValueError(f'Invalid email: {email}')\n    if age < 0 or age > 150:\n        raise ValueError(f'Invalid age: {age}')\n    return {'name': name, 'email': email, 'age': age, 'active': True}\n\n\ndef update_user(user: dict, email: str = None, age: int = None) -> dict:\n    \"\"\"Update user fields.\"\"\"\n    if email is not None:\n        if not re.match(r'^[^@]+@[^@]+\\.[^@]+$', email):\n            raise ValueError(f'Invalid email: {email}')\n        user = {**user, 'email': email}\n    if age is not None:\n        if age < 0 or age > 150:\n            raise ValueError(f'Invalid age: {age}')\n        user = {**user, 'age': age}\n    return user\n\n\ndef register_admin(email: str, age: int, permissions: list) -> dict:\n    \"\"\"Register an admin user.\"\"\"\n    if not re.match(r'^[^@]+@[^@]+\\.[^@]+$', email):\n        raise ValueError(f'Invalid email: {email}')\n    if age < 0 or age > 150:\n        raise ValueError(f'Invalid age: {age}')\n    return {'email': email, 'age': age, 'permissions': permissions, 'is_admin': True}\n",
+      "test_user_ops.py": "import pytest\nfrom user_ops import create_user, update_user, register_admin, validate_user_data\n\n\ndef test_validate_user_data_valid():\n    validate_user_data('alice@example.com', 30)  # should not raise\n\n\ndef test_validate_user_data_bad_email():\n    with pytest.raises(ValueError, match='email'):\n        validate_user_data('not-an-email', 30)\n\n\ndef test_validate_user_data_bad_age():\n    with pytest.raises(ValueError, match='age'):\n        validate_user_data('alice@example.com', -1)\n    with pytest.raises(ValueError, match='age'):\n        validate_user_data('alice@example.com', 200)\n\n\ndef test_create_user_uses_validate():\n    user = create_user('Alice', 'alice@example.com', 25)\n    assert user['email'] == 'alice@example.com'\n    with pytest.raises(ValueError):\n        create_user('Bob', 'bad', 25)\n\n\ndef test_update_user_uses_validate():\n    user = create_user('Alice', 'alice@example.com', 25)\n    updated = update_user(user, email='new@example.com')\n    assert updated['email'] == 'new@example.com'\n    with pytest.raises(ValueError):\n        update_user(user, age=200)\n\n\ndef test_register_admin_uses_validate():\n    admin = register_admin('admin@example.com', 35, ['read', 'write'])\n    assert admin['is_admin']\n    with pytest.raises(ValueError):\n        register_admin('bad-email', 35, [])\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Refactor user_ops.py to eliminate the duplicated email and age validation.\n\n1. Add a `validate_user_data(email: str, age: int) -> None` function that:\n   - Raises ValueError with 'email' in the message if email doesn't match `^[^@]+@[^@]+\\.[^@]+$`\n   - Raises ValueError with 'age' in the message if age < 0 or age > 150\n\n2. Replace the inline validation in create_user, update_user, and register_admin with calls to validate_user_data.\n\nRun `pytest test_user_ops.py -v --rootdir=.` to verify all 6 tests pass.",
+    "entry_point": "user_ops.py",
+    "success_criteria": [
+      "All 6 pytest tests pass",
+      "validate_user_data function exists in user_ops.py",
+      "No duplicated validation logic in create_user/update_user/register_admin"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `pytest test_user_ops.py -v --rootdir=.` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "pytest test_user_ops.py -v --rootdir=."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 8
+}

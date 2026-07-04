@@ -1,0 +1,51 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-refactor-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Refactor multistep processor into a Processor class",
+  "description": "Brownfield Python refactor: extract the process/batch_process logic from module-level functions into a Processor class with a configurable max_retries attribute.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_multistep_service",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Refactor src/processor.py. All existing tests must still pass.\n\n1. Define a Processor class:\n   class Processor:\n       def __init__(self, max_retries: int) -> None\n       def process(self, items: list[str]) -> list[str]\n         — same retry logic as the current module-level process()\n       def batch_process(self, groups: dict[str, list[str]]) -> dict[str, list[str]]\n         — delegates to self.process()\n\n2. Keep the module-level functions as thin wrappers:\n   _default_processor = Processor(MAX_RETRIES)\n   def process(items): return _default_processor.process(items)\n   def batch_process(groups): return _default_processor.batch_process(groups)\n\n3. Keep the module-level _transform(s) helper (unchanged).\n\nAll existing tests must still pass — callers importing process/batch_process from src.processor must work identically.\nRun: pytest",
+    "required_artifacts": [
+      "Processor class with __init__(max_retries), process(), batch_process()",
+      "Module-level process() and batch_process() delegate to _default_processor",
+      "Processor(1).process(['']) raises ValueError on invalid items",
+      "All existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "pytest passes",
+      "ruff check passes"
+    ],
+    "followup_prompts": [
+      "Run `pytest` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `pytest` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "pytest",
+      "lint": "ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

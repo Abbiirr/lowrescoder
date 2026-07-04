@@ -1,0 +1,75 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-009",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Build a min-priority queue in Python wrapping heapq",
+  "description": "Greenfield Python task: implement MinPriorityQueue wrapping heapq with push(item, priority), pop() -> item, peek() -> item, is_empty(), and __len__. Lower priority number = higher priority. Raises IndexError on pop/peek of empty queue.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"priority-queue\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/priority_queue.py",
+        "content": "# TODO: implement MinPriorityQueue\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_pq.py",
+        "content": "import pytest\nfrom src.priority_queue import MinPriorityQueue\n\n\ndef test_push_pop_order():\n    pq = MinPriorityQueue()\n    pq.push(\"low\", 10)\n    pq.push(\"high\", 1)\n    pq.push(\"mid\", 5)\n    assert pq.pop() == \"high\"   # priority 1 comes first\n    assert pq.pop() == \"mid\"    # priority 5\n    assert pq.pop() == \"low\"    # priority 10\n\n\ndef test_peek_does_not_remove():\n    pq = MinPriorityQueue()\n    pq.push(\"x\", 3)\n    pq.push(\"y\", 1)\n    assert pq.peek() == \"y\"\n    assert len(pq) == 2\n\n\ndef test_is_empty():\n    pq = MinPriorityQueue()\n    assert pq.is_empty()\n    pq.push(\"a\", 1)\n    assert not pq.is_empty()\n\n\ndef test_len():\n    pq = MinPriorityQueue()\n    pq.push(\"a\", 1)\n    pq.push(\"b\", 2)\n    assert len(pq) == 2\n    pq.pop()\n    assert len(pq) == 1\n\n\ndef test_pop_empty_raises():\n    pq = MinPriorityQueue()\n    with pytest.raises(IndexError):\n        pq.pop()\n\n\ndef test_peek_empty_raises():\n    pq = MinPriorityQueue()\n    with pytest.raises(IndexError):\n        pq.peek()\n\n\ndef test_equal_priority_stable():\n    pq = MinPriorityQueue()\n    pq.push(\"first\", 5)\n    pq.push(\"second\", 5)\n    # Both have same priority; either order is acceptable\n    result = {pq.pop(), pq.pop()}\n    assert result == {\"first\", \"second\"}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement MinPriorityQueue in src/priority_queue.py.\n\nimport heapq\n\nclass MinPriorityQueue:\n    def __init__(self)\n    def push(self, item, priority: int | float)  # push item with given priority\n    def pop(self)           # remove and return item with lowest priority; raise IndexError if empty\n    def peek(self)          # view item with lowest priority without removing; raise IndexError if empty\n    def is_empty(self) -> bool\n    def __len__(self) -> int\n\nUse heapq internally. Store tuples of (priority, counter, item) to handle equal priorities.\n\nAll 7 tests in tests/test_pq.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "Uses heapq internally",
+      "push stores (priority, counter, item) tuples for stability",
+      "pop removes and returns item with lowest priority",
+      "peek returns without removing",
+      "IndexError raised on pop/peek of empty queue",
+      "All 7 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (7 tests)",
+      "uv run python -c \"from src.priority_queue import MinPriorityQueue\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.priority_queue import MinPriorityQueue\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-greenfield-060",
+  "title": "Implement 90-degree clockwise matrix rotation in Rust",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement rotate(matrix: &mut Vec<Vec<i32>>) that rotates an NxN matrix 90 degrees clockwise in place using transpose-then-reverse-rows.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "pub fn rotate(matrix: &mut Vec<Vec<i32>>) {\n    todo!()\n}\n",
+      "tests/matrix_rotate_test.rs": "use matrix_rotate::rotate;\n\n#[test]\nfn test_1x1() {\n    let mut m = vec![vec![1]];\n    rotate(&mut m);\n    assert_eq!(m, vec![vec![1]]);\n}\n\n#[test]\nfn test_2x2() {\n    let mut m = vec![vec![1, 2], vec![3, 4]];\n    rotate(&mut m);\n    assert_eq!(m, vec![vec![3, 1], vec![4, 2]]);\n}\n\n#[test]\nfn test_3x3() {\n    let mut m = vec![vec![1, 2, 3], vec![4, 5, 6], vec![7, 8, 9]];\n    rotate(&mut m);\n    assert_eq!(m, vec![vec![7, 4, 1], vec![8, 5, 2], vec![9, 6, 3]]);\n}\n\n#[test]\nfn test_4x4() {\n    let mut m = vec![\n        vec![5, 1, 9, 11],\n        vec![2, 4, 8, 10],\n        vec![13, 3, 6, 7],\n        vec![15, 14, 12, 16],\n    ];\n    rotate(&mut m);\n    assert_eq!(m, vec![\n        vec![15, 13, 2, 5],\n        vec![14, 3, 4, 1],\n        vec![12, 6, 8, 9],\n        vec![16, 7, 10, 11],\n    ]);\n}\n",
+      "Cargo.toml": "[package]\nname = \"matrix_rotate\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement rotate in src/lib.rs using transpose-then-reverse-rows:\n1. Transpose: for i in 0..n, for j in (i+1)..n, swap matrix[i][j] with matrix[j][i]\n2. Reverse each row: for each row in matrix.iter_mut(), call row.reverse()\nAll 4 test cases must pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": "All 4 cargo test cases pass",
+    "followup_prompts": [
+      "Run `cargo test --quiet` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test --quiet` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "cargo test",
+    "expected_exit_code": 0
+  }
+}

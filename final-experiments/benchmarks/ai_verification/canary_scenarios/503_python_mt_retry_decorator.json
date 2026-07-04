@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "503-python-mt-retry-decorator",
+  "title": "Build a retry decorator in Python — 3 turns",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {"language": "python", "framework": null, "extra": {}},
+  "description": "Three scripted turns build a retry decorator: turn 1 does basic retry N times, turn 2 adds exponential backoff, turn 3 adds per-exception filtering.",
+  "repo_seed": {
+    "files": {
+      "retry.py": "\"\"\"Retry decorator with backoff and exception filtering.\"\"\"\nimport time\nimport functools\nfrom typing import Callable, Type\n\n\ndef retry(\n    max_attempts: int = 3,\n    delay: float = 0.0,\n    backoff: float = 1.0,\n    exceptions: tuple[Type[Exception], ...] = (Exception,),\n):\n    \"\"\"Decorator: retry wrapped function on failure.\n    \n    Args:\n        max_attempts: total attempts (including first). Must be >= 1.\n        delay: initial delay in seconds between retries.\n        backoff: multiplier applied to delay after each retry (1.0 = no backoff).\n        exceptions: tuple of exception types to catch and retry on.\n                    Exceptions not in this tuple propagate immediately.\n    \"\"\"\n    def decorator(func: Callable) -> Callable:\n        @functools.wraps(func)\n        def wrapper(*args, **kwargs):\n            raise NotImplementedError\n        return wrapper\n    return decorator\n",
+      "tests/test_retry.py": "import pytest\nimport time\nfrom retry import retry\n\n\ndef test_succeeds_first_try():\n    calls = []\n    @retry(max_attempts=3)\n    def f():\n        calls.append(1)\n        return \"ok\"\n    assert f() == \"ok\"\n    assert len(calls) == 1\n\n\ndef test_retries_on_failure():\n    calls = []\n    @retry(max_attempts=3, delay=0)\n    def f():\n        calls.append(1)\n        if len(calls) < 3:\n            raise ValueError(\"not yet\")\n        return \"done\"\n    assert f() == \"done\"\n    assert len(calls) == 3\n\n\ndef test_raises_after_max_attempts():\n    @retry(max_attempts=2, delay=0)\n    def f():\n        raise RuntimeError(\"always fails\")\n    with pytest.raises(RuntimeError, match=\"always fails\"):\n        f()\n\n\ndef test_max_attempts_one_never_retries():\n    calls = []\n    @retry(max_attempts=1, delay=0)\n    def f():\n        calls.append(1)\n        raise ValueError(\"fail\")\n    with pytest.raises(ValueError):\n        f()\n    assert len(calls) == 1\n\n\ndef test_exponential_backoff(monkeypatch):\n    slept = []\n    monkeypatch.setattr(time, \"sleep\", lambda s: slept.append(s))\n    @retry(max_attempts=3, delay=1.0, backoff=2.0)\n    def f():\n        raise ValueError(\"fail\")\n    with pytest.raises(ValueError):\n        f()\n    # First retry: 1.0s, second retry: 2.0s\n    assert len(slept) == 2\n    assert abs(slept[0] - 1.0) < 0.01\n    assert abs(slept[1] - 2.0) < 0.01\n\n\ndef test_exception_filter_retries_matching():\n    calls = []\n    @retry(max_attempts=3, delay=0, exceptions=(ValueError,))\n    def f():\n        calls.append(1)\n        raise ValueError(\"retry this\")\n    with pytest.raises(ValueError):\n        f()\n    assert len(calls) == 3\n\n\ndef test_exception_filter_propagates_nonmatching():\n    calls = []\n    @retry(max_attempts=5, delay=0, exceptions=(ValueError,))\n    def f():\n        calls.append(1)\n        raise TypeError(\"don't retry\")\n    with pytest.raises(TypeError):\n        f()\n    assert len(calls) == 1\n\n\ndef test_preserves_return_value_after_retries():\n    calls = []\n    @retry(max_attempts=3, delay=0)\n    def f():\n        calls.append(1)\n        if len(calls) < 2:\n            raise ValueError()\n        return 42\n    assert f() == 42\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement the `wrapper` function inside the `retry` decorator in `retry.py`. For now just handle basic retry: attempt the function up to `max_attempts` times, catching exceptions. If all attempts fail, re-raise the last exception. Ignore `delay` and `backoff` for now — just retry immediately. Run `uv run pytest tests/ -q` when ready.",
+    "followup_prompts": [
+      "Good. Now add `delay` and `backoff` support: before each retry (not before the first attempt), sleep for `current_delay` seconds, then multiply current_delay by `backoff`. Run `uv run pytest tests/ -q` and fix any failures.",
+      "Final step: add `exceptions` filtering — only catch and retry exceptions that are instances of the types in the `exceptions` tuple. If a non-matching exception is raised, let it propagate immediately without retrying. Run `uv run pytest tests/ -q` — all 8 tests must pass."
+    ],
+    "success_criteria": [
+      "Succeeds without retry when function works first time",
+      "Retries up to max_attempts times on failure",
+      "Re-raises last exception after all attempts exhausted",
+      "Exponential backoff: delay * backoff^n between retries",
+      "Only retries exceptions matching the exceptions tuple",
+      "Non-matching exceptions propagate immediately",
+      "All 8 pytest tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "uv run pytest tests/ -q"}
+  },
+  "duration_hint_minutes": 15
+}

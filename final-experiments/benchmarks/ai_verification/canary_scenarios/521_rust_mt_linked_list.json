@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "521-rust-mt-linked-list",
+  "title": "Build a singly linked list in Rust — 3 turns",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {"language": "rust", "framework": null, "extra": {}},
+  "description": "Three turns build a singly linked list in Rust: turn 1 push_front/pop_front, turn 2 contains/len, turn 3 IntoIterator.",
+  "repo_seed": {
+    "files": {
+      "Cargo.toml": "[package]\nname = \"linked-list\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+      "src/lib.rs": "//! Singly linked list.\n\ntype Link<T> = Option<Box<Node<T>>>;\n\nstruct Node<T> {\n    value: T,\n    next: Link<T>,\n}\n\n/// A singly linked list.\npub struct LinkedList<T> {\n    head: Link<T>,\n    len: usize,\n}\n\nimpl<T> LinkedList<T> {\n    /// Create an empty list.\n    pub fn new() -> Self {\n        LinkedList { head: None, len: 0 }\n    }\n\n    /// Add element to the front.\n    pub fn push_front(&mut self, value: T) {\n        unimplemented!()\n    }\n\n    /// Remove and return the front element.\n    pub fn pop_front(&mut self) -> Option<T> {\n        unimplemented!()\n    }\n\n    /// Return true if value is in the list.\n    pub fn contains(&self, value: &T) -> bool\n    where\n        T: PartialEq,\n    {\n        unimplemented!()\n    }\n\n    /// Return the number of elements.\n    pub fn len(&self) -> usize {\n        self.len\n    }\n\n    /// Return true if list is empty.\n    pub fn is_empty(&self) -> bool {\n        self.len == 0\n    }\n}\n\nimpl<T> IntoIterator for LinkedList<T> {\n    type Item = T;\n    type IntoIter = IntoIter<T>;\n\n    fn into_iter(self) -> Self::IntoIter {\n        unimplemented!()\n    }\n}\n\npub struct IntoIter<T> {\n    list: LinkedList<T>,\n}\n\nimpl<T> Iterator for IntoIter<T> {\n    type Item = T;\n\n    fn next(&mut self) -> Option<T> {\n        self.list.pop_front()\n    }\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_push_pop() {\n        let mut list: LinkedList<i32> = LinkedList::new();\n        list.push_front(3);\n        list.push_front(2);\n        list.push_front(1);\n        assert_eq!(list.pop_front(), Some(1));\n        assert_eq!(list.pop_front(), Some(2));\n        assert_eq!(list.pop_front(), Some(3));\n        assert_eq!(list.pop_front(), None);\n    }\n\n    #[test]\n    fn test_len() {\n        let mut list: LinkedList<i32> = LinkedList::new();\n        assert!(list.is_empty());\n        list.push_front(1);\n        list.push_front(2);\n        assert_eq!(list.len(), 2);\n        list.pop_front();\n        assert_eq!(list.len(), 1);\n    }\n\n    #[test]\n    fn test_contains() {\n        let mut list: LinkedList<i32> = LinkedList::new();\n        list.push_front(1);\n        list.push_front(2);\n        assert!(list.contains(&1));\n        assert!(list.contains(&2));\n        assert!(!list.contains(&99));\n    }\n\n    #[test]\n    fn test_into_iter() {\n        let mut list: LinkedList<i32> = LinkedList::new();\n        list.push_front(3);\n        list.push_front(2);\n        list.push_front(1);\n        let collected: Vec<i32> = list.into_iter().collect();\n        assert_eq!(collected, vec![1, 2, 3]);\n    }\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `push_front(&mut self, value: T)` and `pop_front(&mut self) -> Option<T>` in `src/lib.rs`. push_front: create a new Node, set its `next` to the current head, set head to Some(Box::new(node)), increment len. pop_front: take head, set head to node.next, decrement len, return Some(node.value). Run `cargo test --quiet`.",
+    "followup_prompts": [
+      "Good. Now implement `contains(&self, value: &T) -> bool` — traverse the linked list from head, comparing each node's value to the target using PartialEq. Also make sure `len()` and `is_empty()` work correctly (they use self.len which you should be maintaining). Run `cargo test --quiet` and fix any failures.",
+      "Final step: implement `into_iter(self)` in the `IntoIterator` impl — return `IntoIter { list: self }`. The `Iterator` impl for `IntoIter` already calls `pop_front()`. Run `cargo test --quiet` — all 4 tests must pass."
+    ],
+    "success_criteria": [
+      "push_front adds to front, pop_front removes from front",
+      "len() is maintained correctly across push/pop",
+      "contains() traverses the list to find values",
+      "into_iter() allows collecting list into Vec",
+      "cargo test passes (4 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "cargo test --quiet"}
+  },
+  "duration_hint_minutes": 20
+}

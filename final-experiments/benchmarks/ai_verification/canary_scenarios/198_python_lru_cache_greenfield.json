@@ -1,0 +1,75 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Build an LRU Cache in Python using OrderedDict",
+  "description": "Greenfield Python task: implement an LRUCache class with fixed capacity that supports O(1) get and put, evicting the least-recently-used entry when full.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"lru-cache\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/lru_cache.py",
+        "content": "# TODO: implement LRUCache\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_lru_cache.py",
+        "content": "import pytest\nfrom src.lru_cache import LRUCache\n\n\ndef test_get_missing_returns_minus_one():\n    cache = LRUCache(2)\n    assert cache.get(1) == -1\n\n\ndef test_put_and_get():\n    cache = LRUCache(2)\n    cache.put(1, 10)\n    assert cache.get(1) == 10\n\n\ndef test_evicts_lru_on_overflow():\n    cache = LRUCache(2)\n    cache.put(1, 1)\n    cache.put(2, 2)\n    cache.put(3, 3)  # evicts key 1 (least recently used)\n    assert cache.get(1) == -1\n    assert cache.get(2) == 2\n    assert cache.get(3) == 3\n\n\ndef test_get_updates_recency():\n    cache = LRUCache(2)\n    cache.put(1, 1)\n    cache.put(2, 2)\n    cache.get(1)      # key 1 is now most recently used\n    cache.put(3, 3)   # evicts key 2, not key 1\n    assert cache.get(1) == 1\n    assert cache.get(2) == -1\n    assert cache.get(3) == 3\n\n\ndef test_put_updates_existing_value():\n    cache = LRUCache(2)\n    cache.put(1, 100)\n    cache.put(1, 200)\n    assert cache.get(1) == 200\n\n\ndef test_put_existing_key_updates_recency():\n    cache = LRUCache(2)\n    cache.put(1, 1)\n    cache.put(2, 2)\n    cache.put(1, 10)  # update key 1 — becomes MRU\n    cache.put(3, 3)   # evicts key 2 (LRU), not key 1\n    assert cache.get(1) == 10\n    assert cache.get(2) == -1\n    assert cache.get(3) == 3\n\n\ndef test_capacity_one():\n    cache = LRUCache(1)\n    cache.put(1, 1)\n    cache.put(2, 2)  # evicts key 1\n    assert cache.get(1) == -1\n    assert cache.get(2) == 2\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement LRUCache in src/lru_cache.py.\n\nfrom collections import OrderedDict\n\nclass LRUCache:\n    def __init__(self, capacity: int) -> None:\n        ...\n\n    def get(self, key: int) -> int:\n        # Return value for key, or -1 if key not in cache.\n        # Accessing a key makes it most recently used.\n        ...\n\n    def put(self, key: int, value: int) -> None:\n        # Insert or update key. If at capacity and key is new,\n        # evict the least recently used entry first.\n        # Updating an existing key also makes it most recently used.\n        ...\n\nUse collections.OrderedDict internally (move_to_end + popitem).\nAll 7 tests in tests/test_lru_cache.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "LRUCache uses OrderedDict internally",
+      "get returns -1 for missing keys",
+      "get moves accessed key to most-recently-used position",
+      "put evicts LRU entry when over capacity",
+      "put on existing key updates value and recency",
+      "All 7 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (7 tests)",
+      "uv run python -c \"from src.lru_cache import LRUCache\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.lru_cache import LRUCache\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

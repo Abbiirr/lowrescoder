@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-029",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement custom iterators in Rust",
+  "description": "Greenfield Rust task: implement Fibonacci and Cycle iterators by implementing the Iterator trait, and a zip_sum function using standard iterator combinators.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"iters\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement Fibonacci, Cycle iterators and zip_sum\n"
+      },
+      {
+        "path": "tests/iter_test.rs",
+        "content": "use iters::{Fibonacci, Cycle, zip_sum};\n\n#[test]\nfn test_fibonacci_first_eight() {\n    let fibs: Vec<u64> = Fibonacci::new().take(8).collect();\n    assert_eq!(fibs, vec![0, 1, 1, 2, 3, 5, 8, 13]);\n}\n\n#[test]\nfn test_fibonacci_sum() {\n    let sum: u64 = Fibonacci::new().take(10).sum();\n    assert_eq!(sum, 88); // 0+1+1+2+3+5+8+13+21+34\n}\n\n#[test]\nfn test_cycle_basic() {\n    let got: Vec<i32> = Cycle::new(vec![1, 2, 3]).take(7).collect();\n    assert_eq!(got, vec![1, 2, 3, 1, 2, 3, 1]);\n}\n\n#[test]\nfn test_cycle_single() {\n    let got: Vec<i32> = Cycle::new(vec![42]).take(4).collect();\n    assert_eq!(got, vec![42, 42, 42, 42]);\n}\n\n#[test]\nfn test_zip_sum() {\n    assert_eq!(zip_sum(&[1, 2, 3], &[10, 20, 30]), vec![11, 22, 33]);\n    assert_eq!(zip_sum(&[1, 2], &[10, 20, 30]), vec![11, 22]); // stops at shorter\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement Fibonacci, Cycle, and zip_sum in src/lib.rs.\n\npub struct Fibonacci { a: u64, b: u64 }\nimpl Fibonacci {\n    pub fn new() -> Self { Fibonacci { a: 0, b: 1 } }\n}\nimpl Iterator for Fibonacci {\n    type Item = u64;\n    fn next(&mut self) -> Option<u64> {\n        let val = self.a;\n        let next_b = self.a + self.b;\n        self.a = self.b;\n        self.b = next_b;\n        Some(val) // infinite iterator\n    }\n}\n\npub struct Cycle<T: Clone> { items: Vec<T>, index: usize }\nimpl<T: Clone> Cycle<T> {\n    pub fn new(items: Vec<T>) -> Self { Cycle { items, index: 0 } }\n}\nimpl<T: Clone> Iterator for Cycle<T> {\n    type Item = T;\n    fn next(&mut self) -> Option<T> {\n        if self.items.is_empty() { return None; }\n        let val = self.items[self.index].clone();\n        self.index = (self.index + 1) % self.items.len();\n        Some(val)\n    }\n}\n\npub fn zip_sum(a: &[i32], b: &[i32]) -> Vec<i32>\n    // Use a.iter().zip(b.iter()).map(|(x, y)| x + y).collect()\n\nAll 5 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "Fibonacci yields 0,1,1,2,3,5,8,13,... (starts at 0)",
+      "Fibonacci sum of first 10 == 88",
+      "Cycle wraps around correctly using modulo index",
+      "zip_sum stops at the shorter slice",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

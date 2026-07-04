@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-brownfield-007",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Migrate print debug statements to Python logging module",
+  "description": "Brownfield Python migration: replace bare print() debug calls with the standard logging module. The module should configure a named logger and use debug/info/warning/error levels appropriately.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"dataproc\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/dataproc.py",
+        "content": "def process_items(items: list[int]) -> list[int]:\n    print(f\"Processing {len(items)} items\")\n    result = []\n    for item in items:\n        if item < 0:\n            print(f\"Skipping negative item: {item}\")\n            continue\n        processed = item * 2\n        print(f\"Processed {item} -> {processed}\")\n        result.append(processed)\n    print(f\"Done: {len(result)} items processed\")\n    return result\n\n\ndef load_data(source: str) -> list[int]:\n    print(f\"Loading data from {source}\")\n    if not source:\n        print(\"ERROR: empty source\")\n        raise ValueError(\"source cannot be empty\")\n    return [1, 2, 3]\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_dataproc.py",
+        "content": "from src.dataproc import process_items, load_data\n\n\ndef test_process_items():\n    assert process_items([1, 2, 3]) == [2, 4, 6]\n\n\ndef test_process_skips_negative():\n    assert process_items([-1, 2, -3, 4]) == [4, 8]\n\n\ndef test_load_data():\n    assert load_data(\"source\") == [1, 2, 3]\n\n\ndef test_load_data_empty_raises():\n    import pytest\n    with pytest.raises(ValueError):\n        load_data(\"\")\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Migrate src/dataproc.py from print() to logging.\n\nimport logging\n\nlogger = logging.getLogger(__name__)\n\ndef process_items(items: list[int]) -> list[int]:\n    logger.info(f\"Processing {len(items)} items\")\n    result = []\n    for item in items:\n        if item < 0:\n            logger.debug(f\"Skipping negative item: {item}\")\n            continue\n        processed = item * 2\n        logger.debug(f\"Processed {item} -> {processed}\")\n        result.append(processed)\n    logger.info(f\"Done: {len(result)} items processed\")\n    return result\n\ndef load_data(source: str) -> list[int]:\n    logger.info(f\"Loading data from {source}\")\n    if not source:\n        logger.error(\"empty source\")\n        raise ValueError(\"source cannot be empty\")\n    return [1, 2, 3]\n\nAll 4 original tests must pass.\nThe solution test file adds a 5th test: verify the module uses logging (has a 'logger' attribute).\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "import logging and logger = logging.getLogger(__name__) at module level",
+      "All print() calls replaced with logger.debug/info/error",
+      "ValueError still raised for empty source",
+      "All original behavior preserved",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.dataproc import process_items, load_data\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.dataproc import process_items, load_data\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

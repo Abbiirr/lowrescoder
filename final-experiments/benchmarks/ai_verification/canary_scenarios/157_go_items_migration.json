@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-migration-007",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Migrate go_items_handler from global state to a struct-based Handler",
+  "description": "Brownfield Go migration: replace package-level mutable global state with a dependency-injectable Handler struct while keeping backward-compatible free functions.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_items_handler",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Migrate internal/items/handler.go from package-level global state to a struct-based Handler. All 4 existing tests must still pass.\n\nAdd to handler.go:\n\n  type Handler struct { /* private fields: mu sync.Mutex, store []Item, nextID int */ }\n\n  func NewHandler() *Handler\n    — initializes Handler with nextID=1 and empty store\n\n  func (h *Handler) ListItems(w http.ResponseWriter, r *http.Request)\n  func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request)\n  func (h *Handler) GetItem(w http.ResponseWriter, r *http.Request)\n  func (h *Handler) Reset()\n\nAll four should behave identically to the corresponding package-level functions.\n\nUpdate the package-level global state to use a single module-level *Handler instance:\n  var defaultHandler = NewHandler()\n\nUpdate the existing package-level functions to delegate to defaultHandler:\n  func ResetStore()   { defaultHandler.Reset() }\n  func ListItems(...)  { defaultHandler.ListItems(...) }\n  func CreateItem(...) { defaultHandler.CreateItem(...) }\n  func GetItem(...)    { defaultHandler.GetItem(...) }\n\nAlso add tests for the Handler struct in handler_test.go.\nAll 4 existing fixture tests must still pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Handler struct with private mu, store, nextID fields",
+      "NewHandler() creates Handler with nextID=1",
+      "Handler.ListItems, CreateItem, GetItem, Reset methods implemented",
+      "Package-level functions delegate to defaultHandler",
+      "Tests for Handler struct methods added",
+      "All 4 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `go test ./...` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

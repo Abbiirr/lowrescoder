@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-frontend-008",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add WriteCSVToHTML function to Go CSV reader library",
+  "description": "Brownfield Go task: add a WriteCSVToHTML function that converts a CSV file into an HTML table string.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_csv_reader",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add WriteCSVToHTML to internal/csvutil/csvutil.go. All existing tests must still pass.\n\n  func WriteCSVToHTML(path string) (string, error)\n    — reads the CSV at path using ParseCSV\n    — returns an empty string for empty files (no error)\n    — wraps the first row as a <thead> with <th> cells\n    — wraps all subsequent rows as <tbody> with <td> cells\n    — structure:\n        <table>\n          <thead><tr><th>col1</th><th>col2</th>...</tr></thead>\n          <tbody>\n            <tr><td>val1</td><td>val2</td></tr>\n            ...\n          </tbody>\n        </table>\n    — do NOT add newlines or extra whitespace between tags\n    — use string concatenation or strings.Builder (no html/template required)\n\nAll existing tests must still pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "WriteCSVToHTML returns empty string for empty CSV",
+      "First CSV row becomes <thead> with <th> cells",
+      "Data rows become <tbody> with <td> cells",
+      "Returns error if file cannot be read",
+      "All 4 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `go test ./...` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

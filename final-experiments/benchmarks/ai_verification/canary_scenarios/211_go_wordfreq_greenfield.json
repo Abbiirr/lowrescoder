@@ -1,0 +1,67 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-009",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Build a word-frequency counter in Go with top-N retrieval",
+  "description": "Greenfield Go task: implement a WordFrequency type that tracks word counts and returns the top N words by frequency, sorted descending by count.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module wordfreq\n\ngo 1.22\n"
+      },
+      {
+        "path": "wordfreq.go",
+        "content": "package wordfreq\n\n// TODO: implement WordFrequency\n"
+      },
+      {
+        "path": "wordfreq_test.go",
+        "content": "package wordfreq\n\nimport (\n\t\"testing\"\n)\n\nfunc TestAddAndCount(t *testing.T) {\n\twf := New()\n\twf.Add(\"apple\")\n\twf.Add(\"banana\")\n\twf.Add(\"apple\")\n\tif wf.Count(\"apple\") != 2 {\n\t\tt.Errorf(\"expected 2, got %d\", wf.Count(\"apple\"))\n\t}\n\tif wf.Count(\"banana\") != 1 {\n\t\tt.Errorf(\"expected 1, got %d\", wf.Count(\"banana\"))\n\t}\n\tif wf.Count(\"cherry\") != 0 {\n\t\tt.Errorf(\"expected 0, got %d\", wf.Count(\"cherry\"))\n\t}\n}\n\nfunc TestTopN(t *testing.T) {\n\twf := New()\n\twf.Add(\"a\")\n\twf.Add(\"a\")\n\twf.Add(\"a\")\n\twf.Add(\"b\")\n\twf.Add(\"b\")\n\twf.Add(\"c\")\n\ttop := wf.TopN(2)\n\tif len(top) != 2 {\n\t\tt.Fatalf(\"expected 2 results, got %d\", len(top))\n\t}\n\tif top[0].Word != \"a\" || top[0].Count != 3 {\n\t\tt.Errorf(\"expected a:3, got %s:%d\", top[0].Word, top[0].Count)\n\t}\n\tif top[1].Word != \"b\" || top[1].Count != 2 {\n\t\tt.Errorf(\"expected b:2, got %s:%d\", top[1].Word, top[1].Count)\n\t}\n}\n\nfunc TestTopNMoreThanDistinctWords(t *testing.T) {\n\twf := New()\n\twf.Add(\"x\")\n\ttop := wf.TopN(5)\n\tif len(top) != 1 {\n\t\tt.Fatalf(\"expected 1, got %d\", len(top))\n\t}\n}\n\nfunc TestTopNEmpty(t *testing.T) {\n\twf := New()\n\ttop := wf.TopN(3)\n\tif len(top) != 0 {\n\t\tt.Fatalf(\"expected 0, got %d\", len(top))\n\t}\n}\n\nfunc TestCountZeroForUnknown(t *testing.T) {\n\twf := New()\n\tif wf.Count(\"unknown\") != 0 {\n\t\tt.Errorf(\"expected 0 for unseen word\")\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement WordFrequency in wordfreq.go.\n\ntype WordCount struct {\n    Word  string\n    Count int\n}\n\ntype WordFrequency struct { ... }\n\nfunc New() *WordFrequency\nfunc (wf *WordFrequency) Add(word string)          // increment count for word\nfunc (wf *WordFrequency) Count(word string) int     // return count (0 if unseen)\nfunc (wf *WordFrequency) TopN(n int) []WordCount    // top n words sorted by count desc\n\nAll 5 tests in wordfreq_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "WordCount struct with Word string and Count int fields",
+      "WordFrequency backed by a map[string]int",
+      "Add increments the count for the given word",
+      "Count returns 0 for unseen words",
+      "TopN returns at most n WordCount items sorted descending by Count",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-037",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement a builder pattern for HTTP request config in Rust",
+  "description": "Greenfield Rust task: implement a RequestBuilder that constructs an HttpRequest using method chaining. The builder sets method, URL, headers, and an optional body, then builds to an immutable HttpRequest.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"httpreq\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement RequestBuilder and HttpRequest\n"
+      },
+      {
+        "path": "tests/builder_test.rs",
+        "content": "use httpreq::{RequestBuilder, HttpRequest};\n\n#[test]\nfn test_basic_get() {\n    let req: HttpRequest = RequestBuilder::new()\n        .method(\"GET\")\n        .url(\"https://example.com\")\n        .build();\n    assert_eq!(req.method, \"GET\");\n    assert_eq!(req.url, \"https://example.com\");\n    assert!(req.body.is_none());\n}\n\n#[test]\nfn test_post_with_body() {\n    let req = RequestBuilder::new()\n        .method(\"POST\")\n        .url(\"https://api.example.com/data\")\n        .body(\"hello world\")\n        .build();\n    assert_eq!(req.method, \"POST\");\n    assert_eq!(req.body, Some(\"hello world\".to_string()));\n}\n\n#[test]\nfn test_add_header() {\n    let req = RequestBuilder::new()\n        .method(\"GET\")\n        .url(\"https://example.com\")\n        .header(\"Authorization\", \"Bearer token123\")\n        .build();\n    assert_eq!(req.headers.get(\"Authorization\").map(|s| s.as_str()), Some(\"Bearer token123\"));\n}\n\n#[test]\nfn test_multiple_headers() {\n    let req = RequestBuilder::new()\n        .method(\"GET\")\n        .url(\"https://example.com\")\n        .header(\"Accept\", \"application/json\")\n        .header(\"X-Custom\", \"value\")\n        .build();\n    assert_eq!(req.headers.len(), 2);\n}\n\n#[test]\nfn test_chaining_returns_builder() {\n    // Verify the builder methods return Self for chaining\n    let req = RequestBuilder::new()\n        .method(\"DELETE\")\n        .url(\"https://example.com/resource/1\")\n        .header(\"Accept\", \"*/*\")\n        .build();\n    assert_eq!(req.method, \"DELETE\");\n    assert_eq!(req.headers.len(), 1);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement RequestBuilder and HttpRequest in src/lib.rs.\n\nuse std::collections::HashMap;\n\npub struct HttpRequest {\n    pub method: String,\n    pub url: String,\n    pub headers: HashMap<String, String>,\n    pub body: Option<String>,\n}\n\npub struct RequestBuilder {\n    method: String,\n    url: String,\n    headers: HashMap<String, String>,\n    body: Option<String>,\n}\n\nimpl RequestBuilder {\n    pub fn new() -> Self {\n        RequestBuilder {\n            method: String::new(),\n            url: String::new(),\n            headers: HashMap::new(),\n            body: None,\n        }\n    }\n\n    pub fn method(mut self, method: &str) -> Self {\n        self.method = method.to_string(); self\n    }\n    pub fn url(mut self, url: &str) -> Self {\n        self.url = url.to_string(); self\n    }\n    pub fn header(mut self, key: &str, value: &str) -> Self {\n        self.headers.insert(key.to_string(), value.to_string()); self\n    }\n    pub fn body(mut self, body: &str) -> Self {\n        self.body = Some(body.to_string()); self\n    }\n    pub fn build(self) -> HttpRequest {\n        HttpRequest { method: self.method, url: self.url, headers: self.headers, body: self.body }\n    }\n}\n\nAll 5 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "RequestBuilder uses method chaining (returns Self)",
+      "build() consumes the builder and returns HttpRequest",
+      "headers stored in HashMap<String, String>",
+      "body is Option<String>, None when not set",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

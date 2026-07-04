@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-longhorizon-002",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "medium",
+  "duration_hint_minutes": 35,
+  "title": "Evolve an async job queue in 3 steps: result tracking, status filter, and batch create",
+  "description": "A minimal async FastAPI job queue (create/get/list) is evolved over three steps to become a production-ready queue API.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_async_api",
+    "injections": [],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "The async job queue API (src/app.py) has POST /jobs, GET /jobs/{id}, and GET /jobs. Evolve it in three steps:\n\nStep 1 — Result tracking: Add an optional 'result' field (str | None, default None) to the job store. Add PATCH /jobs/{job_id}/status that accepts {\"status\": \"<str>\", \"result\": \"<optional str>\"} — updates both fields atomically. Return 404 if job not found. Update reset() to clear results too. Write test_update_status_with_result.\n\nStep 2 — Status filter: Update GET /jobs to accept an optional ?status=<str> query param. When provided, return only jobs matching that status. When absent, return all. Write test_list_filter_by_status that creates two jobs, updates one, and asserts only matching jobs are returned.\n\nStep 3 — Batch create: Add POST /jobs/batch that accepts a JSON array [{\"name\": ...}, ...] (max 10 items) and creates all jobs atomically. Return a list of created jobs with status 207 Multi-Status. Reject payloads exceeding 10 items with 422. Write test_batch_create and test_batch_create_too_many.\n\nAll existing tests must continue to pass. Run uv run pytest tests/ -v to confirm.",
+    "required_artifacts": [
+      "PATCH /jobs/{id}/status with optional result field",
+      "GET /jobs?status= filter param",
+      "POST /jobs/batch endpoint (max 10, returns 207)",
+      "test_update_status_with_result, test_list_filter_by_status, test_batch_create, test_batch_create_too_many pass",
+      "All original 4 tests still pass"
+    ],
+    "success_criteria": [
+      "All three steps implemented in a single coherent module",
+      "reset() clears all new fields",
+      "8+ tests total pass"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `uv run pytest tests/ -v` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `uv run pytest tests/ -v` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

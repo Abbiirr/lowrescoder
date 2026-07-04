@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-ioutil-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Migrate Go io/ioutil usage to modern io and os packages",
+  "description": "The go_ioutil_reader package uses the deprecated io/ioutil package. Migrate all calls to the modern equivalents: ioutil.ReadFile -> os.ReadFile, ioutil.WriteFile -> os.WriteFile.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_ioutil_reader",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Migrate internal/fileutil/fileutil.go from the deprecated io/ioutil package to modern equivalents.\n\nReplacements:\n  ioutil.ReadFile(path)  ->  os.ReadFile(path)\n  ioutil.WriteFile(path, data, perm)  ->  os.WriteFile(path, data, perm)\n\nRemove the 'io/ioutil' import and add 'os' if not already present.\nRemove the //nolint:staticcheck comments.\nAll existing tests must pass without modification.\n\nRun go test ./... to confirm.",
+    "required_artifacts": [
+      "No io/ioutil import",
+      "os.ReadFile used instead of ioutil.ReadFile",
+      "os.WriteFile used instead of ioutil.WriteFile",
+      "All tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "io/ioutil not imported"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `go test ./...` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

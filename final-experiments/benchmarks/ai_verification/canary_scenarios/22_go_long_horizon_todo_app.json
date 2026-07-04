@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-longhorizon-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "hard",
+  "duration_hint_minutes": 60,
+  "title": "Evolve a Go todo server over 5 steps: done toggle, delete, priorities, filtering, pagination",
+  "description": "A minimal Go todo server (list + create) must be evolved step by step to a production-ready API.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_middleware_server",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Go todo server has GET /todos and POST /todos. Evolve it in five steps:\n\nStep 1 — Done toggle: add PATCH /todos/{id}/done that flips the Done field and returns the updated todo (404 if missing).\n\nStep 2 — Delete: add DELETE /todos/{id} that removes the todo from the slice and returns 204 No Content (404 if missing).\n\nStep 3 — Priority field: add an optional Priority int field (default 0) to Todo. Update POST /todos to accept priority in the body. Write a SortByPriority helper that returns todos sorted by priority descending.\n\nStep 4 — Filter: update GET /todos to accept an optional ?done=true|false query param. When provided, return only todos matching the done status. When absent, return all.\n\nStep 5 — Pagination: update GET /todos to also accept ?page=N&page_size=M (1-indexed, default page_size=10). Apply pagination after the done filter. Return a JSON object {items: [...], total: N, page: N, page_size: N}.\n\nAdd tests for every new behaviour. All existing tests must continue to pass. Run go test ./... to confirm.",
+    "required_artifacts": [
+      "PATCH /todos/{id}/done endpoint",
+      "DELETE /todos/{id} endpoint",
+      "Priority field on Todo struct",
+      "GET /todos?done=true|false filter",
+      "GET /todos?page=N&page_size=M pagination",
+      "Tests for all five steps",
+      "go test ./... passes"
+    ],
+    "success_criteria": [
+      "All five features implemented end-to-end",
+      "Pagination applied after filter",
+      "All tests green including original three"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `go test ./...` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `go test ./...` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

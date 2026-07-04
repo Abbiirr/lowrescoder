@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "552-go-mt-refactor-extend",
+  "title": "Refactor god struct then add interface in Go — 3 turns",
+  "category": "refactor",
+  "difficulty": "medium",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "God struct does too much. Split it, keep tests green, then add interface and mock.",
+  "repo_seed": {
+    "files": {
+      "go.mod": "module github.com/ai-verification/refactor-go\n\ngo 1.22\n",
+      "service/service.go": "package service\n\nimport (\n\t\"fmt\"\n\t\"strings\"\n)\n\n// UserService does too much: data, validation, formatting.\n// Refactor: split into UserStore, UserValidator, UserFormatter.\ntype UserService struct {\n\tusers map[int]string\n\tnextID int\n}\n\nfunc NewUserService() *UserService {\n\treturn &UserService{users: make(map[int]string), nextID: 1}\n}\n\nfunc (s *UserService) CreateUser(name string) (int, error) {\n\tif strings.TrimSpace(name) == \"\" {\n\t\treturn 0, fmt.Errorf(\"name cannot be empty\")\n\t}\n\tid := s.nextID\n\ts.users[id] = strings.TrimSpace(name)\n\ts.nextID++\n\treturn id, nil\n}\n\nfunc (s *UserService) GetUser(id int) (string, bool) {\n\tname, ok := s.users[id]\n\treturn name, ok\n}\n\nfunc (s *UserService) FormatUser(id int) string {\n\tname, ok := s.users[id]\n\tif !ok {\n\t\treturn \"\"\n\t}\n\treturn fmt.Sprintf(\"User#%d: %s\", id, strings.ToUpper(name))\n}\n\nfunc (s *UserService) ListUsers() []string {\n\tresult := make([]string, 0, len(s.users))\n\tfor id, name := range s.users {\n\t\tresult = append(result, fmt.Sprintf(\"%d:%s\", id, name))\n\t}\n\treturn result\n}\n",
+      "service/service_test.go": "package service_test\n\nimport (\n\t\"testing\"\n\n\t\"github.com/ai-verification/refactor-go/service\"\n)\n\nfunc TestCreateUser(t *testing.T) {\n\tsvc := service.NewUserService()\n\tid, err := svc.CreateUser(\"Alice\")\n\tif err != nil || id == 0 {\n\t\tt.Fatalf(\"expected valid id, got %d %v\", id, err)\n\t}\n}\n\nfunc TestCreateUserEmptyName(t *testing.T) {\n\tsvc := service.NewUserService()\n\t_, err := svc.CreateUser(\"\")\n\tif err == nil {\n\t\tt.Fatal(\"expected error for empty name\")\n\t}\n}\n\nfunc TestGetUser(t *testing.T) {\n\tsvc := service.NewUserService()\n\tid, _ := svc.CreateUser(\"Bob\")\n\tname, ok := svc.GetUser(id)\n\tif !ok || name != \"Bob\" {\n\t\tt.Fatalf(\"expected Bob, got %s %v\", name, ok)\n\t}\n}\n\nfunc TestFormatUser(t *testing.T) {\n\tsvc := service.NewUserService()\n\tid, _ := svc.CreateUser(\"alice\")\n\tfmt := svc.FormatUser(id)\n\tif fmt == \"\" {\n\t\tt.Fatal(\"expected formatted user\")\n\t}\n}\n\nfunc TestUserStore(t *testing.T) {\n\t\"\"\"Test that UserStore interface exists and works.\"\"\"\n\tvar _ service.UserStorer = service.NewUserService()\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Refactor `UserService` in `service/service.go`: extract the data storage operations into a separate concept while keeping the same public API. The existing `NewUserService()`, `CreateUser()`, `GetUser()`, `FormatUser()`, and `ListUsers()` must keep working. Run `go test ./...` to confirm no regressions.",
+    "followup_prompts": [
+      "Run `go test ./...` to confirm no regressions from your refactor. Also review the code you changed — is the separation clean? Look at any remaining duplication or unclear names.",
+      "Final pass: add a `UserStorer` interface with methods `CreateUser(name string) (int, error)`, `GetUser(id int) (string, bool)`, and `ListUsers() []string`. Make `UserService` implement it. Then run `go test ./...` and confirm everything is green — including the TestUserStore test that checks the interface."
+    ],
+    "success_criteria": [
+      "UserService struct is refactored into clearer components",
+      "All 4 existing tests still pass",
+      "UserStorer interface defined with correct methods",
+      "UserService implements UserStorer",
+      "go test ./... passes (5 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "go test ./..."}
+  },
+  "duration_hint_minutes": 20
+}

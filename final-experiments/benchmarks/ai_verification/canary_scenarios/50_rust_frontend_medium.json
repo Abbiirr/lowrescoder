@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-frontend-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Add HTML table and summary report generators to Rust report library",
+  "description": "A Rust report-generation library has aggregation helpers (sum, max, min). Add two functions that generate HTML strings: a data table and a summary card.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_report_gen",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Rust library in src/lib.rs has Item struct and sum/max_item/min_item helpers. Add two HTML-generation functions:\n\n1. pub fn to_html_table(items: &[Item], title: &str) -> String\n   Returns a complete HTML snippet with:\n   - An <h2> containing title\n   - A <table> with a header row (<tr><th>Name</th><th>Value</th></tr>)\n   - One <tr><td>name</td><td>value</td></tr> row per item\n   - An empty table with just the header if items is empty\n\n2. pub fn to_html_summary(items: &[Item]) -> String\n   Returns an HTML <div class=\"summary\"> containing:\n   - <p>Total: {sum}</p> where sum is sum(items) formatted to 2 decimal places\n   - <p>Max: {name} ({value:.2})</p> — or <p>Max: N/A</p> if empty\n   - <p>Min: {name} ({value:.2})</p> — or <p>Min: N/A</p> if empty\n\nAdd 2 tests per function (4 total). All 4 existing tests must still pass.\ncargo test must show 8 tests passing. cargo build must succeed.",
+    "required_artifacts": [
+      "to_html_table returning valid HTML with <table>",
+      "to_html_summary returning <div class=\"summary\"> with total/max/min",
+      "4 new tests",
+      "All 4 original tests still pass",
+      "cargo test passes 8 tests"
+    ],
+    "success_criteria": [
+      "HTML output contains correct tags and data",
+      "Empty items handled gracefully in both functions",
+      "All 8 tests pass"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `cargo test` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-025",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "hard",
+  "duration_hint_minutes": 35,
+  "title": "Implement advanced DP algorithms in Python",
+  "description": "Greenfield Python task: implement coin_change (minimum coins), lis (longest increasing subsequence length), and longest_common_subsequence.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"dp_advanced\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/dp_advanced.py",
+        "content": "# TODO: implement coin_change, lis, longest_common_subsequence\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_dp_advanced.py",
+        "content": "from src.dp_advanced import coin_change, lis, longest_common_subsequence\n\n\ndef test_coin_change_basic():\n    assert coin_change([1, 5, 10, 25], 36) == 3  # 25+10+1\n    assert coin_change([1, 5, 10, 25], 0) == 0\n\n\ndef test_coin_change_impossible():\n    assert coin_change([2], 3) == -1\n\n\ndef test_lis_basic():\n    assert lis([10, 9, 2, 5, 3, 7, 101, 18]) == 4  # 2,3,7,18 or 2,5,7,18\n    assert lis([0, 1, 0, 3, 2, 3]) == 4\n\n\ndef test_lis_all_same():\n    assert lis([5, 5, 5, 5]) == 1\n\n\ndef test_lcs_basic():\n    assert longest_common_subsequence(\"abcde\", \"ace\") == 3\n    assert longest_common_subsequence(\"abc\", \"abc\") == 3\n    assert longest_common_subsequence(\"abc\", \"def\") == 0\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement three DP algorithms in src/dp_advanced.py.\n\ndef coin_change(coins: list[int], amount: int) -> int:\n    # dp[i] = min coins to make amount i. dp[0]=0, rest=inf.\n    # For each i in 1..amount: for each coin: if coin<=i: dp[i]=min(dp[i], dp[i-coin]+1)\n    # Return dp[amount] if finite, else -1.\n\ndef lis(nums: list[int]) -> int:\n    # dp[i] = length of LIS ending at index i.\n    # dp[i] = 1 + max(dp[j] for j<i if nums[j]<nums[i]), default 1.\n    # Return max(dp) or 0 for empty.\n\ndef longest_common_subsequence(s1: str, s2: str) -> int:\n    # dp[i][j] = LCS length for s1[:i] and s2[:j].\n    # if s1[i-1]==s2[j-1]: dp[i][j] = dp[i-1][j-1]+1\n    # else: dp[i][j] = max(dp[i-1][j], dp[i][j-1])\n    # Return dp[len(s1)][len(s2)].\n\nAll 5 tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "coin_change returns minimum coins or -1 if impossible",
+      "coin_change(coins, 0) returns 0",
+      "lis returns length of longest strictly increasing subsequence",
+      "lcs uses 2D DP table correctly",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.dp_advanced import coin_change, lis, longest_common_subsequence\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.dp_advanced import coin_change, lis, longest_common_subsequence\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-018",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Implement matrix multiplication in Rust",
+  "description": "Greenfield Rust task: implement multiply(a, b) -> Vec<Vec<i64>> that computes the matrix product of two 2D matrices represented as slices of Vec<i64>.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"matmul\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement multiply\n"
+      },
+      {
+        "path": "tests/matmul_test.rs",
+        "content": "use matmul::multiply;\n\n#[test]\nfn test_2x2() {\n    let a = vec![vec![1, 2], vec![3, 4]];\n    let b = vec![vec![5, 6], vec![7, 8]];\n    let c = multiply(&a, &b);\n    assert_eq!(c, vec![vec![19, 22], vec![43, 50]]);\n}\n\n#[test]\nfn test_identity() {\n    let a = vec![vec![1i64, 2], vec![3, 4]];\n    let id = vec![vec![1i64, 0], vec![0, 1]];\n    assert_eq!(multiply(&a, &id), a);\n}\n\n#[test]\nfn test_nonsquare() {\n    let a = vec![vec![1, 2, 3], vec![4, 5, 6]];\n    let b = vec![vec![7, 8], vec![9, 10], vec![11, 12]];\n    let c = multiply(&a, &b);\n    assert_eq!(c, vec![vec![58, 64], vec![139, 154]]);\n}\n\n#[test]\nfn test_1x1() {\n    let a = vec![vec![6_i64]];\n    let b = vec![vec![7_i64]];\n    assert_eq!(multiply(&a, &b), vec![vec![42_i64]]);\n}\n\n#[test]\nfn test_zeros() {\n    let a = vec![vec![0i64, 0], vec![0, 0]];\n    let b = vec![vec![1i64, 2], vec![3, 4]];\n    assert_eq!(multiply(&a, &b), vec![vec![0i64, 0], vec![0, 0]]);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement matrix multiplication in src/lib.rs.\n\npub fn multiply(a: &[Vec<i64>], b: &[Vec<i64>]) -> Vec<Vec<i64>>\n  // Compute a * b where a is (rows_a x cols_a) and b is (cols_a x cols_b).\n  // Use the standard triple-loop algorithm:\n  //   result[i][j] += a[i][k] * b[k][j]\n  // Assume dimensions are compatible (panic otherwise).\n\nAll 5 tests in tests/matmul_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "multiply extracts rows_a, cols_a, cols_b from slice dimensions",
+      "Allocates result as vec![vec![0i64; cols_b]; rows_a]",
+      "Triple nested loop: for i in 0..rows_a, for k in 0..cols_a, for j in 0..cols_b",
+      "Handles non-square matrices (2x3 * 3x2)",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

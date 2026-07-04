@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "518-go-mt-debug-slice-append",
+  "title": "Debug slice aliasing bug in Go — 3 turns",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "Slice operations have aliasing bugs: append result not captured, and shared backing array causes mutations to affect both slices. Fix and add benchmark.",
+  "repo_seed": {
+    "files": {
+      "go.mod": "module github.com/ai-verification/slice-bugs\n\ngo 1.22\n",
+      "slices/slices.go": "package slices\n\n// AppendUnique adds value to slice only if not already present.\n// BUG: does not return the new slice — caller loses the appended element.\nfunc AppendUnique(s []int, v int) []int {\n\tfor _, x := range s {\n\t\tif x == v {\n\t\t\treturn s\n\t\t}\n\t}\n\tappend(s, v) // BUG: result of append discarded\n\treturn s\n}\n\n// Copy returns a copy of the slice (does not share backing array).\n// BUG: returns the original slice, not a copy — mutations to result affect original.\nfunc Copy(s []int) []int {\n\treturn s // BUG: should be a real copy\n}\n\n// Filter returns a new slice with elements where predicate returns true.\n// BUG: pre-allocated with len (not 0) causing zero-padding.\nfunc Filter(s []int, fn func(int) bool) []int {\n\tresult := make([]int, len(s)) // BUG: should start with make([]int, 0, len(s))\n\tfor _, v := range s {\n\t\tif fn(v) {\n\t\t\tresult = append(result, v)\n\t\t}\n\t}\n\treturn result\n}\n",
+      "slices/slices_test.go": "package slices_test\n\nimport (\n\t\"testing\"\n\n\t\"github.com/ai-verification/slice-bugs/slices\"\n)\n\nfunc TestAppendUnique(t *testing.T) {\n\ts := []int{1, 2, 3}\n\ts = slices.AppendUnique(s, 4)\n\tif len(s) != 4 || s[3] != 4 {\n\t\tt.Fatalf(\"expected [1 2 3 4], got %v\", s)\n\t}\n}\n\nfunc TestAppendUniqueNoDuplicate(t *testing.T) {\n\ts := []int{1, 2, 3}\n\ts = slices.AppendUnique(s, 2)\n\tif len(s) != 3 {\n\t\tt.Fatalf(\"expected length 3, got %d\", len(s))\n\t}\n}\n\nfunc TestCopyIsIndependent(t *testing.T) {\n\toriginal := []int{1, 2, 3}\n\tcopy := slices.Copy(original)\n\tcopy[0] = 99\n\tif original[0] == 99 {\n\t\tt.Fatal(\"Copy shares backing array with original\")\n\t}\n}\n\nfunc TestFilter(t *testing.T) {\n\ts := []int{1, 2, 3, 4, 5}\n\teven := slices.Filter(s, func(v int) bool { return v%2 == 0 })\n\tif len(even) != 2 || even[0] != 2 || even[1] != 4 {\n\t\tt.Fatalf(\"expected [2 4], got %v\", even)\n\t}\n}\n\nfunc BenchmarkAppendUnique(b *testing.B) {\n\tfor i := 0; i < b.N; i++ {\n\t\ts := make([]int, 0, 100)\n\t\tfor j := 0; j < 100; j++ {\n\t\t\ts = slices.AppendUnique(s, j)\n\t\t}\n\t}\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The `AppendUnique` function in `slices/slices.go` discards the result of `append(s, v)` — Go's append returns a new slice but the code ignores the return value. Fix this: `s = append(s, v)` then `return s`. Run `go test ./...`.",
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what you fixed. Now fix the other two bugs: (1) `Copy()` returns the original slice — it should return a real copy using `append([]int{}, s...)` or `copy()`. (2) `Filter()` pre-allocates with `make([]int, len(s))` which adds zero-padding — change to `make([]int, 0, len(s))`. Run `go test ./...`.",
+      "Final pass: run `go test -run=. -bench=BenchmarkAppendUnique ./...` and confirm everything is green. Give me a one-line summary of what changed."
+    ],
+    "success_criteria": [
+      "AppendUnique captures the result of append(s, v)",
+      "Copy() returns a slice with independent backing array",
+      "Filter() does not have zero-padding from make([]int, len(s))",
+      "All 4 tests pass",
+      "Benchmark runs without error"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "go test ./..."}
+  },
+  "duration_hint_minutes": 15
+}

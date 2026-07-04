@@ -1,0 +1,75 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-005",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Build a min-heap priority queue in Python using heapq",
+  "description": "Greenfield Python task: implement a MinPQ class wrapping heapq with push, pop, peek, is_empty, and __len__ operations.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"minpq\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/minpq.py",
+        "content": "# TODO: implement MinPQ\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_minpq.py",
+        "content": "import pytest\nfrom src.minpq import MinPQ\n\n\ndef test_empty_initially():\n    pq = MinPQ()\n    assert pq.is_empty()\n    assert len(pq) == 0\n\n\ndef test_push_and_pop_order():\n    pq = MinPQ()\n    pq.push(5)\n    pq.push(1)\n    pq.push(3)\n    assert pq.pop() == 1\n    assert pq.pop() == 3\n    assert pq.pop() == 5\n\n\ndef test_peek_does_not_remove():\n    pq = MinPQ()\n    pq.push(7)\n    pq.push(2)\n    assert pq.peek() == 2\n    assert len(pq) == 2\n\n\ndef test_len_tracks_operations():\n    pq = MinPQ()\n    pq.push(10)\n    pq.push(20)\n    assert len(pq) == 2\n    pq.pop()\n    assert len(pq) == 1\n\n\ndef test_pop_empty_raises():\n    pq = MinPQ()\n    with pytest.raises(IndexError):\n        pq.pop()\n\n\ndef test_peek_empty_raises():\n    pq = MinPQ()\n    with pytest.raises(IndexError):\n        pq.peek()\n\n\ndef test_is_empty_after_all_pops():\n    pq = MinPQ()\n    pq.push(42)\n    pq.pop()\n    assert pq.is_empty()\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement MinPQ in src/minpq.py using heapq.\n\nimport heapq\n\nclass MinPQ:\n    def __init__(self) -> None:\n        ...\n\n    def push(self, value: int) -> None:\n        # Add value to the queue.\n        ...\n\n    def pop(self) -> int:\n        # Remove and return the minimum value.\n        # Raise IndexError if empty.\n        ...\n\n    def peek(self) -> int:\n        # Return the minimum value without removing it.\n        # Raise IndexError if empty.\n        ...\n\n    def is_empty(self) -> bool:\n        ...\n\n    def __len__(self) -> int:\n        ...\n\nAll 7 tests in tests/test_minpq.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "MinPQ wraps heapq internally",
+      "pop returns elements in ascending order",
+      "peek does not remove the minimum element",
+      "pop and peek raise IndexError when empty",
+      "len tracks push/pop correctly",
+      "All 7 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (7 tests)",
+      "uv run python -c \"from src.minpq import MinPQ\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.minpq import MinPQ\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

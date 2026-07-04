@@ -1,0 +1,31 @@
+title: Tool output shape validation
+category: backend_feature
+difficulty: easy
+target_stack:
+  language: python
+task_spec:
+  prompt: |
+    Read the file hello.py and confirm its content. Then list the files in the
+    current directory. Report the file count.
+repo_seed:
+  mode: fresh
+  injections:
+    - path: hello.py
+      content: "print('hello')\n"
+expected_outcomes:
+  must_have:
+    - "item_started with kind=tool_execution"
+    - "item_completed event present"
+    - "turn_completed event with usage"
+  must_not_have:
+    - "error event"
+grading:
+  checks:
+    - snapshot
+  check_commands:
+    snapshot: "test -f hello.py && grep -q \"print('hello')\" hello.py"
+trajectory_assertions:
+  must_use_tools:
+    - "read_file"
+    - "list_files"
+  min_tool_calls: 2

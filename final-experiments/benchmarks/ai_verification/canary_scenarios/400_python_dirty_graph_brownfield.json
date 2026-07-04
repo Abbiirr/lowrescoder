@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-021",
+  "title": "Fix three bugs in a Python Graph class",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Fix bugs in an undirected graph: missing reverse edge in add_edge, pop() instead of pop(0) in bfs, and vertex_count returning len+1.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/graph.py": "from collections import deque\n\n\nclass Graph:\n    def __init__(self):\n        self._adj = {}\n\n    def add_vertex(self, v):\n        if v not in self._adj:\n            self._adj[v] = []\n\n    def add_edge(self, u, v):\n        self._adj.setdefault(u, []).append(v)\n        # BUG 1: missing reverse edge for undirected graph\n\n    def bfs(self, start):\n        visited = set()\n        queue = [start]\n        result = []\n        while queue:\n            node = queue.pop()  # BUG 2: should be pop(0)\n            if node not in visited:\n                visited.add(node)\n                result.append(node)\n                for neighbor in sorted(self._adj.get(node, [])):\n                    queue.append(neighbor)\n        return result\n\n    def vertex_count(self):\n        return len(self._adj) + 1  # BUG 3: should be len(self._adj)\n",
+      "tests/test_graph.py": "import sys\nsys.path.insert(0, '.')\nfrom src.graph import Graph\n\n\ndef test_undirected_edges():\n    g = Graph()\n    g.add_edge(1, 2)\n    assert 2 in g._adj.get(1, []), 'edge 1->2 missing'\n    assert 1 in g._adj.get(2, []), 'reverse edge 2->1 missing'\n\n\ndef test_bfs_order():\n    g = Graph()\n    for u, v in [(1, 2), (1, 3), (2, 4)]:\n        g.add_edge(u, v)\n    assert g.bfs(1) == [1, 2, 3, 4]\n\n\ndef test_vertex_count():\n    g = Graph()\n    for v in [10, 20, 30]:\n        g.add_vertex(v)\n    assert g.vertex_count() == 3\n",
+      "pyproject.toml": "[project]\nname = \"graph\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = []\n\n[tool.pytest.ini_options]\npythonpath = [\".\"]\n\n[dependency-groups]\ndev = [\"pytest>=8.0\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/graph.py:\n1. add_edge: add the reverse edge `self._adj.setdefault(v, []).append(u)` (undirected graph)\n2. bfs: replace `queue.pop()` with `queue.pop(0)` so it processes level-by-level\n3. vertex_count: return `len(self._adj)` not `len(self._adj) + 1`\nAll 3 tests must pass.",
+    "entry_point": "src/graph.py",
+    "success_criteria": "All 3 pytest test cases pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

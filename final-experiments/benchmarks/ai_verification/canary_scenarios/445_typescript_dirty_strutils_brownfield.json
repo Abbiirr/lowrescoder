@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-ts-brownfield-001",
+  "title": "Fix three bugs in a TypeScript string utilities module",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "typescript",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Fix bugs in strutils.ts: capitalize returns lowercase, truncate cuts at wrong length, isPalindrome ignores case incorrectly.",
+  "repo_seed": {
+    "files": {
+      "src/strutils.ts": "// BUG 1: returns lowercase instead of capitalizing first letter\nexport function capitalize(s: string): string {\n  if (!s) return s;\n  return s[0].toLowerCase() + s.slice(1);\n}\n\n// BUG 2: truncates at length+1 instead of length\nexport function truncate(s: string, length: number): string {\n  if (s.length <= length) return s;\n  return s.slice(0, length + 1) + '...';\n}\n\n// BUG 3: does not lowercase before palindrome check\nexport function isPalindrome(s: string): boolean {\n  const cleaned = s.replace(/[^a-zA-Z0-9]/g, '');\n  return cleaned === cleaned.split('').reverse().join('');\n}\n",
+      "src/strutils.test.ts": "import { capitalize, truncate, isPalindrome } from './strutils';\n\ntest('capitalize hello', () => {\n  expect(capitalize('hello')).toBe('Hello');\n});\n\ntest('capitalize empty', () => {\n  expect(capitalize('')).toBe('');\n});\n\ntest('truncate short', () => {\n  expect(truncate('hi', 10)).toBe('hi');\n});\n\ntest('truncate long', () => {\n  expect(truncate('hello world', 5)).toBe('hello...');\n});\n\ntest('isPalindrome racecar', () => {\n  expect(isPalindrome('racecar')).toBe(true);\n});\n\ntest('isPalindrome case insensitive', () => {\n  expect(isPalindrome('RaceCar')).toBe(true);\n});\n\ntest('isPalindrome not palindrome', () => {\n  expect(isPalindrome('hello')).toBe(false);\n});\n",
+      "package.json": "{\n  \"name\": \"strutils\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"test\": \"jest\"\n  },\n  \"devDependencies\": {\n    \"@types/jest\": \"^29.0.0\",\n    \"jest\": \"^29.0.0\",\n    \"ts-jest\": \"^29.0.0\",\n    \"typescript\": \"^5.0.0\"\n  },\n  \"jest\": {\n    \"preset\": \"ts-jest\",\n    \"testEnvironment\": \"node\"\n  }\n}\n",
+      "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"target\": \"ES2020\",\n    \"module\": \"commonjs\",\n    \"strict\": true,\n    \"esModuleInterop\": true,\n    \"outDir\": \"dist\"\n  },\n  \"include\": [\"src\"]\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/strutils.ts:\n1. capitalize: change s[0].toLowerCase() to s[0].toUpperCase() so it capitalizes the first letter\n2. truncate: change slice(0, length + 1) to slice(0, length) so it cuts at the correct position\n3. isPalindrome: add .toLowerCase() to the cleaned string comparison so case is ignored\nAll 7 Jest tests must pass.",
+    "entry_point": "src/strutils.ts",
+    "success_criteria": [
+      "All 7 Jest tests pass"
+    ],
+    "followup_prompts": [
+      "Run `npm test -- --forceExit` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `npm test -- --forceExit` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "npm test -- --ci",
+    "expected_exit_code": 0
+  }
+}

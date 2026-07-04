@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-dirty-003",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 10,
+  "title": "Fix two simple bugs in Go HTTP handler: wrong status code and wrong response key",
+  "description": "A Go HTTP handler returns HTTP 201 instead of 200, and uses 'data' instead of 'items' as the JSON response key. Both bugs break the existing test.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "mutate",
+    "fixture_ref": "go_http_server",
+    "injections": [
+      {
+        "path": "internal/handler/items.go",
+        "content": "package handler\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n)\n\nfunc ListItems(w http.ResponseWriter, r *http.Request) {\n\tif r.Method != http.MethodGet {\n\t\thttp.Error(w, \"method not allowed\", http.StatusMethodNotAllowed)\n\t\treturn\n\t}\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tw.WriteHeader(http.StatusCreated) // BUG: should not set status here (returns 201)\n\tjson.NewEncoder(w).Encode(map[string]any{\"data\": []any{}}) // BUG: key should be \"items\"\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Go handler in internal/handler/items.go has two bugs introduced by a bad commit:\n\nBug 1 — wrong status code: The handler calls w.WriteHeader(http.StatusCreated) explicitly, causing GET /items to return HTTP 201 instead of 200. Remove that line.\n\nBug 2 — wrong response key: The JSON response uses 'data' instead of 'items'. Change the key back to 'items'.\n\nAfter fixing both bugs, go test ./... must show 1/1 tests passing.",
+    "required_artifacts": [
+      "GET /items returns HTTP 200",
+      "Response JSON has 'items' key",
+      "go test ./... passes"
+    ],
+    "success_criteria": [
+      "Both fixes are minimal — change only what is broken",
+      "Existing test passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-012",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Implement list utility functions in Python",
+  "description": "Greenfield Python task: implement flatten (recursive list flattening), chunk (split into equal-size pieces), zip_with (element-wise binary map), and group_by (partition by key function).",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"list_utils\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/list_utils.py",
+        "content": "# TODO: implement flatten, chunk, zip_with, group_by\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_list_utils.py",
+        "content": "from src.list_utils import flatten, chunk, zip_with, group_by\n\n\ndef test_flatten():\n    assert flatten([1, [2, [3, 4], 5], 6]) == [1, 2, 3, 4, 5, 6]\n    assert flatten([]) == []\n    assert flatten([1, 2, 3]) == [1, 2, 3]\n\n\ndef test_chunk():\n    assert chunk([1, 2, 3, 4, 5], 2) == [[1, 2], [3, 4], [5]]\n    assert chunk([1, 2, 3], 3) == [[1, 2, 3]]\n    assert chunk([], 2) == []\n\n\ndef test_zip_with():\n    assert zip_with(lambda a, b: a + b, [1, 2, 3], [10, 20, 30]) == [11, 22, 33]\n    assert zip_with(lambda a, b: a * b, [1, 2], [3, 4, 5]) == [3, 8]\n\n\ndef test_group_by():\n    result = group_by([1, 2, 3, 4, 5, 6], lambda x: x % 2)\n    assert result == {0: [2, 4, 6], 1: [1, 3, 5]}\n\n\ndef test_flatten_deep():\n    assert flatten([1, [2, [3, [4, [5]]]]]) == [1, 2, 3, 4, 5]\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement four list utilities in src/list_utils.py.\n\ndef flatten(nested: list) -> list:\n    # Recursively flatten arbitrarily nested lists of lists.\n    # Non-list items pass through unchanged.\n\ndef chunk(lst: list, size: int) -> list:\n    # Split lst into sub-lists of length size (last chunk may be smaller).\n    # Returns [] if lst is empty.\n\ndef zip_with(fn, lst1: list, lst2: list) -> list:\n    # Apply binary fn element-wise, stopping at the shorter list.\n\ndef group_by(lst: list, key_fn) -> dict:\n    # Group items by key_fn(item). Order within each group matches input order.\n\nAll 5 tests in tests/test_list_utils.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "flatten uses isinstance(item, list) check and recursion",
+      "chunk uses slice indexing with step size",
+      "zip_with uses built-in zip and returns a list",
+      "group_by uses setdefault or defaultdict to accumulate groups",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.list_utils import flatten, chunk, zip_with, group_by\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.list_utils import flatten, chunk, zip_with, group_by\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

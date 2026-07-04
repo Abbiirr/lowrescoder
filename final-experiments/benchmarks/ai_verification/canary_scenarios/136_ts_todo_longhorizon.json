@@ -1,0 +1,57 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-ts-003",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "medium",
+  "duration_hint_minutes": 35,
+  "title": "Extend TypeScript Todo API with labels, priority, and filtering in 3 steps",
+  "description": "Multi-step TypeScript/Express task: extend the todo API with labels, priority levels, and server-side filtering.",
+  "target_stack": {
+    "language": "typescript",
+    "framework": "express",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "ts_todo_api",
+    "injections": [],
+    "setup_commands": [
+      "npm install --silent"
+    ]
+  },
+  "task_spec": {
+    "prompt": "Extend the TypeScript todo API in 3 steps. All existing tests must still pass.\n\nStep 1 — Add labels to Todo:\n  Update src/types.ts: add labels: string[] to the Todo interface\n  Update src/store.ts: create() accepts optional labels parameter (default [])\n  POST /todos body can include optional labels array\n  GET /todos/:id and GET /todos return labels field\n\nStep 2 — Add priority field:\n  Add priority: 'low' | 'normal' | 'high' to Todo interface\n  Default priority is 'normal'\n  POST /todos body can include optional priority field\n  Validate that priority is one of the three allowed values; return 400 if invalid\n\nStep 3 — Add GET /todos?done=&priority= filtering:\n  GET /todos accepts optional query params:\n    done=true|false — filter by done status\n    priority=low|normal|high — filter by priority\n  Without params, returns all todos (existing behavior)\n  Filtering is case-insensitive\n\nAll 7 existing tests must still pass.\nRun: npm test -- --forceExit",
+    "required_artifacts": [
+      "Todo interface includes labels: string[]",
+      "Todo interface includes priority: 'low' | 'normal' | 'high'",
+      "POST /todos accepts optional labels and priority fields",
+      "POST /todos returns 400 for invalid priority value",
+      "GET /todos?done=true returns only done todos",
+      "GET /todos?priority=high returns only high-priority todos",
+      "All 7 existing tests pass"
+    ],
+    "success_criteria": [
+      "npm test -- --forceExit passes",
+      "npx tsc --noEmit passes"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `npm test -- --forceExit` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `npm test -- --forceExit` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "typecheck"
+    ],
+    "check_commands": {
+      "run_tests": "npm test -- --forceExit",
+      "typecheck": "npx tsc --noEmit"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

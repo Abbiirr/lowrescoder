@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-java-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "medium",
+  "duration_hint_minutes": 20,
+  "title": "Add power, sqrt, and factorial to Java Calculator",
+  "description": "A Java Calculator class has add/subtract/multiply/divide. Extend it with power(base, exp), sqrt(n), and factorial(n) — with proper edge-case handling and JUnit 5 tests.",
+  "target_stack": {
+    "language": "java",
+    "framework": "maven",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "java_calculator",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Extend src/main/java/com/example/Calculator.java with three new methods:\n\n1. public double power(double base, double exponent)\n   — returns base^exponent. Use Math.pow.\n\n2. public double sqrt(double n)\n   — returns square root of n. Throw IllegalArgumentException if n < 0.\n\n3. public long factorial(int n)\n   — returns n! for n >= 0. Throw IllegalArgumentException if n < 0. Throw ArithmeticException if n > 20 (would overflow long).\n\nAdd tests in src/test/java/com/example/CalculatorExtendedTest.java:\n- testPower: 2^10 = 1024, 2^0 = 1, negative exponent\n- testSqrt: sqrt(9) = 3, sqrt(0) = 0, sqrt(-1) throws\n- testFactorial: 0! = 1, 5! = 120, 20! correct, -1 throws, 21 throws\n- At least 2 tests per method (8+ total)\n\nAll 5 existing CalculatorTest tests must still pass.",
+    "required_artifacts": [
+      "power(), sqrt(), factorial() added to Calculator.java",
+      "CalculatorExtendedTest.java with 8+ tests",
+      "mvn test passes"
+    ],
+    "success_criteria": [
+      "power uses Math.pow",
+      "sqrt throws IllegalArgumentException for negative input",
+      "factorial handles 0!, overflow guard at n>20",
+      "8+ new tests all passing",
+      "Existing 5 tests unbroken"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `mvn test -q` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "mvn test -q",
+      "build": "mvn package -q -DskipTests"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

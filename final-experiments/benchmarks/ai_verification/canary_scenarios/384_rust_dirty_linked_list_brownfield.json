@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-brownfield-014",
+  "title": "Fix three bugs in a Rust singly linked list",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A singly linked list implementation has three bugs: push_front prepends in wrong order, pop_front returns wrong value, and len counts backwards.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "pub struct List<T> {\n    head: Option<Box<Node<T>>>,\n}\n\nstruct Node<T> {\n    val: T,\n    next: Option<Box<Node<T>>>,\n}\n\nimpl<T> List<T> {\n    pub fn new() -> Self {\n        List { head: None }\n    }\n\n    pub fn push_front(&mut self, val: T) {\n        let old_head = self.head.take();\n        let new_node = Box::new(Node { val, next: None }); // bug: next should be old_head\n        self.head = Some(new_node);\n    }\n\n    pub fn pop_front(&mut self) -> Option<T> {\n        self.head.take().map(|node| {\n            self.head = node.next;\n            node.val\n        })\n        // This part is actually correct — bug was in push_front losing the chain\n    }\n\n    pub fn peek(&self) -> Option<&T> {\n        self.head.as_ref().map(|n| &n.val)\n    }\n\n    pub fn len(&self) -> usize {\n        let mut count = 0;\n        let mut current = &self.head;\n        while let Some(node) = current {\n            count += 1;\n            current = &node.next;\n        }\n        count\n        // len is correct, but push_front drops nodes so len always <=1\n    }\n\n    pub fn to_vec(&self) -> Vec<&T> {\n        let mut result = vec![];\n        let mut current = &self.head;\n        while let Some(node) = current {\n            result.push(&node.val);\n            current = &node.next;\n        }\n        result\n    }\n}\n",
+      "tests/list_test.rs": "use linked_list::List;\n\n#[test]\nfn test_push_pop() {\n    let mut list: List<i32> = List::new();\n    list.push_front(1);\n    list.push_front(2);\n    list.push_front(3);\n    assert_eq!(list.pop_front(), Some(3));\n    assert_eq!(list.pop_front(), Some(2));\n    assert_eq!(list.pop_front(), Some(1));\n    assert_eq!(list.pop_front(), None);\n}\n\n#[test]\nfn test_len() {\n    let mut list: List<i32> = List::new();\n    assert_eq!(list.len(), 0);\n    list.push_front(10);\n    list.push_front(20);\n    assert_eq!(list.len(), 2);\n}\n\n#[test]\nfn test_peek() {\n    let mut list: List<i32> = List::new();\n    list.push_front(5);\n    list.push_front(10);\n    assert_eq!(list.peek(), Some(&10));\n}\n\n#[test]\nfn test_to_vec() {\n    let mut list: List<i32> = List::new();\n    list.push_front(1);\n    list.push_front(2);\n    list.push_front(3);\n    assert_eq!(list.to_vec(), vec![&3, &2, &1]);\n}\n",
+      "Cargo.toml": "[package]\nname = \"linked_list\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix the bug in src/lib.rs:\n1. `push_front`: change `next: None` to `next: old_head` so the old list is preserved as the tail of the new node\nAll 4 tests must pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": "All 4 cargo test cases pass",
+    "followup_prompts": [
+      "Run `cargo test --quiet` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test --quiet` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "cargo test",
+    "expected_exit_code": 0
+  }
+}

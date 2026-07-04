@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-brownfield-009",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Add AppError base class to Python exception hierarchy",
+  "description": "Brownfield Python dirty_cleanup: the tests expect AppError as a base class but src/errors.py only has flat exception classes. Add AppError(Exception) as a base, then make NetworkError, TimeoutError, and AuthError extend AppError.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"apperrors\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/errors.py",
+        "content": "class NetworkError(Exception):\n    pass\n\n\nclass TimeoutError(Exception):\n    pass\n\n\nclass AuthError(Exception):\n    pass\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_errors.py",
+        "content": "import pytest\nfrom src.errors import AppError, NetworkError, TimeoutError, AuthError\n\n\ndef test_network_error_is_app_error():\n    assert issubclass(NetworkError, AppError)\n\n\ndef test_timeout_error_is_app_error():\n    assert issubclass(TimeoutError, AppError)\n\n\ndef test_auth_error_is_app_error():\n    assert issubclass(AuthError, AppError)\n\n\ndef test_catch_as_app_error():\n    with pytest.raises(AppError):\n        raise NetworkError(\"connection refused\")\n\n\ndef test_individual_catch_still_works():\n    with pytest.raises(NetworkError):\n        raise NetworkError(\"connection refused\")\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix src/errors.py to add the missing AppError base class.\n\nThe tests import AppError but the original code does not define it.\nAdd AppError(Exception) and make all three exceptions extend it:\n\nclass AppError(Exception):\n    pass\n\n\nclass NetworkError(AppError):\n    pass\n\n\nclass TimeoutError(AppError):\n    pass\n\n\nclass AuthError(AppError):\n    pass\n\nAll 5 tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "AppError inherits from Exception",
+      "NetworkError, TimeoutError, AuthError all inherit from AppError",
+      "Catching AppError catches all subclasses",
+      "Individual subclass catches still work",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.errors import AppError, NetworkError, TimeoutError, AuthError\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -v` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.errors import AppError, NetworkError, TimeoutError, AuthError\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

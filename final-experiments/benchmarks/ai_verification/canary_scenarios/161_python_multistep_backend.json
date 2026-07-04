@@ -1,0 +1,51 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-backend-005",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add filter, deduplicate, and process_and_store to multistep processor",
+  "description": "Brownfield Python task: extend the multistep processor with three new utility functions.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_multistep_service",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add three new functions to src/processor.py. All 6 existing tests must still pass.\n\n  def filter_items(items: list[str], min_length: int) -> list[str]\n    — strip whitespace from each item, keep those whose stripped length >= min_length\n    — return the stripped versions of the kept items\n\n  def deduplicate(items: list[str]) -> list[str]\n    — return items with duplicates removed, preserving the first occurrence order\n    — comparison is case-sensitive\n\n  def process_and_store(key: str, items: list[str]) -> list[str]\n    — call process(items) to get results\n    — call save(key, results) to store them\n    — return the processed results\n\nImport from src.store as needed.\nAll 6 existing tests must still pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "filter_items strips whitespace and keeps items >= min_length",
+      "deduplicate removes duplicate items preserving order",
+      "process_and_store calls process, saves results with key, returns results",
+      "All 6 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `uv run pytest tests/ -v` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

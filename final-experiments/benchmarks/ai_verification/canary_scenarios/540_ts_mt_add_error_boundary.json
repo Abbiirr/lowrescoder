@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "540-ts-mt-add-error-boundary",
+  "title": "Add React ErrorBoundary component — 3 turns",
+  "category": "frontend_feature",
+  "difficulty": "medium",
+  "target_stack": {"language": "typescript", "framework": "react", "extra": {}},
+  "description": "Add an ErrorBoundary class component to catch rendering errors. Turn 1: basic catch. Turn 2: fallback UI. Turn 3: reset and tests.",
+  "repo_seed": {
+    "files": {
+      "package.json": "{\n  \"name\": \"error-boundary\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"test\": \"jest --forceExit\"\n  },\n  \"dependencies\": {\n    \"react\": \"^18.0.0\"\n  },\n  \"devDependencies\": {\n    \"@testing-library/react\": \"^14.0.0\",\n    \"@types/react\": \"^18.0.0\",\n    \"@types/jest\": \"^29.0.0\",\n    \"jest\": \"^29.0.0\",\n    \"jest-environment-jsdom\": \"^29.0.0\",\n    \"ts-jest\": \"^29.0.0\",\n    \"typescript\": \"^5.0.0\"\n  },\n  \"jest\": {\n    \"preset\": \"ts-jest\",\n    \"testEnvironment\": \"jsdom\"\n  }\n}\n",
+      "src/ErrorBoundary.tsx": "import React, { Component, ErrorInfo, ReactNode } from 'react';\n\ninterface Props {\n  children: ReactNode;\n  fallback?: ReactNode | ((error: Error, reset: () => void) => ReactNode);\n  onError?: (error: Error, info: ErrorInfo) => void;\n}\n\ninterface State {\n  hasError: boolean;\n  error: Error | null;\n}\n\n/**\n * ErrorBoundary catches render errors in its subtree.\n * TODO: implement class component lifecycle methods.\n */\nexport class ErrorBoundary extends Component<Props, State> {\n  constructor(props: Props) {\n    super(props);\n    this.state = { hasError: false, error: null };\n  }\n\n  static getDerivedStateFromError(error: Error): State {\n    // TODO: return state with hasError: true and error\n    return { hasError: false, error: null };\n  }\n\n  componentDidCatch(error: Error, info: ErrorInfo): void {\n    // TODO: call props.onError if provided\n  }\n\n  reset = (): void => {\n    // TODO: reset state to { hasError: false, error: null }\n  };\n\n  render(): ReactNode {\n    // TODO: if hasError, render fallback; otherwise render children\n    return this.props.children;\n  }\n}\n",
+      "src/ErrorBoundary.test.tsx": "import React from 'react';\nimport { render, screen, fireEvent } from '@testing-library/react';\nimport { ErrorBoundary } from './ErrorBoundary';\n\n// Suppress console.error for expected errors in tests\nbeforeEach(() => {\n  jest.spyOn(console, 'error').mockImplementation(() => {});\n});\n\nafterEach(() => {\n  (console.error as jest.Mock).mockRestore();\n});\n\nconst ThrowingComponent = ({ shouldThrow }: { shouldThrow: boolean }) => {\n  if (shouldThrow) throw new Error('Test error');\n  return <div>Normal content</div>;\n};\n\ntest('renders children when no error', () => {\n  render(\n    <ErrorBoundary fallback={<div>Error!</div>}>\n      <ThrowingComponent shouldThrow={false} />\n    </ErrorBoundary>\n  );\n  expect(screen.getByText('Normal content')).toBeTruthy();\n});\n\ntest('renders fallback on error', () => {\n  render(\n    <ErrorBoundary fallback={<div>Something went wrong</div>}>\n      <ThrowingComponent shouldThrow={true} />\n    </ErrorBoundary>\n  );\n  expect(screen.getByText('Something went wrong')).toBeTruthy();\n});\n\ntest('calls onError when error occurs', () => {\n  const onError = jest.fn();\n  render(\n    <ErrorBoundary fallback={<div>Error</div>} onError={onError}>\n      <ThrowingComponent shouldThrow={true} />\n    </ErrorBoundary>\n  );\n  expect(onError).toHaveBeenCalledWith(\n    expect.any(Error),\n    expect.objectContaining({ componentStack: expect.any(String) })\n  );\n});\n\ntest('renders fallback function with reset', () => {\n  render(\n    <ErrorBoundary\n      fallback={(error, reset) => (\n        <div>\n          <span>Error: {error.message}</span>\n          <button onClick={reset}>Reset</button>\n        </div>\n      )}\n    >\n      <ThrowingComponent shouldThrow={true} />\n    </ErrorBoundary>\n  );\n  expect(screen.getByText('Error: Test error')).toBeTruthy();\n});\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `getDerivedStateFromError(error)` in `src/ErrorBoundary.tsx` — return `{ hasError: true, error }`. Also implement `render()`: if `this.state.hasError`, render the fallback (it can be a ReactNode directly); otherwise render `this.props.children`. Run `npm test -- --forceExit`.",
+    "followup_prompts": [
+      "Good. Now implement `componentDidCatch(error, info)` — call `this.props.onError?.(error, info)` if the prop is provided. Also handle the function form of `fallback`: if `typeof this.props.fallback === 'function'`, call it with `(this.state.error!, this.reset)` and render the result. Run `npm test -- --forceExit` and fix any failures.",
+      "Final step: implement `reset()` — call `this.setState({ hasError: false, error: null })`. Run `npm test -- --forceExit` — all 4 tests must pass."
+    ],
+    "success_criteria": [
+      "getDerivedStateFromError returns hasError: true with error",
+      "render() shows children when no error",
+      "render() shows fallback (ReactNode) when error occurs",
+      "fallback as function receives error and reset callback",
+      "componentDidCatch calls onError prop",
+      "reset() clears the error state",
+      "All 4 tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "npm test -- --forceExit"}
+  },
+  "duration_hint_minutes": 20
+}

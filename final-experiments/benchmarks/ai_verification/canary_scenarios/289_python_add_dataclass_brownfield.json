@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-brownfield-003",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Refactor dict-based records to Python dataclasses",
+  "description": "Brownfield Python refactor: replace dict-based Point and Rectangle records with @dataclass equivalents. The existing helper functions must continue to work with the new dataclass instances.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"geometry\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/geometry.py",
+        "content": "def make_point(x, y):\n    return {'x': x, 'y': y}\n\n\ndef make_rect(x, y, w, h):\n    return {'x': x, 'y': y, 'width': w, 'height': h}\n\n\ndef distance(p1, p2):\n    return ((p1['x'] - p2['x'])**2 + (p1['y'] - p2['y'])**2) ** 0.5\n\n\ndef rect_area(r):\n    return r['width'] * r['height']\n\n\ndef rect_contains(r, p):\n    return r['x'] <= p['x'] <= r['x'] + r['width'] and r['y'] <= p['y'] <= r['y'] + r['height']\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_geometry.py",
+        "content": "from src.geometry import make_point, make_rect, distance, rect_area, rect_contains\n\n\ndef test_distance():\n    p1 = make_point(0, 0)\n    p2 = make_point(3, 4)\n    assert distance(p1, p2) == 5.0\n\n\ndef test_rect_area():\n    r = make_rect(0, 0, 5, 3)\n    assert rect_area(r) == 15\n\n\ndef test_rect_contains():\n    r = make_rect(0, 0, 10, 10)\n    assert rect_contains(r, make_point(5, 5))\n    assert not rect_contains(r, make_point(15, 5))\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Refactor src/geometry.py to use dataclasses instead of dicts.\n\nfrom dataclasses import dataclass\n\n@dataclass\nclass Point:\n    x: float\n    y: float\n\n@dataclass\nclass Rect:\n    x: float\n    y: float\n    width: float\n    height: float\n\n# Update factory functions to return dataclass instances:\ndef make_point(x, y) -> Point: return Point(x, y)\ndef make_rect(x, y, w, h) -> Rect: return Rect(x, y, w, h)\n\n# Update helpers to use attribute access instead of dict keys:\ndef distance(p1: Point, p2: Point) -> float: use p1.x, p1.y etc.\ndef rect_area(r: Rect) -> float: use r.width, r.height\ndef rect_contains(r: Rect, p: Point) -> bool: use attribute access\n\nAll 5 tests in the solution test file must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "Point and Rect are @dataclass types (not dicts)",
+      "make_point and make_rect return dataclass instances",
+      "distance, rect_area, rect_contains use attribute access",
+      "All existing tests still pass",
+      "All 5 tests pass including new dataclass-specific tests"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.geometry import Point, Rect, make_point, make_rect\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `uv run pytest tests/ -v` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.geometry import make_point, make_rect, distance, rect_area, rect_contains\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-036",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement generic Filter, Map, and Reduce for slices in Go",
+  "description": "Greenfield Go task: implement three generic higher-order functions on slices — Filter, Map, and Reduce — using Go 1.21 generics.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module slicefn\n\ngo 1.21\n"
+      },
+      {
+        "path": "slicefn.go",
+        "content": "// TODO: implement generic Filter, Map, Reduce\npackage slicefn\n"
+      },
+      {
+        "path": "slicefn_test.go",
+        "content": "package slicefn\n\nimport \"testing\"\n\nfunc TestFilterEvens(t *testing.T) {\n\tnums := []int{1, 2, 3, 4, 5, 6}\n\tresult := Filter(nums, func(n int) bool { return n%2 == 0 })\n\tif len(result) != 3 || result[0] != 2 || result[1] != 4 || result[2] != 6 {\n\t\tt.Fatalf(\"want [2 4 6], got %v\", result)\n\t}\n}\n\nfunc TestMapDouble(t *testing.T) {\n\tnums := []int{1, 2, 3}\n\tresult := Map(nums, func(n int) int { return n * 2 })\n\tif len(result) != 3 || result[0] != 2 || result[1] != 4 || result[2] != 6 {\n\t\tt.Fatalf(\"want [2 4 6], got %v\", result)\n\t}\n}\n\nfunc TestMapToString(t *testing.T) {\n\tnums := []int{1, 2, 3}\n\tresult := Map(nums, func(n int) string {\n\t\tif n%2 == 0 {\n\t\t\treturn \"even\"\n\t\t}\n\t\treturn \"odd\"\n\t})\n\tif result[0] != \"odd\" || result[1] != \"even\" || result[2] != \"odd\" {\n\t\tt.Fatalf(\"want [odd even odd], got %v\", result)\n\t}\n}\n\nfunc TestReduceSum(t *testing.T) {\n\tnums := []int{1, 2, 3, 4, 5}\n\tresult := Reduce(nums, 0, func(acc, n int) int { return acc + n })\n\tif result != 15 {\n\t\tt.Fatalf(\"want 15, got %d\", result)\n\t}\n}\n\nfunc TestReduceProduct(t *testing.T) {\n\tnums := []int{1, 2, 3, 4}\n\tresult := Reduce(nums, 1, func(acc, n int) int { return acc * n })\n\tif result != 24 {\n\t\tt.Fatalf(\"want 24, got %d\", result)\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement Filter, Map, and Reduce in slicefn.go.\n\npackage slicefn\n\nfunc Filter[T any](slice []T, pred func(T) bool) []T {\n    result := make([]T, 0)\n    for _, v := range slice {\n        if pred(v) {\n            result = append(result, v)\n        }\n    }\n    return result\n}\n\nfunc Map[T, U any](slice []T, f func(T) U) []U {\n    result := make([]U, len(slice))\n    for i, v := range slice {\n        result[i] = f(v)\n    }\n    return result\n}\n\nfunc Reduce[T, U any](slice []T, init U, f func(U, T) U) U {\n    acc := init\n    for _, v := range slice {\n        acc = f(acc, v)\n    }\n    return acc\n}\n\nAll 5 tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Filter keeps elements matching predicate",
+      "Map transforms each element to a new type",
+      "Reduce folds slice into a single value with accumulator",
+      "All three use Go 1.21 type parameters",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

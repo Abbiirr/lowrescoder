@@ -1,0 +1,95 @@
+title: Multi-turn regression detection
+category: backend_feature
+difficulty: medium
+target_stack:
+  language: python
+task_spec:
+  prompt: |
+    Implement the existing KVStore class in store.py with get, set, and delete methods.
+    Keep the public class name exactly KVStore so the existing tests can import it.
+    You may update tests only if needed, but the existing tests must keep passing.
+  followup_prompts:
+    - "Good. Now add a clear() method to the existing KVStore class that removes all entries, and update the tests to cover it."
+    - "Final check: run all tests and make sure both the original and new functionality work."
+repo_seed:
+  mode: fresh
+  files:
+    store.py: |
+      class KVStore:
+          def __init__(self):
+              self._data = {}
+
+          def set(self, key, value):
+              raise NotImplementedError
+
+          def get(self, key):
+              raise NotImplementedError
+
+          def delete(self, key):
+              raise NotImplementedError
+
+    test_store.py: |
+      import pytest
+
+      def test_import():
+          from store import KVStore
+
+      def test_get_set():
+          from store import KVStore
+          s = KVStore()
+          s.set("key", "value")
+          assert s.get("key") == "value"
+
+      def test_get_missing():
+          from store import KVStore
+          s = KVStore()
+          assert s.get("missing") is None
+
+      def test_delete():
+          from store import KVStore
+          s = KVStore()
+          s.set("key", "value")
+          s.delete("key")
+          assert s.get("key") is None
+expected_outcomes:
+  must_have:
+    - "item_completed event present"
+  must_not_have: []
+trajectory_assertions:
+  min_tool_calls: 2
+turn_assertions:
+  min_turns: 2
+  no_regression_after_pass: true
+artifact_assertions:
+  require_non_empty_diff: true
+  forbid_noop_pass: true
+  must_not_change_files:
+    - "test_store.py"
+  must_contain_text:
+    test_store.py:
+      - "test_get_set"
+      - "test_delete"
+  hidden_test_files:
+    test_hidden_kvstore_api.py: |
+      from store import KVStore
+
+      def test_kvstore_public_api_preserved():
+          store = KVStore()
+          store.set("key", "value")
+          assert store.get("key") == "value"
+          store.delete("key")
+          assert store.get("key") is None
+
+      def test_clear_preserves_existing_class_contract():
+          store = KVStore()
+          store.set("a", 1)
+          store.set("b", 2)
+          store.clear()
+          assert store.get("a") is None
+          assert store.get("b") is None
+  hidden_test_command: "python -m pytest .autocode_hidden_tests -q"
+grading:
+  checks:
+    - run_tests
+  check_commands:
+    run_tests: "python -m pytest test_store.py -v"

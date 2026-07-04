@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-greenfield-039",
+  "title": "Implement a generic Set type in Go",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement a generic Set[T comparable] with Add, Remove, Contains, Len, Union, and Intersection.",
+  "repo_seed": {
+    "files": {
+      "set.go": "package set\n\n// Set is a generic set of comparable values.\ntype Set[T comparable] struct{}\n\nfunc New[T comparable]() *Set[T] { panic(\"not implemented\") }\nfunc (s *Set[T]) Add(v T) { panic(\"not implemented\") }\nfunc (s *Set[T]) Remove(v T) { panic(\"not implemented\") }\nfunc (s *Set[T]) Contains(v T) bool { panic(\"not implemented\") }\nfunc (s *Set[T]) Len() int { panic(\"not implemented\") }\nfunc (s *Set[T]) Union(other *Set[T]) *Set[T] { panic(\"not implemented\") }\nfunc (s *Set[T]) Intersection(other *Set[T]) *Set[T] { panic(\"not implemented\") }\n",
+      "set_test.go": "package set\n\nimport \"testing\"\n\nfunc TestAddContains(t *testing.T) {\n\ts := New[int]()\n\ts.Add(1)\n\ts.Add(2)\n\tif !s.Contains(1) || !s.Contains(2) { t.Fatal(\"missing added elements\") }\n\tif s.Contains(3) { t.Fatal(\"should not contain 3\") }\n}\n\nfunc TestRemove(t *testing.T) {\n\ts := New[string]()\n\ts.Add(\"a\")\n\ts.Add(\"b\")\n\ts.Remove(\"a\")\n\tif s.Contains(\"a\") { t.Fatal(\"a should be removed\") }\n\tif !s.Contains(\"b\") { t.Fatal(\"b should remain\") }\n}\n\nfunc TestLen(t *testing.T) {\n\ts := New[int]()\n\tif s.Len() != 0 { t.Fatal(\"new set should have len 0\") }\n\ts.Add(1)\n\ts.Add(1) // duplicate\n\ts.Add(2)\n\tif s.Len() != 2 { t.Fatalf(\"want 2, got %d\", s.Len()) }\n}\n\nfunc TestUnion(t *testing.T) {\n\ta := New[int]()\n\ta.Add(1); a.Add(2)\n\tb := New[int]()\n\tb.Add(2); b.Add(3)\n\tu := a.Union(b)\n\tif u.Len() != 3 { t.Fatalf(\"want 3, got %d\", u.Len()) }\n\tif !u.Contains(1) || !u.Contains(2) || !u.Contains(3) { t.Fatal(\"union missing element\") }\n}\n\nfunc TestIntersection(t *testing.T) {\n\ta := New[int]()\n\ta.Add(1); a.Add(2); a.Add(3)\n\tb := New[int]()\n\tb.Add(2); b.Add(3); b.Add(4)\n\ti := a.Intersection(b)\n\tif i.Len() != 2 { t.Fatalf(\"want 2, got %d\", i.Len()) }\n\tif !i.Contains(2) || !i.Contains(3) { t.Fatal(\"intersection missing element\") }\n\tif i.Contains(1) || i.Contains(4) { t.Fatal(\"intersection has wrong element\") }\n}\n",
+      "go.mod": "module set\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement Set[T comparable] in set.go using `map[T]struct{}` as backing store:\n- `New[T comparable]()`: return &Set[T]{m: make(map[T]struct{})}\n- `Add(v)`: s.m[v] = struct{}{}\n- `Remove(v)`: delete(s.m, v)\n- `Contains(v)`: _, ok := s.m[v]; return ok\n- `Len()`: return len(s.m)\n- `Union(other)`: copy s into result, add all of other\n- `Intersection(other)`: add elements from s that also exist in other\nAll 5 tests must pass.",
+    "entry_point": "set.go",
+    "success_criteria": "All 5 go test cases pass",
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "go test ./...",
+    "expected_exit_code": 0
+  }
+}

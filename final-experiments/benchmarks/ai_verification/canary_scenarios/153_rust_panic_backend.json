@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-backend-005",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Add safe Option-returning variants to Rust panic-service library",
+  "description": "Brownfield Rust task: add safe Option<T>-returning wrappers alongside the existing panicking functions.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_panic_service",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add three new functions to src/lib.rs. All 5 existing tests must still pass.\n\n  pub fn safe_divide(a: f64, b: f64) -> Option<f64>\n    — returns None if b == 0.0, else Some(a / b)\n\n  pub fn lookup(map: &HashMap<String, i32>, key: &str) -> Option<i32>\n    — returns the value for key, or None if absent\n\n  pub fn try_parse_age(s: &str) -> Option<u32>\n    — parses s as u32; returns None on failure\n\nDo not modify the existing functions.\nAll 5 existing tests must still pass.\nRun: cargo test",
+    "required_artifacts": [
+      "safe_divide returns Some(result) for non-zero divisor",
+      "safe_divide returns None when b == 0.0",
+      "lookup returns Some(value) for existing key, None for missing key",
+      "try_parse_age returns Some(age) for valid string, None for invalid",
+      "All 5 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `cargo test` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-migration-004",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Migrate rust-page-builder to enum-based PageItem storage",
+  "description": "Brownfield Rust migration: replace Vec<String> internal storage with Vec<PageItem> enum and add add_heading method.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_page_builder",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Migrate the internal storage of the Page struct in src/lib.rs from Vec<String> to Vec<PageItem>. All 3 existing tests must still pass.\n\n  pub enum PageItem {\n      Paragraph(String),\n      Heading(u8, String),\n  }\n\n  pub struct Page {\n      title: String,\n      body_items: Vec<PageItem>,\n  }\n\n  impl Page {\n      // keep existing new() and render() signatures unchanged\n      pub fn add_paragraph(&mut self, text: &str) -> &mut Self\n        — stores PageItem::Paragraph(text.to_string())\n\n      pub fn add_heading(&mut self, level: u8, text: &str) -> &mut Self\n        — stores PageItem::Heading(level, text.to_string())\n        — renders as <h{level}>{text}</h{level}> in the HTML body\n  }\n\nrender() must produce the same output as before for existing paragraph content.\nAll 3 existing tests must still pass.\nRun: cargo test",
+    "required_artifacts": [
+      "PageItem enum has Paragraph and Heading variants",
+      "add_paragraph stores PageItem::Paragraph",
+      "add_heading stores PageItem::Heading and renders as <hN>text</hN>",
+      "render() output is unchanged for existing paragraph tests",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `cargo test` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

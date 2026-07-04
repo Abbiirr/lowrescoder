@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "536-ts-mt-debug-memory-leak",
+  "title": "Debug React useEffect event listener leak — 3 turns",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {"language": "typescript", "framework": "react", "extra": {}},
+  "description": "React hooks missing cleanup functions cause event listener and interval leaks. Fix them across turns.",
+  "repo_seed": {
+    "files": {
+      "package.json": "{\n  \"name\": \"cleanup-fix\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"test\": \"jest --forceExit\"\n  },\n  \"dependencies\": {\n    \"react\": \"^18.0.0\"\n  },\n  \"devDependencies\": {\n    \"@testing-library/react\": \"^14.0.0\",\n    \"@types/react\": \"^18.0.0\",\n    \"@types/jest\": \"^29.0.0\",\n    \"jest\": \"^29.0.0\",\n    \"jest-environment-jsdom\": \"^29.0.0\",\n    \"ts-jest\": \"^29.0.0\",\n    \"typescript\": \"^5.0.0\"\n  },\n  \"jest\": {\n    \"preset\": \"ts-jest\",\n    \"testEnvironment\": \"jsdom\"\n  }\n}\n",
+      "src/useWindowSize.ts": "import { useState, useEffect } from 'react';\n\n/** Returns current window dimensions. Updates on resize. */\nexport function useWindowSize() {\n  const [size, setSize] = useState({ width: window.innerWidth, height: window.innerHeight });\n\n  useEffect(() => {\n    const handler = () => setSize({ width: window.innerWidth, height: window.innerHeight });\n    window.addEventListener('resize', handler);\n    // BUG: missing cleanup — event listener is never removed\n    // Should return () => window.removeEventListener('resize', handler);\n  }, []);\n\n  return size;\n}\n",
+      "src/usePolling.ts": "import { useState, useEffect } from 'react';\n\n/** Polls a fetch function every intervalMs milliseconds. */\nexport function usePolling<T>(fetchFn: () => Promise<T>, intervalMs: number) {\n  const [data, setData] = useState<T | null>(null);\n  const [error, setError] = useState<Error | null>(null);\n\n  useEffect(() => {\n    fetchFn().then(setData).catch(setError);\n    // BUG: interval is set but never cleared\n    const id = setInterval(() => {\n      fetchFn().then(setData).catch(setError);\n    }, intervalMs);\n    // Should return () => clearInterval(id);\n  }, [fetchFn, intervalMs]);\n\n  return { data, error };\n}\n",
+      "src/hooks.test.ts": "import { renderHook, act } from '@testing-library/react';\nimport { useWindowSize } from './useWindowSize';\nimport { usePolling } from './usePolling';\n\ntest('useWindowSize returns initial size', () => {\n  const { result } = renderHook(() => useWindowSize());\n  expect(result.current.width).toBeDefined();\n  expect(result.current.height).toBeDefined();\n});\n\ntest('useWindowSize cleans up on unmount', () => {\n  const addSpy = jest.spyOn(window, 'addEventListener');\n  const removeSpy = jest.spyOn(window, 'removeEventListener');\n  const { unmount } = renderHook(() => useWindowSize());\n  unmount();\n  // After unmount, removeEventListener should be called\n  expect(removeSpy).toHaveBeenCalledWith('resize', expect.any(Function));\n  addSpy.mockRestore();\n  removeSpy.mockRestore();\n});\n\ntest('usePolling returns fetched data', async () => {\n  const fetchFn = jest.fn().mockResolvedValue({ items: [1, 2, 3] });\n  const { result } = renderHook(() => usePolling(fetchFn, 10000));\n  await act(async () => {});\n  expect(result.current.data).toEqual({ items: [1, 2, 3] });\n});\n\ntest('usePolling clears interval on unmount', () => {\n  const clearSpy = jest.spyOn(global, 'clearInterval');\n  const fetchFn = jest.fn().mockResolvedValue({});\n  const { unmount } = renderHook(() => usePolling(fetchFn, 10000));\n  unmount();\n  expect(clearSpy).toHaveBeenCalled();\n  clearSpy.mockRestore();\n});\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The `useWindowSize` hook in `src/useWindowSize.ts` adds a resize event listener but never removes it. Fix the useEffect to return a cleanup function: `return () => window.removeEventListener('resize', handler);`. Run `npm test -- --forceExit`.",
+    "followup_prompts": [
+      "Run `npm test -- --forceExit` to check the current state. Walk me through what you fixed. Now fix `usePolling` in `src/usePolling.ts` — the setInterval is created but never cleared. Add `return () => clearInterval(id);` as the cleanup function. Run `npm test -- --forceExit` and fix any failures.",
+      "Final verification: run `npm test -- --forceExit` and confirm a completely clean build. Every test must pass — fix any failures now."
+    ],
+    "success_criteria": [
+      "useWindowSize returns cleanup that calls removeEventListener",
+      "usePolling returns cleanup that calls clearInterval",
+      "All 4 tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "npm test -- --forceExit"}
+  },
+  "duration_hint_minutes": 10
+}

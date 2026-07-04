@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-longhorizon-003",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "long_horizon",
+  "difficulty": "medium",
+  "duration_hint_minutes": 35,
+  "title": "Migrate rust-panic-service from panic to Result in 3 steps",
+  "description": "Multi-step Rust migration: convert 5 panic-based functions to return Result<T, String>, keeping all tests green.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_panic_service",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Convert all 5 panicking functions in src/lib.rs to return Result<T, String>. All 5 existing tests must still pass.\n\nStep 1 — Convert divide and get_value:\n  fn divide(a: f64, b: f64) -> Result<f64, String>\n    — returns Err(\"division by zero\".to_string()) when b == 0.0\n  fn get_value(map: &HashMap<String, i32>, key: &str) -> Result<i32, String>\n    — returns Err(format!(\"key '{}' not found\", key)) when missing\n\nStep 2 — Convert parse_age and first_element:\n  fn parse_age(s: &str) -> Result<u32, String>\n    — returns Err(format!(\"invalid age: '{}'\", s)) on parse failure\n  fn first_element(v: &[i32]) -> Result<i32, String>\n    — returns Err(\"slice is empty\".to_string()) when v is empty\n\nStep 3 — Convert find_user and add error-path tests:\n  fn find_user(users: &[&str], name: &str) -> Result<usize, String>\n    — returns Err(format!(\"user '{}' not found\", name)) when absent\n  Add tests for the error paths:\n    test_divide_zero, test_get_value_missing, test_parse_age_invalid,\n    test_first_element_empty, test_find_user_missing\n\nAll 5 original tests must still pass (update them to unwrap the Result).\nRun: cargo test",
+    "required_artifacts": [
+      "divide returns Result<f64, String>",
+      "get_value returns Result<i32, String>",
+      "parse_age returns Result<u32, String>",
+      "first_element returns Result<i32, String>",
+      "find_user returns Result<usize, String>",
+      "Error-path tests for all 5 functions",
+      "All 5 original happy-path tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Good progress. Run `cargo test` to see where we stand. Continue with the remaining steps, prioritizing the parts the tests depend on most.",
+      "Final push: run `cargo test` and fix any remaining failures. Make sure the full implementation is complete and all tests pass."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

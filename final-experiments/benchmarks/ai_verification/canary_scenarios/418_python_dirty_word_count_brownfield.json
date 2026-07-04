@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-024",
+  "title": "Fix three bugs in a Python WordCount class",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Fix bugs in WordCount: count_words doesn't strip punctuation, most_common sorts ascending instead of descending, total_count returns unique words instead of total.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/word_count.py": "import re\nfrom collections import Counter\n\n\nclass WordCount:\n    def __init__(self):\n        self._counts = Counter()\n\n    def add_text(self, text):\n        # BUG 1: splits on whitespace but doesn't strip punctuation\n        words = text.lower().split()\n        self._counts.update(words)\n\n    def most_common(self, n):\n        # BUG 2: sorts ascending instead of descending\n        return sorted(self._counts.items(), key=lambda x: x[1])[:n]\n\n    def total_count(self):\n        # BUG 3: returns number of unique words, not total\n        return len(self._counts)\n",
+      "tests/test_word_count.py": "import sys\nsys.path.insert(0, '.')\nfrom src.word_count import WordCount\n\n\ndef test_punctuation():\n    wc = WordCount()\n    wc.add_text('hello, world. hello')\n    assert wc._counts['hello'] == 2\n    assert wc._counts['world'] == 1\n    assert 'hello,' not in wc._counts\n\n\ndef test_most_common():\n    wc = WordCount()\n    wc.add_text('a a a b b c')\n    result = wc.most_common(1)\n    assert result == [('a', 3)]\n\n\ndef test_total_count():\n    wc = WordCount()\n    wc.add_text('a b c a')\n    assert wc.total_count() == 4\n",
+      "pyproject.toml": "[project]\nname = \"word_count_cls\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = []\n\n[tool.pytest.ini_options]\npythonpath = [\".\"]\n\n[dependency-groups]\ndev = [\"pytest>=8.0\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/word_count.py:\n1. add_text: strip punctuation from each word using `re.sub(r'[^\\w]', '', word)` or `word.strip(string.punctuation)` before updating counts\n2. most_common: sort descending — change key to `lambda x: -x[1]` or use `sorted(..., reverse=True)`\n3. total_count: return `sum(self._counts.values())` instead of `len(self._counts)`\nAll 3 tests must pass.",
+    "entry_point": "src/word_count.py",
+    "success_criteria": "All 3 pytest test cases pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-brownfield-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Refactor procedural stats functions into a Stats class",
+  "description": "Brownfield Python refactor: given procedural functions mean, variance, std_dev operating on a list, wrap them into a Stats class that stores the data and exposes the same computations as methods. All existing tests must still pass and new class-based tests must also pass.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"stats\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/stats.py",
+        "content": "def mean(data: list[float]) -> float:\n    return sum(data) / len(data)\n\n\ndef variance(data: list[float]) -> float:\n    m = mean(data)\n    return sum((x - m) ** 2 for x in data) / len(data)\n\n\ndef std_dev(data: list[float]) -> float:\n    return variance(data) ** 0.5\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_stats.py",
+        "content": "from src.stats import mean, variance, std_dev\n\n\ndef test_mean():\n    assert mean([1, 2, 3, 4, 5]) == 3.0\n\n\ndef test_variance():\n    assert variance([2, 4, 4, 4, 5, 5, 7, 9]) == 4.0\n\n\ndef test_std_dev():\n    assert abs(std_dev([2, 4, 4, 4, 5, 5, 7, 9]) - 2.0) < 1e-9\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Add a Stats class to src/stats.py (keep existing functions, do not remove them).\n\nclass Stats:\n    def __init__(self, data: list[float]):\n        self.data = data\n    def mean(self) -> float:\n        return mean(self.data)\n    def variance(self) -> float:\n        return variance(self.data)\n    def std_dev(self) -> float:\n        return std_dev(self.data)\n\nExisting functions mean/variance/std_dev must remain importable.\nAll 5 tests must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "Stats class stores data and delegates to module-level functions",
+      "Existing mean/variance/std_dev functions remain unchanged and importable",
+      "Stats.mean() returns correct value",
+      "Stats.std_dev() returns correct value",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests — 3 original + 2 new class tests)",
+      "uv run python -c \"from src.stats import mean, variance, std_dev, Stats\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `uv run pytest tests/ -v` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.stats import mean, variance, std_dev\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

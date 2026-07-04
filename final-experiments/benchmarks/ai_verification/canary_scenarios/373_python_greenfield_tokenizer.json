@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-greenfield-042",
+  "title": "Implement a simple expression tokenizer in Python",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement tokenize(expr) that splits a math expression string into a list of token dicts with 'type' and 'value' fields. Token types: NUMBER (integers), PLUS, MINUS, STAR, SLASH, LPAREN, RPAREN.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/tokenizer.py": "def tokenize(expr: str) -> list[dict]:\n    raise NotImplementedError\n",
+      "tests/test_tokenizer.py": "from src.tokenizer import tokenize\n\ndef test_simple_addition():\n    tokens = tokenize('3 + 4')\n    assert tokens == [\n        {'type': 'NUMBER', 'value': '3'},\n        {'type': 'PLUS', 'value': '+'},\n        {'type': 'NUMBER', 'value': '4'},\n    ]\n\ndef test_complex_expr():\n    tokens = tokenize('(10 - 2) * 3')\n    assert tokens == [\n        {'type': 'LPAREN', 'value': '('},\n        {'type': 'NUMBER', 'value': '10'},\n        {'type': 'MINUS', 'value': '-'},\n        {'type': 'NUMBER', 'value': '2'},\n        {'type': 'RPAREN', 'value': ')'},\n        {'type': 'STAR', 'value': '*'},\n        {'type': 'NUMBER', 'value': '3'},\n    ]\n\ndef test_division():\n    tokens = tokenize('8 / 2')\n    assert tokens == [\n        {'type': 'NUMBER', 'value': '8'},\n        {'type': 'SLASH', 'value': '/'},\n        {'type': 'NUMBER', 'value': '2'},\n    ]\n\ndef test_multi_digit():\n    tokens = tokenize('123 + 456')\n    assert len(tokens) == 3\n    assert tokens[0] == {'type': 'NUMBER', 'value': '123'}\n    assert tokens[2] == {'type': 'NUMBER', 'value': '456'}\n\ndef test_no_spaces():\n    tokens = tokenize('1+2')\n    assert tokens == [\n        {'type': 'NUMBER', 'value': '1'},\n        {'type': 'PLUS', 'value': '+'},\n        {'type': 'NUMBER', 'value': '2'},\n    ]\n",
+      "pyproject.toml": "[project]\nname = \"tokenizer\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npythonpath = [\".\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement tokenize(expr: str) -> list[dict] in src/tokenizer.py:\n- Iterate through the expression string character by character\n- Skip whitespace\n- If current char is a digit, consume consecutive digits and emit {'type': 'NUMBER', 'value': '<digits>'}\n- Map single-char operators: '+' -> PLUS, '-' -> MINUS, '*' -> STAR, '/' -> SLASH, '(' -> LPAREN, ')' -> RPAREN\n- Return list of token dicts\nAll 5 tests must pass.",
+    "entry_point": "src/tokenizer.py",
+    "success_criteria": "All 5 pytest tests pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -q` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

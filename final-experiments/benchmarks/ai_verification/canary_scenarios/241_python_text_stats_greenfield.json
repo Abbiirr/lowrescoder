@@ -1,0 +1,75 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-013",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Implement text statistics functions in Python",
+  "description": "Greenfield Python task: implement word_count, char_count, avg_word_length, most_common_words, and sentence_count functions for basic text analysis.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "pyproject.toml",
+        "content": "[project]\nname = \"text_stats\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+      },
+      {
+        "path": "src/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "src/text_stats.py",
+        "content": "# TODO: implement text statistics functions\n"
+      },
+      {
+        "path": "tests/__init__.py",
+        "content": ""
+      },
+      {
+        "path": "tests/test_text_stats.py",
+        "content": "from src.text_stats import word_count, char_count, avg_word_length, most_common_words, sentence_count\n\n\ndef test_word_count():\n    assert word_count(\"hello world\") == 2\n    assert word_count(\"  one  two  three  \") == 3\n    assert word_count(\"\") == 0\n\n\ndef test_char_count():\n    assert char_count(\"hello world\") == 10\n    assert char_count(\"\") == 0\n\n\ndef test_avg_word_length():\n    assert avg_word_length(\"hi there\") == 3.5\n    assert avg_word_length(\"\") == 0.0\n\n\ndef test_most_common_words():\n    text = \"the cat sat on the mat the cat\"\n    result = most_common_words(text, 2)\n    assert result == [\"the\", \"cat\"]\n\n\ndef test_sentence_count():\n    assert sentence_count(\"Hello! How are you? I am fine.\") == 3\n    assert sentence_count(\"No punctuation here\") == 0\n    assert sentence_count(\"\") == 0\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement five text-analysis functions in src/text_stats.py.\n\ndef word_count(text: str) -> int:\n    # Count words by splitting on whitespace.\n\ndef char_count(text: str) -> int:\n    # Count non-whitespace characters.\n\ndef avg_word_length(text: str) -> float:\n    # Average length of words. Return 0.0 for empty text.\n\ndef most_common_words(text: str, n: int) -> list:\n    # Return n most frequent words (case-insensitive, strip punctuation).\n    # Ordered by frequency descending.\n\ndef sentence_count(text: str) -> int:\n    # Count sentence-ending punctuation marks: . ! ?\n\nAll 5 tests in tests/test_text_stats.py must pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "word_count uses str.split() with no args to handle multiple spaces",
+      "char_count filters whitespace with isspace()",
+      "avg_word_length returns 0.0 for empty string",
+      "most_common_words uses collections.Counter and re.findall for word extraction",
+      "sentence_count counts . ! ? with re.findall or similar",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes (5 tests)",
+      "uv run python -c \"from src.text_stats import word_count, char_count, avg_word_length, most_common_words, sentence_count\" passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "build": "uv run python -c \"from src.text_stats import word_count, char_count, avg_word_length, most_common_words, sentence_count\""
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

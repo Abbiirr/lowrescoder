@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-015",
+  "title": "Fix three bugs in a DateRange class",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A DateRange class has three bugs: contains() uses wrong boundary comparison, overlaps() checks wrong direction, and days() is off by one.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/daterange.py": "from datetime import date\n\nclass DateRange:\n    def __init__(self, start: date, end: date):\n        if start > end:\n            raise ValueError(\"start must be <= end\")\n        self.start = start\n        self.end = end\n\n    def contains(self, d: date) -> bool:\n        \"\"\"Return True if d is within [start, end] inclusive.\"\"\"\n        return self.start < d < self.end  # bug: should be <= on both sides\n\n    def overlaps(self, other: 'DateRange') -> bool:\n        \"\"\"Return True if this range overlaps with other.\"\"\"\n        return self.start < other.end and other.start < self.end  # bug: should be <=\n\n    def days(self) -> int:\n        \"\"\"Return the number of days in the range (inclusive).\"\"\"\n        return (self.end - self.start).days  # bug: should be +1 for inclusive count\n",
+      "tests/test_daterange.py": "from datetime import date\nfrom src.daterange import DateRange\n\ndef test_contains_boundary():\n    r = DateRange(date(2024, 1, 1), date(2024, 1, 31))\n    assert r.contains(date(2024, 1, 1))   # start boundary included\n    assert r.contains(date(2024, 1, 31))  # end boundary included\n    assert r.contains(date(2024, 1, 15))\n    assert not r.contains(date(2023, 12, 31))\n\ndef test_overlaps_touching():\n    a = DateRange(date(2024, 1, 1), date(2024, 1, 15))\n    b = DateRange(date(2024, 1, 15), date(2024, 1, 31))\n    assert a.overlaps(b)  # share boundary day — should overlap\n\ndef test_no_overlap():\n    a = DateRange(date(2024, 1, 1), date(2024, 1, 10))\n    b = DateRange(date(2024, 1, 20), date(2024, 1, 31))\n    assert not a.overlaps(b)\n\ndef test_days_inclusive():\n    r = DateRange(date(2024, 1, 1), date(2024, 1, 1))\n    assert r.days() == 1  # single day = 1\n    r2 = DateRange(date(2024, 1, 1), date(2024, 1, 7))\n    assert r2.days() == 7\n",
+      "pyproject.toml": "[project]\nname = \"daterange\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npythonpath = [\".\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/daterange.py:\n1. `contains`: change `self.start < d < self.end` to `self.start <= d <= self.end`\n2. `overlaps`: change `<` comparisons to `<=` — `self.start <= other.end and other.start <= self.end`\n3. `days`: add `+ 1` — `return (self.end - self.start).days + 1`\nAll 4 tests must pass.",
+    "entry_point": "src/daterange.py",
+    "success_criteria": "All 4 pytest tests pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

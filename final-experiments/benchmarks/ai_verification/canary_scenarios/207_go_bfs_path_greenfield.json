@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-greenfield-007",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 30,
+  "title": "Build a BFS shortest-path finder in Go",
+  "description": "Greenfield Go task: implement ShortestPath using BFS on an unweighted adjacency list, returning the path as a slice or nil if unreachable.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module github.com/ai-verification/go-bfs\n\ngo 1.22\n"
+      },
+      {
+        "path": "internal/bfs/bfs.go",
+        "content": "package bfs\n\n// TODO: implement ShortestPath\n"
+      },
+      {
+        "path": "internal/bfs/bfs_test.go",
+        "content": "package bfs_test\n\nimport (\n\t\"testing\"\n\n\t\"github.com/ai-verification/go-bfs/internal/bfs\"\n)\n\nfunc TestDirectEdge(t *testing.T) {\n\tgraph := map[int][]int{0: {1}, 1: {2}}\n\tpath := bfs.ShortestPath(graph, 0, 1)\n\tif len(path) != 2 || path[0] != 0 || path[1] != 1 {\n\t\tt.Fatalf(\"expected [0 1], got %v\", path)\n\t}\n}\n\nfunc TestShortestPath(t *testing.T) {\n\tgraph := map[int][]int{\n\t\t0: {1, 2},\n\t\t1: {3},\n\t\t2: {3},\n\t\t3: {},\n\t}\n\tpath := bfs.ShortestPath(graph, 0, 3)\n\t// both [0 1 3] and [0 2 3] are valid (length 3)\n\tif len(path) != 3 || path[0] != 0 || path[len(path)-1] != 3 {\n\t\tt.Fatalf(\"expected path of length 3 from 0 to 3, got %v\", path)\n\t}\n}\n\nfunc TestSameNode(t *testing.T) {\n\tgraph := map[int][]int{0: {1}}\n\tpath := bfs.ShortestPath(graph, 0, 0)\n\tif len(path) != 1 || path[0] != 0 {\n\t\tt.Fatalf(\"expected [0], got %v\", path)\n\t}\n}\n\nfunc TestUnreachable(t *testing.T) {\n\tgraph := map[int][]int{0: {1}, 2: {3}}\n\tpath := bfs.ShortestPath(graph, 0, 3)\n\tif path != nil {\n\t\tt.Fatalf(\"expected nil for unreachable path, got %v\", path)\n\t}\n}\n\nfunc TestLongerPath(t *testing.T) {\n\tgraph := map[int][]int{\n\t\t0: {1},\n\t\t1: {2},\n\t\t2: {3},\n\t\t3: {4},\n\t\t4: {},\n\t}\n\tpath := bfs.ShortestPath(graph, 0, 4)\n\texpected := []int{0, 1, 2, 3, 4}\n\tif len(path) != len(expected) {\n\t\tt.Fatalf(\"expected %v, got %v\", expected, path)\n\t}\n\tfor i, v := range expected {\n\t\tif path[i] != v {\n\t\t\tt.Fatalf(\"path[%d]: expected %d, got %d\", i, v, path[i])\n\t\t}\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement ShortestPath in internal/bfs/bfs.go.\n\npackage bfs\n\n// ShortestPath returns the shortest path from start to end in the unweighted\n// directed graph represented as an adjacency list. Returns nil if end is\n// unreachable from start. Returns []int{start} if start == end.\nfunc ShortestPath(graph map[int][]int, start, end int) []int\n\nAlgorithm:\n1. If start == end, return []int{start}.\n2. BFS: maintain a visited set and a parent map.\n3. When end is found, reconstruct the path by following parent pointers back to start, then reverse.\n4. Return nil if end not found.\n\nAll 5 tests in internal/bfs/bfs_test.go must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "BFS explores nodes level by level",
+      "Parent map is used to reconstruct the path",
+      "Returns nil when end is unreachable",
+      "Returns []int{start} when start == end",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `go test ./...` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

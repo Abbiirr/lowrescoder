@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-dirty-012",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 buggy functions in rust_num_parser",
+  "description": "Brownfield Rust dirty scenario: parse_int, parse_pair, and parse_and_sum each have a bug. Fix them so all 3 tests pass.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_num_parser",
+    "injections": [
+      {
+        "path": "src/lib.rs",
+        "content": "/// Parses an integer from a string, panicking on invalid input.\npub fn parse_int(s: &str) -> i32 {\n    // BUG: missing .trim() — panics on strings with leading/trailing whitespace\n    s.parse::<i32>().unwrap()\n}\n\n/// Parses a comma-separated pair of integers, panicking on invalid input.\npub fn parse_pair(s: &str) -> (i32, i32) {\n    let parts: Vec<&str> = s.splitn(2, ',').collect();\n    let a = parts[0].trim().parse::<i32>().unwrap();\n    let b = parts[1].trim().parse::<i32>().unwrap();\n    // BUG: returns (b, a) instead of (a, b)\n    (b, a)\n}\n\n/// Returns the sum of two integers parsed from comma-separated string.\npub fn parse_and_sum(s: &str) -> i32 {\n    let (a, b) = parse_pair(s);\n    // BUG: subtracts instead of adds\n    a - b\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_parse_int_valid() {\n        assert_eq!(parse_int(\"42\"), 42);\n        assert_eq!(parse_int(\"-7\"), -7);\n        assert_eq!(parse_int(\" 100 \"), 100);\n    }\n\n    #[test]\n    fn test_parse_pair_valid() {\n        assert_eq!(parse_pair(\"1, 2\"), (1, 2));\n        assert_eq!(parse_pair(\"-3,4\"), (-3, 4));\n    }\n\n    #[test]\n    fn test_parse_and_sum() {\n        assert_eq!(parse_and_sum(\"3, 7\"), 10);\n    }\n}\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 bugs in src/lib.rs so all 3 tests pass.\n\n  fn parse_int(s: &str) -> i32\n    — missing .trim() causes panic on whitespace-padded strings\n    — fix: change s.parse() to s.trim().parse()\n\n  fn parse_pair(s: &str) -> (i32, i32)\n    — returns (b, a) instead of (a, b)\n    — fix: return (a, b)\n\n  fn parse_and_sum(s: &str) -> i32\n    — subtracts (a - b) instead of adding\n    — fix: return a + b\n\nDo not modify the test code.\nRun: cargo test",
+    "required_artifacts": [
+      "parse_int trims whitespace before parsing",
+      "parse_pair returns (a, b) not (b, a)",
+      "parse_and_sum adds a + b",
+      "All 3 existing tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-py-multifile-search-001",
+  "title": "Rename a constant across 5 Python files using search",
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Python codebase uses MAX_RETRIES = 3 scattered across 5 files. Rename it to MAX_RETRY_ATTEMPTS everywhere. Agent must use search_text to find all occurrences, then apply edits. Tests verify the rename.",
+  "repo_seed": {
+    "files": {
+      "config.py": "# Global retry configuration\nMAX_RETRIES = 3\nDEFAULT_TIMEOUT = 30\nBASE_URL = 'http://api.example.com'\n",
+      "http_client.py": "from config import MAX_RETRIES, DEFAULT_TIMEOUT\n\n\ndef get(url, retries=MAX_RETRIES):\n    \"\"\"HTTP GET with retry.\"\"\"\n    for attempt in range(retries):\n        try:\n            return _do_request('GET', url)\n        except Exception:\n            if attempt == retries - 1:\n                raise\n    return None\n\n\ndef _do_request(method, url):\n    pass\n",
+      "job_runner.py": "from config import MAX_RETRIES\n\n\ndef run_job(task):\n    \"\"\"Run a job with retry logic.\"\"\"\n    attempts = 0\n    while attempts < MAX_RETRIES:\n        try:\n            task()\n            return True\n        except Exception:\n            attempts += 1\n    return False\n",
+      "worker.py": "from config import MAX_RETRIES, BASE_URL\n\nMAX_WORKERS = 4\n\n\nclass Worker:\n    def __init__(self, max_retries=MAX_RETRIES):\n        self.max_retries = max_retries\n        self.base_url = BASE_URL\n\n    def execute(self, task):\n        for _ in range(self.max_retries):\n            if task():\n                return True\n        return False\n",
+      "test_retry.py": "import pytest\nfrom config import MAX_RETRY_ATTEMPTS\nfrom http_client import get\nfrom job_runner import run_job\nfrom worker import Worker\n\n\ndef test_config_constant():\n    assert MAX_RETRY_ATTEMPTS == 3\n\n\ndef test_http_default_retries():\n    \"\"\"get() uses MAX_RETRY_ATTEMPTS as default.\"\"\"\n    import inspect\n    sig = inspect.signature(get)\n    assert sig.parameters['retries'].default == MAX_RETRY_ATTEMPTS\n\n\ndef test_worker_default_retries():\n    w = Worker()\n    assert w.max_retries == MAX_RETRY_ATTEMPTS\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Rename MAX_RETRIES to MAX_RETRY_ATTEMPTS across the codebase.\n\nUse search_text to find all occurrences of MAX_RETRIES in the Python files, then rename:\n- config.py: rename the constant definition\n- http_client.py: rename the import and usage\n- job_runner.py: rename the import and usage\n- worker.py: rename the import and usage\n\nDo NOT modify test_retry.py (it already uses MAX_RETRY_ATTEMPTS).\n\nRun `pytest test_retry.py -v --rootdir=.` to verify.",
+    "entry_point": "config.py",
+    "success_criteria": [
+      "All 3 pytest tests pass",
+      "MAX_RETRIES no longer exists anywhere",
+      "MAX_RETRY_ATTEMPTS defined in config.py"
+    ],
+    "followup_prompts": [
+      "Run `pytest test_retry.py -v --rootdir=.` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `pytest test_retry.py -v --rootdir=.` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "pytest test_retry.py -v --rootdir=."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 8
+}

@@ -1,0 +1,158 @@
+{
+  "contract": {
+    "harness_version": "1.0.0",
+    "harness_commit_sha": "unknown",
+    "agent": "autocode",
+    "agent_version": "0.1.0",
+    "model": "bench_stable",
+    "provider_mode": "local_free",
+    "lane": "META",
+    "run_id": "selfimprove-20260704-005508",
+    "manifest_hash": "sha256:cc58ffb3241f71de",
+    "budget_profile": {
+      "wall_time_s": 1800,
+      "token_cap": 80000,
+      "max_tool_calls": 150
+    },
+    "budget_profile_id": "wt1800_tc80000_mc150",
+    "command_trace": "/home/bs01763/projects/ai/autocode-full/benchmarks/benchmark_runner.py --agent autocode --lane META --model bench_stable --max-tasks 4 --task-timeout-s 600 --run-id selfimprove-20260704-005508",
+    "timestamp": "2026-07-04T01:47:09.189750+00:00",
+    "comparison_validity": "internal",
+    "seed": null,
+    "image_digests": {
+      "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+    }
+  },
+  "lane": "META",
+  "lane_name": "meta-autocode Build Lane",
+  "agent": "autocode",
+  "model": "bench_stable",
+  "provider_mode": "local_free",
+  "aggregate": {
+    "total_tasks": 4,
+    "resolved": 0,
+    "resolve_rate": 0.0,
+    "infra_fails": 4,
+    "infra_fail_rate": 1.0,
+    "total_wall_time_s": 1219.9,
+    "avg_wall_time_s": 305.0
+  },
+  "results": [
+    {
+      "task_id": "meta-001-piv-strategy",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 268.3,
+      "tool_calls": 1,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 2,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "RuntimeError: Provider rate limit reached (429).",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-001-piv-strategy_20260704_005511/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-002-context-loader",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 233.5,
+      "tool_calls": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 3,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "RuntimeError: Provider rate limit reached (429).",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-002-context-loader_20260704_010926/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-003-benchmark-maxxing",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 294.9,
+      "tool_calls": 3,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Model alias 'bench_stable' is not available on the configured gateway. Detail: litellm.BadRequestError: OpenrouterException - {\"error\":{\"message\":\"Provider returned error\",\"code\":400,\"metadata\":{\"raw\":\"{\\\"error\\\":\\\"This model only supports single tool-calls at once!\\\",\\\"request_id\\\":\\\"9s5nykBcu-mPSi1lKeXQM\\\"}\",\"provider_name\":\"Venice\",\"is_byok\":false,\"retry_after_seconds\":30,\"retry_after_seconds_raw\":29.182,\"headers\":{\"Retry-After\":\"30\"}}},\"user_id\":\"user_373BgQAP9qd7zq9yTjMElB1IbJm\"}. Received Model Group=bench_stable\nAvailable Model Group Fallbacks=['default']\nError doin",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 3,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-003-benchmark-maxxing_20260704_012018/setup_log.txt"
+      }
+    },
+    {
+      "task_id": "meta-004-runner-integration",
+      "resolved": false,
+      "score": 0.0,
+      "wall_time_s": 423.2,
+      "tool_calls": 2,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "error": "RuntimeError: Provider rate limit reached (429).",
+      "artifacts": {
+        "grade_attempts": [],
+        "failure_type": "INFRA_FAIL",
+        "harness_features": {
+          "syntax_gate": false,
+          "task_md_prompt": true,
+          "category_prompt": false,
+          "traceback_extraction": true,
+          "index_warmup": true
+        },
+        "index_build_ms": 3,
+        "syntax_gate_checks": 0,
+        "syntax_gate_rejections": 0,
+        "infra_retry_attempted": true,
+        "infra_retry_reason": "RuntimeError: Provider rate limit reached (429).",
+        "infra_retry_reason_class": "legacy_error_keyword",
+        "infra_retry_resolved": false,
+        "setup_log_path": "/home/bs01763/projects/ai/autocode-full/sandboxes/bench_META_meta-004-runner-integration_20260704_012732/setup_log.txt"
+      }
+    }
+  ],
+  "image_digests": {
+    "3.11": "sha256:ae52c5bef62a6bdd42cd1e8dffef86b9cd284bde9427da79839de7a4b983e7ca"
+  },
+  "halted": false
+}

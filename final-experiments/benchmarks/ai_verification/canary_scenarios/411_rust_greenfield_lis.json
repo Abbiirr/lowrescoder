@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-greenfield-057",
+  "title": "Implement longest increasing subsequence in Rust",
+  "category": "repo_init",
+  "difficulty": "hard",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement lis_length(nums: &[i32]) -> usize using O(n log n) patience sorting: maintain a tails array and binary search for each element.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "/// Returns the length of the longest strictly increasing subsequence.\npub fn lis_length(nums: &[i32]) -> usize {\n    // TODO: implement using patience sorting (binary search on tails array)\n    panic!(\"not implemented\")\n}\n",
+      "tests/lis_test.rs": "use lis::lis_length;\n\n#[test]\nfn test_mixed() {\n    // LIS: [2, 3, 7, 101] or [2, 5, 7, 101] — length 4\n    assert_eq!(lis_length(&[10, 9, 2, 5, 3, 7, 101, 18]), 4);\n}\n\n#[test]\nfn test_all_increasing() {\n    assert_eq!(lis_length(&[1, 2, 3, 4, 5]), 5);\n}\n\n#[test]\nfn test_all_decreasing() {\n    assert_eq!(lis_length(&[5, 4, 3, 2, 1]), 1);\n}\n\n#[test]\nfn test_single() {\n    assert_eq!(lis_length(&[42]), 1);\n}\n\n#[test]\nfn test_with_duplicates() {\n    // [1,3,6,7,9,10] — length 6\n    assert_eq!(lis_length(&[1, 3, 6, 7, 9, 4, 10, 5, 6]), 6);\n}\n",
+      "Cargo.toml": "[package]\nname = \"lis\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement lis_length in src/lib.rs using patience sorting:\n- Maintain a `tails: Vec<i32>` (tails[i] = smallest tail of IS of length i+1)\n- For each num: use binary_search to find position\n  - If Ok(_) (exact match): skip (strictly increasing, no duplicates extend)\n  - If Err(pos): if pos==tails.len() push num, else replace tails[pos]=num\n- Return tails.len()\nAll 5 cargo test cases must pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": "All 5 cargo test cases pass",
+    "followup_prompts": [
+      "Run `cargo test --quiet` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test --quiet` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "cargo test",
+    "expected_exit_code": 0
+  }
+}

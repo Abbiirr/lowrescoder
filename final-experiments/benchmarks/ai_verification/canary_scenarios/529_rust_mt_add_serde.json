@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "529-rust-mt-add-serde",
+  "title": "Add serde serialization to Rust structs — 3 turns",
+  "category": "backend_feature",
+  "difficulty": "easy",
+  "target_stack": {"language": "rust", "framework": null, "extra": {}},
+  "description": "Existing Rust structs need serde derives. Turn 1: add Serialize. Turn 2: add Deserialize with custom field names. Turn 3: add JSON round-trip test.",
+  "repo_seed": {
+    "files": {
+      "Cargo.toml": "[package]\nname = \"serde-example\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\nserde = { version = \"1\", features = [\"derive\"] }\nserde_json = \"1\"\n",
+      "src/lib.rs": "//! User and address types that need serde support.\n\n/// A user record.\n#[derive(Debug, PartialEq)]\npub struct User {\n    pub id: u64,\n    pub name: String,\n    pub email: String,\n    pub active: bool,\n}\n\n/// An address.\n#[derive(Debug, PartialEq)]\npub struct Address {\n    pub street: String,\n    pub city: String,\n    /// Serialized as \"postal_code\" in JSON.\n    pub zip: String,\n    /// Serialized as \"country_code\" in JSON.\n    pub country: String,\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n    use serde_json;\n\n    #[test]\n    fn test_user_serialize() {\n        let u = User { id: 1, name: \"Alice\".into(), email: \"a@b.com\".into(), active: true };\n        let json = serde_json::to_string(&u).unwrap();\n        assert!(json.contains(\"\\\"id\\\":1\"));\n        assert!(json.contains(\"\\\"name\\\":\\\"Alice\\\"\"));\n    }\n\n    #[test]\n    fn test_user_roundtrip() {\n        let u = User { id: 42, name: \"Bob\".into(), email: \"bob@example.com\".into(), active: false };\n        let json = serde_json::to_string(&u).unwrap();\n        let u2: User = serde_json::from_str(&json).unwrap();\n        assert_eq!(u, u2);\n    }\n\n    #[test]\n    fn test_address_custom_field_names() {\n        let a = Address { street: \"123 Main\".into(), city: \"Springfield\".into(),\n                          zip: \"12345\".into(), country: \"US\".into() };\n        let json = serde_json::to_string(&a).unwrap();\n        // zip should be serialized as postal_code\n        assert!(json.contains(\"\\\"postal_code\\\":\\\"12345\\\"\"));\n        // country should be serialized as country_code\n        assert!(json.contains(\"\\\"country_code\\\":\\\"US\\\"\"));\n    }\n\n    #[test]\n    fn test_address_roundtrip() {\n        let a = Address { street: \"456 Oak\".into(), city: \"Shelbyville\".into(),\n                          zip: \"99999\".into(), country: \"CA\".into() };\n        let json = serde_json::to_string(&a).unwrap();\n        let a2: Address = serde_json::from_str(&json).unwrap();\n        assert_eq!(a, a2);\n    }\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The `User` struct in `src/lib.rs` needs serde support. Add `use serde::{Serialize, Deserialize};` at the top and derive `#[derive(Debug, PartialEq, Serialize)]` on `User`. Run `cargo test test_user_serialize --quiet` to check it compiles and the serialize test passes.",
+    "followup_prompts": [
+      "Good. Now add `Deserialize` to `User` so the round-trip test works. Also add `Serialize` and `Deserialize` to `Address`, and add `#[serde(rename = \"postal_code\")]` on the `zip` field and `#[serde(rename = \"country_code\")]` on the `country` field. Run `cargo test --quiet` and fix any failures.",
+      "Run `cargo test --quiet` to verify everything including your custom field names. Fix any failures and confirm all 4 tests pass."
+    ],
+    "success_criteria": [
+      "User derives Serialize and Deserialize",
+      "Address derives Serialize and Deserialize",
+      "zip field serializes as 'postal_code'",
+      "country field serializes as 'country_code'",
+      "cargo test passes (4 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "cargo test --quiet"}
+  },
+  "duration_hint_minutes": 10
+}

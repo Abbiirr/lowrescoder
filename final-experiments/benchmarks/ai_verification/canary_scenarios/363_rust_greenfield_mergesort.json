@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-rust-greenfield-048",
+  "title": "Implement merge sort in Rust",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Implement a recursive merge sort that returns a new sorted Vec<i32>.",
+  "repo_seed": {
+    "files": {
+      "src/lib.rs": "/// Returns a new sorted Vec containing the elements of input.\npub fn merge_sort(input: &[i32]) -> Vec<i32> {\n    panic!(\"not implemented\")\n}\n",
+      "tests/mergesort_test.rs": "use mergesort::merge_sort;\n\n#[test]\nfn test_empty() {\n    assert_eq!(merge_sort(&[]), vec![]);\n}\n\n#[test]\nfn test_single() {\n    assert_eq!(merge_sort(&[42]), vec![42]);\n}\n\n#[test]\nfn test_sorted() {\n    assert_eq!(merge_sort(&[1, 2, 3, 4, 5]), vec![1, 2, 3, 4, 5]);\n}\n\n#[test]\nfn test_reverse() {\n    assert_eq!(merge_sort(&[5, 4, 3, 2, 1]), vec![1, 2, 3, 4, 5]);\n}\n\n#[test]\nfn test_random() {\n    assert_eq!(merge_sort(&[3, 1, 4, 1, 5, 9, 2, 6]), vec![1, 1, 2, 3, 4, 5, 6, 9]);\n}\n\n#[test]\nfn test_duplicates() {\n    assert_eq!(merge_sort(&[2, 2, 1, 1]), vec![1, 1, 2, 2]);\n}\n",
+      "Cargo.toml": "[package]\nname = \"mergesort\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement merge_sort in src/lib.rs:\n- Base cases: return input.to_vec() if len <= 1\n- Split: mid = len/2; left = merge_sort(&input[..mid]); right = merge_sort(&input[mid..])\n- Merge: two-pointer merge into result — advance whichever pointer has the smaller element; append remaining elements from whichever side is non-empty\nAll 6 tests must pass.",
+    "entry_point": "src/lib.rs",
+    "success_criteria": "All 6 cargo test cases pass",
+    "followup_prompts": [
+      "Run `cargo test --quiet` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test --quiet` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "cargo test",
+    "expected_exit_code": 0
+  }
+}

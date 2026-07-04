@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "507-python-mt-debug-counter",
+  "title": "Debug word counter with 3 bugs — 3 turns",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {"language": "python", "framework": null, "extra": {}},
+  "description": "Word counter has 3 bugs: case sensitivity, punctuation handling, and empty string crash. Fix bugs across turns, then add most_common(n).",
+  "repo_seed": {
+    "files": {
+      "word_counter.py": "\"\"\"Word frequency counter — has 3 bugs.\"\"\"\nimport re\nfrom collections import Counter\n\n\nclass WordCounter:\n    def __init__(self):\n        self._counts: Counter = Counter()\n\n    def add_text(self, text: str) -> None:\n        \"\"\"Count words in text, merging into existing counts.\n        Words are case-insensitive; punctuation is stripped.\n        \"\"\"\n        # BUG 1: does not lowercase — 'Hello' and 'hello' counted separately\n        words = text.split()\n        for word in words:\n            # BUG 2: strips punctuation incorrectly — uses assignment instead of cleaned\n            cleaned = re.sub(r\"[^a-zA-Z0-9']\", \"\", word)\n            self._counts[word] += 1  # BUG: should use cleaned, not word\n\n    def count(self, word: str) -> int:\n        \"\"\"Return frequency of word (case-insensitive).\"\"\"\n        # BUG 3: does not lowercase the lookup\n        return self._counts.get(word, 0)\n\n    def most_common(self, n: int) -> list[tuple[str, int]]:\n        \"\"\"Return the n most common words as (word, count) pairs.\"\"\"\n        raise NotImplementedError\n\n    def total(self) -> int:\n        \"\"\"Return total word count across all words.\"\"\"\n        return sum(self._counts.values())\n",
+      "tests/test_word_counter.py": "import pytest\nfrom word_counter import WordCounter\n\n\ndef test_basic_count():\n    wc = WordCounter()\n    wc.add_text(\"hello world hello\")\n    assert wc.count(\"hello\") == 2\n    assert wc.count(\"world\") == 1\n\n\ndef test_case_insensitive():\n    wc = WordCounter()\n    wc.add_text(\"Hello HELLO hello\")\n    assert wc.count(\"hello\") == 3\n\n\ndef test_punctuation_stripped():\n    wc = WordCounter()\n    wc.add_text(\"hello, world! hello.\")\n    assert wc.count(\"hello\") == 2\n    assert wc.count(\"world\") == 1\n\n\ndef test_empty_string():\n    wc = WordCounter()\n    wc.add_text(\"\")\n    assert wc.total() == 0\n\n\ndef test_total_count():\n    wc = WordCounter()\n    wc.add_text(\"a b c a\")\n    assert wc.total() == 4\n\n\ndef test_missing_word_returns_zero():\n    wc = WordCounter()\n    assert wc.count(\"nothere\") == 0\n\n\ndef test_most_common():\n    wc = WordCounter()\n    wc.add_text(\"a a a b b c\")\n    result = wc.most_common(2)\n    assert result[0] == (\"a\", 3)\n    assert result[1] == (\"b\", 2)\n\n\ndef test_most_common_less_than_n():\n    wc = WordCounter()\n    wc.add_text(\"hello world\")\n    result = wc.most_common(10)\n    assert len(result) == 2\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The `WordCounter` class in `word_counter.py` has bugs. Read the code carefully — I see at least 3 issues:\n1. `add_text` doesn't lowercase words before counting\n2. Punctuation is stripped into `cleaned` but the original `word` is stored instead\n3. `count()` doesn't lowercase the lookup key\nFix these three bugs. Don't implement `most_common` yet. Run `uv run pytest tests/ -q`.",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what you fixed. If any tests are still failing — especially empty string or punctuation — show me the errors and fix them.",
+      "Final step: implement `most_common(n)` using `self._counts.most_common(n)` from Counter. Then run `uv run pytest tests/ -q` — all 8 tests must pass."
+    ],
+    "success_criteria": [
+      "Case insensitive: 'Hello' and 'hello' count as same word",
+      "Punctuation stripped: 'hello,' and 'hello' count as same word",
+      "count() lookup is case-insensitive",
+      "Empty string handled without error",
+      "most_common(n) returns top-n (word, count) pairs",
+      "All 8 pytest tests pass"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "uv run pytest tests/ -q"}
+  },
+  "duration_hint_minutes": 10
+}

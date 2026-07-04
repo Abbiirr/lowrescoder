@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-023",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement two-pointer algorithms in Rust",
+  "description": "Greenfield Rust task: implement two_sum (sorted array, O(n)), remove_duplicates (in-place, returns new length), and max_water (container with most water) using two-pointer technique.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"twopointer\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement two_sum, remove_duplicates, max_water\n"
+      },
+      {
+        "path": "tests/twopointer_test.rs",
+        "content": "use twopointer::{two_sum, remove_duplicates, max_water};\n\n#[test]\nfn test_two_sum() {\n    assert_eq!(two_sum(&[1, 2, 3, 4, 6], 6), Some((1, 3)));\n    assert_eq!(two_sum(&[1, 2, 3], 10), None);\n}\n\n#[test]\nfn test_remove_duplicates() {\n    let mut v = vec![1, 1, 2, 2, 3];\n    let len = remove_duplicates(&mut v);\n    assert_eq!(len, 3);\n    assert_eq!(&v[..len], &[1, 2, 3]);\n}\n\n#[test]\nfn test_max_water() {\n    assert_eq!(max_water(&[1, 8, 6, 2, 5, 4, 8, 3, 7]), 49);\n    assert_eq!(max_water(&[1, 1]), 1);\n}\n\n#[test]\nfn test_two_sum_empty() {\n    let empty: Vec<i32> = vec![];\n    assert_eq!(two_sum(&empty, 5), None);\n}\n\n#[test]\nfn test_remove_duplicates_no_dups() {\n    let mut v = vec![1, 2, 3];\n    let len = remove_duplicates(&mut v);\n    assert_eq!(len, 3);\n    assert_eq!(&v[..len], &[1, 2, 3]);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement three two-pointer functions in src/lib.rs.\n\npub fn two_sum(nums: &[i32], target: i32) -> Option<(usize, usize)>\n  // Assumes nums is sorted. O(n) two-pointer: lo=0, hi=len-1.\n  // Return Some((lo, hi)) when nums[lo]+nums[hi]==target, else None.\n  // Return None if nums has fewer than 2 elements.\n\npub fn remove_duplicates(nums: &mut Vec<i32>) -> usize\n  // Remove duplicates in-place from sorted nums.\n  // Use slow pointer i and fast pointer j.\n  // Truncate Vec to new length and return it.\n\npub fn max_water(heights: &[i32]) -> i32\n  // Find two indices lo, hi maximizing min(h[lo], h[hi]) * (hi-lo).\n  // Two-pointer: advance the side with the shorter height.\n  // Return 0 if fewer than 2 elements.\n\nAll 5 tests in tests/twopointer_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "two_sum guards on len < 2, then uses lo/hi pointers advancing based on sum vs target",
+      "remove_duplicates uses slow/fast pointer pattern and calls nums.truncate(i)",
+      "max_water advances lo when heights[lo] < heights[hi], else advances hi",
+      "All edge cases (empty, no duplicates, two elements) handled",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

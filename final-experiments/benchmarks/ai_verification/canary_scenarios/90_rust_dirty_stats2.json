@@ -1,0 +1,61 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-dirty-006",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Fix three off-by-one and logic bugs in Rust statistics library",
+  "description": "A fresh Rust statistics library has three injected bugs: median uses wrong midpoint, percentile has off-by-one, and std_dev uses n instead of n-1. Fix all bugs to make 8 tests pass.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"stats-lib\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "/// Returns the mean of the slice, or None if empty.\npub fn mean(data: &[f64]) -> Option<f64> {\n    if data.is_empty() {\n        return None;\n    }\n    Some(data.iter().sum::<f64>() / data.len() as f64)\n}\n\n/// Returns the median of the slice, or None if empty.\n/// Assumes data is already sorted.\n/// BUG: for even-length slices, uses mid-1 instead of mid as upper index.\npub fn median(data: &[f64]) -> Option<f64> {\n    let n = data.len();\n    if n == 0 {\n        return None;\n    }\n    if n % 2 == 1 {\n        Some(data[n / 2])\n    } else {\n        let mid = n / 2;\n        Some((data[mid - 1] + data[mid - 1]) / 2.0) // BUG: should be data[mid-1] + data[mid]\n    }\n}\n\n/// Returns the value at the given percentile (0.0–100.0), or None if empty.\n/// BUG: off-by-one: uses floor(p/100 * n) without clamping — can return out-of-bounds index.\npub fn percentile(data: &[f64], p: f64) -> Option<f64> {\n    if data.is_empty() {\n        return None;\n    }\n    let idx = (p / 100.0 * data.len() as f64).floor() as usize;\n    // BUG: idx can equal data.len() when p=100.0, causing out-of-bounds\n    Some(data[idx])\n}\n\n/// Returns the sample standard deviation (using n-1), or None if fewer than 2 elements.\n/// BUG: divides by n instead of n-1 (population std dev instead of sample std dev).\npub fn std_dev(data: &[f64]) -> Option<f64> {\n    let n = data.len();\n    if n < 2 {\n        return None;\n    }\n    let m = mean(data).unwrap();\n    let variance = data.iter().map(|x| (x - m).powi(2)).sum::<f64>() / n as f64; // BUG: should be / (n-1)\n    Some(variance.sqrt())\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_mean_basic() {\n        assert!((mean(&[1.0, 2.0, 3.0]).unwrap() - 2.0).abs() < 1e-9);\n    }\n\n    #[test]\n    fn test_mean_empty() {\n        assert!(mean(&[]).is_none());\n    }\n\n    #[test]\n    fn test_median_odd() {\n        assert_eq!(median(&[1.0, 3.0, 5.0]).unwrap(), 3.0);\n    }\n\n    #[test]\n    fn test_median_even() {\n        // [1, 2, 3, 4] -> median = (2+3)/2 = 2.5\n        assert!((median(&[1.0, 2.0, 3.0, 4.0]).unwrap() - 2.5).abs() < 1e-9);\n    }\n\n    #[test]\n    fn test_percentile_50() {\n        // [1,2,3,4,5] p=50 -> index floor(0.5*5)=2 -> 3.0\n        assert_eq!(percentile(&[1.0, 2.0, 3.0, 4.0, 5.0], 50.0).unwrap(), 3.0);\n    }\n\n    #[test]\n    fn test_percentile_100() {\n        // p=100 should return last element\n        assert_eq!(percentile(&[1.0, 2.0, 3.0], 100.0).unwrap(), 3.0);\n    }\n\n    #[test]\n    fn test_std_dev_basic() {\n        // [1,1,3,5,5] mean=3, sum_sq_dev=16, sample std dev = sqrt(16/4) = 2.0\n        let data = vec![1.0, 1.0, 3.0, 5.0, 5.0];\n        assert!((std_dev(&data).unwrap() - 2.0).abs() < 1e-6);\n    }\n\n    #[test]\n    fn test_std_dev_too_few() {\n        assert!(std_dev(&[1.0]).is_none());\n    }\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/lib.rs:\n\n1. median (even-length): currently computes (data[mid-1] + data[mid-1]) / 2.0\n   Fix to: (data[mid-1] + data[mid]) / 2.0\n\n2. percentile (p=100.0 out-of-bounds): idx can equal data.len() when p=100.0\n   Fix by clamping: let idx = idx.min(data.len() - 1)\n\n3. std_dev (population vs sample): divides by n instead of n-1\n   Fix to divide by (n-1) as f64\n\nAll 8 tests must pass after fixing.\nRun: cargo test",
+    "required_artifacts": [
+      "median even-length returns average of two middle elements",
+      "percentile p=100.0 returns last element without panic",
+      "std_dev divides by n-1 (sample standard deviation)",
+      "All 8 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (8 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

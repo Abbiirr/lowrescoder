@@ -1,0 +1,67 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-017",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Implement Caesar cipher in Rust",
+  "description": "Greenfield Rust task: implement encrypt(text, shift) and decrypt(text, shift) for a Caesar cipher that shifts ASCII letters by shift positions (wrapping), preserves case, and leaves non-alphabetic characters unchanged.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"caesar\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement encrypt and decrypt\n"
+      },
+      {
+        "path": "tests/caesar_test.rs",
+        "content": "use caesar::{encrypt, decrypt};\n\n#[test]\nfn test_encrypt_basic() {\n    assert_eq!(encrypt(\"abc\", 1), \"bcd\");\n    assert_eq!(encrypt(\"xyz\", 3), \"abc\");\n    assert_eq!(encrypt(\"Hello\", 13), \"Uryyb\");\n}\n\n#[test]\nfn test_encrypt_non_alpha() {\n    assert_eq!(encrypt(\"Hello, World!\", 1), \"Ifmmp, Xpsme!\");\n}\n\n#[test]\nfn test_decrypt_basic() {\n    assert_eq!(decrypt(\"bcd\", 1), \"abc\");\n    assert_eq!(decrypt(\"Uryyb\", 13), \"Hello\");\n}\n\n#[test]\nfn test_roundtrip() {\n    let text = \"The Quick Brown Fox!\";\n    for shift in [1, 7, 13, 25] {\n        assert_eq!(decrypt(&encrypt(text, shift), shift), text);\n    }\n}\n\n#[test]\nfn test_empty() {\n    assert_eq!(encrypt(\"\", 5), \"\");\n    assert_eq!(decrypt(\"\", 5), \"\");\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement encrypt and decrypt in src/lib.rs.\n\npub fn encrypt(text: &str, shift: i32) -> String\n  // Shift each ASCII letter forward by shift positions (wrapping mod 26).\n  // Preserve case (uppercase stays uppercase, lowercase stays lowercase).\n  // Non-alphabetic characters are unchanged.\n\npub fn decrypt(text: &str, shift: i32) -> String\n  // Reverse of encrypt: shift letters backward by shift positions.\n\nHint: use rem_euclid(26) to handle negative shifts in decrypt.\n\nAll 5 tests in tests/caesar_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "shift_char helper takes char and i32 shift, returns shifted char",
+      "Uses rem_euclid(26) so negative shifts wrap correctly",
+      "Preserves uppercase/lowercase based on is_ascii_uppercase()",
+      "Non-alpha chars passed through unchanged",
+      "decrypt calls encrypt with negated shift (or shift_char with -shift)",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-013",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "hard",
+  "duration_hint_minutes": 45,
+  "title": "Build an LRU Cache in Rust with O(1) get and put",
+  "description": "Greenfield Rust task: implement LRUCache with integer keys and values. get(key) returns -1 on miss. put(key, value) evicts the least-recently-used entry when at capacity. Use a HashMap plus a VecDeque for order tracking.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"lru-cache\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement LRUCache\n"
+      },
+      {
+        "path": "tests/lru_test.rs",
+        "content": "use lru_cache::LRUCache;\n\n#[test]\nfn test_get_miss() {\n    let mut cache = LRUCache::new(2);\n    assert_eq!(cache.get(1), -1);\n}\n\n#[test]\nfn test_put_and_get() {\n    let mut cache = LRUCache::new(2);\n    cache.put(1, 10);\n    cache.put(2, 20);\n    assert_eq!(cache.get(1), 10);\n    assert_eq!(cache.get(2), 20);\n}\n\n#[test]\nfn test_evict_lru() {\n    let mut cache = LRUCache::new(2);\n    cache.put(1, 1);\n    cache.put(2, 2);\n    cache.put(3, 3); // evicts key 1 (LRU)\n    assert_eq!(cache.get(1), -1);\n    assert_eq!(cache.get(2), 2);\n    assert_eq!(cache.get(3), 3);\n}\n\n#[test]\nfn test_get_refreshes_recency() {\n    let mut cache = LRUCache::new(2);\n    cache.put(1, 1);\n    cache.put(2, 2);\n    cache.get(1);    // 1 is now most recently used\n    cache.put(3, 3); // evicts key 2 (LRU)\n    assert_eq!(cache.get(1), 1);\n    assert_eq!(cache.get(2), -1);\n    assert_eq!(cache.get(3), 3);\n}\n\n#[test]\nfn test_put_updates_existing() {\n    let mut cache = LRUCache::new(2);\n    cache.put(1, 1);\n    cache.put(1, 10); // update, not insert\n    assert_eq!(cache.get(1), 10);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement LRUCache in src/lib.rs.\n\nuse std::collections::HashMap;\n\npub struct LRUCache {\n    capacity: usize,\n    map: HashMap<i32, i32>,\n    order: Vec<i32>,  // front = oldest (LRU), back = newest (MRU)\n}\n\nimpl LRUCache {\n    pub fn new(capacity: usize) -> Self\n    pub fn get(&mut self, key: i32) -> i32\n        // Return map[key] or -1. Move key to back of order (most recent).\n    pub fn put(&mut self, key: i32, value: i32)\n        // If key exists: update value and move to back of order.\n        // If key absent and len == capacity: remove order[0] (LRU) from map and order.\n        // Insert/push key to back of order.\n}\n\nAll 5 tests in tests/lru_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "LRUCache with HashMap for O(1) lookup and Vec for LRU order",
+      "get returns -1 on miss; updates recency on hit",
+      "put evicts order[0] (LRU) when at capacity before inserting",
+      "put on existing key updates value and refreshes recency",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

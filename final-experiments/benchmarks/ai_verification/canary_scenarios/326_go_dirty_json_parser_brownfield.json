@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-brownfield-010",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Fix bugs in a Go JSON config loader",
+  "description": "Brownfield Go dirty_cleanup: fix three intentional bugs in a JSON config loader (wrong field name in struct tags, missing error return, default value never applied).",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "go.mod",
+        "content": "module jsonconfig\n\ngo 1.21\n"
+      },
+      {
+        "path": "config.go",
+        "content": "package jsonconfig\n\nimport \"encoding/json\"\n\ntype Config struct {\n\t// BUG: wrong json tag — should be \"host\" not \"hostname\"\n\tHost    string `json:\"hostname\"`\n\tPort    int    `json:\"port\"`\n\tDebug   bool   `json:\"debug\"`\n}\n\n// BUG: ignores unmarshal error, always returns empty config\nfunc ParseConfig(data []byte) (Config, error) {\n\tvar c Config\n\tjson.Unmarshal(data, &c)\n\treturn c, nil\n}\n\n// BUG: returns 0 instead of defaultPort when port is 0\nfunc EffectivePort(c Config, defaultPort int) int {\n\tif c.Port == 0 {\n\t\treturn 0\n\t}\n\treturn c.Port\n}\n"
+      },
+      {
+        "path": "config_test.go",
+        "content": "package jsonconfig\n\nimport \"testing\"\n\nfunc TestParseHost(t *testing.T) {\n\tdata := []byte(`{\"host\": \"example.com\", \"port\": 9000}`)\n\tc, err := ParseConfig(data)\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\tif c.Host != \"example.com\" {\n\t\tt.Fatalf(\"want example.com, got %q\", c.Host)\n\t}\n}\n\nfunc TestParseInvalidJSON(t *testing.T) {\n\t_, err := ParseConfig([]byte(`{bad json}`))\n\tif err == nil {\n\t\tt.Fatal(\"expected error for invalid JSON\")\n\t}\n}\n\nfunc TestEffectivePortDefault(t *testing.T) {\n\tc := Config{Port: 0}\n\tif got := EffectivePort(c, 8080); got != 8080 {\n\t\tt.Fatalf(\"want 8080, got %d\", got)\n\t}\n}\n\nfunc TestEffectivePortExplicit(t *testing.T) {\n\tc := Config{Port: 9000}\n\tif got := EffectivePort(c, 8080); got != 9000 {\n\t\tt.Fatalf(\"want 9000, got %d\", got)\n\t}\n}\n\nfunc TestParseDebugFlag(t *testing.T) {\n\tdata := []byte(`{\"host\": \"localhost\", \"port\": 80, \"debug\": true}`)\n\tc, _ := ParseConfig(data)\n\tif !c.Debug {\n\t\tt.Fatal(\"want debug=true\")\n\t}\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in config.go.\n\nBug 1 — Config.Host json tag: `json:\"hostname\"` should be `json:\"host\"`\n  Fix: change the struct tag to `json:\"host\"`\n\nBug 2 — ParseConfig ignores unmarshal error:\n  Fix: return the error from json.Unmarshal: `if err := json.Unmarshal(data, &c); err != nil { return c, err }`\n\nBug 3 — EffectivePort returns 0 instead of defaultPort:\n  Fix: change `return 0` to `return defaultPort`\n\nAll 5 tests must pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Config.Host has json tag \\\"host\\\"",
+      "ParseConfig returns unmarshal errors",
+      "EffectivePort returns defaultPort when port is 0",
+      "All edge cases handled",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes (5 tests)",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

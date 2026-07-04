@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "556-go-mt-migrate-extend",
+  "title": "Migrate raw SQL to sqlx then add query with joins in Go — 3 turns",
+  "category": "migration",
+  "difficulty": "hard",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "Raw database/sql migrated to sqlx for struct scanning, tests green, join query added.",
+  "repo_seed": {
+    "files": {
+      "go.mod": "module github.com/ai-verification/sqlx-migration\n\ngo 1.22\n\nrequire (\n    github.com/jmoiron/sqlx v1.3.5\n    github.com/mattn/go-sqlite3 v1.14.22\n)\n",
+      "db/db.go": "package db\n\nimport (\n\t\"database/sql\"\n\t_ \"github.com/mattn/go-sqlite3\"\n)\n\n// User represents a database user row.\ntype User struct {\n\tID    int    `db:\"id\"`\n\tName  string `db:\"name\"`\n\tEmail string `db:\"email\"`\n}\n\n// Post represents a blog post.\ntype Post struct {\n\tID       int    `db:\"id\"`\n\tUserID   int    `db:\"user_id\"`\n\tTitle    string `db:\"title\"`\n\tUserName string `db:\"user_name\"` // populated by join\n}\n\n// OpenDB opens an SQLite database and creates tables.\nfunc OpenDB(dsn string) (*sql.DB, error) {\n\tdb, err := sql.Open(\"sqlite3\", dsn)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\t_, err = db.Exec(`\n\t\tCREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, email TEXT);\n\t\tCREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT);\n\t`)\n\treturn db, err\n}\n\n// GetAllUsers fetches all users using raw sql — TODO: migrate to sqlx.\nfunc GetAllUsers(db *sql.DB) ([]User, error) {\n\trows, err := db.Query(\"SELECT id, name, email FROM users\")\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tdefer rows.Close()\n\tvar users []User\n\tfor rows.Next() {\n\t\tvar u User\n\t\tif err := rows.Scan(&u.ID, &u.Name, &u.Email); err != nil {\n\t\t\treturn nil, err\n\t\t}\n\t\tusers = append(users, u)\n\t}\n\treturn users, rows.Err()\n}\n\n// GetPostsWithAuthor — TODO: implement using sqlx with JOIN.\nfunc GetPostsWithAuthor(db *sql.DB) ([]Post, error) {\n\treturn nil, nil\n}\n",
+      "db/db_test.go": "package db_test\n\nimport (\n\t\"testing\"\n\n\t\"github.com/ai-verification/sqlx-migration/db\"\n)\n\nfunc setupTestDB(t *testing.T) *db.DB {\n\tt.Helper()\n\tconn, err := db.OpenDB(\":memory:\")\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\treturn conn\n}\n\nfunc TestGetAllUsers(t *testing.T) {\n\tconn := setupTestDB(t)\n\tdefer conn.Close()\n\tconn.Exec(\"INSERT INTO users VALUES (1, 'Alice', 'a@b.com')\")\n\tconn.Exec(\"INSERT INTO users VALUES (2, 'Bob', 'b@c.com')\")\n\tusers, err := db.GetAllUsers(conn)\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\tif len(users) != 2 {\n\t\tt.Fatalf(\"expected 2 users, got %d\", len(users))\n\t}\n}\n\nfunc TestGetPostsWithAuthor(t *testing.T) {\n\tconn := setupTestDB(t)\n\tdefer conn.Close()\n\tconn.Exec(\"INSERT INTO users VALUES (1, 'Alice', 'a@b.com')\")\n\tconn.Exec(\"INSERT INTO posts VALUES (1, 1, 'Hello World')\")\n\tposts, err := db.GetPostsWithAuthor(conn)\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\tif len(posts) != 1 {\n\t\tt.Fatalf(\"expected 1 post, got %d\", len(posts))\n\t}\n\tif posts[0].UserName != \"Alice\" {\n\t\tt.Fatalf(\"expected Alice, got %s\", posts[0].UserName)\n\t}\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "The test uses `db.DB` type (from sqlx) but the code uses `*sql.DB`. First, update `OpenDB` in `db/db.go` to return `*sqlx.DB` instead of `*sql.DB` (import `github.com/jmoiron/sqlx`). Update `GetAllUsers` to accept `*sqlx.DB` and use `sqlx.Select()` for struct scanning. Update the test's `setupTestDB` to return `*sqlx.DB`. Run `go test ./...`.",
+    "followup_prompts": [
+      "Run `go test ./...` to confirm no regressions. Make sure sqlx.Select correctly populates User structs using the `db:` struct tags. Walk me through what changed.",
+      "Final pass: implement `GetPostsWithAuthor(*sqlx.DB)` using a JOIN query: `SELECT posts.id, posts.user_id, posts.title, users.name AS user_name FROM posts JOIN users ON posts.user_id = users.id`. Use `sqlx.Select()` to scan into `[]Post`. Then run `go test ./...` — all 2 tests must pass."
+    ],
+    "success_criteria": [
+      "OpenDB returns *sqlx.DB",
+      "GetAllUsers uses sqlx.Select for struct scanning",
+      "GetPostsWithAuthor does JOIN and populates UserName field",
+      "go test ./... passes (2 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "go test ./..."}
+  },
+  "duration_hint_minutes": 25
+}

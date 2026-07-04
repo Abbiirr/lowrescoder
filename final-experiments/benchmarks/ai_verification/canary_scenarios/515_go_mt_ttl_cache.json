@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "515-go-mt-ttl-cache",
+  "title": "Build a TTL cache in Go — 3 turns",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "Three turns build a TTL cache: turn 1 Set/Get, turn 2 expiry on Get, turn 3 cleanup goroutine.",
+  "repo_seed": {
+    "files": {
+      "go.mod": "module github.com/ai-verification/ttl-cache\n\ngo 1.22\n",
+      "cache/cache.go": "package cache\n\nimport (\n\t\"sync\"\n\t\"time\"\n)\n\ntype entry struct {\n\tvalue     interface{}\n\texpiresAt time.Time\n}\n\n// Cache is a thread-safe key-value store with per-entry TTL.\ntype Cache struct {\n\tmu      sync.RWMutex\n\tstore   map[string]entry\n\tstopCh  chan struct{}\n}\n\n// New creates a Cache. cleanupInterval specifies how often expired entries\n// are purged in the background (0 = no background cleanup).\nfunc New(cleanupInterval time.Duration) *Cache {\n\tc := &Cache{\n\t\tstore:  make(map[string]entry),\n\t\tstopCh: make(chan struct{}),\n\t}\n\tif cleanupInterval > 0 {\n\t\tgo c.cleanupLoop(cleanupInterval)\n\t}\n\treturn c\n}\n\n// Set stores value under key with the given TTL.\nfunc (c *Cache) Set(key string, value interface{}, ttl time.Duration) {\n\t// TODO\n}\n\n// Get returns (value, true) if key exists and hasn't expired, else (\"\", false).\nfunc (c *Cache) Get(key string) (interface{}, bool) {\n\t// TODO\n\treturn nil, false\n}\n\n// Delete removes key from the cache.\nfunc (c *Cache) Delete(key string) {\n\tc.mu.Lock()\n\tdefer c.mu.Unlock()\n\tdelete(c.store, key)\n}\n\n// Stop halts the background cleanup goroutine.\nfunc (c *Cache) Stop() {\n\tc.once.Do(func() { close(c.stopCh) })\n}\n\nfunc (c *Cache) cleanupLoop(interval time.Duration) {\n\tticker := time.NewTicker(interval)\n\tdefer ticker.Stop()\n\tfor {\n\t\tselect {\n\t\tcase <-ticker.C:\n\t\t\tc.deleteExpired()\n\t\tcase <-c.stopCh:\n\t\t\treturn\n\t\t}\n\t}\n}\n\nfunc (c *Cache) deleteExpired() {\n\t// TODO: iterate store and delete expired entries\n}\n",
+      "cache/cache_test.go": "package cache_test\n\nimport (\n\t\"testing\"\n\t\"time\"\n\n\t\"github.com/ai-verification/ttl-cache/cache\"\n)\n\nfunc TestSetAndGet(t *testing.T) {\n\tc := cache.New(0)\n\tc.Set(\"k\", \"v\", time.Minute)\n\tval, ok := c.Get(\"k\")\n\tif !ok || val != \"v\" {\n\t\tt.Fatalf(\"expected (v, true), got (%v, %v)\", val, ok)\n\t}\n}\n\nfunc TestGetMissing(t *testing.T) {\n\tc := cache.New(0)\n\t_, ok := c.Get(\"nope\")\n\tif ok {\n\t\tt.Fatal(\"expected false for missing key\")\n\t}\n}\n\nfunc TestExpiry(t *testing.T) {\n\tc := cache.New(0)\n\tc.Set(\"k\", \"v\", 20*time.Millisecond)\n\ttime.Sleep(30 * time.Millisecond)\n\t_, ok := c.Get(\"k\")\n\tif ok {\n\t\tt.Fatal(\"expected key to be expired\")\n\t}\n}\n\nfunc TestNotExpiredYet(t *testing.T) {\n\tc := cache.New(0)\n\tc.Set(\"k\", \"v\", time.Minute)\n\t_, ok := c.Get(\"k\")\n\tif !ok {\n\t\tt.Fatal(\"expected key to not be expired\")\n\t}\n}\n\nfunc TestDelete(t *testing.T) {\n\tc := cache.New(0)\n\tc.Set(\"k\", \"v\", time.Minute)\n\tc.Delete(\"k\")\n\t_, ok := c.Get(\"k\")\n\tif ok {\n\t\tt.Fatal(\"expected key to be deleted\")\n\t}\n}\n\nfunc TestCleanupGoroutine(t *testing.T) {\n\tc := cache.New(15 * time.Millisecond)\n\tdefer c.Stop()\n\tc.Set(\"x\", 1, 10*time.Millisecond)\n\ttime.Sleep(40 * time.Millisecond)\n\t// After cleanup, expired entry should be gone from internal store\n\t_, ok := c.Get(\"x\")\n\tif ok {\n\t\tt.Fatal(\"expected cleanup to remove expired entry\")\n\t}\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `Set(key, value, ttl)` and `Get(key)` in `cache/cache.go`. Set should store an `entry{value: value, expiresAt: time.Now().Add(ttl)}` under key using a write lock. Get should acquire a read lock, look up the key, check if it's expired (time.Now().After(expiresAt)), return (nil, false) if expired or missing. Note: the `Stop()` method references `c.once` which isn't declared yet — add `once sync.Once` to the struct. Run `go test ./...`.",
+    "followup_prompts": [
+      "Good. Now implement `deleteExpired()`: iterate `c.store` under a write lock and delete entries where `time.Now().After(entry.expiresAt)`. Run `go test ./...` and fix any failures — especially the cleanup goroutine test.",
+      "Final check: run `go test ./...` one more time — all 6 tests must pass. Make sure the cleanup test works: the background goroutine should remove expired keys from the store."
+    ],
+    "success_criteria": [
+      "Set stores entry with expiry timestamp",
+      "Get returns value for unexpired entry",
+      "Get returns (nil, false) for expired entry",
+      "Delete removes entry",
+      "Background cleanup goroutine removes expired entries",
+      "Stop() halts the cleanup goroutine cleanly",
+      "go test ./... passes (6 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "go test ./..."}
+  },
+  "duration_hint_minutes": 20
+}

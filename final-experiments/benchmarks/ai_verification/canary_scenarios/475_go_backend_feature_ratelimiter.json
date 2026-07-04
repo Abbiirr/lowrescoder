@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-go-backend-feature-ratelimiter-001",
+  "title": "Add a token-bucket rate limiter to a Go HTTP server",
+  "category": "backend_feature",
+  "difficulty": "medium",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "A Go HTTP server needs a token-bucket rate limiter. Add NewRateLimiter, Allow, and refill logic. Tests verify burst allowance, blocking after burst, and token refill.",
+  "repo_seed": {
+    "files": {
+      "ratelimiter.go": "package ratelimiter\n\nimport (\n\t\"sync\"\n\t\"time\"\n)\n\n// RateLimiter implements a token-bucket algorithm.\ntype RateLimiter struct {\n\tmu       sync.Mutex\n\ttokens   float64\n\tcap      float64\n\trate     float64 // tokens per second\n\tlastTime time.Time\n}\n\n// NewRateLimiter creates a rate limiter with the given capacity and refill rate.\nfunc NewRateLimiter(capacity float64, ratePerSec float64) *RateLimiter {\n\tpanic(\"NewRateLimiter: not implemented\")\n}\n\n// Allow returns true and consumes one token if available; false otherwise.\nfunc (rl *RateLimiter) Allow() bool {\n\tpanic(\"Allow: not implemented\")\n}\n",
+      "ratelimiter_test.go": "package ratelimiter\n\nimport (\n\t\"testing\"\n\t\"time\"\n)\n\nfunc TestBurstAllow(t *testing.T) {\n\trl := NewRateLimiter(3, 1.0) // 3 token burst, 1 token/sec refill\n\t// First 3 calls should be allowed\n\tfor i := 0; i < 3; i++ {\n\t\tif !rl.Allow() {\n\t\t\tt.Fatalf(\"call %d should be allowed (burst)\", i+1)\n\t\t}\n\t}\n\t// 4th call should fail — burst exhausted\n\tif rl.Allow() {\n\t\tt.Error(\"4th call should be denied after burst exhausted\")\n\t}\n}\n\nfunc TestRefill(t *testing.T) {\n\trl := NewRateLimiter(1, 10.0) // 1 token capacity, 10 tokens/sec refill\n\tif !rl.Allow() {\n\t\tt.Fatal(\"first call should be allowed\")\n\t}\n\tif rl.Allow() {\n\t\tt.Fatal(\"second call should be denied — no tokens\")\n\t}\n\t// Sleep 200ms: at 10 tok/sec, ~2 tokens added but capped at capacity=1\n\ttime.Sleep(200 * time.Millisecond)\n\tif !rl.Allow() {\n\t\tt.Error(\"after refill sleep, call should be allowed\")\n\t}\n}\n\nfunc TestZeroCapacity(t *testing.T) {\n\trl := NewRateLimiter(0, 1.0)\n\tif rl.Allow() {\n\t\tt.Error(\"zero-capacity limiter should never allow\")\n\t}\n}\n",
+      "go.mod": "module ratelimiter\n\ngo 1.21\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement the RateLimiter in ratelimiter.go:\n\n1. NewRateLimiter(capacity, ratePerSec): Initialize tokens=capacity, cap=capacity, rate=ratePerSec, lastTime=time.Now(). Return a pointer.\n2. Allow():\n   a. Lock the mutex.\n   b. Compute elapsed = time.Since(rl.lastTime).Seconds()\n   c. Add rl.rate * elapsed tokens, capped at rl.cap: rl.tokens = min(rl.cap, rl.tokens + rl.rate*elapsed)\n   d. Update rl.lastTime = time.Now()\n   e. If rl.tokens >= 1.0: subtract 1 token, unlock, return true\n   f. Otherwise: unlock, return false\n\nNote: min() for float64 is available as math.Min in Go 1.21, or write inline.\n\nRun `go test ./...` to verify all 3 tests pass.",
+    "entry_point": "ratelimiter.go",
+    "success_criteria": [
+      "All 3 go tests pass",
+      "Burst of capacity tokens allowed before denial",
+      "Tokens refill over time at ratePerSec",
+      "Zero-capacity limiter always denies"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `go test ./...` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./..."
+    },
+    "expected_exit_code": 0
+  },
+  "duration_hint_minutes": 10
+}

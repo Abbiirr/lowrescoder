@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-migration-007",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Migrate Python blog app from dict-based posts to Post dataclass",
+  "description": "Brownfield Python/Flask migration: replace plain-dict post records with a @dataclasses.dataclass Post class while keeping all routes and JSON responses identical.",
+  "target_stack": {
+    "language": "python",
+    "framework": "flask",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_blog_app",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Migrate src/app.py from dict-based post storage to a @dataclasses.dataclass Post class. All 6 existing tests must still pass.\n\n1. Define:\n   @dataclasses.dataclass\n   class Post:\n       id: int\n       title: str\n       body: str\n       tags: list[str]\n       published: bool\n\n2. Replace _posts: list[dict] with _posts: list[Post].\n\n3. Update reset() to use Post instances (use dataclasses.replace() or direct construction).\n\n4. Update all route handlers:\n   — attribute access (p.id, p.title, p.published, etc.) instead of dict access (p[\"id\"], p[\"published\"])\n   — templates already use .id / .title dot-notation so they work unchanged\n   — JSON endpoints (api_posts, api_create_post) must use dataclasses.asdict(p) before passing to jsonify\n\n5. api_create_post builds a Post dataclass from the request JSON, then appends it to _posts.\n\nAll 6 existing tests must still pass — the JSON response structure must not change.\nRun: pytest",
+    "required_artifacts": [
+      "Post dataclass with id, title, body, tags, published fields",
+      "_posts stores Post instances, not dicts",
+      "api_posts returns JSON with same fields as before (via dataclasses.asdict)",
+      "api_create_post creates a Post and returns JSON",
+      "All 6 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "pytest passes",
+      "ruff check passes"
+    ],
+    "followup_prompts": [
+      "Run `pytest` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `pytest` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "pytest",
+      "lint": "ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

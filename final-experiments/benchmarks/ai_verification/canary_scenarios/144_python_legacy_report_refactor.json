@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-refactor-005",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Extract ReportDir class from Python legacy report library",
+  "description": "Brownfield Python refactor: extract a ReportDir class from the report_gen module's free functions. Keep free functions as wrappers.",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_legacy_report",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Refactor src/report_gen.py to extract a ReportDir class. All 5 existing tests must still pass.\n\n  class ReportDir:\n      def __init__(self, base_dir: str, name: str) -> None\n        — stores base_dir and name; does NOT create the directory immediately\n      def ensure(self) -> str\n        — creates the subdirectory (base_dir/name) if it does not exist\n        — returns the full path as a string\n      def write_html(self, title: str, rows: list[list[str]]) -> str\n        — calls self.ensure() to get the dir path\n        — writes report.html with the given title and rows\n        — returns the full path to report.html\n      def read(self) -> str\n        — reads base_dir/name/report.html; returns empty string if missing\n      def delete(self) -> bool\n        — removes base_dir/name/report.html; returns True if deleted, False if missing\n\nKeep the existing free functions (ensure_report_dir, write_html_report, read_report,\nlist_reports, delete_report) as thin wrappers that delegate to ReportDir.\nAll 5 existing tests must still pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "ReportDir class defined with __init__, ensure, write_html, read, delete methods",
+      "ensure() creates base_dir/name and returns full path",
+      "write_html() creates report.html with correct HTML",
+      "read() returns empty string for missing file",
+      "delete() returns True/False based on file existence",
+      "All 5 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `uv run pytest tests/ -v` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

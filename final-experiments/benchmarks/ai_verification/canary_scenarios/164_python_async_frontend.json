@@ -1,0 +1,51 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-frontend-008",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add HTML jobs dashboard to async job queue API",
+  "description": "Brownfield Python/FastAPI task: add a GET /jobs/ui endpoint that returns an HTML table of all jobs and their statuses.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_async_api",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Add a new HTML endpoint to src/app.py. All 3 existing tests must still pass.\n\n  GET /jobs/ui\n    — returns an HTMLResponse with a simple HTML page listing all jobs\n    — the page must include an HTML <table> with columns: ID and Status\n    — each job in _jobs appears as a <tr> with its id and status\n    — register this route BEFORE GET /jobs/{job_id} to avoid path shadowing\n\nImport HTMLResponse from fastapi.responses.\nAll 3 existing tests must still pass.\nRun: uv run pytest tests/ -v",
+    "required_artifacts": [
+      "GET /jobs/ui registered before GET /jobs/{job_id}",
+      "GET /jobs/ui returns 200 with content-type text/html",
+      "Response body contains an HTML <table>",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "uv run pytest tests/ -v passes",
+      "uv run ruff check src/ passes"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `uv run pytest tests/ -v` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

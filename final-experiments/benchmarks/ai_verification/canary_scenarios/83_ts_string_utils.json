@@ -1,0 +1,73 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-ts-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement TypeScript string utility functions",
+  "description": "Implement four string utilities in TypeScript: slugify, truncate, wordCount, and capitalize. A Jest test suite is provided.",
+  "target_stack": {
+    "language": "typescript",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "package.json",
+        "content": "{\"name\":\"ts-string-utils\",\"version\":\"1.0.0\",\"private\":true,\"scripts\":{\"build\":\"tsc\",\"test\":\"node --experimental-vm-modules node_modules/.bin/jest --forceExit\"},\"devDependencies\":{\"@types/jest\":\"^29.5.12\",\"@types/node\":\"^20.11.0\",\"jest\":\"^29.7.0\",\"ts-jest\":\"^29.1.2\",\"typescript\":\"^5.3.3\"}}\n"
+      },
+      {
+        "path": "tsconfig.json",
+        "content": "{\"compilerOptions\":{\"target\":\"ES2020\",\"module\":\"commonjs\",\"outDir\":\"dist\",\"rootDir\":\"src\",\"strict\":true,\"esModuleInterop\":true,\"skipLibCheck\":true},\"include\":[\"src/**/*\"],\"exclude\":[\"node_modules\",\"dist\"]}\n"
+      },
+      {
+        "path": "jest.config.js",
+        "content": "module.exports = {preset: 'ts-jest', testEnvironment: 'node', roots: ['<rootDir>/tests']};\n"
+      },
+      {
+        "path": "tests/strings.test.ts",
+        "content": "import { slugify, truncate, wordCount, capitalize } from \"../src/strings\";\n\ndescribe(\"slugify\", () => {\n  it(\"lowercases and replaces spaces with hyphens\", () => {\n    expect(slugify(\"Hello World\")).toBe(\"hello-world\");\n  });\n  it(\"removes non-alphanumeric characters\", () => {\n    expect(slugify(\"Hello, World!\")).toBe(\"hello-world\");\n  });\n  it(\"collapses multiple hyphens\", () => {\n    expect(slugify(\"foo  bar--baz\")).toBe(\"foo-bar-baz\");\n  });\n  it(\"trims leading/trailing hyphens\", () => {\n    expect(slugify(\"  hello  \")).toBe(\"hello\");\n  });\n});\n\ndescribe(\"truncate\", () => {\n  it(\"returns string unchanged when short enough\", () => {\n    expect(truncate(\"hello\", 10)).toBe(\"hello\");\n  });\n  it(\"truncates and appends ellipsis\", () => {\n    expect(truncate(\"hello world\", 8)).toBe(\"hello...\");\n  });\n  it(\"max=3 gives just ellipsis content\", () => {\n    expect(truncate(\"hello world\", 3)).toBe(\"...\");\n  });\n});\n\ndescribe(\"wordCount\", () => {\n  it(\"counts words in normal sentence\", () => {\n    expect(wordCount(\"the quick brown fox\")).toBe(4);\n  });\n  it(\"handles multiple spaces\", () => {\n    expect(wordCount(\"  hello   world  \")).toBe(2);\n  });\n  it(\"returns 0 for empty string\", () => {\n    expect(wordCount(\"\")).toBe(0);\n  });\n});\n\ndescribe(\"capitalize\", () => {\n  it(\"capitalizes first letter\", () => {\n    expect(capitalize(\"hello world\")).toBe(\"Hello world\");\n  });\n  it(\"handles empty string\", () => {\n    expect(capitalize(\"\")).toBe(\"\");\n  });\n  it(\"leaves already-capitalized unchanged\", () => {\n    expect(capitalize(\"Hello\")).toBe(\"Hello\");\n  });\n});\n"
+      }
+    ],
+    "setup_commands": [
+      "npm install --silent"
+    ]
+  },
+  "task_spec": {
+    "prompt": "Create src/strings.ts exporting four string utility functions:\n\n  export function slugify(text: string): string\n    — lowercase, replace spaces/non-alphanumeric with hyphens, collapse multiple hyphens, trim leading/trailing hyphens\n\n  export function truncate(text: string, maxLength: number): string\n    — if text.length <= maxLength return text; otherwise return text.slice(0, maxLength - 3) + '...'\n\n  export function wordCount(text: string): number\n    — split on whitespace, return count of non-empty tokens\n\n  export function capitalize(text: string): string\n    — uppercase first character, leave rest unchanged; empty string -> empty string\n\nAll 13 tests in tests/strings.test.ts must pass.\nRun: npm test",
+    "required_artifacts": [
+      "src/strings.ts with all 4 functions exported",
+      "slugify normalizes to hyphen-separated lowercase",
+      "truncate appends '...' and respects maxLength",
+      "wordCount handles multiple spaces and empty string",
+      "capitalize handles empty string",
+      "All 13 tests pass"
+    ],
+    "success_criteria": [
+      "npm test passes (13 tests)",
+      "npm run build passes"
+    ],
+    "followup_prompts": [
+      "Run `npm test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `npm test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "npm test",
+      "build": "npm run build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

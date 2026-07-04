@@ -1,0 +1,67 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-009",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "hard",
+  "duration_hint_minutes": 40,
+  "title": "Build a Trie (prefix tree) in Rust with insert, search, starts_with, and count_words",
+  "description": "Greenfield Rust task: implement a Trie data structure with TrieNode children stored in a HashMap<char, TrieNode>. Support insert, search (exact match), starts_with (prefix check), and count_words (total inserted words).",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"trie\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement Trie\n"
+      },
+      {
+        "path": "tests/trie_test.rs",
+        "content": "use trie::Trie;\n\n#[test]\nfn test_insert_and_search() {\n    let mut t = Trie::new();\n    t.insert(\"apple\");\n    assert!(t.search(\"apple\"));\n    assert!(!t.search(\"app\"));\n    assert!(!t.search(\"apples\"));\n}\n\n#[test]\nfn test_starts_with() {\n    let mut t = Trie::new();\n    t.insert(\"apple\");\n    assert!(t.starts_with(\"app\"));\n    assert!(t.starts_with(\"apple\"));\n    assert!(!t.starts_with(\"apz\"));\n    assert!(!t.starts_with(\"banana\"));\n}\n\n#[test]\nfn test_prefix_not_word() {\n    let mut t = Trie::new();\n    t.insert(\"apple\");\n    assert!(!t.search(\"app\"));\n    t.insert(\"app\");\n    assert!(t.search(\"app\"));\n    assert!(t.search(\"apple\"));\n}\n\n#[test]\nfn test_count_words() {\n    let mut t = Trie::new();\n    assert_eq!(t.count_words(), 0);\n    t.insert(\"hello\");\n    t.insert(\"world\");\n    t.insert(\"he\");\n    assert_eq!(t.count_words(), 3);\n}\n\n#[test]\nfn test_empty_string() {\n    let mut t = Trie::new();\n    t.insert(\"\");\n    assert!(t.search(\"\"));\n    assert!(t.starts_with(\"\"));\n    assert_eq!(t.count_words(), 1);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement Trie in src/lib.rs.\n\nuse std::collections::HashMap;\n\npub struct TrieNode {\n    children: HashMap<char, TrieNode>,\n    is_end: bool,\n}\n\npub struct Trie {\n    root: TrieNode,\n}\n\nimpl Trie {\n    pub fn new() -> Self\n    pub fn insert(&mut self, word: &str)          // walk/create nodes per char; mark last as is_end\n    pub fn search(&self, word: &str) -> bool      // true iff word was inserted exactly\n    pub fn starts_with(&self, prefix: &str) -> bool  // true iff any inserted word has this prefix\n    pub fn count_words(&self) -> usize            // recursive count of is_end nodes\n}\n\nAll 5 tests in tests/trie_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "TrieNode with children: HashMap<char, TrieNode> and is_end: bool",
+      "insert walks the trie creating nodes as needed, sets is_end on last node",
+      "search returns true only when the full word path ends at an is_end node",
+      "starts_with returns true if the prefix path exists (is_end not required)",
+      "count_words recursively counts is_end nodes",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

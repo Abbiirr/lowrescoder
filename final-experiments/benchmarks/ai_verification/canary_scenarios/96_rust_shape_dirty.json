@@ -1,0 +1,61 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-dirty-007",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Fix 3 shape calculation bugs in Rust: wrong PI, wrong perimeter, wrong hypotenuse",
+  "description": "A Rust shape calculator library has three deliberate math bugs: using 3.14 instead of PI, computing perimeter as 2w+h instead of 2(w+h), and computing hypotenuse as sqrt(a+b) instead of sqrt(a²+b²). All three tests fail. Fix the bugs.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"shape-calc\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "/// BUG: uses approximate PI instead of std::f64::consts::PI\npub fn circle_area(r: f64) -> f64 {\n    3.14 * r * r\n}\n\n/// BUG: missing parentheses — computes 2w + h instead of 2(w + h)\npub fn rectangle_perimeter(w: f64, h: f64) -> f64 {\n    2.0 * w + h\n}\n\n/// BUG: adds a and b before sqrt instead of squaring them\npub fn triangle_hypotenuse(a: f64, b: f64) -> f64 {\n    (a + b).sqrt()\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n    use std::f64::consts::PI;\n\n    #[test]\n    fn test_circle_area() {\n        // 3.14 * 4.0 = 12.56, but PI * 4.0 ≈ 12.566 — fails tolerance\n        assert!((circle_area(2.0) - PI * 4.0).abs() < 0.001,\n            \"circle_area(2.0) = {} but expected ~{}\", circle_area(2.0), PI * 4.0);\n    }\n\n    #[test]\n    fn test_rectangle_perimeter() {\n        // 2.0*3.0 + 4.0 = 10.0, should be 2*(3+4) = 14.0\n        assert_eq!(rectangle_perimeter(3.0, 4.0), 14.0);\n    }\n\n    #[test]\n    fn test_triangle_hypotenuse() {\n        // sqrt(3+4) ≈ 2.65, should be sqrt(9+16) = 5.0\n        assert!((triangle_hypotenuse(3.0, 4.0) - 5.0).abs() < 0.001,\n            \"hypotenuse(3,4) = {} but expected 5.0\", triangle_hypotenuse(3.0, 4.0));\n    }\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix the three bugs in src/lib.rs:\n\n1. circle_area: replace the hardcoded 3.14 with std::f64::consts::PI\n   use std::f64::consts::PI;\n   pub fn circle_area(r: f64) -> f64 { PI * r * r }\n\n2. rectangle_perimeter: add the missing parentheses\n   pub fn rectangle_perimeter(w: f64, h: f64) -> f64 { 2.0 * (w + h) }\n\n3. triangle_hypotenuse: square a and b before summing and taking the square root\n   pub fn triangle_hypotenuse(a: f64, b: f64) -> f64 { (a * a + b * b).sqrt() }\n\nAll 3 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "circle_area uses std::f64::consts::PI",
+      "rectangle_perimeter uses 2.0 * (w + h)",
+      "triangle_hypotenuse uses (a*a + b*b).sqrt()",
+      "All 3 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (3 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

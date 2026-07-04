@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-async-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Add job status update endpoint to async job queue API",
+  "description": "An async FastAPI job queue supports creating, fetching, and listing jobs. Add a PATCH endpoint to update a job's status.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "python_async_api",
+    "injections": [],
+    "setup_commands": [
+      "uv sync"
+    ]
+  },
+  "task_spec": {
+    "prompt": "The async job queue API in src/app.py supports POST /jobs, GET /jobs/{id}, and GET /jobs. Add a PATCH /jobs/{job_id}/status endpoint that accepts a JSON body {\"status\": \"<string>\"} and updates the job's status in the store. Return 404 if the job_id is not found. Return the updated job as {\"id\": ..., \"status\": ...}. Also add a test test_update_job_status in tests/test_jobs.py that verifies the happy path (200 + updated status) and a second test test_update_job_status_not_found that verifies 404. Make sure all existing tests still pass.",
+    "required_artifacts": [
+      "PATCH /jobs/{job_id}/status route exists in src/app.py",
+      "Returns 200 with {id, status} on success",
+      "Returns 404 when job_id unknown",
+      "test_update_job_status and test_update_job_status_not_found in tests/test_jobs.py",
+      "All 6 tests pass"
+    ],
+    "success_criteria": [
+      "New PATCH route handles the update and 404 cases",
+      "Tests cover both branches",
+      "No existing tests broken"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `uv run pytest tests/ -q` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "lint"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -q",
+      "lint": "uv run ruff check src/"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

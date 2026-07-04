@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "canary-python-brownfield-023",
+  "title": "Fix three bugs in a Python Queue class",
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "target_stack": {
+    "language": "python",
+    "framework": null,
+    "extra": {}
+  },
+  "description": "Fix bugs in Queue: dequeue uses pop() instead of pop(0) giving LIFO not FIFO, front returns last element not first, size has off-by-one.",
+  "repo_seed": {
+    "files": {
+      "src/__init__.py": "",
+      "src/queue.py": "class Queue:\n    def __init__(self):\n        self._items = []\n\n    def enqueue(self, val):\n        self._items.append(val)\n\n    def dequeue(self):\n        if not self._items:\n            raise IndexError('dequeue from empty queue')\n        return self._items.pop()  # BUG 1: should be pop(0) for FIFO\n\n    def front(self):\n        if not self._items:\n            raise IndexError('front of empty queue')\n        return self._items[-1]  # BUG 2: should be self._items[0]\n\n    def size(self):\n        return len(self._items) + 1  # BUG 3: off by one\n\n    def is_empty(self):\n        return len(self._items) == 0\n",
+      "tests/test_queue.py": "import sys\nsys.path.insert(0, '.')\nfrom src.queue import Queue\n\n\ndef test_fifo_order():\n    q = Queue()\n    q.enqueue(1)\n    q.enqueue(2)\n    q.enqueue(3)\n    assert q.dequeue() == 1\n    assert q.dequeue() == 2\n\n\ndef test_front():\n    q = Queue()\n    q.enqueue(5)\n    q.enqueue(10)\n    assert q.front() == 5  # front returns oldest\n    assert q.size() == 2   # front is non-destructive\n\n\ndef test_size():\n    q = Queue()\n    assert q.size() == 0\n    q.enqueue('a')\n    q.enqueue('b')\n    q.enqueue('c')\n    assert q.size() == 3\n",
+      "pyproject.toml": "[project]\nname = \"queue_simple\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = []\n\n[tool.pytest.ini_options]\npythonpath = [\".\"]\n\n[dependency-groups]\ndev = [\"pytest>=8.0\"]\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Fix three bugs in src/queue.py:\n1. dequeue: change `self._items.pop()` to `self._items.pop(0)` for FIFO order\n2. front: change `self._items[-1]` to `self._items[0]` to return the oldest element\n3. size: change `len(self._items) + 1` to `len(self._items)`\nAll 3 tests must pass.",
+    "entry_point": "src/queue.py",
+    "success_criteria": "All 3 pytest test cases pass",
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -q` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `uv run pytest tests/ -q` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "type": "test_suite",
+    "command": "uv run pytest tests/ -v",
+    "expected_exit_code": 0
+  }
+}

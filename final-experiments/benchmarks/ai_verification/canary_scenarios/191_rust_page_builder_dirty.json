@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-dirty-016",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 bugs in rust_page_builder Page methods",
+  "description": "Brownfield Rust dirty scenario: Page::new, add_paragraph, and render each have a bug. Fix them so all 3 tests pass.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_page_builder",
+    "injections": [
+      {
+        "path": "src/lib.rs",
+        "content": "/// A minimal HTML page builder.\npub struct Page {\n    title: String,\n    body_items: Vec<String>,\n}\n\nimpl Page {\n    pub fn new(title: &str) -> Self {\n        // BUG: ignores title argument, always uses empty string\n        Page {\n            title: \"\".to_string(),\n            body_items: Vec::new(),\n        }\n    }\n\n    pub fn add_paragraph(&mut self, text: &str) -> &mut Self {\n        // BUG: uses <div> instead of <p>\n        self.body_items.push(format!(\"<div>{}</div>\", text));\n        self\n    }\n\n    pub fn render(&self) -> String {\n        // BUG: uses <foot> closing tag instead of </body>\n        format!(\n            \"<!DOCTYPE html><html><head><title>{title}</title></head><body>{body}</foot></html>\",\n            title = self.title,\n            body = self.body_items.join(\"\"),\n        )\n    }\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_render_title() {\n        let p = Page::new(\"Hello\");\n        assert!(p.render().contains(\"<title>Hello</title>\"));\n    }\n\n    #[test]\n    fn test_render_empty_body() {\n        let p = Page::new(\"Empty\");\n        assert!(p.render().contains(\"<body></body>\"));\n    }\n\n    #[test]\n    fn test_render_paragraph() {\n        let mut p = Page::new(\"Test\");\n        p.add_paragraph(\"world\");\n        assert!(p.render().contains(\"<p>world</p>\"));\n    }\n}\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 bugs in src/lib.rs so all 3 tests pass.\n\n  fn new(title: &str) -> Self:\n    — ignores title: always sets title to \"\".to_string()\n    — fix: use title.to_string() instead\n\n  fn add_paragraph(&mut self, text: &str) -> &mut Self:\n    — uses wrong tag: format!(\"<div>{}</div>\", text) should be format!(\"<p>{}</p>\", text)\n    — fix: change <div> to <p>\n\n  fn render(&self) -> String:\n    — uses wrong closing tag: </foot> should be </body>\n    — fix: change </foot> to </body>\n\nDo not modify the test code.\nRun: cargo test",
+    "required_artifacts": [
+      "Page::new stores title argument",
+      "add_paragraph wraps text in <p> tags",
+      "render uses </body> closing tag",
+      "All 3 existing tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-text-stats-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "medium",
+  "duration_hint_minutes": 20,
+  "title": "Fix 4 Unicode bugs in Rust text-stats library",
+  "description": "The rust_text_stats library has 4 buggy functions — char_count counts bytes instead of chars, is_palindrome doesn't normalize, count_vowels misses uppercase, and char_truncate uses byte offsets. All 6 tests currently fail.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_text_stats",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Fix the 4 buggy functions in src/lib.rs. All 6 tests must pass after your fixes.\n\n1. char_count(s): use s.chars().count() instead of s.len()\n2. is_palindrome(s): normalize by lowercasing and removing non-alphanumeric chars before comparing\n3. count_vowels(s): use c.to_ascii_lowercase() so uppercase vowels are counted\n4. char_truncate(s, max_len): use char_indices to find the correct byte boundary for the nth char\n\nDo not modify the test file. Run cargo test to confirm all 6 tests pass.",
+    "required_artifacts": [
+      "char_count uses chars().count()",
+      "is_palindrome normalizes before comparing",
+      "count_vowels counts uppercase vowels",
+      "char_truncate uses char boundaries",
+      "cargo test: 6 passed"
+    ],
+    "success_criteria": [
+      "All 6 existing tests pass",
+      "cargo test passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `cargo test` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

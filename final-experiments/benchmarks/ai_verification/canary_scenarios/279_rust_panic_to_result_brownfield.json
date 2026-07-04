@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-brownfield-001",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "refactor",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Refactor panic-based Rust code to use Result",
+  "description": "Brownfield Rust refactor: convert divide and parse_int functions from panicking on error to returning Result<T, String>, and update callers in the test suite to use ? or match.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"safemath\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "pub fn divide(a: f64, b: f64) -> f64 {\n    if b == 0.0 {\n        panic!(\"division by zero\");\n    }\n    a / b\n}\n\npub fn parse_int(s: &str) -> i64 {\n    s.parse::<i64>().expect(\"invalid integer\")\n}\n"
+      },
+      {
+        "path": "tests/safemath_test.rs",
+        "content": "use safemath::{divide, parse_int};\n\n#[test]\nfn test_divide_basic() {\n    assert_eq!(divide(10.0, 2.0), 5.0);\n    assert_eq!(divide(9.0, 3.0), 3.0);\n}\n\n#[test]\nfn test_parse_int_basic() {\n    assert_eq!(parse_int(\"42\"), 42);\n    assert_eq!(parse_int(\"-7\"), -7);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Refactor src/lib.rs to use Result instead of panicking.\n\npub fn divide(a: f64, b: f64) -> Result<f64, String>\n    // Return Err(\"division by zero\".to_string()) if b == 0.0\n    // Otherwise return Ok(a / b)\n\npub fn parse_int(s: &str) -> Result<i64, String>\n    // Return s.parse::<i64>().map_err(|e| e.to_string())\n\nAll 5 tests in tests/safemath_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "divide returns Result<f64, String> instead of panicking",
+      "parse_int returns Result<i64, String> instead of panicking",
+      "Err is returned for division by zero",
+      "Err is returned for non-integer strings",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests — 2 original + 3 new Result tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` to confirm no regressions from your refactor. Also review the code you changed — any remaining duplication, long functions, or unclear names to clean up?",
+      "Final pass: run `cargo test` and confirm everything is green. Give me a one-line summary of what changed."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

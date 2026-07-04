@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-backend-001",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "backend_feature",
+  "difficulty": "hard",
+  "duration_hint_minutes": 45,
+  "title": "Add update endpoint, name-search filter, and price-range filter to Go products API",
+  "description": "A Go products API supports list, create, get, and delete. Add three hard features: PUT update, full-text name search, and price-range filter — all with tests.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_legacy_products",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Go products API in internal/products/products.go supports GET/POST /products and GET/DELETE /products/{id}. Add three new features:\n\nFeature 1 — PUT /products/{id}: Accept {\"name\": \"...\", \"price\": ...} (both optional). Update only the provided fields. Return 200 with updated product, 404 if not found, 400 if body is invalid JSON.\n\nFeature 2 — Name search: Update GET /products to accept an optional ?name=<query> parameter. Perform a case-insensitive substring match on product names. Return only matching products (all if param absent).\n\nFeature 3 — Price range filter: Update GET /products to also accept optional ?min_price=X and ?max_price=Y params. Filter products where price >= min_price and <= max_price (each param independent). Apply both name search and price filter together when both are provided.\n\nAll filters apply before any existing logic. The existing four tests must still pass. Add tests: test_update_product, test_update_product_not_found, test_search_by_name, test_filter_by_price_range, test_combined_filters. Run go test ./... to confirm.",
+    "required_artifacts": [
+      "PUT /products/{id} endpoint with partial update",
+      "GET /products?name= case-insensitive search",
+      "GET /products?min_price=X&max_price=Y filter",
+      "Filters compose correctly when combined",
+      "5 new tests: update, update_404, search, price_range, combined",
+      "All 4 original tests still pass",
+      "go test ./... passes"
+    ],
+    "success_criteria": [
+      "PUT correctly updates only supplied fields",
+      "Search and price filter work independently and together",
+      "All 9 tests pass"
+    ],
+    "followup_prompts": [
+      "Good. Now add input validation and error handling to the feature you just implemented. What should happen with invalid, missing, or malformed inputs? Update the implementation and tests to cover those cases.",
+      "Run `go test ./...` to verify everything including your new error handling. Fix any failures and confirm the feature is complete."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

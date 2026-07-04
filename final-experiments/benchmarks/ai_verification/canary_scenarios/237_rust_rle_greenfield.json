@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-016",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Implement run-length encoding in Rust",
+  "description": "Greenfield Rust task: implement encode(s: &str) -> String (compress runs of identical chars into count+char) and decode(s: &str) -> String (reverse the encoding).",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"rle\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement encode and decode\n"
+      },
+      {
+        "path": "tests/rle_test.rs",
+        "content": "use rle::{encode, decode};\n\n#[test]\nfn test_encode_basic() {\n    assert_eq!(encode(\"aaabbc\"), \"3a2b1c\");\n    assert_eq!(encode(\"abcd\"), \"1a1b1c1d\");\n}\n\n#[test]\nfn test_encode_empty() {\n    assert_eq!(encode(\"\"), \"\");\n}\n\n#[test]\nfn test_decode_basic() {\n    assert_eq!(decode(\"3a2b1c\"), \"aaabbc\");\n    assert_eq!(decode(\"1a1b1c1d\"), \"abcd\");\n}\n\n#[test]\nfn test_decode_empty() {\n    assert_eq!(decode(\"\"), \"\");\n}\n\n#[test]\nfn test_roundtrip() {\n    let inputs = [\"aaabbc\", \"abcd\", \"aaaaaa\", \"xyzz\"];\n    for s in &inputs {\n        assert_eq!(decode(&encode(s)), *s);\n    }\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement encode and decode in src/lib.rs.\n\npub fn encode(s: &str) -> String\n  // Compress consecutive identical characters: \"aaabbc\" -> \"3a2b1c\"\n  // Empty input returns empty string.\n\npub fn decode(s: &str) -> String\n  // Expand count+char pairs: \"3a2b1c\" -> \"aaabbc\"\n  // Counts may be multi-digit (e.g. \"12a\").\n  // Empty input returns empty string.\n\nAll 5 tests in tests/rle_test.rs must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "encode iterates chars, counts consecutive runs, outputs count+char for each run",
+      "encode returns empty string for empty input",
+      "decode parses digit runs as count, then reads one char, repeats it count times",
+      "decode handles multi-digit counts",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

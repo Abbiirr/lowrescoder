@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-frontend-002",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "frontend_feature",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Add to_html_list and to_html_badge generators to Rust string-utils library",
+  "description": "A Rust string-utils library gets two simple HTML-generation helpers for rendering word lists and count badges.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "rust_string_utils",
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "The Rust library in src/lib.rs has word_count and capitalize_words. Add two HTML-generation functions:\n\n1. pub fn to_html_list(words: &[&str]) -> String\n   Returns an HTML <ul> with one <li> per word. Empty slice returns <ul></ul>.\n\n2. pub fn to_html_badge(label: &str, count: usize) -> String\n   Returns <span class=\"badge\"><span class=\"label\">{label}</span><span class=\"count\">{count}</span></span>\n\nWrite 2 tests for each function (4 total):\n  test_html_list_items — to_html_list(&[\"alpha\", \"beta\"]) contains <li>alpha</li> and <li>beta</li>\n  test_html_list_empty — to_html_list(&[]) == \"<ul></ul>\"\n  test_html_badge_basic — to_html_badge(\"words\", 3) contains class=\"badge\" and contains \"words\" and \"3\"\n  test_html_badge_zero — to_html_badge(\"items\", 0) contains \"0\"\n\nAll 3 original tests must still pass. cargo test must pass all 7 tests. cargo build must succeed.",
+    "required_artifacts": [
+      "pub fn to_html_list(words: &[&str]) -> String",
+      "pub fn to_html_badge(label: &str, count: usize) -> String",
+      "4 new tests",
+      "All 3 original tests still pass",
+      "cargo test passes 7 tests"
+    ],
+    "success_criteria": [
+      "HTML output contains correct tags and data",
+      "Empty slice handled correctly",
+      "All 7 tests pass"
+    ],
+    "followup_prompts": [
+      "Good. Now handle edge cases: what does the UI show when data is empty, loading, or an error occurs? Add those states and tests.",
+      "Run `cargo test` to verify the complete implementation. Fix any failures and confirm all UI states work correctly."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

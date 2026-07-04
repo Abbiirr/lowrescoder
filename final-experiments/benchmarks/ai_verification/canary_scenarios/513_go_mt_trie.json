@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.1",
+  "scenario_id": "513-go-mt-trie",
+  "title": "Build a Trie in Go — 3 turns",
+  "category": "repo_init",
+  "difficulty": "medium",
+  "target_stack": {"language": "go", "framework": null, "extra": {}},
+  "description": "Three turns build a Trie: turn 1 adds Insert/Search, turn 2 adds Delete, turn 3 adds StartsWith prefix search.",
+  "repo_seed": {
+    "files": {
+      "go.mod": "module github.com/ai-verification/trie\n\ngo 1.22\n",
+      "trie/trie.go": "package trie\n\n// Node is a trie node.\ntype Node struct {\n\tchildren map[rune]*Node\n\tisEnd    bool\n}\n\nfunc newNode() *Node {\n\treturn &Node{children: make(map[rune]*Node)}\n}\n\n// Trie is a prefix tree for strings.\ntype Trie struct {\n\troot *Node\n}\n\n// New returns an empty Trie.\nfunc New() *Trie {\n\treturn &Trie{root: newNode()}\n}\n\n// Insert adds word to the trie.\nfunc (t *Trie) Insert(word string) {\n\t// TODO\n}\n\n// Search returns true if the exact word is in the trie.\nfunc (t *Trie) Search(word string) bool {\n\t// TODO\n\treturn false\n}\n\n// Delete removes word from the trie. Returns true if word was present.\nfunc (t *Trie) Delete(word string) bool {\n\t// TODO\n\treturn false\n}\n\n// StartsWith returns all words in the trie that begin with prefix.\nfunc (t *Trie) StartsWith(prefix string) []string {\n\t// TODO\n\treturn nil\n}\n",
+      "trie/trie_test.go": "package trie_test\n\nimport (\n\t\"sort\"\n\t\"testing\"\n\n\t\"github.com/ai-verification/trie/trie\"\n)\n\nfunc TestInsertSearch(t *testing.T) {\n\ttr := trie.New()\n\ttr.Insert(\"apple\")\n\ttr.Insert(\"app\")\n\tif !tr.Search(\"apple\") {\n\t\tt.Error(\"expected apple found\")\n\t}\n\tif !tr.Search(\"app\") {\n\t\tt.Error(\"expected app found\")\n\t}\n\tif tr.Search(\"ap\") {\n\t\tt.Error(\"ap should not be found\")\n\t}\n}\n\nfunc TestSearchEmpty(t *testing.T) {\n\ttr := trie.New()\n\tif tr.Search(\"anything\") {\n\t\tt.Error(\"empty trie should not find anything\")\n\t}\n}\n\nfunc TestDelete(t *testing.T) {\n\ttr := trie.New()\n\ttr.Insert(\"hello\")\n\ttr.Insert(\"help\")\n\tif !tr.Delete(\"hello\") {\n\t\tt.Error(\"expected delete to return true\")\n\t}\n\tif tr.Search(\"hello\") {\n\t\tt.Error(\"hello should be deleted\")\n\t}\n\tif !tr.Search(\"help\") {\n\t\tt.Error(\"help should still exist\")\n\t}\n}\n\nfunc TestDeleteMissing(t *testing.T) {\n\ttr := trie.New()\n\tif tr.Delete(\"missing\") {\n\t\tt.Error(\"delete of missing word should return false\")\n\t}\n}\n\nfunc TestStartsWith(t *testing.T) {\n\ttr := trie.New()\n\ttr.Insert(\"apple\")\n\ttr.Insert(\"app\")\n\ttr.Insert(\"application\")\n\ttr.Insert(\"banana\")\n\tresult := tr.StartsWith(\"app\")\n\tsort.Strings(result)\n\texpected := []string{\"app\", \"apple\", \"application\"}\n\tif len(result) != len(expected) {\n\t\tt.Fatalf(\"expected %v got %v\", expected, result)\n\t}\n\tfor i := range expected {\n\t\tif result[i] != expected[i] {\n\t\t\tt.Errorf(\"mismatch: %s != %s\", result[i], expected[i])\n\t\t}\n\t}\n}\n\nfunc TestStartsWithNoMatch(t *testing.T) {\n\ttr := trie.New()\n\ttr.Insert(\"hello\")\n\tif len(tr.StartsWith(\"xyz\")) != 0 {\n\t\tt.Error(\"expected empty result for non-matching prefix\")\n\t}\n}\n"
+    }
+  },
+  "task_spec": {
+    "prompt": "Implement `Insert(word)` and `Search(word)` in `trie/trie.go`. Insert: iterate over runes of word, create child nodes as needed, mark the last node as isEnd=true. Search: traverse nodes for each rune; if any rune is missing return false; return isEnd at the last node. Run `go test ./...`.",
+    "followup_prompts": [
+      "Good. Now implement `Delete(word string) bool`: traverse to the word, if not found return false. Mark the end node isEnd=false. Optionally prune leaf nodes that are no longer needed. Run `go test ./...` and fix any failures.",
+      "Final step: implement `StartsWith(prefix string) []string` — find the node at the end of prefix, then DFS to collect all complete words under it. Each collected word should be the full word (prefix + suffix). Run `go test ./...` — all 6 tests must pass."
+    ],
+    "success_criteria": [
+      "Insert/Search work for exact words including shared prefixes",
+      "Search returns false for prefixes that aren't full words",
+      "Delete removes exact word without affecting words sharing its prefix",
+      "Delete returns false for words not in the trie",
+      "StartsWith returns all words with given prefix",
+      "go test ./... passes (6 tests)"
+    ]
+  },
+  "grading": {
+    "checks": ["run_tests"],
+    "check_commands": {"run_tests": "go test ./..."}
+  },
+  "duration_hint_minutes": 20
+}

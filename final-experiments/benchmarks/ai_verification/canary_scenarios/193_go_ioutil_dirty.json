@@ -1,0 +1,56 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-dirty-010",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "dirty_cleanup",
+  "difficulty": "easy",
+  "duration_hint_minutes": 15,
+  "title": "Fix 3 bugs in go_ioutil_reader fileutil functions",
+  "description": "Brownfield Go dirty scenario: ReadBytes, WriteBytes, and ReadLines each have a bug. Fix them so all 3 tests pass.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_ioutil_reader",
+    "injections": [
+      {
+        "path": "internal/fileutil/fileutil.go",
+        "content": "// Package fileutil wraps common file I/O operations.\n// NOTE: uses deprecated io/ioutil — to be migrated to io and os packages.\npackage fileutil\n\nimport (\n\t\"io/ioutil\" //nolint:staticcheck\n\t\"strings\"\n)\n\n// ReadBytes returns the full contents of path as a byte slice.\nfunc ReadBytes(path string) ([]byte, error) {\n\t// BUG: ignores path, always returns empty bytes\n\treturn []byte{}, nil\n}\n\n// WriteBytes writes data to path, creating or truncating the file.\nfunc WriteBytes(path string, data []byte) error {\n\t// BUG: writes nil instead of data\n\treturn ioutil.WriteFile(path, nil, 0o644) //nolint:staticcheck\n}\n\n// ReadLines returns the file at path split into lines.\nfunc ReadLines(path string) ([]string, error) {\n\tdata, err := ioutil.ReadFile(path) //nolint:staticcheck\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\t// BUG: splits on comma instead of newline\n\traw := strings.Split(string(data), \",\")\n\tlines := make([]string, 0, len(raw))\n\tfor _, l := range raw {\n\t\tif l != \"\" {\n\t\t\tlines = append(lines, l)\n\t\t}\n\t}\n\treturn lines, nil\n}\n"
+      }
+    ]
+  },
+  "task_spec": {
+    "prompt": "Fix the 3 bugs in internal/fileutil/fileutil.go so all 3 tests pass.\n\n  func ReadBytes(path string) ([]byte, error):\n    — ignores path and returns empty bytes\n    — fix: return ioutil.ReadFile(path)\n\n  func WriteBytes(path string, data []byte) error:\n    — writes nil instead of the data argument\n    — fix: pass data not nil to ioutil.WriteFile\n\n  func ReadLines(path string) ([]string, error):\n    — splits on \",\" instead of \"\\n\"\n    — fix: change \",\" to \"\\n\"\n\nDo not modify the test file.\nRun: go test ./...",
+    "required_artifacts": [
+      "ReadBytes returns ioutil.ReadFile result",
+      "WriteBytes passes data argument to WriteFile",
+      "ReadLines splits on newline not comma",
+      "All 3 existing tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to check the current state. Walk me through what bugs you found and fixed. If any tests are still failing, show me the errors and fix them.",
+      "Final verification: run `go test ./...` and confirm a completely clean build. Every test must pass — if any are still red, fix them now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

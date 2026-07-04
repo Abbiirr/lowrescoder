@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-rust-greenfield-036",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "medium",
+  "duration_hint_minutes": 25,
+  "title": "Implement a fixed-capacity ring buffer in Rust",
+  "description": "Greenfield Rust task: implement a RingBuffer<T> with a fixed capacity that overwrites the oldest element when full. Supports push, pop (from front), len, and is_full.",
+  "target_stack": {
+    "language": "rust",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [
+      {
+        "path": "Cargo.toml",
+        "content": "[package]\nname = \"ringbuf\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+      },
+      {
+        "path": "src/lib.rs",
+        "content": "// TODO: implement RingBuffer\n"
+      },
+      {
+        "path": "tests/ring_test.rs",
+        "content": "use ringbuf::RingBuffer;\n\n#[test]\nfn test_push_pop() {\n    let mut rb = RingBuffer::new(3);\n    rb.push(1);\n    rb.push(2);\n    rb.push(3);\n    assert_eq!(rb.pop(), Some(1));\n    assert_eq!(rb.pop(), Some(2));\n    assert_eq!(rb.pop(), Some(3));\n    assert_eq!(rb.pop(), None);\n}\n\n#[test]\nfn test_overwrite_oldest() {\n    let mut rb = RingBuffer::new(3);\n    rb.push(1);\n    rb.push(2);\n    rb.push(3);\n    rb.push(4); // overwrites 1\n    assert_eq!(rb.pop(), Some(2));\n    assert_eq!(rb.pop(), Some(3));\n    assert_eq!(rb.pop(), Some(4));\n}\n\n#[test]\nfn test_len() {\n    let mut rb = RingBuffer::new(4);\n    assert_eq!(rb.len(), 0);\n    rb.push(10);\n    rb.push(20);\n    assert_eq!(rb.len(), 2);\n}\n\n#[test]\nfn test_is_full() {\n    let mut rb = RingBuffer::new(2);\n    assert!(!rb.is_full());\n    rb.push(1);\n    rb.push(2);\n    assert!(rb.is_full());\n}\n\n#[test]\nfn test_empty_pop() {\n    let mut rb: RingBuffer<i32> = RingBuffer::new(5);\n    assert_eq!(rb.pop(), None);\n}\n"
+      }
+    ],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Implement RingBuffer<T> in src/lib.rs.\n\npub struct RingBuffer<T> {\n    buf: Vec<Option<T>>,\n    head: usize,  // index of next pop\n    tail: usize,  // index of next push\n    len: usize,\n    cap: usize,\n}\n\nimpl<T> RingBuffer<T> {\n    pub fn new(cap: usize) -> Self {\n        let buf = (0..cap).map(|_| None).collect();\n        RingBuffer { buf, head: 0, tail: 0, len: 0, cap }\n    }\n\n    pub fn push(&mut self, val: T) {\n        if self.len == self.cap {\n            // Overwrite oldest: advance head\n            self.head = (self.head + 1) % self.cap;\n        } else {\n            self.len += 1;\n        }\n        self.buf[self.tail] = Some(val);\n        self.tail = (self.tail + 1) % self.cap;\n    }\n\n    pub fn pop(&mut self) -> Option<T> {\n        if self.len == 0 { return None; }\n        let val = self.buf[self.head].take();\n        self.head = (self.head + 1) % self.cap;\n        self.len -= 1;\n        val\n    }\n\n    pub fn len(&self) -> usize { self.len }\n    pub fn is_full(&self) -> bool { self.len == self.cap }\n}\n\nAll 5 tests must pass.\nRun: cargo test",
+    "required_artifacts": [
+      "RingBuffer uses a fixed-capacity Vec<Option<T>>",
+      "push overwrites oldest when full (advances head)",
+      "pop removes from head (FIFO order)",
+      "pop returns None when empty",
+      "All 5 tests pass"
+    ],
+    "success_criteria": [
+      "cargo test passes (5 tests)",
+      "cargo build passes"
+    ],
+    "followup_prompts": [
+      "Run `cargo test` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `cargo test` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "cargo test",
+      "build": "cargo build"
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}

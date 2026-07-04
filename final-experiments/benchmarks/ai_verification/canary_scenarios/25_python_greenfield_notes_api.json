@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-python-greenfield-002",
+  "generated_by": "human",
+  "created_at": "2026-04-29T00:00:00+00:00",
+  "seed": 0,
+  "category": "repo_init",
+  "difficulty": "hard",
+  "duration_hint_minutes": 40,
+  "title": "Greenfield FastAPI notes API with tags, search, and soft-delete",
+  "description": "Build a feature-rich notes REST API from scratch: CRUD, tags, full-text search, and soft-delete.",
+  "target_stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fresh",
+    "fixture_ref": null,
+    "injections": [],
+    "setup_commands": []
+  },
+  "task_spec": {
+    "prompt": "Build a FastAPI notes API from scratch. Create src/app.py and tests/test_notes.py, plus pyproject.toml (requires-python>=3.11, dependencies: fastapi>=0.111, httpx>=0.27, pytest>=8.0).\n\nData model — a Note has: id (int, auto-increment), title (str), body (str), tags (list[str], default []), deleted (bool, default False).\n\nEndpoints:\n- POST /notes — create a note from {title, body, tags?}, return the note with status 201\n- GET /notes — list all non-deleted notes; accept optional ?q=<text> for full-text search (case-insensitive match in title or body); accept optional ?tag=<tag> to filter by tag\n- GET /notes/{id} — return a single note (404 if not found or deleted)\n- PATCH /notes/{id} — partial update: accept any subset of {title, body, tags}; return updated note (404 if not found or deleted)\n- DELETE /notes/{id} — soft-delete: set deleted=True, return 204 (404 if not found or already deleted)\n\nAlso add a reset() function for test isolation and expose it to tests.\n\nTests (in tests/test_notes.py): create note, get note, list notes, search by ?q=, filter by ?tag=, patch note, soft-delete returns 204, deleted note excluded from list, get deleted note returns 404. That's 9 tests minimum. Run uv run pytest tests/ -v to confirm.",
+    "required_artifacts": [
+      "src/app.py with all 5 endpoints",
+      "Note model with id, title, body, tags, deleted fields",
+      "Soft-delete (deleted flag, not physical removal)",
+      "Full-text search via ?q= param",
+      "Tag filter via ?tag= param",
+      "tests/test_notes.py with 9+ tests",
+      "uv run pytest tests/ -v passes"
+    ],
+    "success_criteria": [
+      "All endpoints return correct status codes",
+      "Search and tag filter work independently",
+      "Soft-deleted notes excluded from list and GET",
+      "All 9+ tests pass"
+    ],
+    "followup_prompts": [
+      "Run `uv run pytest tests/ -v` and show me which tests are passing and which are still failing. Fix any failures — pay attention to edge cases like empty input, boundary values, and error conditions.",
+      "Final check: run `uv run pytest tests/ -v` one more time. All tests must be green. If anything is still failing, trace through the failing assertion and fix it now."
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests"
+    ],
+    "check_commands": {
+      "run_tests": "uv run pytest tests/ -v"
+    },
+    "ai_review_enabled": true,
+    "reviewer": "claude"
+  }
+}

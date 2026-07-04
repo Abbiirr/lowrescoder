@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "scenario_id": "canary-go-migration-008",
+  "generated_by": "human",
+  "created_at": "2026-04-30T00:00:00+00:00",
+  "seed": 0,
+  "category": "migration",
+  "difficulty": "easy",
+  "duration_hint_minutes": 20,
+  "title": "Add Logger middleware and NewServeMux to go_middleware_server",
+  "description": "Brownfield Go migration: introduce an HTTP Logger middleware and a NewServeMux helper that registers middleware-wrapped todo handlers.",
+  "target_stack": {
+    "language": "go",
+    "framework": null,
+    "extra": {}
+  },
+  "repo_seed": {
+    "mode": "fixture",
+    "fixture_ref": "go_middleware_server",
+    "injections": []
+  },
+  "task_spec": {
+    "prompt": "Migrate internal/handler/todos.go to add HTTP middleware support. All 3 existing tests must still pass.\n\nAdd to todos.go:\n\n  func Logger(next http.HandlerFunc) http.HandlerFunc\n    — returns a new HandlerFunc that logs '\"METHOD PATH\" to os.Stderr before calling next\n\n  func NewServeMux() *http.ServeMux\n    — creates a new *http.ServeMux and registers one route:\n        /todos dispatches to Logger(ListTodos) for GET and Logger(CreateTodo) for POST,\n        returns 405 for other methods\n    — returns the mux\n\nDo not modify the existing handler functions or tests.\nAdd tests for Logger and NewServeMux in todos_test.go.\nAll 3 existing tests must still pass.\nRun: go test ./...",
+    "required_artifacts": [
+      "Logger wraps a HandlerFunc and logs method+path to stderr before delegating",
+      "NewServeMux returns a *http.ServeMux with /todos registered",
+      "GET /todos via NewServeMux returns 200",
+      "POST /todos with valid body via NewServeMux returns 201",
+      "Tests for Logger and NewServeMux added",
+      "All 3 existing fixture tests pass"
+    ],
+    "success_criteria": [
+      "go test ./... passes",
+      "go build ./... passes"
+    ],
+    "followup_prompts": [
+      "Run `go test ./...` to verify the migration is correct. Make sure existing behavior is preserved and the migration handles edge cases safely.",
+      "Final verification: run `go test ./...` and confirm all tests pass. Is this migration safe to run on real data without data loss or breaking existing clients?"
+    ]
+  },
+  "grading": {
+    "checks": [
+      "run_tests",
+      "build"
+    ],
+    "check_commands": {
+      "run_tests": "go test ./...",
+      "build": "go build ./..."
+    },
+    "ai_review_enabled": false,
+    "reviewer": "claude"
+  }
+}
