@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoCode</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='2' y='2' width='60' height='60' rx='14' fill='%2312151d' stroke='rgba(255,255,255,.14)'/%3E%3Ccircle cx='17' cy='17' r='4' fill='%23ff5f57'/%3E%3Ccircle cx='28' cy='17' r='4' fill='%23febc2e'/%3E%3Ccircle cx='39' cy='17' r='4' fill='%2328c840'/%3E%3Ctext x='32' y='48' font-family='Consolas,monospace' font-size='26' font-weight='700' fill='%23658dff' text-anchor='middle'%3EAC%3C/text%3E%3C/svg%3E">
+<!--
+  AutoCode WebUI — a browser frontend for the AutoCode harness.
+  Implements the Claude Design source AutoCode.dc.html; ports the standalone
+  prototype (../AutoCode.html) into modules and wires a live JSON-RPC backend.
+
+  Modes:
+    (default)     demo mode — fully offline, no backend needed.
+    ?live[=1]     connect to the harness over WebSocket (default ws://127.0.0.1:8901).
+    ?ws=URL       connect to a specific WebSocket URL (implies live).
+    ?demo=1       force demo mode.
+  Start a dev backend with:  uv run --no-project webui/mock-server.py
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css">
+<style>
+  #conn-badge{position:fixed;left:14px;bottom:14px;z-index:80;display:none;align-items:center;gap:7px;
+    padding:5px 11px;border-radius:999px;font:600 11.5px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    background:rgba(20,24,36,.9);color:#edf0f7;border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 8px 24px rgba(0,0,0,.35);backdrop-filter:blur(12px);user-select:none}
+  #conn-badge .dot{width:8px;height:8px;border-radius:50%;background:#5f6880}
+  #conn-badge.live .dot{background:#42d392}
+  #conn-badge.offline .dot{background:#f0b34e}
+  #conn-badge.connecting .dot{background:#658dff;animation:pulse 1.2s ease infinite}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="conn-badge"><span class="dot"></span><span class="label">demo</span></div>
+
+<script src="./rpc.js"></script>
+<script src="./events.js"></script>
+<script src="./demo.js"></script>
+<script src="./app.js"></script>
+<script src="./wiring.js"></script>
+<script>
+(function () {
+  'use strict';
+  var params = new URLSearchParams(location.search);
+  var badge = document.getElementById('conn-badge');
+  function setBadge(cls, label) {
+    if (!badge) return;
+    badge.className = cls;
+    badge.querySelector('.label').textContent = label;
+    badge.style.display = (cls === 'demo') ? 'none' : 'inline-flex';
+  }
+
+  var forceDemo = params.get('demo') === '1';
+  var wsParam = params.get('ws');
+  var wantLive = !forceDemo && (wsParam || params.has('live'));
+  // When served over HTTP, connect to the same origin (port-agnostic — the backend may
+  // have fallen back to an ephemeral port). From file://, default to the documented port.
+  var sameOrigin = (location.protocol === 'http:' || location.protocol === 'https:')
+    ? (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host
+    : 'ws://127.0.0.1:8901';
+  var url = wsParam || sameOrigin;
+
+  if (!wantLive) {
+    // Demo mode: Live stays disabled, every seam falls back to window.DEMO.
+    window.__demo = true;
+    if (window.Live) window.Live.enabled = false;
+    setBadge('demo', 'demo');
+    return;
+  }
+
+  setBadge('connecting', 'connecting…');
+  if (window.RPC) window.RPC.onStatus(function (s) {
+    if (s === 'open') setBadge('live', 'live');
+    else if (s === 'reconnecting' || s === 'connecting') setBadge('connecting', 'reconnecting…');
+    else if (s === 'closed') setBadge('offline', 'backend offline');
+  });
+
+  window.Live.connect(url).then(function () {
+    setBadge('live', 'live');
+  }).catch(function () {
+    // Backend unreachable — fall back to demo so the page still works.
+    window.RPC && window.RPC.close();
+    window.Live.enabled = false;
+    window.__demo = true;
+    setBadge('offline', 'backend offline · demo');
+    window.Store && window.Store.render();
+  });
+})();
+</script>
+</body>
+</html>

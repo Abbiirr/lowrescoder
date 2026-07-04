@@ -1,0 +1,40 @@
+/* AutoCode WebUI — extracted verbatim from AutoCode.html <style> block.
+   Reset, keyframes, scrollbar, and the .hv*/.a* hover/active utility classes.
+   All theme colors are injected as CSS custom properties by app.js (themeVars). */
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;background:#05060a}
+::selection{background:rgba(120,150,255,.3)}
+::placeholder{color:var(--t3);opacity:1}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:rgba(128,140,170,.25);border-radius:8px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-track{background:transparent}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{0%,55%{opacity:1}56%,100%{opacity:0}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes dots{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+input,textarea,button{font:inherit;color:inherit}
+button{background:none;border:none;padding:0;cursor:pointer;text-align:left}
+input:focus,textarea:focus{outline:none}
+/* hover/active utilities — !important so they win over inline base styles */
+.hv:hover{background:var(--hov)!important}
+.hvt:hover{background:var(--hov)!important;color:var(--t1)!important}
+.hvc:hover{color:var(--t1)!important}
+.hva:hover{color:var(--acc)!important}
+.hvo:hover{opacity:.75!important}
+.hvb:hover{filter:brightness(1.12)!important}
+.hvbd:hover{border-color:var(--line2)!important}
+.hvcb:hover{background:var(--hov)!important;border-color:var(--line2)!important}
+.hvtb:hover{background:var(--hov)!important;color:var(--t1)!important;border-color:var(--line2)!important}
+.hverr:hover{opacity:1!important;text-decoration:underline!important}
+.a92:active{transform:scale(.92)!important}
+.a93:active{transform:scale(.93)!important}
+.a95:active{transform:scale(.95)!important}
+.a96:active{transform:scale(.96)!important}
+.a97:active{transform:scale(.97)!important}
+.a98:active{transform:scale(.98)!important}
+.a985:active{transform:scale(.985)!important}
+.a99:active{transform:scale(.99)!important}
+.a995:active{transform:scale(.995)!important}
+.arot:active{transform:rotate(-40deg)!important}
